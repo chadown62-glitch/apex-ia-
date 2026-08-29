@@ -12,6 +12,7 @@ prétendre valider ce que SQLite ne peut pas garantir.
 from __future__ import annotations
 
 import unittest
+import unittest.mock
 from datetime import datetime, timezone
 
 from sqlalchemy import create_engine, inspect
@@ -166,6 +167,32 @@ class TestDatabaseUrlFromConfig(unittest.TestCase):
         cfg = parse_config(config_dict(**{"services": {}}))
         with self.assertRaises(ConfigError):
             database_url_from_config(cfg, environ={"POSTGRES_PASSWORD": "x"})
+
+
+class TestEventSinkImportableWithoutSqlalchemy(unittest.TestCase):
+    """Garde de non-régression pour le piège exact rencontré pendant cette phase :
+    `apex.interfaces.registry.module_importable()` doit pouvoir importer
+    `apex.db.event_sink` même quand l'extra `db` n'est pas installé — sinon
+    `apex doctor` casserait sur "interfaces.integrity" pour une raison qui n'a
+    rien à voir avec une régression du code (voir apex/db/event_sink.py)."""
+
+    def test_module_imports_with_sqlalchemy_hidden(self) -> None:
+        import sys
+
+        blocked = {
+            name: sys.modules.pop(name)
+            for name in list(sys.modules)
+            if name == "sqlalchemy" or name.startswith("sqlalchemy.")
+            or name == "apex.db.event_sink" or name.startswith("apex.db.")
+        }
+        try:
+            with unittest.mock.patch.dict(sys.modules, {"sqlalchemy": None}):
+                import apex.db.event_sink as fresh_event_sink
+
+                self.assertTrue(hasattr(fresh_event_sink, "DatabaseEventSink"))
+        finally:
+            sys.modules.pop("apex.db.event_sink", None)
+            sys.modules.update(blocked)
 
 
 if __name__ == "__main__":

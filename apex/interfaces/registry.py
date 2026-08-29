@@ -158,9 +158,11 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     ),
     Abstraction(
         "EventSink", "journal d'événements append-only", 1, 2,
-        ImplStatus.STUB, "logging structuré JSON",
-        module="apex.obs.logging",
-        notes="Persistance PostgreSQL en phase 2.",
+        ImplStatus.IMPLEMENTED, "logging structuré JSON (sink additionnel, pas un remplacement)",
+        module="apex.db.event_sink",
+        notes="Persistance PostgreSQL (phase 2, apex.db.event_sink.DatabaseEventSink). "
+              "Validé contre PostgreSQL réel (tests/test_db_security.py) ; le sink JSON "
+              "structuré (apex.obs.logging) reste actif en parallèle, inchangé.",
     ),
     Abstraction(
         "MetricSink", "métriques de tout composant", 1, 1,
