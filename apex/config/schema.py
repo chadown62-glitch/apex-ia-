@@ -1,0 +1,568 @@
+"""Schéma de configuration APEX — dataclasses stdlib, validation stricte.
+
+Pourquoi pas Pydantic ici : ce module est importé par `apex doctor`, qui doit
+fonctionner **avant** l'installation des dépendances, sur un environnement
+cassé. Pydantic entre en phase 2 pour les schémas de base de données et d'API,
+où il apporte un gain réel.
+
+Décisions de Phase 0 encodées ici comme structures de données :
+
+- `ModelRef` (identité logique) et `ModelEndpoint` (lieu d'exécution) sont deux
+  types distincts — principe 7. Le routeur choisira des `ModelRef` ; le
+  placement résoudra des `ModelEndpoint`.
+- `ComputePool` existe dès maintenant avec `trust_level`, même s'il n'y a qu'un
+  pool local — principe 6.
+- Un rôle de modèle porte une **liste de candidats ordonnée**, pas un modèle
+  unique : le défaut est un candidat de référence, pas un vainqueur déclaré
+  (principe 1).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
+
+from apex.errors import ConfigError
+
+
+
+def as_bool(value: Any, *, field: str) -> bool:
+    """Coercition booléenne stricte.
+
+    La substitution d'environnement produit toujours des chaînes :
+    `${APEX_EXTERNAL_ENABLED:-false}` devient la chaîne "false", dont la valeur
+    de vérité Python est True. Sans cette fonction, la politique externe
+    s'activerait silencieusement — exactement le type de dérive que le
+    principe 3 interdit. Une valeur non reconnue est une erreur, pas un défaut.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "yes", "on", "1"}:
+            return True
+        if normalized in {"false", "no", "off", "0", ""}:
+            return False
+    raise ConfigError(f"valeur booléenne invalide : {value!r}", field=field)
+
+
+class TrustLevel(str, Enum):
+    TRUSTED = "trusted"
+    UNTRUSTED = "untrusted"
+
+
+class PoolLocation(str, Enum):
+    LOCAL = "local"
+    LAN = "lan"
+    CLOUD = "cloud"
+
+
+class Capability(str, Enum):
+    INFERENCE = "inference"
+    SANDBOX = "sandbox"
+    CPU_EVAL = "cpu_eval"
+
+
+# --------------------------------------------------------------------------
+# Modèles : identité logique vs point de service
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ModelRef:
+    """Identité **logique** et versionnée d'un modèle.
+
+    C'est l'objet que manipulent le routeur, les génomes et les empreintes
+    d'expérience. Il ne contient aucune information de localisation : le même
+    ModelRef peut être servi par Ollama en local aujourd'hui et par vLLM sur un
+    pool cloud demain, sans invalider les comparaisons.
+    """
+
+    family: str            # qwen3-coder, gemma4, gpt-oss...
+    version: str           # 30b-a3b-instruct, 12b...
+    quantization: str      # q4_k_m, fp16, external
+    capability_class: str  # coder, generalist, judge, fast, embed
+
+    @property
+    def id(self) -> str:
+        return f"{self.family}:{self.version}:{self.quantization}"
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any], *, where: str) -> ModelRef:
+        missing = [k for k in ("family", "version", "quantization", "capability_class") if k not in raw]
+        if missing:
+            raise ConfigError(f"champs manquants {missing}", field=where)
+        return cls(
+            family=str(raw["family"]),
+            version=str(raw["version"]),
+            quantization=str(raw["quantization"]),
+            capability_class=str(raw["capability_class"]),
+        )
+
+
+
+@dataclass(frozen=True)
+class MeasuredCapability:
+    """Capacité RÉELLEMENT mesurée d'un modèle sur une machine donnée.
+
+    Règle §59 de la vision : ne jamais supposer les performances documentaires
+    d'un modèle. Une valeur documentée est une hypothèse ; seule une mesure
+    engage le budget de calcul.
+
+    `environment_fingerprint` rattache la mesure à une configuration matérielle
+    précise. Un changement de GPU ou de pilote produit une empreinte différente
+    et invalide la mesure : elle redevient une hypothèse à remesurer, plutôt
+    que de contaminer silencieusement les estimations de budget.
+    """
+
+    vram_gb: float
+    tokens_per_s: float
+    measured_at: str
+    environment_fingerprint: str
+    max_context_verified: int | None = None
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any], *, where: str) -> MeasuredCapability:
+        for key in ("vram_gb", "tokens_per_s", "measured_at", "environment_fingerprint"):
+            if key not in raw:
+                raise ConfigError(f"mesure incomplète : « {key} » manquant", field=where)
+        return cls(
+            vram_gb=float(raw["vram_gb"]),
+            tokens_per_s=float(raw["tokens_per_s"]),
+            measured_at=str(raw["measured_at"]),
+            environment_fingerprint=str(raw["environment_fingerprint"]),
+            max_context_verified=(
+                int(raw["max_context_verified"]) if raw.get("max_context_verified") else None
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ModelEndpoint:
+    """Point de service **physique** d'un ModelRef sur un pool donné."""
+
+    pool_id: str
+    runtime: str             # ollama, vllm, external
+    url: str
+    served_model: str        # nom tel que connu du runtime
+    max_context: int
+    vram_gb: float | None = None          # DOCUMENTÉ — hypothèse, pas une mesure
+    measured: MeasuredCapability | None = None
+
+    @property
+    def is_measured(self) -> bool:
+        return self.measured is not None
+
+    @property
+    def effective_vram_gb(self) -> float | None:
+        """VRAM à utiliser pour planifier : la mesure prime toujours sur la doc."""
+        if self.measured is not None:
+            return self.measured.vram_gb
+        return self.vram_gb
+
+    def measurement_is_valid_for(self, environment_fingerprint: str) -> bool:
+        """Une mesure faite sur un autre matériel ne vaut pas pour celui-ci."""
+        return (
+            self.measured is not None
+            and self.measured.environment_fingerprint == environment_fingerprint
+        )
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any], *, where: str) -> ModelEndpoint:
+        for key in ("pool_id", "runtime", "url", "served_model", "max_context"):
+            if key not in raw:
+                raise ConfigError(f"champ « {key} » manquant", field=where)
+        return cls(
+            pool_id=str(raw["pool_id"]),
+            runtime=str(raw["runtime"]),
+            url=str(raw["url"]),
+            served_model=str(raw["served_model"]),
+            max_context=int(raw["max_context"]),
+            vram_gb=float(raw["vram_gb"]) if raw.get("vram_gb") is not None else None,
+            measured=(
+                MeasuredCapability.parse(raw["measured"], where=f"{where}.measured")
+                if raw.get("measured")
+                else None
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ModelRole:
+    """Rôle logique (`apex/coder-main`) et ses candidats ordonnés.
+
+    Principe 1 : `candidates[0]` est le **candidat de référence**, pas un
+    optimum établi. `selection` indique comment le choix évoluera : en phase 1
+    il est statique ; à partir de la phase 17 il est piloté par les benchmarks.
+    """
+
+    role: str
+    candidates: tuple[ModelRef, ...]
+    selection: str = "static_prior"
+    resident: bool = False
+    notes: str = ""
+
+    @property
+    def reference(self) -> ModelRef:
+        return self.candidates[0]
+
+    @classmethod
+    def parse(cls, role: str, raw: dict[str, Any]) -> ModelRole:
+        raw_candidates = raw.get("candidates") or []
+        if not raw_candidates:
+            raise ConfigError("au moins un candidat requis", field=f"models.roles.{role}")
+        selection = str(raw.get("selection", "static_prior"))
+        if selection not in {"static_prior", "benchmark_driven"}:
+            raise ConfigError(f"selection inconnue « {selection} »", field=f"models.roles.{role}")
+        return cls(
+            role=role,
+            candidates=tuple(
+                ModelRef.parse(c, where=f"models.roles.{role}.candidates[{i}]")
+                for i, c in enumerate(raw_candidates)
+            ),
+            selection=selection,
+            resident=as_bool(raw.get("resident", False), field=f"models.roles.{role}.resident"),
+            notes=str(raw.get("notes", "")),
+        )
+
+
+# --------------------------------------------------------------------------
+# Calcul
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class GpuSpec:
+    model: str
+    vram_gb: float
+
+
+@dataclass(frozen=True)
+class ComputePool:
+    """Ressource de calcul. Abstraction de premier niveau dès la phase 1."""
+
+    pool_id: str
+    location: PoolLocation
+    trust_level: TrustLevel
+    capabilities: tuple[Capability, ...]
+    gpus: tuple[GpuSpec, ...] = ()
+    cpu_cores: int = 0
+    ram_gb: float = 0.0
+    cost_per_hour: float = 0.0
+    endpoints: dict[str, str] = field(default_factory=dict)
+
+    @property
+    def total_vram_gb(self) -> float:
+        return sum(g.vram_gb for g in self.gpus)
+
+    @property
+    def may_hold_secrets(self) -> bool:
+        """Seul un pool de confiance reçoit des secrets ou le split HELDOUT."""
+        return self.trust_level is TrustLevel.TRUSTED
+
+    @classmethod
+    def parse(cls, pool_id: str, raw: dict[str, Any]) -> ComputePool:
+        where = f"compute.pools.{pool_id}"
+        try:
+            location = PoolLocation(str(raw.get("location", "local")))
+            trust = TrustLevel(str(raw.get("trust_level", "untrusted")))
+            capabilities = tuple(Capability(str(c)) for c in raw.get("capabilities", []))
+        except ValueError as exc:
+            raise ConfigError(str(exc), field=where) from exc
+        if not capabilities:
+            raise ConfigError("au moins une capability requise", field=where)
+        gpus = tuple(
+            GpuSpec(model=str(g.get("model", "unknown")), vram_gb=float(g.get("vram_gb", 0)))
+            for g in raw.get("gpus", [])
+        )
+        return cls(
+            pool_id=pool_id,
+            location=location,
+            trust_level=trust,
+            capabilities=capabilities,
+            gpus=gpus,
+            cpu_cores=int(raw.get("cpu_cores", 0)),
+            ram_gb=float(raw.get("ram_gb", 0)),
+            cost_per_hour=float(raw.get("cost_per_hour", 0)),
+            endpoints=dict(raw.get("endpoints", {})),
+        )
+
+
+# --------------------------------------------------------------------------
+# Externe, budgets, langages, chemins
+# --------------------------------------------------------------------------
+
+
+#: Contextes où un modèle externe est autorisé (principe 3). Toute autre
+#: valeur dans la configuration est une erreur, pas un avertissement.
+ALLOWED_EXTERNAL_CONTEXTS = frozenset(
+    {"interactive", "hypothesis_generation", "research", "judge_calibration"}
+)
+
+
+@dataclass(frozen=True)
+class ExternalPolicy:
+    enabled: bool
+    allowed_contexts: frozenset[str]
+    daily_budget_eur: float
+    monthly_budget_eur: float
+    circuit_breaker_failures: int
+    circuit_breaker_cooldown_s: int
+
+    def allows(self, context: str) -> bool:
+        return self.enabled and context in self.allowed_contexts
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> ExternalPolicy:
+        contexts = frozenset(str(c) for c in raw.get("allowed_contexts", []))
+        illegal = contexts - ALLOWED_EXTERNAL_CONTEXTS
+        if illegal:
+            raise ConfigError(
+                f"contextes externes interdits {sorted(illegal)} ; "
+                f"autorisés : {sorted(ALLOWED_EXTERNAL_CONTEXTS)}",
+                field="external.allowed_contexts",
+            )
+        return cls(
+            enabled=as_bool(raw.get("enabled", False), field="external.enabled"),
+            allowed_contexts=contexts,
+            daily_budget_eur=float(raw.get("daily_budget_eur", 0)),
+            monthly_budget_eur=float(raw.get("monthly_budget_eur", 0)),
+            circuit_breaker_failures=int(raw.get("circuit_breaker_failures", 3)),
+            circuit_breaker_cooldown_s=int(raw.get("circuit_breaker_cooldown_s", 900)),
+        )
+
+
+@dataclass(frozen=True)
+class ComputeBudget:
+    """Budget de calcul, exprimé en temps GPU — principe 9.
+
+    Le scheduler raisonnera en budget disponible et en valeur attendue, pas en
+    nombre fixe de tâches. Ces valeurs sont donc des enveloppes, pas des quotas
+    de tâches.
+    """
+
+    nightly_gpu_minutes: int
+    max_experiment_gpu_minutes: int
+    min_expected_value_to_start: float
+    reserve_fraction: float
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> ComputeBudget:
+        reserve = float(raw.get("reserve_fraction", 0.1))
+        if not 0.0 <= reserve < 1.0:
+            raise ConfigError("reserve_fraction doit être dans [0, 1)", field="budget.reserve_fraction")
+        return cls(
+            nightly_gpu_minutes=int(raw.get("nightly_gpu_minutes", 600)),
+            max_experiment_gpu_minutes=int(raw.get("max_experiment_gpu_minutes", 240)),
+            min_expected_value_to_start=float(raw.get("min_expected_value_to_start", 0.0)),
+            reserve_fraction=reserve,
+        )
+
+
+@dataclass(frozen=True)
+class LanguageToolchain:
+    language: str
+    wave: int
+    image: str
+    oracle_strength: str
+    separate_metrics: bool
+    commands: dict[str, str]
+
+    @classmethod
+    def parse(cls, language: str, raw: dict[str, Any]) -> LanguageToolchain:
+        where = f"languages.{language}"
+        strength = str(raw.get("oracle_strength", "unknown"))
+        if strength not in {"very_strong", "strong", "medium", "weak", "unknown"}:
+            raise ConfigError(f"oracle_strength inconnue « {strength} »", field=where)
+        image = str(raw.get("image", ""))
+        if "@sha256:" not in image and ":" not in image:
+            raise ConfigError("image de conteneur requise (tag ou digest)", field=where)
+        return cls(
+            language=language,
+            wave=int(raw.get("wave", 1)),
+            image=image,
+            oracle_strength=strength,
+            separate_metrics=as_bool(raw.get("separate_metrics", False), field=f"{where}.separate_metrics"),
+            commands=dict(raw.get("commands", {})),
+        )
+
+
+@dataclass(frozen=True)
+class Paths:
+    data_root: str
+    workspaces: str
+    artifacts: str
+    logs: str
+
+    @property
+    def all(self) -> dict[str, str]:
+        return {
+            "data_root": self.data_root,
+            "workspaces": self.workspaces,
+            "artifacts": self.artifacts,
+            "logs": self.logs,
+        }
+
+
+@dataclass(frozen=True)
+class ServiceEndpoint:
+    host: str
+    port: int
+    required: bool = True
+
+
+@dataclass(frozen=True)
+class SandboxDefaults:
+    provider: str
+    network: str
+    cpu_limit: float
+    memory_mb: int
+    pids_limit: int
+    timeout_s: int
+    read_only_rootfs: bool
+    required_isolation_for_red_team: str
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> SandboxDefaults:
+        network = str(raw.get("network", "none"))
+        if network not in {"none", "proxy"}:
+            raise ConfigError(
+                "network doit valoir « none » ou « proxy » — aucun accès direct autorisé",
+                field="sandbox.network",
+            )
+        return cls(
+            provider=str(raw.get("provider", "docker")),
+            network=network,
+            cpu_limit=float(raw.get("cpu_limit", 2.0)),
+            memory_mb=int(raw.get("memory_mb", 4096)),
+            pids_limit=int(raw.get("pids_limit", 256)),
+            timeout_s=int(raw.get("timeout_s", 900)),
+            read_only_rootfs=as_bool(raw.get("read_only_rootfs", True), field="sandbox.read_only_rootfs"),
+            required_isolation_for_red_team=str(
+                raw.get("required_isolation_for_red_team", "gvisor_or_dedicated_host")
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class ComposeMemoryPolicy:
+    """Politique de sur-allocation memoire pour docker-compose.
+
+    Le ratio compare la somme des LIMITES memoire declarees a la RAM visible
+    par l'hote. Les reservations sont exclues : elles reservent sans plafonner,
+    et ne peuvent donc pas provoquer de depassement.
+
+    Les seuils sont configurables parce qu'ils dependent de la machine : un
+    poste de 64 Go tolere une marge differente d'un portable de 8 Go.
+    """
+
+    warn_ratio: float
+    fail_ratio: float
+    expect_memory_limits: bool
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> ComposeMemoryPolicy:
+        warn = float(raw.get("warn_ratio", 0.75))
+        fail = float(raw.get("fail_ratio", 1.0))
+        if not 0.0 < warn <= fail:
+            raise ConfigError(
+                "warn_ratio doit etre positif et inferieur ou egal a fail_ratio",
+                field="gate.compose_memory",
+            )
+        return cls(
+            warn_ratio=warn,
+            fail_ratio=fail,
+            expect_memory_limits=as_bool(
+                raw.get("expect_memory_limits", True), field="gate.compose_memory.expect_memory_limits"
+            ),
+        )
+
+
+@dataclass(frozen=True)
+class GatePolicy:
+    compose_memory: ComposeMemoryPolicy
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> GatePolicy:
+        return cls(compose_memory=ComposeMemoryPolicy.parse(raw.get("compose_memory") or {}))
+
+
+@dataclass(frozen=True)
+class ApexConfig:
+    version: int
+    phase: int
+    paths: Paths
+    pools: dict[str, ComputePool]
+    model_roles: dict[str, ModelRole]
+    endpoints: tuple[ModelEndpoint, ...]
+    external: ExternalPolicy
+    budget: ComputeBudget
+    languages: dict[str, LanguageToolchain]
+    services: dict[str, ServiceEndpoint]
+    sandbox: SandboxDefaults
+    gate: GatePolicy
+
+    # -- invariants transverses -------------------------------------------
+
+    def validate(self) -> None:
+        """Invariants qui traversent plusieurs sections.
+
+        Ils encodent les principes verrouillés ; une violation est une erreur
+        de configuration, pas un avertissement.
+        """
+        if not self.pools:
+            raise ConfigError("au moins un ComputePool est requis", field="compute.pools")
+
+        # Principe 6 : le pool local doit exister et être de confiance.
+        local = [p for p in self.pools.values() if p.location is PoolLocation.LOCAL]
+        if not local:
+            raise ConfigError("un pool local est obligatoire (fallback 100 % local)", field="compute.pools")
+
+        # Les endpoints ne peuvent référencer qu'un pool déclaré.
+        for endpoint in self.endpoints:
+            if endpoint.pool_id not in self.pools:
+                raise ConfigError(
+                    f"endpoint rattaché au pool inconnu « {endpoint.pool_id} »", field="models.endpoints"
+                )
+
+        # Principe 2 : le Judge doit être d'une famille différente du coder.
+        coder = self.model_roles.get("coder_main")
+        judge = self.model_roles.get("judge")
+        if coder and judge and coder.reference.family == judge.reference.family:
+            raise ConfigError(
+                "le Judge doit appartenir à une famille de modèles différente du coder "
+                f"(les deux valent « {coder.reference.family} ») — l'indépendance du Judge "
+                "est une condition, pas une préférence",
+                field="models.roles.judge",
+            )
+
+        # Principe 3 : un rôle utilisé par la boucle autonome ne peut pas être externe.
+        for name in ("coder_main", "judge", "fast", "embed"):
+            role = self.model_roles.get(name)
+            if role and role.reference.quantization == "external":
+                raise ConfigError(
+                    f"le rôle « {name} » est utilisé par la boucle autonome et doit être local",
+                    field=f"models.roles.{name}",
+                )
+
+        # Principe 4 : aucun accès réseau direct depuis la sandbox.
+        if self.sandbox.network not in {"none", "proxy"}:
+            raise ConfigError("réseau de sandbox non autorisé", field="sandbox.network")
+
+        # Cohérence VRAM : les modèles résidents doivent tenir sur le pool local.
+        vram = max((p.total_vram_gb for p in local), default=0.0)
+        resident = [
+            e
+            for e in self.endpoints
+            for role in self.model_roles.values()
+            if role.resident and e.served_model.startswith(role.reference.family)
+        ]
+        needed = sum(e.effective_vram_gb or 0.0 for e in resident)
+        if vram and needed > vram:
+            raise ConfigError(
+                f"les modèles résidents demandent {needed:.1f} Go de VRAM pour {vram:.1f} Go disponibles",
+                field="models.roles",
+            )

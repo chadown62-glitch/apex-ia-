@@ -1,0 +1,134 @@
+# APEX — services d'infrastructure locaux (phase 1)
+#
+# Tous les volumes sont NOMMÉS et résident dans le stockage Docker de la
+# distribution WSL2 (ext4). Aucun bind-mount vers /mnt/c : ce serait la
+# principale cause de lenteur du système.
+#
+# Chaque service porte un healthcheck et des limites de ressources : principe 13,
+# appliqué dès l'infrastructure et pas seulement au code Python.
+#
+# ---------------------------------------------------------------------------
+# MÉMOIRE (correction K2)
+#
+# Les limites étaient déclarées uniquement via `deploy.resources.limits`, qui
+# n'est honoré que par Compose V2 hors Swarm : `docker-compose` V1 (Python)
+# l'ignore SILENCIEUSEMENT. Chaque service déclare donc aussi `mem_limit`,
+# honoré par les deux. Quand les deux formes sont présentes, le plafond
+# effectif est la plus basse — elles sont tenues identiques.
+#
+# Les valeurs par défaut sont dimensionnées pour la phase 2 (migrations,
+# tests d'intégration), pas pour une charge de production :
+#
+#   postgres  2 Go  shared_buffers 256 Mo + work_mem 32 Mo × connexions actives.
+#                   L'ancienne limite de 6 Go avec shared_buffers à 1 Go visait
+#                   une charge qui n'existe pas encore.
+#   redis     512 Mo  maxmemory fixé à 256 Mo : la file de tâches est petite,
+#                     et `noeviction` impose de ne pas la laisser croître.
+#   minio     1 Go  stockage d'artefacts, empreinte mémoire faible.
+#
+#   Total par défaut : 3,5 Go — tient sur une machine exposant 6,7 Go à WSL2.
+#
+# Chaque valeur est surchargeable par variable d'environnement : la machine
+# cible pourra les relever sans modifier ce fichier. GATE-21 confronte la somme
+# des limites à la RAM réellement visible et refuse une sur-allocation.
+# ---------------------------------------------------------------------------
+
+name: apex
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: apex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-apex}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}
+      POSTGRES_DB: ${POSTGRES_DB:-apex}
+      # Cohérence des données privilégiée sur la vitesse : les expériences
+      # doivent survivre à un arrêt brutal de la machine (principe 8).
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "127.0.0.1:5432:5432"     # jamais exposé hors loopback
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/init-db:/docker-entrypoint-initdb.d:ro
+    command:
+      - postgres
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - max_connections=200
+      - -c
+      - shared_buffers=${APEX_PG_SHARED_BUFFERS:-256MB}
+      - -c
+      - work_mem=32MB
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-apex} -d ${POSTGRES_DB:-apex}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    mem_limit: ${APEX_PG_MEM:-2g}
+    cpus: ${APEX_PG_CPUS:-2.0}
+    deploy:
+      resources:
+        limits: {cpus: "${APEX_PG_CPUS:-2.0}", memory: "${APEX_PG_MEM:-2g}"}
+
+  redis:
+    image: redis:7-alpine
+    container_name: apex-redis
+    restart: unless-stopped
+    # appendonly : une file de tâches perdue au redémarrage casserait la
+    # reprise d'expérience exigée par le principe 8.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "${APEX_REDIS_MAXMEMORY:-256mb}",
+              "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    mem_limit: ${APEX_REDIS_MEM:-512m}
+    cpus: ${APEX_REDIS_CPUS:-1.0}
+    deploy:
+      resources:
+        limits: {cpus: "${APEX_REDIS_CPUS:-1.0}", memory: "${APEX_REDIS_MEM:-512m}"}
+
+  minio:
+    # ArtifactStore : workspaces adressés par contenu (principe 5).
+    # API compatible S3 dès maintenant, pour qu'un worker distant puisse
+    # matérialiser un workspace sans dépendre d'un chemin local.
+    image: minio/minio:latest
+    container_name: apex-minio
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-apex}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD est obligatoire}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: ${APEX_MINIO_MEM:-1g}
+    cpus: ${APEX_MINIO_CPUS:-1.0}
+    deploy:
+      resources:
+        limits: {cpus: "${APEX_MINIO_CPUS:-1.0}", memory: "${APEX_MINIO_MEM:-1g}"}
+
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
+
+# Réseau par défaut uniquement. Le réseau de sandbox sera créé en phase 3,
+# séparément et sans route sortante — il ne doit jamais partager ce réseau.

@@ -1,0 +1,23 @@
+# Exceptions acceptées au Hardware & Environment Gate.
+#
+# Copier en gate.exceptions.yaml. Chaque dérogation exige un motif, un
+# responsable et une DATE D'EXPIRATION. Passé ce délai, l'exception cesse de
+# s'appliquer et le contrôle redevient bloquant : une dérogation permanente
+# n'est pas une dérogation, c'est un changement de spécification silencieux.
+#
+# Une exception ne modifie AUCUNE garantie de sécurité. Elle documente une
+# capacité absente et l'accepte ; elle ne l'active pas.
+
+exceptions:
+  - check_id: GATE-20
+    reason: >
+      runsc non fonctionnel sous WSL2. Plafond d'isolation : Docker durci.
+      Conséquence acceptée : le Red Team reste désactivé jusqu'à disposer d'un
+      hôte dédié. Aucune garantie n'est abaissée.
+    approved_by: rafael
+    expires_on: 2026-12-31
+
+  # - check_id: GATE-18
+  #   reason: GPU hors conteneur (Ollama sur l'hôte WSL2). Repli assumé.
+  #   approved_by: rafael
+  #   expires_on: 2026-10-31

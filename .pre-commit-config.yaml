@@ -1,0 +1,26 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: [--maxkb=512]
+      # Un secret commité dans config.yaml serait irrattrapable dans l'historique.
+      - id: detect-private-key
+
+  - repo: local
+    hooks:
+      - id: apex-tests
+        name: tests APEX (stdlib)
+        entry: python -m unittest discover -s tests -t .
+        language: system
+        pass_filenames: false

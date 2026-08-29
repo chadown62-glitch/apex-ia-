@@ -1,0 +1,16 @@
+# À placer dans %UserProfile%\.wslconfig sur l'hôte Windows, puis : wsl --shutdown
+#
+# Sans limite explicite, WSL2 réclame environ la moitié de la RAM de la machine
+# et la rend mal. Sur un poste qui fait tourner des évaluations la nuit, cela se
+# traduit par un système Windows qui rame sans cause apparente.
+
+[wsl2]
+memory=48GB
+processors=12
+swap=16GB
+localhostForwarding=true
+autoMemoryReclaim=gradual
+
+# Nécessaire si une micro-VM d'isolation renforcée est envisagée plus tard
+# (voir ADR-0005 sur le plafond d'isolation).
+nestedVirtualization=true
