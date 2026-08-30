@@ -24,16 +24,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from apex.config.schema import ApexConfig
+from apex.config.schema import ApexConfig, HardwareThresholds, PoolStatus
 from apex.version import MIN_PYTHON
 from apex.gate.compose import analyse_compose_file
 from apex.gate.model import Evidence, GateCheckResult, GateStatus
 from apex.util.probe import Probe
 
-MIN_FREE_GB = 150.0
-MIN_RAM_GB = 24.0
-MIN_VRAM_GB = 20.0
-MIN_CORES = 8
+#: Repli utilisé seulement quand aucune configuration n'est chargée
+#: (`ctx.config is None`) — la source de vérité normale est
+#: `ApexConfig.gate.hardware` (voir `apex.config.schema.HardwareThresholds`),
+#: configurable précisément parce que ces seuils décrivent un choix de
+#: déploiement, pas une limite fixe de l'architecture APEX.
+_DEFAULT_THRESHOLDS = HardwareThresholds.parse({})
+MIN_FREE_GB = _DEFAULT_THRESHOLDS.min_free_disk_gb
+MIN_RAM_GB = _DEFAULT_THRESHOLDS.min_ram_gb
+MIN_VRAM_GB = _DEFAULT_THRESHOLDS.min_vram_gb
+MIN_CORES = _DEFAULT_THRESHOLDS.min_cpu_threads
+
+
+def _thresholds(ctx: "GateContext") -> HardwareThresholds:
+    return ctx.config.gate.hardware if ctx.config else _DEFAULT_THRESHOLDS
 
 PROBE_IMAGE = "docker.io/library/alpine:3.20"
 CUDA_PROBE_IMAGE = "docker.io/nvidia/cuda:12.4.1-base-ubuntu22.04"
@@ -413,10 +423,17 @@ def gate_09_vram(ctx: GateContext) -> GateCheckResult:
 
     declared = 0.0
     if ctx.config:
-        declared = max((p.total_vram_gb for p in ctx.config.pools.values()), default=0.0)
+        # PoolStatus.TARGET (machine visée, pas encore construite) est exclu :
+        # comparer la VRAM mesurée sur CE poste à un pool délibérément déclaré
+        # pour la future machine dédiée d'APEX produirait un DEGRADED sur une
+        # non-concordance attendue, pas une vraie erreur de configuration.
+        declared = max(
+            (p.total_vram_gb for p in ctx.config.pools.values() if p.status is PoolStatus.ACTIVE),
+            default=0.0,
+        )
         facts["vram_declared_gb"] = declared
 
-    if total < MIN_VRAM_GB:
+    if total < _thresholds(ctx).min_vram_gb:
         return _degraded(
             "GATE-09", title,
             f"{total:.1f} Go de VRAM — le rôle coder_main de référence (30B MoE) ne tient pas",
@@ -516,9 +533,10 @@ def gate_11_disk(ctx: GateContext) -> GateCheckResult:
     )
 
     # Cas 2 : espace reellement insuffisant.
-    if free < MIN_FREE_GB:
+    min_free_gb = _thresholds(ctx).min_free_disk_gb
+    if free < min_free_gb:
         return _degraded(
-            "GATE-11", title, f"{origin} — {MIN_FREE_GB:.0f} Go recommandes",
+            "GATE-11", title, f"{origin} — {min_free_gb:.0f} Go recommandes",
             remediation=(
                 "Poids de modeles (~20 Go par modele Q4), images de conteneurs et journaux "
                 "d'evaluation cumulent vite. Le disque virtuel WSL2 (.vhdx) croit sans se "
@@ -544,7 +562,7 @@ def gate_12_ram(ctx: GateContext) -> GateCheckResult:
             available = int(re.findall(r"\d+", line)[0]) / (1024 * 1024)
     facts = {"ram_total_gb": round(total, 1) if total else None,
              "ram_available_gb": round(available, 1) if available else None}
-    if total and total < MIN_RAM_GB:
+    if total and total < _thresholds(ctx).min_ram_gb:
         return _degraded(
             "GATE-12", title, f"{total:.0f} Go de RAM visibles depuis WSL2",
             remediation=(
@@ -567,9 +585,10 @@ def gate_13_cpu(ctx: GateContext) -> GateCheckResult:
     if match:
         model = match.group(1).strip()
     facts = {"cpu_model": model or None, "cpu_threads": threads or None}
-    if threads and threads < MIN_CORES:
+    min_cores = _thresholds(ctx).min_cpu_threads
+    if threads and threads < min_cores:
         return _degraded(
-            "GATE-13", title, f"{threads} threads — {MIN_CORES} recommandés",
+            "GATE-13", title, f"{threads} threads — {min_cores} recommandés",
             remediation=(
                 "Compilation, tests, lint et mutation testing tournent sur CPU en parallèle du "
                 "GPU. Un CPU étroit sérialise l'évaluation derrière la génération et réduit le "

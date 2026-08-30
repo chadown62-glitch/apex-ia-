@@ -1,0 +1,124 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1400px;
+}
+
+.page__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.page__subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.kv-table th,
+.kv-table td {
+  text-align: left;
+  padding: 9px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.kv-table th {
+  font-size: 11px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+}
+
+.kv-table tr:last-child td {
+  border-bottom: none;
+}
+
+.kv-table td.mono {
+  color: var(--text-muted);
+}
+
+.planned-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  padding: 80px 20px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.planned-page__icon {
+  font-size: 40px;
+  opacity: 0.6;
+}
+
+.planned-page__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.planned-page__desc {
+  margin: 0;
+  max-width: 480px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.planned-page__meta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* Boutons d'action désactivés par défaut : voir docstring
+   AgentDetailPage — aucune action sensible n'est déclenchable tant que le
+   backend ne l'exécute pas réellement sous PolicyEngine. */
+.action-button {
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: not-allowed;
+  opacity: 0.55;
+}

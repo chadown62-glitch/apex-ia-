@@ -60,6 +60,29 @@ class PoolLocation(str, Enum):
     CLOUD = "cloud"
 
 
+class PoolStatus(str, Enum):
+    """Distingue ce qui tourne réellement de ce qui est visé.
+
+    Corrige un risque architectural précis : sans ce champ, un `ComputePool`
+    décrivant la future machine dédiée d'APEX (bien plus puissante que le
+    poste de développement actuel) est indiscernable d'un pool mal déclaré,
+    et déclenche les mêmes avertissements « déclaré ≠ mesuré » (gate_09_vram,
+    doctor.gpu.config_match) qu'une véritable erreur de configuration.
+
+    - ACTIVE : pool réellement disponible aujourd'hui — mesuré, comparé au
+      matériel réel, compte pour le fallback local obligatoire (principe 6).
+    - TARGET : machine visée mais pas encore construite/équipée. Déclarable
+      dès maintenant (l'architecture n'attend pas le matériel pour exister),
+      mais explicitement exclue de toute comparaison déclaré-vs-mesuré et du
+      calcul de fallback local : le hardware de développement actuel ne doit
+      jamais devenir un plafond architectural, et une cible ne doit jamais
+      se faire passer pour une disponibilité actuelle.
+    """
+
+    ACTIVE = "active"
+    TARGET = "target"
+
+
 class Capability(str, Enum):
     INFERENCE = "inference"
     SANDBOX = "sandbox"
@@ -253,6 +276,7 @@ class ComputePool:
     ram_gb: float = 0.0
     cost_per_hour: float = 0.0
     endpoints: dict[str, str] = field(default_factory=dict)
+    status: PoolStatus = PoolStatus.ACTIVE
 
     @property
     def total_vram_gb(self) -> float:
@@ -270,6 +294,7 @@ class ComputePool:
             location = PoolLocation(str(raw.get("location", "local")))
             trust = TrustLevel(str(raw.get("trust_level", "untrusted")))
             capabilities = tuple(Capability(str(c)) for c in raw.get("capabilities", []))
+            status = PoolStatus(str(raw.get("status", "active")))
         except ValueError as exc:
             raise ConfigError(str(exc), field=where) from exc
         if not capabilities:
@@ -288,6 +313,7 @@ class ComputePool:
             ram_gb=float(raw.get("ram_gb", 0)),
             cost_per_hour=float(raw.get("cost_per_hour", 0)),
             endpoints=dict(raw.get("endpoints", {})),
+            status=status,
         )
 
 
@@ -482,12 +508,78 @@ class ComposeMemoryPolicy:
 
 
 @dataclass(frozen=True)
+class HardwareThresholds:
+    """Seuils recommandés pour CE déploiement — pas une limite universelle
+    d'APEX.
+
+    Corrige un risque architectural précis : ces valeurs vivaient comme des
+    constantes de module dans `apex/gate/checks.py` (MIN_FREE_GB, MIN_RAM_GB,
+    MIN_VRAM_GB, MIN_CORES) et un doublon partiellement divergent dans
+    `apex/doctor/checks/platform.py` (MIN_FREE_GB=80 au lieu de 150, un « 20 »
+    non nommé au lieu de MIN_VRAM_GB). Un poste de développement plus modeste
+    que ces seuils déclenchait DEGRADED/WARN comme si le seuil était une
+    propriété fixe de l'architecture, plutôt qu'un choix de déploiement
+    reconfigurable — même raisonnement que `ComposeMemoryPolicy` ci-dessus.
+
+    Les valeurs par défaut sont IDENTIQUES à celles qui existaient avant ce
+    correctif (150/24/20/8) : aucune limite existante n'est modifiée, elle
+    devient seulement configurable.
+    """
+
+    min_free_disk_gb: float
+    min_ram_gb: float
+    min_vram_gb: float
+    min_cpu_threads: int
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> HardwareThresholds:
+        return cls(
+            min_free_disk_gb=float(raw.get("min_free_disk_gb", 150.0)),
+            min_ram_gb=float(raw.get("min_ram_gb", 24.0)),
+            min_vram_gb=float(raw.get("min_vram_gb", 20.0)),
+            min_cpu_threads=int(raw.get("min_cpu_threads", 8)),
+        )
+
+
+@dataclass(frozen=True)
 class GatePolicy:
     compose_memory: ComposeMemoryPolicy
+    hardware: HardwareThresholds
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> GatePolicy:
-        return cls(compose_memory=ComposeMemoryPolicy.parse(raw.get("compose_memory") or {}))
+        return cls(
+            compose_memory=ComposeMemoryPolicy.parse(raw.get("compose_memory") or {}),
+            hardware=HardwareThresholds.parse(raw.get("hardware") or {}),
+        )
+
+
+@dataclass(frozen=True)
+class SchedulerPolicy:
+    """Politique de déploiement du Scheduler (étape 8) — PAS une propriété
+    architecturale d'APEX, même discipline que `HardwareThresholds` : un
+    choix reconfigurable, jamais dérivé du matériel de développement actuel.
+
+    `max_concurrent_missions` borne le nombre d'exécutions sandboxées
+    réellement concurrentes qu'UNE instance de `SchedulerService` accepte de
+    lancer (voir `apex.scheduler.service`). Ce n'est PAS un plafond partagé
+    entre plusieurs instances/processus Scheduler — chacune applique sa
+    propre borne locale ; seule l'absence de double-lancement d'une même
+    mission est garantie globalement (réclamation atomique en base), pas
+    l'addition exacte des capacités entre instances. Documenté honnêtement,
+    pas résolu ici : voir le rapport de l'étape 8.
+    """
+
+    max_concurrent_missions: int
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> SchedulerPolicy:
+        value = int(raw.get("max_concurrent_missions", 2))
+        if value < 1:
+            raise ConfigError(
+                "max_concurrent_missions doit être >= 1", field="scheduler.max_concurrent_missions"
+            )
+        return cls(max_concurrent_missions=value)
 
 
 @dataclass(frozen=True)
@@ -504,6 +596,7 @@ class ApexConfig:
     services: dict[str, ServiceEndpoint]
     sandbox: SandboxDefaults
     gate: GatePolicy
+    scheduler: SchedulerPolicy
 
     # -- invariants transverses -------------------------------------------
 
@@ -517,9 +610,19 @@ class ApexConfig:
             raise ConfigError("au moins un ComputePool est requis", field="compute.pools")
 
         # Principe 6 : le pool local doit exister et être de confiance.
-        local = [p for p in self.pools.values() if p.location is PoolLocation.LOCAL]
+        # PoolStatus.TARGET (machine visée, pas encore construite) ne compte
+        # jamais pour ce fallback : une déclaration de matériel futur ne doit
+        # jamais se faire passer pour une disponibilité réelle aujourd'hui.
+        local = [
+            p for p in self.pools.values()
+            if p.location is PoolLocation.LOCAL and p.status is PoolStatus.ACTIVE
+        ]
         if not local:
-            raise ConfigError("un pool local est obligatoire (fallback 100 % local)", field="compute.pools")
+            raise ConfigError(
+                "un pool local ACTIVE est obligatoire (fallback 100 % local) — "
+                "un pool status=target ne compte pas comme disponibilité réelle",
+                field="compute.pools",
+            )
 
         # Les endpoints ne peuvent référencer qu'un pool déclaré.
         for endpoint in self.endpoints:

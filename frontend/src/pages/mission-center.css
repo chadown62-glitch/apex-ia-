@@ -1,0 +1,120 @@
+.mission-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mission-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.mission-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mission-form__field select,
+.mission-form__field input,
+.mission-form__field textarea {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.mission-form__field--checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.mission-form__hint {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.mission-selected-agent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  font-size: 13px;
+}
+
+.action-button--live {
+  cursor: pointer;
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.action-button--live:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}
+
+.mission-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mission-detail__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mission-detail__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mission-row:hover {
+  background: var(--bg-hover);
+}
+
+.mission-state {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.mission-state--draft,
+.mission-state--queued {
+  color: var(--status-unknown);
+  background: var(--status-unknown-bg);
+}
+.mission-state--running,
+.mission-state--review {
+  color: var(--accent);
+  background: rgba(77, 163, 255, 0.14);
+}
+.mission-state--completed {
+  color: var(--status-real);
+  background: var(--status-real-bg);
+}
+.mission-state--failed {
+  color: var(--status-fail);
+  background: var(--status-fail-bg);
+}
+.mission-state--cancelled {
+  color: var(--text-faint);
+  background: var(--bg-hover);
+}

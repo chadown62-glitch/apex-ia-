@@ -15,7 +15,8 @@ dependencies = [
 # Ajoutées phase par phase, quand leur sous-système existe réellement.
 db  = ["sqlalchemy>=2.0", "alembic>=1.13", "psycopg[binary]>=3.2", "pgvector>=0.3"]  # phase 2
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9"]                 # phase 10
-dev = ["pytest>=8.3", "pytest-cov>=5.0", "ruff>=0.7", "mypy>=1.13", "hypothesis>=6.115"]
+dev = ["pytest>=8.3", "pytest-cov>=5.0", "ruff>=0.7", "mypy>=1.13", "hypothesis>=6.115",
+       "httpx>=0.27"]  # requis par fastapi.testclient.TestClient
 
 [project.scripts]
 apex = "apex.cli.main:main"

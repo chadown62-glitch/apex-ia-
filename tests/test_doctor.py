@@ -150,6 +150,41 @@ class TestGpuChecks(unittest.TestCase):
         self.assertEqual(outcome.facts["declared_gb"], 24.0)
 
 
+class TestHardwareIsNotAnArchitecturalCeiling(unittest.TestCase):
+    """Le poste utilisé pour développer APEX n'est ni la machine cible ni la
+    machine de production — ses limites ne doivent jamais devenir celles
+    d'APEX. Voir aussi tests/test_gate.py::TestHardwareThresholdsAreNotACeiling
+    et tests/test_config.py::TestCapabilityAwareArchitecture."""
+
+    def test_disk_and_vram_thresholds_are_configurable_not_hardcoded(self) -> None:
+        document = base_config()
+        document["gate"] = {"hardware": {"min_free_disk_gb": 1, "min_vram_gb": 0}}
+        probe = healthy_probe()
+        probe.free_gb["/home/apex/data"] = 5.0  # bien sous l'ancien défaut (150), au-dessus du choisi (1)
+        ctx = CheckContext(probe=probe, config=parse_config(document), timeout_s=1.0)
+        self.assertIs(platform.check_disk_space(ctx).severity, Severity.PASS)
+
+    def test_target_pool_never_counted_in_declared_vram(self) -> None:
+        """Un pool status=target bien plus gros que le GPU mesuré ne doit
+        jamais faire croire à une non-concordance de configuration."""
+        document = base_config()
+        document["compute"]["pools"]["future-machine"] = {
+            "location": "local", "trust_level": "trusted", "status": "target",
+            "capabilities": ["inference"], "gpus": [{"model": "TBD", "vram_gb": 300}],
+        }
+        ctx = CheckContext(probe=healthy_probe(), config=parse_config(document), timeout_s=1.0)
+        outcome = platform.check_gpu_matches_config(ctx)
+        self.assertIs(outcome.severity, Severity.PASS)
+        self.assertEqual(outcome.facts["declared_gb"], 24.0)
+
+    def test_active_pool_mismatch_still_warns(self) -> None:
+        """La correction n'a pas désactivé le contrôle pour un vrai pool ACTIVE."""
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 300
+        ctx = CheckContext(probe=healthy_probe(), config=parse_config(document), timeout_s=1.0)
+        self.assertIs(platform.check_gpu_matches_config(ctx).severity, Severity.WARN)
+
+
 class TestServiceChecks(unittest.TestCase):
     def test_required_service_down_is_blocking(self) -> None:
         probe = healthy_probe()

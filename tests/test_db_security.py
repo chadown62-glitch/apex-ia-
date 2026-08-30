@@ -161,6 +161,161 @@ class TestReadonlyRoleIsReadOnly(unittest.TestCase):
 
 
 @unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
+class TestMissionRoleIsWriteRestricted(unittest.TestCase):
+    """apex_core est le seul rôle qui écrit `missions` — aucun rôle de clone
+    (apex_agent/apex_eval/apex_audit) n'y a accès : cohérent avec
+    PolicyEngine (aucun Subject de clone n'a CREATE/CANCEL/VALIDATE/
+    REJECT_MISSION dans son allow-list)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def test_apex_core_can_insert_and_update_missions(self) -> None:
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO missions (id, title, description, specialty, objective, priority, "
+                "state, created_by, created_at) VALUES "
+                "('m1', 't', 'd', 'research', 'o', 'normal', 'draft', 'human', now())"
+            )
+            cur.execute("UPDATE missions SET state = 'queued' WHERE id = 'm1'")
+
+    def test_apex_core_cannot_delete_missions(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM missions")
+
+    def test_apex_agent_cannot_write_missions(self) -> None:
+        """Un clone (rôle apex_agent) n'a aucun accès à `missions` — pas même en lecture."""
+        import psycopg
+
+        with support.role_connection("apex_agent") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO missions (id, title, description, specialty, objective, "
+                        "priority, state, created_by, created_at) VALUES "
+                        "('rogue', 't', 'd', 'research', 'o', 'normal', 'draft', 'research', now())"
+                    )
+
+    def test_apex_readonly_can_select_but_not_insert_missions(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_readonly") as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM missions")
+        with support.role_connection("apex_readonly") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO missions (id, title, description, specialty, objective, "
+                        "priority, state, created_by, created_at) VALUES "
+                        "('x', 't', 'd', 'research', 'o', 'normal', 'draft', 'human', now())"
+                    )
+
+
+@unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
+class TestMemoryRoleIsWriteRestricted(unittest.TestCase):
+    """apex_core est le seul rôle qui écrit `memory_records`/`memory_relations`
+    — aucun rôle de clone n'y a accès direct, cohérent avec PolicyEngine
+    (un clone n'écrit jamais sa propre ligne, seul MemoryService le fait
+    pour son compte). DELETE/TRUNCATE refusés même à apex_core : aucune
+    ligne mémoire n'est jamais supprimée, seule une révision (nouvelle
+    ligne) ou une promotion de visibilité (UPDATE ciblé) existe."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def test_apex_core_can_insert_and_update_memory_records(self) -> None:
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO memory_records (id, kind, content, source, created_by, "
+                "confidence, verification_status, visibility) VALUES "
+                "('mem1', 'semantic', 'x', 'https://example.com', 'research', 0.5, "
+                "'uncertain', 'own')"
+            )
+            cur.execute("UPDATE memory_records SET visibility = 'shared' WHERE id = 'mem1'")
+
+    def test_apex_core_cannot_delete_memory_records(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM memory_records")
+
+    def test_apex_core_can_insert_memory_relations_but_not_delete(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO memory_records (id, kind, content, source, created_by, "
+                "confidence, verification_status, visibility) VALUES "
+                "('mem2', 'semantic', 'y', 'https://example.com', 'research', 0.5, "
+                "'uncertain', 'own')"
+            )
+            cur.execute(
+                "INSERT INTO memory_records (id, kind, content, source, created_by, "
+                "confidence, verification_status, visibility) VALUES "
+                "('mem3', 'semantic', 'z', 'https://example.com', 'research', 0.5, "
+                "'uncertain', 'own')"
+            )
+            cur.execute(
+                "INSERT INTO memory_relations (id, source_id, target_id, relation, "
+                "provenance, created_by) VALUES "
+                "('rel1', 'mem2', 'mem3', 'contradicts', 'cross-check', 'research')"
+            )
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM memory_relations")
+
+    def test_apex_agent_cannot_write_memory_records(self) -> None:
+        """Un clone (rôle apex_agent) n'a aucun accès à `memory_records` —
+        pas même en lecture : seul MemoryService écrit pour son compte."""
+        import psycopg
+
+        with support.role_connection("apex_agent") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO memory_records (id, kind, content, source, created_by, "
+                        "confidence, verification_status, visibility) VALUES "
+                        "('rogue', 'semantic', 'x', 'x', 'research', 0.5, 'uncertain', 'own')"
+                    )
+
+    def test_apex_readonly_can_select_but_not_insert_memory_records(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_readonly") as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM memory_records")
+            cur.execute("SELECT count(*) FROM memory_relations")
+        with support.role_connection("apex_readonly") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO memory_records (id, kind, content, source, created_by, "
+                        "confidence, verification_status, visibility) VALUES "
+                        "('x', 'semantic', 'x', 'x', 'human', 0.5, 'uncertain', 'own')"
+                    )
+
+
+@unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
 class TestHeldoutSplitSeparation(unittest.TestCase):
     """Critère de validation §5.3 du brief : le rôle worker ne doit pas lire
     le split HELDOUT.

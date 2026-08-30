@@ -36,10 +36,15 @@ def sqlite_session_factory():
 
 class TestSchema(unittest.TestCase):
     def test_all_tables_are_created(self) -> None:
+        """Inclusion, pas égalité stricte : Base.metadata grandit légitimement
+        à chaque nouvelle abstraction persistée (ex. agents, AgentRuntime) —
+        figer un compte exact casserait ce test à chaque extension honnête du
+        schéma plutôt que de vérifier ce qu'il est censé vérifier : que les
+        tables fondamentales de la phase 2 sont toujours là."""
         engine = create_engine("sqlite:///:memory:", future=True)
         Base.metadata.create_all(engine)
         tables = set(inspect(engine).get_table_names())
-        self.assertEqual({"compute_pools", "events", "audit_log"}, tables)
+        self.assertTrue({"compute_pools", "events", "audit_log"} <= tables)
 
 
 class TestComputePoolRepository(unittest.TestCase):

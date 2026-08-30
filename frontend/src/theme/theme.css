@@ -1,0 +1,90 @@
+/* APEX Control Center — jetons de design. Dark-first (demande explicite) :
+   la palette sombre est la valeur par défaut de :root ; le mode clair est
+   l'exception, activée par [data-theme="light"]. */
+
+:root {
+  --bg: #0a0d12;
+  --bg-elevated: #10141b;
+  --bg-panel: #141920;
+  --bg-hover: #1b222c;
+  --border: #232b36;
+  --border-strong: #2f3946;
+
+  --text: #e6ebf2;
+  --text-muted: #8b96a5;
+  --text-faint: #5a6577;
+
+  --accent: #4da3ff;
+  --accent-dim: #2c6bb0;
+
+  --status-real: #35d07f;
+  --status-real-bg: rgba(53, 208, 127, 0.12);
+  --status-simulated: #f2b84b;
+  --status-simulated-bg: rgba(242, 184, 75, 0.12);
+  --status-unknown: #8b96a5;
+  --status-unknown-bg: rgba(139, 150, 165, 0.12);
+  --status-planned: #a37cf0;
+  --status-planned-bg: rgba(163, 124, 240, 0.12);
+  --status-fail: #f2554b;
+  --status-fail-bg: rgba(242, 85, 75, 0.12);
+  --status-degraded: #f2b84b;
+  --status-degraded-bg: rgba(242, 184, 75, 0.12);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --sidebar-width: 248px;
+  --topbar-height: 56px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+}
+
+:root[data-theme="light"] {
+  --bg: #f5f7fa;
+  --bg-elevated: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-hover: #eef1f5;
+  --border: #dde3ea;
+  --border-strong: #c7d0dc;
+
+  --text: #171b21;
+  --text-muted: #5a6577;
+  --text-faint: #8b96a5;
+
+  --accent: #1c6fd6;
+  --accent-dim: #4da3ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+code,
+.mono {
+  font-family: var(--font-mono);
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}

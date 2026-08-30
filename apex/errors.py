@@ -81,6 +81,29 @@ class PolicyDenied(ApexError):
 
     exit_code = 6
 
+    def __init__(self, subject: str, action: str, *, reason: str = "") -> None:
+        self.subject = subject
+        self.action = action
+        self.reason = reason
+        msg = f"action refusée : « {action} » pour « {subject} »"
+        if reason:
+            msg += f" — {reason}"
+        super().__init__(msg)
+
+
+class ArtifactIntegrityError(ApexError):
+    """Le contenu relu depuis un `ArtifactStoreProvider` ne correspond plus
+    au hash qui l'identifie — l'identité par hash (principe 5) n'est plus
+    vérifiée. Ne jamais rattraper cette exception pour renvoyer un contenu
+    non vérifié à l'appelant."""
+
+    exit_code = 8
+
+    def __init__(self, expected: str, *, actual: str) -> None:
+        self.expected = expected
+        self.actual = actual
+        super().__init__(f"intégrité rompue : attendu « {expected} », relu « {actual} »")
+
 
 class IsolationUnavailable(ApexError):
     """Le niveau d'isolation exigé n'est pas disponible sur cet hôte.

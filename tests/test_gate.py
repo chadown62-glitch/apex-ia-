@@ -21,6 +21,7 @@ from apex.gate.checks import (
     gate_09_vram,
     gate_01_windows_host,
     gate_05_python,
+    gate_12_ram,
     gate_14_virtualization,
     gate_17_container_exec,
     gate_18_gpu_in_container,
@@ -531,3 +532,59 @@ class TestPythonVersionSupport(unittest.TestCase):
         probe = healthy_probe()
         probe.platform = {**probe.platform, "python": "3.11.9"}
         self.assertIs(gate_05_python(ctx(probe)).status, GateStatus.FAIL)
+
+
+class TestHardwareThresholdsAreNotACeiling(unittest.TestCase):
+    """Le hardware de la machine qui exécute le Gate est une variable
+    d'environnement, jamais une limite architecturale codée en dur. Ces
+    seuils décrivent un choix de déploiement (poste de dev modeste, machine
+    cible future) ; ils ne doivent jamais empêcher APEX de fonctionner
+    ailleurs, ni prétendre qu'une machine cible est disponible aujourd'hui."""
+
+    def test_gate_and_doctor_share_one_source_of_truth(self) -> None:
+        """Avant ce correctif : MIN_FREE_GB valait 150 dans le Gate et 80
+        (divergent) dans le doctor — deux seuils pour la même question."""
+        from apex.doctor.checks.platform import _DEFAULT_THRESHOLDS as doctor_defaults
+        from apex.gate.checks import _DEFAULT_THRESHOLDS as gate_defaults
+
+        self.assertEqual(gate_defaults, doctor_defaults)
+
+    def test_low_ram_threshold_from_config_makes_a_modest_machine_pass(self) -> None:
+        """Un poste de développement avec moins de 24 Go de RAM ne doit pas
+        être signalé DEGRADED si le déploiement a explicitement choisi un
+        seuil plus bas — la valeur par défaut n'est pas un plafond d'APEX."""
+        document = base_config()
+        document["gate"] = {"hardware": {"min_ram_gb": 2}}
+        probe = healthy_probe()
+        probe.files["/proc/meminfo"] = "MemTotal:        4000000 kB\nMemAvailable:     2000000 kB\n"
+        outcome = gate_12_ram(GateContext(probe=probe, config=parse_config(document), timeout_s=1.0))
+        self.assertIs(outcome.status, GateStatus.PASS)
+
+    def test_default_threshold_still_flags_the_same_modest_machine(self) -> None:
+        """Sans reconfiguration explicite, le comportement par défaut est
+        inchangé (aucune limite existante modifiée en silence)."""
+        probe = healthy_probe()
+        probe.files["/proc/meminfo"] = "MemTotal:        4000000 kB\nMemAvailable:     2000000 kB\n"
+        outcome = gate_12_ram(ctx(probe))
+        self.assertIs(outcome.status, GateStatus.DEGRADED)
+
+    def test_target_pool_vram_mismatch_is_not_flagged(self) -> None:
+        """Un pool status=target bien plus gros que le matériel mesuré ne
+        doit jamais déclencher le DEGRADED « déclaré vs mesuré » : c'est
+        l'écart attendu entre le poste de dev et la machine cible future."""
+        document = base_config()
+        document["compute"]["pools"]["future-machine"] = {
+            "location": "local", "trust_level": "trusted", "status": "target",
+            "capabilities": ["inference"], "gpus": [{"model": "TBD", "vram_gb": 200}],
+        }
+        outcome = gate_09_vram(GateContext(probe=healthy_probe(), config=parse_config(document), timeout_s=1.0))
+        self.assertIs(outcome.status, GateStatus.PASS)
+        self.assertEqual(outcome.facts["vram_declared_gb"], 24.0)  # ne compte que local-gpu (ACTIVE)
+
+    def test_active_pool_vram_mismatch_is_still_flagged(self) -> None:
+        """La correction n'a pas désactivé le contrôle : un vrai pool ACTIVE
+        mal déclaré doit toujours produire un DEGRADED."""
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 200
+        outcome = gate_09_vram(GateContext(probe=healthy_probe(), config=parse_config(document), timeout_s=1.0))
+        self.assertIs(outcome.status, GateStatus.DEGRADED)

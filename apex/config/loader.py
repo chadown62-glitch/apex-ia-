@@ -27,6 +27,7 @@ from apex.config.schema import (
     ModelRole,
     Paths,
     SandboxDefaults,
+    SchedulerPolicy,
     ServiceEndpoint,
 )
 from apex.errors import ConfigError, DependencyMissing
@@ -120,6 +121,7 @@ def parse_config(raw: dict[str, Any]) -> ApexConfig:
         services=services,
         sandbox=SandboxDefaults.parse(raw.get("sandbox") or {}),
         gate=GatePolicy.parse(raw.get("gate") or {}),
+        scheduler=SchedulerPolicy.parse(raw.get("scheduler") or {}),
     )
     config.validate()
     return config

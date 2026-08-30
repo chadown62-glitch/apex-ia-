@@ -17,3 +17,4 @@ indéfiniment les mêmes débats.
 | 0008 | Tests en unittest plutôt qu'en pytest | Acceptée |
 | 0009 | Décodage des sorties de processus | Acceptée |
 | 0010 | Persistance PostgreSQL : SQLAlchemy 2.0, Alembic, rôles créés par migration | Acceptée |
+| 0011 | AgentRuntime et CodeIntelligence comme abstractions PLANNED | Acceptée |

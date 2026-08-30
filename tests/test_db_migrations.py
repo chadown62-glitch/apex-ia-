@@ -47,10 +47,56 @@ class TestMigrationUpAndDown(unittest.TestCase):
         support.run_upgrade()
         engine = _engine()
         tables = set(inspect(engine).get_table_names())
-        self.assertTrue({"compute_pools", "events", "audit_log", "alembic_version"} <= tables)
+        self.assertTrue(
+            {"compute_pools", "events", "audit_log", "agents", "missions", "alembic_version"} <= tables
+        )
         partitions = {t for t in tables if t.startswith("events_")}
         self.assertIn("events_default", partitions)
         self.assertGreaterEqual(len(partitions), 3, "au moins 2 mois à venir + défaut")
+
+    def test_missions_table_grants_match_policy_engine(self) -> None:
+        """Seuls apex_core (écriture) et apex_readonly (lecture) touchent
+        `missions` — cohérent avec PolicyEngine : CREATE/CANCEL/VALIDATE/
+        REJECT_MISSION ne sont accordées qu'à HUMAN/CORE, jamais à un clone."""
+        support.run_upgrade()
+        engine = _engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
+                    "WHERE table_name = 'missions' AND grantee != 'apex' ORDER BY grantee, privilege_type"
+                )
+            ).all()
+        by_grantee: dict[str, set[str]] = {}
+        for grantee, privilege in rows:
+            by_grantee.setdefault(grantee, set()).add(privilege)
+        self.assertEqual(by_grantee.get("apex_core"), {"SELECT", "INSERT", "UPDATE"})
+        self.assertEqual(by_grantee.get("apex_readonly"), {"SELECT"})
+        self.assertNotIn("apex_agent", by_grantee)
+        self.assertNotIn("apex_eval", by_grantee)
+        self.assertNotIn("apex_audit", by_grantee)
+
+    def test_agents_table_grants_match_policy_engine(self) -> None:
+        """Seuls apex_core (écriture) et apex_readonly (lecture) touchent
+        `agents` — cohérent avec PolicyEngine : SPAWN_CLONE/TERMINATE_CLONE
+        ne sont accordées qu'à CORE/HUMAN, jamais à un clone."""
+        support.run_upgrade()
+        engine = _engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
+                    "WHERE table_name = 'agents' AND grantee != 'apex' ORDER BY grantee, privilege_type"
+                )
+            ).all()
+        by_grantee: dict[str, set[str]] = {}
+        for grantee, privilege in rows:
+            by_grantee.setdefault(grantee, set()).add(privilege)
+        self.assertEqual(by_grantee.get("apex_core"), {"SELECT", "INSERT", "UPDATE"})
+        self.assertEqual(by_grantee.get("apex_readonly"), {"SELECT"})
+        self.assertNotIn("apex_agent", by_grantee)
+        self.assertNotIn("apex_eval", by_grantee)
+        self.assertNotIn("apex_audit", by_grantee)
 
     def test_upgrade_creates_all_application_roles(self) -> None:
         support.run_upgrade()

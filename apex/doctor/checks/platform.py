@@ -9,13 +9,24 @@ seulement ce qui est *installé*.
 
 from __future__ import annotations
 
+from apex.config.schema import HardwareThresholds, PoolStatus
 from apex.doctor.check import CheckContext, CheckResult, Severity, result
 
 CATEGORY_FS = "stockage"
 CATEGORY_DOCKER = "conteneurs"
 CATEGORY_GPU = "gpu"
 
-MIN_FREE_GB = 80.0
+#: Repli seulement quand aucune configuration n'est chargée — sinon la
+#: source de vérité est `ctx.config.gate.hardware` (voir
+#: `apex.config.schema.HardwareThresholds`). Avant ce correctif, ce module
+#: avait sa PROPRE constante MIN_FREE_GB=80, divergente de celle du Gate
+#: (150) : deux sources de vérité pour le même seuil. `apex/gate/checks.py`
+#: a le même repli, garanti identique puisque tiré du même parse().
+_DEFAULT_THRESHOLDS = HardwareThresholds.parse({})
+
+
+def _thresholds(ctx: CheckContext) -> HardwareThresholds:
+    return ctx.config.gate.hardware if ctx.config else _DEFAULT_THRESHOLDS
 
 
 def check_paths_on_ext4(ctx: CheckContext) -> CheckResult:
@@ -50,10 +61,11 @@ def check_disk_space(ctx: CheckContext) -> CheckResult:
     free = ctx.probe.disk_free_gb(target)
     if free is None:
         return result("fs.space", CATEGORY_FS, Severity.WARN, f"espace libre indéterminé sur {target}")
-    if free < MIN_FREE_GB:
+    min_free_gb = _thresholds(ctx).min_free_disk_gb
+    if free < min_free_gb:
         return result(
             "fs.space", CATEGORY_FS, Severity.WARN,
-            f"{free:.0f} Go libres sur {target} — {MIN_FREE_GB:.0f} Go recommandés",
+            f"{free:.0f} Go libres sur {target} — {min_free_gb:.0f} Go recommandés",
             remediation=(
                 "Poids des modèles, images de conteneurs et journaux d'évaluation cumulent vite. "
                 "Rappel : le disque virtuel WSL2 (.vhdx) croît sans se réduire seul."
@@ -133,7 +145,8 @@ def check_gpu(ctx: CheckContext) -> CheckResult:
     if ctx.probe.which("nvidia-smi") is None:
         return result(
             "gpu.present", CATEGORY_GPU, Severity.WARN,
-            "nvidia-smi introuvable — APEX fonctionnera en CPU seul (mode autonome non viable)",
+            "nvidia-smi introuvable — mode autonome non viable SUR CETTE MACHINE "
+            "(pas une limite d'APEX : dépend du matériel réellement connecté)",
             remediation="Installer le pilote NVIDIA côté Windows ; WSL2 expose CUDA via /usr/lib/wsl/lib.",
         )
     out = ctx.probe.run(
@@ -154,12 +167,13 @@ def check_gpu(ctx: CheckContext) -> CheckResult:
         return result("gpu.present", CATEGORY_GPU, Severity.WARN, "aucun GPU listé")
 
     total = sum(g["vram_gb"] for g in gpus)
-    severity = Severity.PASS if total >= 20 else Severity.WARN
+    min_vram_gb = _thresholds(ctx).min_vram_gb
+    severity = Severity.PASS if total >= min_vram_gb else Severity.WARN
     message = f"{len(gpus)} GPU, {total:.0f} Go de VRAM"
     remediation = ""
-    if total < 20:
+    if total < min_vram_gb:
         remediation = (
-            "Sous 20 Go, le rôle coder-main de référence (30B MoE) ne tient pas. "
+            f"Sous {min_vram_gb:.0f} Go, le rôle coder-main de référence (30B MoE) ne tient pas. "
             "Revoir le catalogue de modèles dans config.yaml."
         )
     return result("gpu.present", CATEGORY_GPU, severity, message,
@@ -170,7 +184,12 @@ def check_gpu_matches_config(ctx: CheckContext) -> CheckResult:
     """La VRAM déclarée dans les ComputePool doit refléter le matériel réel."""
     if ctx.config is None:
         return result("gpu.config_match", CATEGORY_GPU, Severity.SKIP, "configuration non chargée")
-    declared = max((p.total_vram_gb for p in ctx.config.pools.values()), default=0.0)
+    # PoolStatus.TARGET exclu — voir le commentaire équivalent dans
+    # apex/gate/checks.py::gate_09_vram, même raisonnement.
+    declared = max(
+        (p.total_vram_gb for p in ctx.config.pools.values() if p.status is PoolStatus.ACTIVE),
+        default=0.0,
+    )
     if declared <= 0:
         return result("gpu.config_match", CATEGORY_GPU, Severity.WARN,
                       "aucun GPU déclaré dans les ComputePool")

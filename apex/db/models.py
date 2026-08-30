@@ -8,6 +8,17 @@ Portée exacte du brief phase 2 (`docs/VISION_INTEGRATION.md` §5) :
   `UPDATE`/`DELETE`/`TRUNCATE` est appliquée en migration (PostgreSQL), pas
   ici. Ce module ne fait que décrire la forme des données.
 
+- `AgentRuntime` (registre : PLANNED -> STUB) -> table `agents`, ajoutée
+  quand l'abstraction a cessé d'être seulement planifiée
+  (`docs/COGNITIVE_ARCHITECTURE.md` §9 la nommait déjà comme table future).
+- Mission Engine (étape 6) -> table `missions`, ajoutée maintenant que
+  `apex.missions` existe réellement (ADR-0007 : jamais avant).
+- `MemoryProvider` (registre : PLANNED -> STUB, étape 9) -> tables
+  `memory_records`/`memory_relations`, tranche minimale (provenance,
+  confiance, statut de vérification, révisions par `supersedes_id`,
+  relations SUPPORTS/CONTRADICTS) — pas de RAG/embeddings (`EmbeddingProvider`
+  reste PLANNED), pas de graphe visuel ni de moteur de traversée.
+
 Ce que ce module ne fait PAS :
 - il ne crée aucune table pour des abstractions encore `PLANNED`
   (`task_runs`, `model_runs`, `tool_usage`, `sandbox_execs` — TaskBank,
@@ -28,7 +39,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -134,4 +145,206 @@ class AuditLogRow(Base):
             "action": self.action,
             "target": self.target,
             "details": dict(self.details),
+        }
+
+
+class AgentRow(Base):
+    """Persistance d'un clone (`apex.agents.model.Clone`, `AgentRuntime`).
+
+    `isolation_level` est une valeur CONSTATÉE (mesurée par le Gate si un
+    rapport existe, `"unknown"` sinon) — cette colonne ne fait respecter
+    aucune isolation réelle. L'isolation d'exécution effective dépend de
+    `SandboxProvider` (PLANNED, phase 3), qui n'existe pas encore. Ne pas lire
+    cette colonne comme une garantie de sécurité appliquée.
+
+    Pas de contrainte `ForeignKey` vers `compute_pools.pool_id` : les deux
+    tables ne sont pas encore synchronisées automatiquement (le pool est
+    fourni à `AgentRuntime.spawn` comme objet de configuration, pas
+    nécessairement déjà upserté en base) — documenté comme simplification,
+    à revoir si un besoin réel de cohérence référentielle apparaît.
+    """
+
+    __tablename__ = "agents"
+
+    clone_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    type: Mapped[str] = mapped_column(String(16), nullable=False)
+    state: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    mission_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    genome_ref: Mapped[str] = mapped_column(String(128), nullable=False)
+    spawned_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    pool_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    isolation_level: Mapped[str] = mapped_column(String(32), nullable=False)
+    retries_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_retries: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    terminated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "clone_id": self.clone_id,
+            "type": self.type,
+            "state": self.state,
+            "mission_id": self.mission_id,
+            "genome_ref": self.genome_ref,
+            "spawned_by": self.spawned_by,
+            "pool_id": self.pool_id,
+            "isolation_level": self.isolation_level,
+            "retries_used": self.retries_used,
+            "max_retries": self.max_retries,
+            "last_error": self.last_error,
+            "created_at": self.created_at.isoformat(),
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "terminated_at": self.terminated_at.isoformat() if self.terminated_at else None,
+            "last_heartbeat_at": self.last_heartbeat_at.isoformat() if self.last_heartbeat_at else None,
+        }
+
+
+class MissionRow(Base):
+    """Persistance d'une Mission (`apex.missions.model.Mission`, Mission Engine).
+
+    Pas de contrainte `ForeignKey` vers `agents.clone_id` : même simplification
+    documentée que `AgentRow.pool_id` — `assigned_agent` référence un clone
+    par convention, pas encore par contrainte référentielle. `specialty`
+    référence un id de `apex.specialties.registry`, vérifié au niveau service
+    (`apex.missions.service`), pas ici : cette table ne fait que décrire la
+    forme des données, comme le reste de ce module.
+    """
+
+    __tablename__ = "missions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    objective: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[str] = mapped_column(String(16), nullable=False)
+    constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
+    assigned_agent: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    state: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    validation_status: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: Étape 8 — IDs d'autres missions devant être COMPLETED avant que
+    #: celle-ci soit éligible au Scheduler. Fixé à la création, jamais muté
+    #: ensuite (voir apex.missions.dependencies pour pourquoi ceci suffit à
+    #: garantir l'absence de cycle par construction). Liste vide par défaut,
+    #: jamais NULL, pour éviter un cas particulier côté lecture.
+    depends_on: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "specialty": self.specialty,
+            "objective": self.objective,
+            "priority": self.priority,
+            "constraints": self.constraints,
+            "assigned_agent": self.assigned_agent,
+            "state": self.state,
+            "result": self.result,
+            "error": self.error,
+            "validation_status": self.validation_status,
+            "created_by": self.created_by,
+            "depends_on": list(self.depends_on or []),
+            "created_at": self.created_at.isoformat(),
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class MemoryRecordRow(Base):
+    """Persistance d'un `apex.memory.model.MemoryRecord` (étape 9).
+
+    Jamais d'`UPDATE` en place depuis `apex.memory` : `apex/db/repositories.py`
+    n'expose d'ailleurs aucune méthode de modification pour cette table, à
+    l'image d'`AuditLogRepository` — une révision est une nouvelle ligne
+    (`supersedes_id`), jamais une mutation. Pas de contrainte `ForeignKey`
+    sur `supersedes_id` : même simplification documentée qu'`AgentRow.pool_id`
+    et `MissionRow.assigned_agent` — l'existence est vérifiée au niveau
+    service (`apex.memory.service`), pas ici.
+    """
+
+    __tablename__ = "memory_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    domain: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(512), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False)
+    verification_status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    visibility: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    evidence_for: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    evidence_against: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    external_provenance: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    external_source: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    supersedes_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "domain": self.domain,
+            "content": self.content,
+            "source": self.source,
+            "created_by": self.created_by,
+            "confidence": self.confidence,
+            "verification_status": self.verification_status,
+            "visibility": self.visibility,
+            "evidence_for": list(self.evidence_for or []),
+            "evidence_against": list(self.evidence_against or []),
+            "external_provenance": self.external_provenance,
+            "external_source": self.external_source,
+            "supersedes_id": self.supersedes_id,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class MemoryRelationRow(Base):
+    """Persistance d'une `apex.memory.model.MemoryRelation` (étape 9) —
+    SUPPORTS/CONTRADICTS entre deux `MemoryRecord`. Jamais mutée ni
+    supprimée ; pas de `ForeignKey` (même simplification que ci-dessus),
+    l'existence des deux extrémités est vérifiée au niveau service."""
+
+    __tablename__ = "memory_relations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    source_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    target_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    relation: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    provenance: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "source_id": self.source_id,
+            "target_id": self.target_id,
+            "relation": self.relation,
+            "provenance": self.provenance,
+            "created_by": self.created_by,
+            "confidence": self.confidence,
+            "created_at": self.created_at.isoformat(),
         }

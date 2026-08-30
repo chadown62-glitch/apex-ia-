@@ -17,7 +17,7 @@ import copy
 import unittest
 
 from apex.config.loader import parse_config, substitute_env
-from apex.config.schema import PoolLocation, TrustLevel
+from apex.config.schema import HardwareThresholds, PoolLocation, PoolStatus, TrustLevel
 from apex.errors import ConfigError
 
 BASE: dict = {
@@ -240,6 +240,85 @@ class TestBooleanCoercion(unittest.TestCase):
         document["services"]["postgres"]["required"] = "false"
         self.assertFalse(parse_config(document).services["postgres"].required)
 
+
+class TestCapabilityAwareArchitecture(unittest.TestCase):
+    """Le hardware de la machine qui EXÉCUTE APEX (dev, cible, prod) est une
+    variable d'environnement, jamais une contrainte architecturale codée en
+    dur. Ces tests garantissent que : (1) les seuils du Gate sont un choix de
+    déploiement configurable, pas une limite fixe ; (2) un ComputePool
+    `status: target` (machine future, pas encore construite) ne peut jamais
+    se faire passer pour une disponibilité réelle aujourd'hui, dans aucun des
+    calculs qui comptent (fallback local obligatoire, capacité VRAM résidente)."""
+
+    def test_hardware_thresholds_default_to_the_previous_hardcoded_values(self) -> None:
+        """Aucune limite existante n'a changé — seulement sa configurabilité."""
+        thresholds = HardwareThresholds.parse({})
+        self.assertEqual(thresholds.min_free_disk_gb, 150.0)
+        self.assertEqual(thresholds.min_ram_gb, 24.0)
+        self.assertEqual(thresholds.min_vram_gb, 20.0)
+        self.assertEqual(thresholds.min_cpu_threads, 8)
+
+    def test_hardware_thresholds_are_configurable(self) -> None:
+        document = config()
+        document["gate"] = {
+            "hardware": {"min_free_disk_gb": 5, "min_ram_gb": 1, "min_vram_gb": 0, "min_cpu_threads": 1}
+        }
+        cfg = parse_config(document)
+        self.assertEqual(cfg.gate.hardware.min_ram_gb, 1.0)
+        self.assertEqual(cfg.gate.hardware.min_cpu_threads, 1)
+
+    def test_pool_status_defaults_to_active(self) -> None:
+        cfg = parse_config(config())
+        self.assertIs(cfg.pools["local-gpu"].status, PoolStatus.ACTIVE)
+
+    def test_pool_status_target_is_parseable(self) -> None:
+        document = config()
+        document["compute"]["pools"]["future-machine"] = {
+            "location": "local", "trust_level": "trusted", "status": "target",
+            "capabilities": ["inference"], "gpus": [{"model": "TBD", "vram_gb": 200}],
+            "cpu_cores": 256, "ram_gb": 1024,
+        }
+        cfg = parse_config(document)
+        self.assertIs(cfg.pools["future-machine"].status, PoolStatus.TARGET)
+
+    def test_a_target_only_local_pool_does_not_satisfy_the_local_fallback_requirement(self) -> None:
+        """Principe 6 : le fallback 100% local doit être une disponibilité
+        RÉELLE. Une machine visée, pas encore construite, ne compte pas."""
+        document = config()
+        document["compute"]["pools"]["local-gpu"]["status"] = "target"
+        with self.assertRaises(ConfigError):
+            parse_config(document)
+
+    def test_target_pool_vram_never_inflates_real_resident_capacity(self) -> None:
+        """Un modèle résident dimensionné pour la VRAM d'une machine cible
+        future ne doit jamais valider contre la VRAM du pool ACTIVE réel."""
+        document = config()
+        # local-gpu (ACTIVE) déclare 24 Go — voir BASE. On ajoute une cible
+        # bien plus grande qui ne doit compter pour rien ici.
+        document["compute"]["pools"]["future-machine"] = {
+            "location": "local", "trust_level": "trusted", "status": "target",
+            "capabilities": ["inference"], "gpus": [{"model": "TBD", "vram_gb": 200}],
+        }
+        # coder_main est résident et sa référence vaut ~qwen3-coder — on force
+        # un vram_gb d'endpoint qui tient dans le pool ACTIVE (24 Go) mais pas
+        # dans le pool ACTIVE si le calcul incluait par erreur la cible.
+        document["models"]["roles"]["coder_main"]["resident"] = True
+        document["models"]["endpoints"] = [
+            {
+                "pool_id": "local-gpu", "runtime": "ollama", "url": "http://localhost:11434",
+                "served_model": document["models"]["roles"]["coder_main"]["candidates"][0]["family"],
+                "max_context": 8192, "vram_gb": 20,
+            }
+        ]
+        cfg = parse_config(document)  # 20 Go tient dans les 24 Go ACTIVE : ne doit pas lever
+        self.assertIs(cfg.pools["future-machine"].status, PoolStatus.TARGET)
+
+        # Maintenant on demande 100 Go — ne tient ni dans les 24 Go ACTIVE ni
+        # nulle part de légitime : doit échouer, PAS réussir en piochant dans
+        # la capacité de la cible.
+        document["models"]["endpoints"][0]["vram_gb"] = 100
+        with self.assertRaises(ConfigError):
+            parse_config(document)
 
 
 if __name__ == "__main__":
