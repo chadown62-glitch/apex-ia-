@@ -105,6 +105,24 @@ class ArtifactIntegrityError(ApexError):
         super().__init__(f"intégrité rompue : attendu « {expected} », relu « {actual} »")
 
 
+class ModelProviderError(ApexError):
+    """Un backend `ModelProvider` a échoué pendant un appel réel (connexion
+    refusée, statut HTTP d'erreur, réponse malformée) — distinct d'un
+    backend simplement absent (`ModelCapabilityReport.status =
+    UNAVAILABLE_ON_DEV`, jamais une exception). Le message ne porte JAMAIS le
+    corps de la requête/réponse (prompt, sortie du modèle) ni d'en-tête
+    d'authentification — seuls l'URL de l'endpoint et un résumé borné de la
+    cause sont conservés (§72)."""
+
+    exit_code = 9
+
+    def __init__(self, component: str, *, endpoint_url: str, detail: str) -> None:
+        self.component = component
+        self.endpoint_url = endpoint_url
+        self.detail = detail
+        super().__init__(f"« {component} » a échoué sur {endpoint_url} : {detail}")
+
+
 class IsolationUnavailable(ApexError):
     """Le niveau d'isolation exigé n'est pas disponible sur cet hôte.
 

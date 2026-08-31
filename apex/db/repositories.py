@@ -21,10 +21,14 @@ from apex.db.models import (
     AgentRow,
     AuditLogRow,
     ComputePoolRow,
+    EvalRunRow,
     EventRow,
+    GenomeVersionRow,
     MemoryRecordRow,
     MemoryRelationRow,
     MissionRow,
+    SkillRow,
+    TaskRow,
 )
 
 
@@ -405,3 +409,300 @@ class MemoryRepository:
             .limit(limit)
         )
         return list(self._session.scalars(stmt))
+
+
+class TaskRepository:
+    """Persistance de `apex.tasks` (`TaskBank`, phase 5) — INSERT seul, même
+    garantie que `MemoryRepository` : aucune méthode `update`/`delete`
+    n'existe ici. Une tâche ne change jamais après coup."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        split: str,
+        specialty: str,
+        title: str,
+        description: str,
+        command: tuple[str, ...],
+        dataset_ref: str | None,
+        created_by: str,
+        created_at: datetime,
+    ) -> TaskRow:
+        row = TaskRow(
+            id=id, split=split, specialty=specialty, title=title, description=description,
+            command=list(command), dataset_ref=dataset_ref, created_by=created_by,
+            created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, task_id: str) -> TaskRow | None:
+        return self._session.get(TaskRow, task_id)
+
+    def list_all(self, limit: int = 200) -> list[TaskRow]:
+        stmt = select(TaskRow).order_by(TaskRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def list_by_split(self, split: str, limit: int = 200) -> list[TaskRow]:
+        stmt = (
+            select(TaskRow)
+            .where(TaskRow.split == split)
+            .order_by(TaskRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_specialty(self, specialty: str, limit: int = 200) -> list[TaskRow]:
+        """Phase 12 — `WeaknessDetectorService` : point d'entrée pour
+        rassembler les tâches d'une compétence/domaine donné, avant de
+        remonter leurs `EvalRun` associés."""
+        stmt = (
+            select(TaskRow)
+            .where(TaskRow.specialty == specialty)
+            .order_by(TaskRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+
+class EvalRunRepository:
+    """Persistance de `apex.evalrunner` (`EvalRunner`, phase 5) — INSERT
+    seul, même garantie que `TaskRepository` : un résultat d'évaluation,
+    positif ou négatif, n'est jamais modifié ni supprimé après coup."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        task_id: str,
+        clone_id: str,
+        method: str,
+        seed: int | None,
+        dataset_ref: str | None,
+        experiment_ref: str | None,
+        oracle_verdict: str,
+        oracle_detail: str | None,
+        sandbox_status: str,
+        exit_code: int | None,
+        elapsed_s: float | None,
+        facts: dict[str, Any],
+        created_by: str,
+        started_at: datetime | None,
+        completed_at: datetime | None,
+        created_at: datetime,
+    ) -> EvalRunRow:
+        row = EvalRunRow(
+            id=id, task_id=task_id, clone_id=clone_id, method=method, seed=seed,
+            dataset_ref=dataset_ref, experiment_ref=experiment_ref, oracle_verdict=oracle_verdict,
+            oracle_detail=oracle_detail, sandbox_status=sandbox_status, exit_code=exit_code,
+            elapsed_s=elapsed_s, facts=facts, created_by=created_by, started_at=started_at,
+            completed_at=completed_at, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, eval_run_id: str) -> EvalRunRow | None:
+        return self._session.get(EvalRunRow, eval_run_id)
+
+    def list_all(self, limit: int = 200) -> list[EvalRunRow]:
+        stmt = select(EvalRunRow).order_by(EvalRunRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def list_by_task(self, task_id: str, limit: int = 200) -> list[EvalRunRow]:
+        stmt = (
+            select(EvalRunRow)
+            .where(EvalRunRow.task_id == task_id)
+            .order_by(EvalRunRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_clone(self, clone_id: str, limit: int = 200) -> list[EvalRunRow]:
+        stmt = (
+            select(EvalRunRow)
+            .where(EvalRunRow.clone_id == clone_id)
+            .order_by(EvalRunRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+
+class SkillRepository:
+    """Persistance de `apex.skills` (`SkillRegistry`, phase 14). N'importe
+    jamais `apex.skills` : même règle de couche qu'`AgentRepository`/
+    `MissionRepository` — méthodes en mots-clés, jamais un objet `Skill`.
+
+    `decide()` est la SEULE méthode de mutation — un `UPDATE` ciblé sur les
+    seuls champs de décision, jamais un `update` générique du contenu de la
+    compétence (même discipline que `AgentRepository.touch_heartbeat` :
+    l'absence de méthode générale est la garde-fou Python, en plus de la
+    garantie SQL)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        name: str,
+        specialty: str,
+        description: str,
+        status: str,
+        prerequisite_skill_ids: tuple[str, ...],
+        evidence_run_ids: tuple[str, ...],
+        confidence: float | None,
+        supersedes_id: str | None,
+        created_by: str,
+        created_at: datetime,
+    ) -> SkillRow:
+        row = SkillRow(
+            id=id, name=name, specialty=specialty, description=description, status=status,
+            prerequisite_skill_ids=list(prerequisite_skill_ids),
+            evidence_run_ids=list(evidence_run_ids), confidence=confidence,
+            supersedes_id=supersedes_id, created_by=created_by, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def decide(
+        self,
+        skill_id: str,
+        *,
+        status: str,
+        decided_by: str,
+        decided_at: datetime,
+        decision_reason: str | None,
+    ) -> SkillRow | None:
+        """Réclamation conditionnelle `WHERE status = 'proposed'` — même
+        motif que `MissionRepository.claim_running` : garantit qu'une
+        compétence ne peut jamais être décidée deux fois, y compris en cas
+        d'appels concurrents. Retourne `None` si déjà décidée ou absente."""
+        stmt = (
+            update(SkillRow)
+            .where(SkillRow.id == skill_id, SkillRow.status == "proposed")
+            .values(status=status, decided_by=decided_by, decided_at=decided_at, decision_reason=decision_reason)
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(SkillRow, skill_id)
+
+    def get(self, skill_id: str) -> SkillRow | None:
+        return self._session.get(SkillRow, skill_id)
+
+    def list_all(self, limit: int = 200) -> list[SkillRow]:
+        stmt = select(SkillRow).order_by(SkillRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def list_by_specialty(self, specialty: str, limit: int = 200) -> list[SkillRow]:
+        stmt = (
+            select(SkillRow)
+            .where(SkillRow.specialty == specialty)
+            .order_by(SkillRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def find_successor(self, skill_id: str) -> SkillRow | None:
+        """Existe-t-il déjà une révision de `skill_id` ? Même patron que
+        `MemoryRepository.find_successor` — garantit une chaîne de
+        révisions linéaire."""
+        stmt = select(SkillRow).where(SkillRow.supersedes_id == skill_id).limit(1)
+        return self._session.scalars(stmt).first()
+
+    def dependency_graph(self) -> dict[str, tuple[str, ...]]:
+        """Paires (id, prerequisite_skill_ids) de TOUTES les compétences —
+        utilisé uniquement pour la détection de cycle à la proposition
+        (`apex.skills.service`, réutilise `apex.missions.dependencies.
+        detect_cycle` tel quel). Même limitation de volume assumée que
+        `MissionRepository.dependency_graph`."""
+        stmt = select(SkillRow.id, SkillRow.prerequisite_skill_ids)
+        return {row.id: tuple(row.prerequisite_skill_ids or ()) for row in self._session.execute(stmt)}
+
+
+class GenomeVersionRepository:
+    """Persistance de `apex.genome` (`GenomeStore`, phase 17). N'importe
+    jamais `apex.genome` : même règle de couche qu'`AgentRepository`/
+    `SkillRepository` — méthodes en mots-clés, jamais un objet
+    `GenomeVersion`. Ne stocke JAMAIS le contenu du Genome lui-même
+    (`ArtifactStoreProvider` s'en charge) — seulement `content_hash` et la
+    généalogie.
+
+    `decide()` est la SEULE méthode de mutation — même garde-fou Python que
+    `SkillRepository.decide()` (réclamation conditionnelle `WHERE status =
+    'proposed'`, décision unique garantie même sous appels concurrents)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        content_hash: str,
+        parent_version_id: str | None,
+        parent_version_id_b: str | None,
+        origin: str,
+        status: str,
+        created_by: str,
+        created_at: datetime,
+    ) -> GenomeVersionRow:
+        row = GenomeVersionRow(
+            id=id, content_hash=content_hash, parent_version_id=parent_version_id,
+            parent_version_id_b=parent_version_id_b, origin=origin, status=status,
+            created_by=created_by, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def decide(
+        self,
+        version_id: str,
+        *,
+        status: str,
+        decided_by: str,
+        decided_at: datetime,
+        decision_reason: str | None,
+    ) -> GenomeVersionRow | None:
+        stmt = (
+            update(GenomeVersionRow)
+            .where(GenomeVersionRow.id == version_id, GenomeVersionRow.status == "proposed")
+            .values(status=status, decided_by=decided_by, decided_at=decided_at, decision_reason=decision_reason)
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(GenomeVersionRow, version_id)
+
+    def get(self, version_id: str) -> GenomeVersionRow | None:
+        return self._session.get(GenomeVersionRow, version_id)
+
+    def list_all(self, limit: int = 200) -> list[GenomeVersionRow]:
+        stmt = select(GenomeVersionRow).order_by(GenomeVersionRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def get_current(self) -> GenomeVersionRow | None:
+        """La version `promoted` la plus récemment décidée — jamais un
+        pointeur mutable séparé (source d'incohérence possible), toujours
+        dérivé des lignes de décision elles-mêmes."""
+        stmt = (
+            select(GenomeVersionRow)
+            .where(GenomeVersionRow.status == "promoted")
+            .order_by(GenomeVersionRow.decided_at.desc())
+            .limit(1)
+        )
+        return self._session.scalars(stmt).first()

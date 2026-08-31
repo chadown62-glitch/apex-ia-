@@ -51,7 +51,54 @@ class Abstraction:
 ABSTRACTIONS: tuple[Abstraction, ...] = (
     Abstraction(
         "ModelProvider", "génération, streaming, comptage de tokens", 4, 6,
-        ImplStatus.PLANNED, "Ollama local",
+        ImplStatus.STUB, "aucun — refuse la génération si le backend n'est pas vérifié disponible",
+        module="apex.models.provider",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 6, partiel) : "
+              "`OllamaProvider` est réel — `detect()` sonde `GET /api/tags` "
+              "(HTTP réel, jamais un simple port ouvert), `generate()` "
+              "appelle `POST /api/generate` réellement, timeout et "
+              "annulation (`threading.Event`, coopératif) réels. "
+              "`CapabilityStatus.UNAVAILABLE_ON_DEV` sur cette machine "
+              "(Ollama injoignable, vérifié empiriquement), jamais "
+              "`UNSUPPORTED`. `generate_stream()` (streaming réel par "
+              "lecture de blocs) est une méthode CONCRÈTE de "
+              "`OllamaProvider`, délibérément hors du contrat abstrait "
+              "`ModelProvider` — à généraliser plus tard seulement si "
+              "plusieurs backends en ont réellement besoin. Aucun modèle "
+              "codé en dur : l'appelant fournit toujours un `ModelEndpoint` "
+              "déjà résolu (`apex.config.schema`, existant). Hors périmètre "
+              "de cette étape, toujours PLANNED : `Placement` (résolution "
+              "rôle -> endpoint), `EmbeddingProvider`, comptage de tokens/s "
+              "(Model Capability Gate). Aucun raccordement à "
+              "`MissionEngine`/`AgentRuntime`, ni à `TaskBank`/`EvalRunner`/"
+              "`OracleProvider` (devenus STUB en Phase 5, mais "
+              "`task.command` y reste une commande déterministe déjà "
+              "stockée — jamais générée par ce `ModelProvider`, ni par "
+              "aucun autre). Un appel réel contre un vrai Ollama n'a pas été "
+              "prouvé sur DEV_MACHINE (Ollama absent ici) — seul le "
+              "comportement structurel et le refus honnête sans backend "
+              "sont vérifiés ; un test d'intégration réel existe, "
+              "explicitement sauté si Ollama n'est pas joignable, jamais "
+              "simulé comme passant. **MissionEngine<->ModelProvider "
+              "désormais RACCORDÉ, HORS sandbox** (mis à jour après la "
+              "passe « première IA utilisable ») : "
+              "`apex.missions.execution.generate_mission_response` est un "
+              "second chemin d'exécution de Mission (à côté de "
+              "`launch_mission`), appelé au niveau ORCHESTRATEUR — jamais "
+              "depuis un clone sandboxé, donc AUCUN contournement de la "
+              "sandbox. Câblage prouvé par test contre un double de test "
+              "fidèle au contrat `ModelProvider` (jamais présenté comme une "
+              "preuve d'inférence réelle) ; un test d'intégration RÉEL "
+              "existe (`tests/test_missions_model_generation.py::"
+              "TestRealOllamaMissionIntegration`), auto-exécuté dès qu'un "
+              "Ollama réel est joignable (local ou via `APEX_OLLAMA_URL`), "
+              "explicitement sauté sinon. `MissionEngine`/`AgentRuntime` -> "
+              "sandbox -> `ModelProvider` (un clone sandboxé appelant un "
+              "modèle réseau) reste bloqué pour la raison déjà établie : "
+              "`apex.sandbox.linux_namespace` lève `NotImplementedYet` pour "
+              "tout `network` autre que `\"none\"` — mode `\"proxy\"` "
+              "encore PLANNED, un changement de surface de sécurité réel, "
+              "délibérément hors périmètre de cette passe.",
     ),
     Abstraction(
         "EmbeddingProvider", "vectorisation pour la mémoire", 4, 8,
@@ -102,7 +149,12 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "ici). `detect_capabilities()` sonde empiriquement à chaque appel — sur une "
               "machine différente (moins capable OU plus capable), le niveau réellement "
               "obtenu peut différer ; ce résultat ne doit jamais être extrapolé à une "
-              "autre machine, voir apex.config.schema.PoolStatus (CURRENT vs TARGET).",
+              "autre machine, voir apex.config.schema.PoolStatus (CURRENT vs TARGET). "
+              "GATE-19 (apex.gate.checks.gate_19_isolation_state) consulte désormais "
+              "cette même détection quand Docker n'atteint ni docker_hardened ni "
+              "gvisor (ADR-0012) : NAMESPACED y est reconnu comme un niveau distinct, "
+              "jamais confondu avec un plafond conteneur — la Gate ne sous-déclare "
+              "plus cette capacité, sans jamais accorder red_team_allowed pour autant.",
     ),
     Abstraction(
         "ComputePool", "où s'exécute un run (GPU/CPU/local/distant/cloud)", 1, 6,
@@ -165,32 +217,175 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     ),
     Abstraction(
         "GenomeStore", "configuration mutable versionnée", 4, 17,
-        ImplStatus.PLANNED, "génome unique figé",
+        ImplStatus.STUB, "génome unique figé",
+        module="apex.genome.service",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 17) : "
+              "`GenomeStoreService.propose()` compose RÉELLEMENT "
+              "`ArtifactStoreProvider` (STUB réel depuis la Phase 10) pour "
+              "le contenu — sérialisation JSON canonique (clés triées, "
+              "déterministe : même contenu -> même `content_hash`, prouvé "
+              "par test), jamais réimplémenté. `content_hash` EST le "
+              "`genome_ref: hash` déjà spécifié pour `Clone` "
+              "(`docs/COGNITIVE_ARCHITECTURE.md` §2.2) — aucun nouveau "
+              "format d'identifiant inventé. Cycle de décision : "
+              "`Action.PROPOSE_GENOME_VERSION` (CORE et HUMAIN) puis "
+              "`PROMOTE_GENOME_VERSION`/`REJECT_GENOME_VERSION` (**HUMAIN "
+              "seul**, décision UNIQUE, jamais redécidée), EXACTEMENT le "
+              "patron `SkillRegistryService` (Phase 14) — cycle HUMAIN "
+              "provisoire en attendant `PromotionGovernor` (`PLANNED`, "
+              "phase 16, périmètre jugé insuffisamment défini). "
+              "`get_current()` dérive la version active de la décision la "
+              "plus récente (`decided_at`), jamais un pointeur mutable "
+              "séparé — source d'incohérence évitée par construction. "
+              "**Invariant vérifié** : `Subject.RESEARCH` (tout type de "
+              "clone) ne peut ni proposer ni promouvoir/rejeter — testé "
+              "explicitement, PLUS testé contre PostgreSQL réel "
+              "(`apex_agent` sans aucun GRANT sur `genome_versions`). "
+              "**Ne modifie jamais le Core** : stocke des DONNÉES (dict "
+              "JSON), jamais de code ; aucun raccordement à "
+              "`AgentRuntime`/`Clone.genome_ref` — un futur pas, pas "
+              "celui-ci.",
     ),
     Abstraction(
         "MutationOperator", "opérateurs d'évolution sur le Genome", 4, 17,
-        ImplStatus.PLANNED, "aucun",
+        ImplStatus.STUB, "aucun",
+        module="apex.genome.mutation",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 17) : "
+              "`mutate()` (perturbation ponctuelle de chaque feuille "
+              "numérique — int/float — avec probabilité `rate`, inversion "
+              "des booléens à la même probabilité, jamais les chaînes ni "
+              "`None` — « mutations structurales appropriées au type ») ET "
+              "`crossover()` (croisement uniforme récursif entre deux "
+              "parents) sont réels et testés, tous deux déterministes pour "
+              "une graine donnée. Directive Phase 17 explicite suivie à la "
+              "lettre : « le crossover doit être explicitement supporté "
+              "lorsque MutationOperator sera implémenté » — pas de "
+              "`RecombinationEngine` séparé. Fonctions PURES sur des `dict` "
+              "ordinaires, zéro couplage à `apex.genome.service`/DB — "
+              "produire un contenu muté/croisé reste une opération sur des "
+              "DONNÉES, jamais automatiquement proposé ni promu (l'appelant "
+              "doit explicitement invoquer `GenomeStoreService.propose"
+              "(origin=MUTATION/CROSSOVER, ...)`).",
     ),
     Abstraction(
         "TaskBank", "banque de tâches et splits", 5, 5,
-        ImplStatus.PLANNED, "banque statique",
+        ImplStatus.STUB, "banque statique",
+        module="apex.tasks.service",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 5) : "
+              "`TaskBankService.create()` persiste réellement (table `tasks`, "
+              "INSERT seul — `UPDATE`/`DELETE`/`TRUNCATE` révoqués en "
+              "migration pour tous les rôles applicatifs), autorise "
+              "`Action.CREATE_TASK` (HUMAN seul, `PolicyEngine`, même motif "
+              "que `CREATE_MISSION` — un clone ne peut jamais écrire sa "
+              "propre tâche), valide la spécialité "
+              "(`apex.specialties.registry`). Split HELDOUT (ADR-0010, "
+              "différé phase 2) réellement appliqué : le rôle SQL `apex_eval` "
+              "n'a AUCUN grant sur `tasks` (migration `eda413ca0829`) — un "
+              "exécuteur d'évaluation ne peut structurellement pas lire une "
+              "tâche, HELDOUT ou non, qu'il connaisse ou non son `id` ; "
+              "`tests/test_db_security.py::TestHeldoutSplitSeparation` "
+              "vérifie ceci contre PostgreSQL réel, plus un test unitaire "
+              "SQLite. Pas de champ `method` sur `Task` (délibéré — voir "
+              "`apex.db.models.TaskRow`), pas de `TaskGenerator` (PLANNED, "
+              "phase 15) : les tâches de cette étape sont écrites à la main "
+              "par un HUMAN, jamais générées.",
     ),
     Abstraction(
         "OracleProvider", "vérité terrain d'une tâche", 5, 5,
-        ImplStatus.PLANNED, "oracle « tests »",
+        ImplStatus.STUB, "oracle « tests »",
+        module="apex.oracles.provider",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 5) : seul "
+              "`ExitCodeOracle` existe — jugement par `ExecutionStatus` du "
+              "`SandboxResult` (SUCCESS/FAILED déjà classifiés par code de "
+              "sortie réel dans `LinuxNamespaceSandbox`), mappé sur les cinq "
+              "catégories exigées : PASS (SUCCESS), FAIL (FAILED), TIMEOUT, "
+              "ERROR (échec d'infrastructure — OOM/limite ressource/réseau "
+              "refusé/permission refusée, jamais confondu avec un FAIL de "
+              "correction), UNKNOWN (annulation, ou statut non reconnu — "
+              "jamais un verdict deviné). Aucun oracle par comparaison de "
+              "sortie attendue, aucun jugement par `ModelProvider` — le "
+              "contrat prend déjà `task` en paramètre pour ne pas avoir à "
+              "changer de signature le jour où un tel oracle existera.",
     ),
     Abstraction(
         "EvalRunner", "exécution appariée, seeds, budgets", 5, 5,
-        ImplStatus.PLANNED, "séquentiel local",
+        ImplStatus.STUB, "séquentiel local",
+        module="apex.evalrunner.service",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 5) : "
+              "`EvalRunnerService.run()` compose réellement TaskBank + "
+              "`AgentRuntime.execute_in_sandbox` (isolation NAMESPACED "
+              "réelle, jamais simulée) + `OracleProvider`, persiste chaque "
+              "résultat (table `eval_runs`, INSERT seul, positif ET négatif "
+              "retenus de façon identique — aucun filtrage à l'écriture). "
+              "Champ `method` (vocabulaire fermé "
+              "`docs/COGNITIVE_ARCHITECTURE.md` §5, `EvalMethod`) taggé sur "
+              "chaque run dès cette étape — collecte pure, AUCUNE "
+              "comparaison entre méthodes (réservée à `MetaLearner`, "
+              "PLANNED, phase 22). `seed`/`dataset_ref`/`experiment_ref` "
+              "portés comme simples colonnes (données, pas de logique) — "
+              "affordances explicites pour que les phases 12/14/15/16/17/18 "
+              "futures (plusieurs Clones par expérience, comparaison de "
+              "`genome_ref`, etc.) n'exigent aucune migration de schéma "
+              "supplémentaire pour exister, sans qu'aucune de ces phases ne "
+              "soit implémentée ici. AUCUN raccordement à `ModelProvider` : "
+              "`task.command` est toujours une commande déterministe déjà "
+              "stockée, jamais générée à la volée. AUCUNE promotion, aucune "
+              "modification de Genome — un laboratoire d'évaluation, pas un "
+              "système autonome d'amélioration. `exécution appariée` "
+              "(comparaison A/B contrôlée) et budgets restent PLANNED, non "
+              "implémentés : un `EvalRun` est une tentative indépendante, "
+              "jamais encore mise en regard d'une autre par ce module.",
     ),
     Abstraction(
         "StatTest", "décision statistique, preuve cumulable", 5, 16,
-        ImplStatus.PLANNED, "bootstrap apparié",
-        notes="Principe 10 : validité continue, accumulation multi-nuits.",
+        ImplStatus.STUB, "bootstrap apparié",
+        module="apex.stattest.comparator",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 16) : "
+              "`StatTest.compare_paired()` calcule un VRAI intervalle de "
+              "confiance par bootstrap apparié (stdlib `random`, ADR-0002 — "
+              "aucune dépendance `numpy`/`scipy`), déterministe pour une "
+              "graine donnée, testé sur des cas clairement significatifs, "
+              "clairement non significatifs, et la reproductibilité. "
+              "Principe 10 (« validité continue, accumulation multi-nuits ») "
+              "satisfait PAR CONSTRUCTION : aucun état conservé entre deux "
+              "appels, ré-exécuter avec plus de paires produit une "
+              "nouvelle décision indépendante, jamais une mise à jour d'un "
+              "état figé. **Remplace explicitement** l'heuristique fixe "
+              "documentée dans `apex.weakness.detector` "
+              "(`CREDIBLE_FAILURE_RATE_THRESHOLD`, qui se déclarait déjà "
+              "elle-même « PAS un StatTest réel ») pour tout appelant qui a "
+              "besoin d'une vraie décision statistique — `WeaknessDetector` "
+              "lui-même n'est PAS modifié ici (contrat déjà validé, Phase "
+              "12), ce module fournit seulement l'outil qui n'existait pas "
+              "encore. Aucun raccordement automatique à `WeaknessDetector`/"
+              "`CurriculumStrategy`/`MetaLearner` : un outil composable, pas "
+              "encore composé.",
     ),
     Abstraction(
         "JudgeTier", "notation hiérarchisée tier 0/1/2", 5, 9,
-        ImplStatus.PLANNED, "tier 0 objectif seul",
+        ImplStatus.STUB, "tier 0 objectif seul",
+        module="apex.judge.provider",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 9) : mapping "
+              "`docs/VISION_INTEGRATION.md` §16 — « le Verifier est le tier "
+              "0/1 ; le Critic est un rôle d'agent défini dans le Genome ». "
+              "Seul `Tier0Judge` existe réellement : délègue INTÉGRALEMENT "
+              "à `OracleProvider.judge()` (réel depuis la Phase 5, "
+              "`ExitCodeOracle`), zéro logique de jugement dupliquée — "
+              "`JudgeVerdict` enveloppe un `OracleResult` tel quel, ne "
+              "réinvente aucun second vocabulaire de correction. TIER_1 "
+              "(vérification automatisée étendue) et TIER_2 (Critic Clone, "
+              "`Subject.CRITIC` déjà existant, verdict consultatif qui ne "
+              "bloque jamais seul) restent `PLANNED` : le contrat "
+              "(`JudgeTierLevel`) nomme déjà les trois paliers, mais aucune "
+              "escalade n'est jamais tentée — un verdict `UNKNOWN` de tier 0 "
+              "reste `UNKNOWN`, jamais « résolu » par un palier qui n'existe "
+              "pas. Aucun raccordement à `AgentRuntime`/`Subject.CRITIC` : "
+              "TIER_2 n'exécute aucun Clone ici. `JudgeTier` n'est PAS encore "
+              "utilisé par `EvalRunner` (qui continue d'appeler "
+              "`OracleProvider` directement, Phase 5) — décision de "
+              "périmètre explicite, pas un oubli : ce raccordement est un "
+              "choix architectural séparé, à valider indépendamment (même "
+              "discipline que ModelProvider↔MissionEngine, Phase 6).",
     ),
     Abstraction(
         "LanguageToolchain", "build/test/lint/bench par langage", 3, 6,
@@ -204,23 +399,141 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     ),
     Abstraction(
         "WeaknessDetector", "détection d'écarts de compétence", 5, 12,
-        ImplStatus.PLANNED, "requête SQL simple",
+        ImplStatus.STUB, "requête SQL simple",
+        module="apex.weakness.service",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 12) : "
+              "`WeaknessDetectorService.detect_for_specialty()` rassemble "
+              "réellement les `EvalRun` persistés (Phase 5) des tâches d'une "
+              "spécialité (`Task.specialty`, seul proxy de « compétence/"
+              "domaine » disponible — `SkillRegistry`, PLANNED, phase 14, "
+              "n'existe pas), filtrable par `clone_id`. `WeaknessDetector` "
+              "(logique pure, `apex.weakness.detector`) distingue les cinq "
+              "catégories exigées : `INSUFFICIENT_DATA`/`NO_WEAKNESS`/"
+              "`ISOLATED_FAILURE`/`REPEATED_WEAKNESS`/"
+              "`STATISTICALLY_CREDIBLE_WEAKNESS`, sur la base des "
+              "`oracle_verdict` réels (`OracleProvider`, Phase 5) — ERROR/"
+              "TIMEOUT/UNKNOWN systématiquement exclus du calcul de "
+              "faiblesse, jamais confondus avec un échec de tâche. Chaque "
+              "rapport cite `evidence_run_ids` (traçabilité complète). "
+              "**Limite honnête** : le seuil « statistiquement crédible » "
+              "est une HEURISTIQUE fixe documentée (taux d'échec >= 50 % sur "
+              "n >= 5), PAS un `StatTest` réel (`StatTest` reste PLANNED, "
+              "phase 16) — ne jamais présenter ce mot comme une preuve "
+              "statistique rigoureuse. Aucune traversée de Knowledge Graph "
+              "(`MemoryProvider` relations, mentionnée par "
+              "`docs/COGNITIVE_ARCHITECTURE.md` §4) : seul `EvalRunner` est "
+              "exploité pour l'instant.",
     ),
     Abstraction(
         "CurriculumStrategy", "progression de difficulté", 5, 12,
-        ImplStatus.PLANNED, "difficulté fixe",
+        ImplStatus.STUB, "difficulté fixe",
+        module="apex.curriculum.strategy",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 12) : "
+              "`CurriculumStrategy.decide()` applique une règle DÉTERMINISTE "
+              "réelle (même `WeaknessReport` -> toujours la même "
+              "`CurriculumDecision`) sur un niveau ENTIER ABSTRAIT "
+              "(`1..max_level`) — jamais plus d'un cran par décision "
+              "(ADVANCE si `NO_WEAKNESS`, REINFORCE si "
+              "`STATISTICALLY_CREDIBLE_WEAKNESS`, HOLD sinon), bornes "
+              "respectées. **Décision de périmètre explicite** : le niveau "
+              "de difficulté n'est PAS un champ ajouté à `apex.tasks.model."
+              "Task` (aucune modification du contrat Phase 5 déjà validé) — "
+              "la correspondance « niveau N -> quelles tâches concrètes » "
+              "reste PLANNED, propriété future de `TaskGenerator` (phase "
+              "15) ; ce module ne choisit JAMAIS de tâche, seulement une "
+              "direction. Aucune dépendance à `MetaLearner` (PLANNED, phase "
+              "22) : la politique adaptative/apprise reste future.",
     ),
     Abstraction(
         "TaskGenerator", "self-play, bug farm, adversarial", 5, 15,
-        ImplStatus.PLANNED, "banque statique",
+        ImplStatus.STUB, "banque statique",
+        module="apex.taskgen.provider",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 15) : "
+              "`DeterministicTaskGenerator` couvre RÉELLEMENT cinq des onze "
+              "`GenerationMode` (directive Phase 15), tous pour la seule "
+              "spécialité `is_supported` (`research`) : `NORMAL` (réutilise "
+              "`apex.missions.workloads.research_diagnostic_command()`, "
+              "zéro duplication), `INCREASING_DIFFICULTY`/"
+              "`CURRICULUM_INTERMEDIATE` (script paramétré par un niveau "
+              "1..3, où le niveau 3 fait RÉELLEMENT échouer le script "
+              "— `sys.exit(1)` — si l'isolation réseau attendue est "
+              "violée : la « difficulté » n'est pas un label, prouvée par "
+              "test contre un vrai sandbox namespaced — échoue hors "
+              "sandbox, réussit dedans, exactement l'inverse), "
+              "`TARGETED_WEAKNESS` (niveau dérivé de la sévérité d'un "
+              "`apex.weakness.model.WeaknessReport` réel, Phase 12 — cible "
+              "la sévérité, PAS un sous-contrôle précis, limite "
+              "explicitement documentée), `REGRESSION` (reproduit la "
+              "commande d'une `Task` existante à l'identique, jamais un "
+              "contenu réinventé). **Aucun `ModelProvider`** : chaque "
+              "script est déterministe, stdlib pur, aucune inférence. "
+              "**Aucune persistance** : `GeneratedTaskSpec` reste en "
+              "mémoire — la création reste `TaskBankService.create()` "
+              "(HUMAN seul), jamais automatique, jamais un raccordement "
+              "TaskGenerator -> TaskBank qui contournerait le contrôle "
+              "humain établi en Phase 5. Les six autres modes "
+              "(`EDGE_CASE`/`BUG_FARM`/`ADVERSARIAL`/`TRANSFER`/`SELF_PLAY`/"
+              "`FROM_HYPOTHESIS`) lèvent `apex.errors.NotImplementedYet`, "
+              "chacun citant sa dépendance réellement bloquante "
+              "(`CodeIntelligence` PLANNED phase 12, `HypothesisGenerator` "
+              "PLANNED phase 16, absence d'une seconde spécialité réelle, "
+              "absence d'orchestration multi-clones) — jamais un contenu "
+              "inventé pour combler l'absence de dépendance.",
     ),
     Abstraction(
         "SelectionStrategy", "successive halving, front de Pareto", 4, 17,
-        ImplStatus.PLANNED, "candidat unique",
+        ImplStatus.STUB, "candidat unique",
+        module="apex.genome.selection",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 17) : "
+              "`successive_halving()` (garde la fraction la mieux notée "
+              "d'UN round — enchaîner plusieurs rounds à budget croissant "
+              "reste un futur orchestrateur, `ExperimentEngine`, composite "
+              "documenté jamais construit ici) et `pareto_front()` "
+              "(domination standard, tous les objectifs déjà orientés "
+              "« plus grand est meilleur » par convention explicite) sont "
+              "des fonctions PURES, réelles, testées — n'exécutent JAMAIS "
+              "rien (ni Clone, ni Sandbox, ni EvalRunner) : les scores "
+              "viennent toujours de l'appelant. Aucun raccordement à "
+              "`Experiment.clones_participants`/`AgentRuntime` — la "
+              "sélection est un outil composable, pas encore composé.",
     ),
     Abstraction(
         "MetaLearner", "apprendre comment apprendre", 5, 22,
-        ImplStatus.PLANNED, "journalisation seule",
+        ImplStatus.STUB, "journalisation seule",
+        module="apex.metalearner.selector",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 22) : "
+              "`MetaLearner.select_strategy()` implémente EXACTEMENT la "
+              "« politique statique/simple » actée dès la validation "
+              "initiale du Learning System (« avant Phase 22, Learning "
+              "Manager utilise une politique statique ; à partir de "
+              "MetaLearner, le choix devient progressivement appris ») — "
+              "ici, la politique statique elle-même, PAS encore "
+              "l'apprentissage réel. Compose `CurriculumStrategy.decide()` "
+              "(Phase 12, réel) pour le niveau et réutilise DIRECTEMENT "
+              "`apex.taskgen.model.GenerationMode` (Phase 15, réel) pour la "
+              "stratégie — aucun second vocabulaire de stratégie, aucune "
+              "seconde logique de progression dupliquée. Règle "
+              "déterministe, testée sur les cinq catégories de "
+              "`WeaknessCategory` : `INSUFFICIENT_DATA` -> aucune stratégie "
+              "recommandée (jamais devinée) ; `NO_WEAKNESS` -> "
+              "`CURRICULUM_INTERMEDIATE` (progression) ; les trois "
+              "catégories de faiblesse -> `TARGETED_WEAKNESS` (dimensionné "
+              "par `TaskGenerator` lui-même, aucun second mapping sévérité "
+              "-> niveau). **Pourquoi aucun apprentissage réel n'existe "
+              "encore, et ce n'est pas un oubli** : apprendre « quelle "
+              "stratégie fonctionne » exigerait de savoir, pour chaque "
+              "`EvalRun` passé, quel `GenerationMode` a produit sa `Task` — "
+              "ce lien n'est persisté nulle part (`EvalRun.method` est "
+              "`EvalMethod`, un vocabulaire distinct, jamais fusionné avec "
+              "`GenerationMode`) ; l'ajouter modifierait le contrat déjà "
+              "validé d'`EvalRun` (Phase 5), hors périmètre. "
+              "**Exploration/exploitation** : appartient conceptuellement à "
+              "`MetaLearner` (aucun composant séparé créé), mais non "
+              "implémentée pour la même raison — aucune donnée historique "
+              "de performance par stratégie à arbitrer aujourd'hui. Aucun "
+              "état conservé entre deux appels (prouvé par test) : v1 est "
+              "une fonction pure du `WeaknessReport` courant, jamais une "
+              "mémoire simulée.",
     ),
     Abstraction(
         "EventSink", "journal d'événements append-only", 1, 2,
@@ -243,41 +556,194 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     Abstraction(
         "CheckpointStore", "reprise d'expérience longue durée", 2, 19,
         ImplStatus.PLANNED, "état en base",
-        notes="Principe 8 : une expérience interrompue reprend à son état sauvegardé.",
+        notes="Principe 8 : une expérience interrompue reprend à son état sauvegardé. "
+              "**Analysé et délibérément reporté à la Phase 18/19 (directive : "
+              "« si son périmètre est suffisamment spécifié »)** : jugé NON "
+              "suffisamment spécifié — aucun processus long-cours "
+              "(`ExperimentEngine`) n'existe encore comme code exécutable "
+              "(composite documenté, jamais une classe) qui aurait besoin "
+              "d'être interrompu puis repris ; construire `CheckpointStore` "
+              "maintenant reviendrait à deviner un mécanisme de reprise "
+              "pour un processus qui n'existe pas. Le fallback honnête "
+              "« état en base » est déjà, en pratique, ce qui existe "
+              "réellement : chaque `EvalRun` (Phase 5) est persisté "
+              "immédiatement, INSERT seul — une campagne d'évaluations "
+              "interrompue se reprend déjà en interrogeant "
+              "`EvalRunRepository.list_by_task`/`list_by_specialty` et en "
+              "sautant ce qui est déjà enregistré, sans abstraction dédiée. "
+              "Même raisonnement que le report de `PromotionGovernor` "
+              "(Phase 16) : ne pas construire une coquille sans "
+              "consommateur réel.",
     ),
     # -- Ajouts issus de la Master Architecture Specification -----------------
     # Chacune a été confrontée au registre existant (§58) : elles sont ajoutées
     # parce qu'aucune abstraction en place ne les couvre sans dénaturer son rôle.
     Abstraction(
         "SkillRegistry", "compétences versionnées, graphe de prérequis, promotion", 11, 14,
-        ImplStatus.PLANNED, "aucune compétence — capacités portées par le Genome",
-        notes="Manquait au registre initial. Distinct du Genome : une compétence a "
-              "son propre cycle de promotion, ses benchmarks et sa généalogie.",
+        ImplStatus.STUB, "aucune compétence — capacités portées par le Genome",
+        module="apex.skills.service",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 14) : "
+              "`SkillRegistryService.propose()` persiste réellement (table "
+              "`skills`), autorise `Action.PROPOSE_SKILL` (CORE et HUMAN, "
+              "jamais un clone), valide la spécialité, le graphe de "
+              "prérequis (existence + absence de cycle — réutilise "
+              "`apex.missions.dependencies.detect_cycle` telle quelle, "
+              "aucune logique dupliquée, prouvé câblé par un test de cycle "
+              "manufacturé, même patron que "
+              "`test_missions_service.py::TestDependsOn`) et les "
+              "`evidence_run_ids` (chaque preuve doit référencer un "
+              "`EvalRun` RÉELLEMENT persisté — Phase 5 — sinon rejetée, "
+              "jamais une preuve inventée). `promote()`/`reject()` : "
+              "**HUMAIN seul** (`Action.PROMOTE_SKILL`/`REJECT_SKILL`), "
+              "décision UNIQUE (même garde que "
+              "`MissionService._require_no_prior_decision`), promotion "
+              "bloquée tant que les prérequis ne sont pas eux-mêmes "
+              "`ACQUIRED` (vérifié réellement, testé). `revise()` implémente "
+              "la « généalogie » : insère une NOUVELLE ligne "
+              "(`supersedes_id`), jamais une mutation du contenu — même "
+              "patron que `MemoryService.revise`/`find_successor`, chaîne "
+              "linéaire garantie. Cycle de promotion **HUMAIN**, "
+              "explicitement DISTINCT de `PromotionGovernor` (`PLANNED`, "
+              "phase 16, qui gouvernera la promotion vers le Core — un "
+              "sujet entièrement différent, jamais mélangé ici) : "
+              "`SkillRegistry` ne promeut qu'une entrée du registre de "
+              "compétences, aucun chemin vers le Core. **Hors périmètre** : "
+              "`confidence` n'est jamais calculée ici — un appelant peut la "
+              "fournir (ex. déjà produite par "
+              "`apex.calibration.ConfidenceCalibrator`, Phase 12) mais ce "
+              "module ne l'invoque pas lui-même ; aucun raccordement à "
+              "`Self-Model` (vue composée future) ni à `MemoryProvider`/"
+              "Knowledge Graph.",
     ),
     Abstraction(
         "PromotionGovernor", "autorité de promotion indépendante du système évalué", 16, 16,
         ImplStatus.PLANNED, "décision par l'ExperimentEngine, journalisée",
         notes="APEX ne doit pas être seul juge de sa propre promotion. Hors de "
-              "portée de toute mutation, au même titre que le Policy Engine.",
+              "portée de toute mutation, au même titre que le Policy Engine. "
+              "**Réévalué après la passe de capitalisation** (`GenomeStore` "
+              "et `SkillRegistry` sont désormais RÉELS, plus seulement "
+              "`PLANNED` — l'ancien motif de report, « GenomeStore n'existe "
+              "pas encore », n'est donc plus valable) : toujours PLANNED, "
+              "mais pour une raison DIFFÉRENTE et actualisée, pas la même "
+              "laissée par oubli. `PolicyEngine.authorize(Subject.HUMAN, "
+              "Action.PROMOTE_SKILL/PROMOTE_GENOME_VERSION)` EST DÉJÀ, "
+              "structurellement, l'autorité de promotion indépendante que "
+              "`PromotionGovernor` devait fournir : deux consommateurs "
+              "indépendants (`SkillRegistryService.promote`, "
+              "`GenomeStoreService` via `GenomeVersionRepository.decide`) "
+              "appliquent CHACUN, sans se connaître, la même discipline "
+              "(décision HUMAIN seule, unique, jamais auto-décidée, aucun "
+              "chemin alternatif — `PolicyEngine` est le seul point "
+              "d'application, déjà interdit à toute boucle d'apprentissage). "
+              "`SkillRegistry` a démontré, de façon indépendante, le patron "
+              "« proposition CORE/HUMAIN + décision HUMAIN unique » que "
+              "`PromotionGovernor` aurait dû généraliser — `GenomeStore` "
+              "l'a ensuite reproduit à l'identique sans jamais consulter "
+              "`SkillRegistry`, preuve que le patron généralise déjà "
+              "correctement PAR RÉPÉTITION, sans classe commune. Ajouter "
+              "une classe `PromotionGovernor` aujourd'hui échouerait le "
+              "critère « aucun duplicata » du test en 4 points : elle "
+              "n'envelopperait que des vérifications déjà correctement "
+              "centralisées dans `PolicyEngine`, sans responsabilité "
+              "réellement nouvelle à porter. Resterait PLANNED jusqu'à un "
+              "TROISIÈME consommateur (ex. une future promotion de Memory "
+              "vers `SHARED` gouvernée au même niveau) dont le besoin "
+              "générique deviendrait alors démontrable, pas seulement "
+              "supposé — un troisième point de répétition, pas une "
+              "anticipation.",
     ),
     Abstraction(
         "HypothesisGenerator", "observation -> hypothèse falsifiable", 16, 16,
-        ImplStatus.PLANNED, "hypothèses saisies par l'humain",
-        notes="Distinct de l'ExperimentEngine, qui exécute et décide mais ne "
-              "propose pas. Seul composant où un modèle externe apporte un gain net.",
+        ImplStatus.STUB, "hypothèses saisies par l'humain",
+        module="apex.hypothesis.generator",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 16) : "
+              "`HypothesisGenerator.generate()` compose UNIQUEMENT "
+              "`apex.weakness.model.WeaknessReport` (réel, Phase 12) — "
+              "zéro `ModelProvider`, contrairement à ce que ce composant "
+              "visera à terme (« seul composant où un modèle externe "
+              "apporte un gain net » reste vrai, non encore exploité, même "
+              "discipline que `apex.taskgen`, Phase 15). Chaque hypothèse "
+              "produite est réellement falsifiable : `prediction` nomme un "
+              "chemin de réfutation concret et RÉEL — "
+              "`apex.taskgen.model.GenerationMode.TARGETED_WEAKNESS` (Phase "
+              "15) pour produire les tâches de renforcement, "
+              "`apex.stattest.StatTest.compare_paired` (Phase 16, ce même "
+              "tour) pour juger l'amélioration — jamais exécutés par ce "
+              "module (prouvé par test : aucun import de `apex.evalrunner`/"
+              "`apex.agents.runtime`/`apex.sandbox`). « Distinct de "
+              "l'ExperimentEngine, qui exécute et décide mais ne propose "
+              "pas » : `ExperimentEngine` reste le composite documenté "
+              "(TaskBank+TaskGenerator+HypothesisGenerator+OracleProvider+"
+              "JudgeTier+EvalRunner+StatTest+Memory+sélection), jamais une "
+              "classe séparée. **Jamais persistée** : aucune table "
+              "`hypotheses` — aucun consommateur réel "
+              "(`ExperimentEngine`) n'existe encore pour la lire (ADR-0007).",
     ),
     Abstraction(
         "CostGainEstimator", "gain attendu / coût de calcul, puis calibration sur le réel", 5, 18,
-        ImplStatus.PLANNED, "coût réel mesuré, gain non estimé",
-        notes="Couvre à la fois la conception d'expériences, l'estimation de "
-              "ressources et le rendement d'apprentissage — une seule boucle "
-              "estimer/mesurer/corriger, donc une seule abstraction.",
+        ImplStatus.STUB, "coût réel mesuré, gain non estimé",
+        module="apex.costgain.estimator",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 18, enrichi lors "
+              "de la passe de capitalisation) : `CostGainEstimator."
+              "estimate_cost()` additionne le VRAI `elapsed_s` de chaque "
+              "`EvalRun` (Phase 5) — `UNKNOWN`, jamais un sous-total "
+              "silencieux, si UN SEUL run manque cette mesure (prouvé par "
+              "test). `memory_peak_mb` (cgroups v1 "
+              "`memory.max_usage_in_bytes`, réel) est maintenant copié par "
+              "`EvalRunnerService._build_eval_run` dans "
+              "`EvalRun.facts[\"memory_peak_mb\"]` — le sac JSON libre déjà "
+              "prévu par le contrat Phase 5, AUCUNE colonne ajoutée, aucune "
+              "migration — puis lu par `estimate_cost()` comme le MAXIMUM "
+              "(pas la somme, un pic n'est pas additif) sur les runs "
+              "considérés, `UNKNOWN` si un seul run ne le porte pas. "
+              "`cpu_time_s`/`token_count` restent honnêtement "
+              "`Measurement.unknown()` — jamais 0 — pour deux raisons "
+              "réelles et documentées, pas des oublis : (1) `cpu.stat` "
+              "(cgroups v1) n'expose que du throttling, jamais le temps CPU "
+              "réellement consommé — aucune valeur réelle à copier, quelle "
+              "que soit la couche ; (2) `token_count` exigerait un "
+              "raccordement `ModelProvider` -> `EvalRunner` qui n'existe "
+              "pas (décision explicite depuis la Phase 5). `estimate_gain()`"
+              " délègue INTÉGRALEMENT à "
+              "`apex.stattest.StatTest.compare_paired` (Phase 16, réel) — "
+              "zéro seconde logique statistique. `ratio` (gain/coût) n'est "
+              "`Measurement.real` QUE si le gain est "
+              "`StatTestVerdict.SIGNIFICANT` ET le coût temps réellement "
+              "mesuré et positif — un gain `NOT_SIGNIFICANT` ou "
+              "`INSUFFICIENT_DATA` donne toujours un ratio `UNKNOWN`, "
+              "jamais un nombre construit sur du bruit statistique (prouvé "
+              "par test, les deux cas). **Hors périmètre, honnêtement** : "
+              "robustesse et transfert ne sont pas des champs de ce module "
+              "— aucune infrastructure d'évidence cross-domaine/répétée "
+              "n'existe encore pour les mesurer ; les ajouter comme champs "
+              "systématiquement `UNKNOWN` aurait été un placeholder sans "
+              "valeur, pas une honnêteté supplémentaire.",
     ),
     Abstraction(
         "ConfidenceCalibrator", "incertitude calibrée contre les résultats réels", 9, 12,
-        ImplStatus.PLANNED, "seuils fixes dans le Genome",
-        notes="Pilote l'escalade de raisonnement et de modèle. Une confiance non "
-              "calibrée contre les issues observées est un nombre décoratif.",
+        ImplStatus.STUB, "seuils fixes dans le Genome",
+        module="apex.calibration.calibrator",
+        notes="STUB et non IMPLEMENTED délibérément (Phase 12) : "
+              "`ConfidenceCalibrator.calibrate()` calcule un VRAI intervalle "
+              "de Wilson à 95 % (méthode statistique standard, stdlib pur — "
+              "ADR-0002) sur des compteurs succès/total réels, jamais un "
+              "nombre décoratif. Trois notions jamais confondues : "
+              "`observed_success_rate` (taux brut), "
+              "`calibrated_point_estimate`/bornes (l'estimation calibrée, "
+              "qui se resserre avec le volume — prouvé par test), "
+              "`declared_confidence` (transmise telle quelle par l'appelant, "
+              "jamais recalculée) — `calibration_gap` (déclaré - calibré) "
+              "signe la sur/sous-confiance. Sous `n=3` : `INSUFFICIENT_DATA`, "
+              "aucune valeur calibrée fabriquée. "
+              "`calibrate_from_weakness_report()` réutilise EXACTEMENT "
+              "l'échantillon PASS/FAIL de `WeaknessDetector` (Phase 12) — "
+              "zéro définition divergente de ce qui compte comme résultat "
+              "exploitable. **Hors périmètre** : aucun raccordement au "
+              "Genome (`GenomeStore`, PLANNED, phase 17, n'existe pas) — "
+              "« seuils fixes dans le Genome » reste le fallback documenté, "
+              "pas encore réel ; ce module ne pilote encore aucune escalade "
+              "de raisonnement/modèle, il calibre seulement, sur demande "
+              "explicite d'un appelant.",
     ),
     # -- Ajouts issus de docs/COGNITIVE_ARCHITECTURE.md (ADR-0011) -------------
     Abstraction(
@@ -324,10 +790,14 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "déterministe, apex.missions.workloads) — testé de bout en bout "
               "avec une vraie isolation NAMESPACED, y compris via "
               "POST /missions/{id}/launch (apex/api/routes/missions.py). "
-              "TaskBank/EvalRunner, PLANNED, n'existent toujours pas pour "
-              "dériver un « travail » arbitraire depuis l'objectif texte "
-              "d'une mission quelconque — seul le diagnostic RESEARCH, câblé "
-              "en dur, existe ; lancer toute autre spécialité échoue proprement.",
+              "`TaskBank`/`EvalRunner` (STUB depuis la phase 5, "
+              "`apex.tasks`/`apex.evalrunner`) ne sont PAS raccordés à "
+              "`MissionEngine` : aucun mécanisme ne dérive un « travail » "
+              "arbitraire depuis l'objectif texte d'une mission quelconque "
+              "— seul le diagnostic RESEARCH, câblé en dur, existe ici ; "
+              "lancer toute autre spécialité échoue proprement. Une mission "
+              "et un `EvalRun` restent deux chemins d'exécution distincts, "
+              "jamais composés l'un dans l'autre par ce module.",
     ),
     Abstraction(
         "SpecialtyEngine",

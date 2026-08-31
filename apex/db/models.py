@@ -18,12 +18,39 @@ Portée exacte du brief phase 2 (`docs/VISION_INTEGRATION.md` §5) :
   confiance, statut de vérification, révisions par `supersedes_id`,
   relations SUPPORTS/CONTRADICTS) — pas de RAG/embeddings (`EmbeddingProvider`
   reste PLANNED), pas de graphe visuel ni de moteur de traversée.
+- `TaskBank`/`EvalRunner` (registre : PLANNED -> STUB, phase 5) -> tables
+  `tasks`/`eval_runs`. Les deux sont **INSERT seul** : aucune méthode de
+  modification n'existe côté `apex/db/repositories.py`, et `UPDATE` est
+  révoqué en migration pour tous les rôles applicatifs (même garantie que
+  `audit_log`) — une tâche ou un résultat d'évaluation ne change jamais
+  silencieusement après coup ; une correction est une nouvelle ligne, pas
+  une mutation. `eval_runs` conserve les échecs et les succès de façon
+  identique (aucun filtrage à l'écriture) — un résultat négatif est une
+  donnée, pas une erreur à effacer. Le rôle `apex_eval` (réservé sans
+  usage depuis la migration initiale) reçoit `SELECT, INSERT` sur
+  `eval_runs` mais **aucun accès** à `tasks` : c'est le mécanisme qui rend
+  le critère HELDOUT (`docs/adr` ADR-0010, différé en phase 2) vrai par
+  construction plutôt que par une règle applicative contournable.
+- `SkillRegistry` (registre : PLANNED -> STUB, phase 14) -> table `skills`,
+  seule table de ce module **mutable au sens strict** (hors `audit_log`
+  écriture seule et la promotion de visibilité de `memory_records`) : un
+  `UPDATE` ciblé (`SkillRepository.decide()`) fait passer `status` de
+  `proposed` à `acquired`/`rejected`, UNE seule fois — jamais le contenu
+  (nom/description/preuves). La généalogie (versionnement) n'est PAS une
+  mutation : réviser une compétence insère une nouvelle ligne
+  (`supersedes_id`), même patron que `memory_records`.
+- `GenomeStore` (registre : PLANNED -> STUB, phase 17) -> table
+  `genome_versions`, MÉTADONNÉES seules — le contenu du Genome est stocké
+  par `ArtifactStoreProvider` (adressé par contenu, `content_hash` = le
+  `genome_ref: hash` de `Clone`). Même discipline de mutation que `skills` :
+  un `UPDATE` ciblé (`GenomeVersionRepository.decide()`) fait passer
+  `status` de `proposed` à `promoted`/`rejected`, UNE seule fois.
 
 Ce que ce module ne fait PAS :
 - il ne crée aucune table pour des abstractions encore `PLANNED`
-  (`task_runs`, `model_runs`, `tool_usage`, `sandbox_execs` — TaskBank,
-  ModelProvider, ToolProvider, SandboxProvider n'existent pas avant les
-  phases 3 à 7). Créer leur schéma maintenant reviendrait à deviner une
+  (`model_runs`, `tool_usage`, `sandbox_execs` — ModelProvider,
+  ToolProvider, SandboxProvider n'ont pas de table de persistance dédiée
+  à ce stade). Créer leur schéma maintenant reviendrait à deviner une
   implémentation qui n'existe pas encore (ADR-0007 : rien n'est déclaré
   avant d'exister). Le partitionnement mensuel de ces tables reste un
   risque documenté (voir `docs/PHASE_2_REPORT.md`), à traiter par la phase
@@ -347,4 +374,268 @@ class MemoryRelationRow(Base):
             "created_by": self.created_by,
             "confidence": self.confidence,
             "created_at": self.created_at.isoformat(),
+        }
+
+
+class TaskRow(Base):
+    """Persistance d'un `apex.tasks.model.Task` (`TaskBank`, phase 5).
+
+    **INSERT seul** — aucune méthode de modification côté
+    `apex/db/repositories.py`, `UPDATE`/`DELETE`/`TRUNCATE` révoqués en
+    migration pour tous les rôles applicatifs : une tâche d'évaluation ne
+    change jamais après coup, une correction est une nouvelle ligne. `split`
+    (`train`/`heldout`) est le mécanisme du critère HELDOUT (ADR-0010) :
+    combiné à l'absence totale de `GRANT` sur cette table pour le rôle
+    `apex_eval`, un exécuteur d'évaluation ne peut structurellement pas lire
+    les tâches HELDOUT, qu'il connaisse ou non leur `id`. `specialty`
+    référence un id de `apex.specialties.registry`, vérifié au niveau
+    service (`apex.tasks.service`), pas ici — même séparation que
+    `MissionRow.specialty`. Pas de `ForeignKey` : même simplification
+    documentée que `MissionRow.assigned_agent`.
+
+    Volontairement **pas de champ `method`** ici : `docs/COGNITIVE_ARCHITECTURE.md`
+    §5 est explicite — « chaque *run* est tagué par un champ fermé `method` »
+    — c'est une propriété de la TENTATIVE (`EvalRunRow.method`), pas de
+    l'énoncé de la tâche. Fixer un `method` sur `Task` empêcherait par
+    construction de comparer plusieurs méthodes sur la même tâche, ce que
+    §5 prévoit explicitement (« Méthode A vs B », comparaison future via
+    `MetaLearner`).
+    """
+
+    __tablename__ = "tasks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    split: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    #: Argv — liste de chaînes, JAMAIS une chaîne shell : même contrat que
+    #: `apex.sandbox.model.SandboxSpec.command` ("un argv, jamais une
+    #: fermeture Python"), qui la reçoit directement telle quelle
+    #: (`apex.evalrunner.service`). Une chaîne shell obligerait à invoquer
+    #: `sh -c`, une surface d'interprétation supplémentaire (quoting,
+    #: expansion) qu'un simple argv évite par construction. Commande
+    #: déterministe, exécutable telle quelle par SandboxProvider — jamais
+    #: une tentative générée par un ModelProvider (hors périmètre phase 5,
+    #: voir docs/PHASE_5_REPORT.md).
+    command: Mapped[list[str]] = mapped_column(JSON, nullable=False)
+    dataset_ref: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "split": self.split,
+            "specialty": self.specialty,
+            "title": self.title,
+            "description": self.description,
+            "command": list(self.command),
+            "dataset_ref": self.dataset_ref,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class EvalRunRow(Base):
+    """Persistance d'un `apex.evalrunner.model.EvalRun` (`EvalRunner`, phase 5).
+
+    **INSERT seul**, même garantie que `TaskRow` : un résultat d'évaluation
+    — succès comme échec — n'est jamais modifié ni supprimé après coup.
+    `oracle_verdict` (PASS/FAIL/ERROR/TIMEOUT/UNKNOWN,
+    `apex.oracles.model.OracleVerdict`) est un jugement de correction de
+    tâche, délibérément distinct de `sandbox_status`
+    (`apex.sandbox.model.ExecutionStatus`, ex. TIMEOUT/OOM_KILLED) qui est
+    un statut d'exécution processus : les deux vocabulaires ne sont jamais
+    fusionnés, un run peut par ex. avoir `sandbox_status=SUCCESS` et
+    `oracle_verdict=FAIL` (le code s'est exécuté sans erreur mais a produit
+    une réponse incorrecte). `experiment_ref` est une étiquette libre,
+    sans contrainte ni logique associée ici : une pure affordance de
+    traçabilité pour permettre à une phase future (16, ExperimentEngine)
+    de regrouper plusieurs `EvalRun` — Clones, seeds, `genome_ref` (déjà
+    sur `AgentRow`/`Clone`) différents — sous une même expérience, comme
+    donnée et non comme nouvelle abstraction. Pas de `ForeignKey` vers
+    `tasks.id`/`agents.clone_id` : même simplification documentée que
+    `MissionRow.assigned_agent` ; l'existence est vérifiée au niveau
+    service (`apex.evalrunner.service`).
+    """
+
+    __tablename__ = "eval_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    clone_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    method: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dataset_ref: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    #: Étiquette libre de regroupement — voir docstring de la classe.
+    experiment_ref: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    oracle_verdict: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    oracle_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sandbox_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    elapsed_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    facts: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "task_id": self.task_id,
+            "clone_id": self.clone_id,
+            "method": self.method,
+            "seed": self.seed,
+            "dataset_ref": self.dataset_ref,
+            "experiment_ref": self.experiment_ref,
+            "oracle_verdict": self.oracle_verdict,
+            "oracle_detail": self.oracle_detail,
+            "sandbox_status": self.sandbox_status,
+            "exit_code": self.exit_code,
+            "elapsed_s": self.elapsed_s,
+            "facts": dict(self.facts),
+            "created_by": self.created_by,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class SkillRow(Base):
+    """Persistance d'un `apex.skills.model.Skill` (`SkillRegistry`, phase 14).
+
+    Distincte du Genome (`docs/VISION_INTEGRATION.md` §2.2 : « une
+    compétence a son propre cycle de promotion, ses benchmarks et sa
+    généalogie ») : ce cycle de promotion est ICI, HUMAIN, jamais celui de
+    `PromotionGovernor` (`PLANNED`, phase 16, qui gouverne la promotion vers
+    le Core, un sujet entièrement différent).
+
+    **Mutable, contrairement à `TaskRow`/`EvalRunRow`** : `status` (`proposed`
+    -> `acquired`/`rejected`, UNE seule décision, jamais redécidée — même
+    garde que `MissionService._require_no_prior_decision`) et les champs de
+    décision associés sont les SEULES mutations autorisées ; `UPDATE` reste
+    accordé à `apex_core` en migration mais `apex/db/repositories.py`
+    n'expose qu'une méthode `decide()` ciblée, jamais une modification libre
+    du contenu (nom/description/preuves). La « généalogie » (versionnement)
+    n'est PAS une mutation : réviser une compétence insère une NOUVELLE ligne
+    (`supersedes_id`), exactement le patron déjà prouvé par
+    `MemoryRecordRow.supersedes_id` — jamais un historique réécrit.
+
+    Pas de `ForeignKey` sur `prerequisite_skill_ids`/`evidence_run_ids`/
+    `supersedes_id` : même simplification documentée que
+    `MissionRow.assigned_agent` — l'existence est vérifiée au niveau service
+    (`apex.skills.service`), pas ici.
+    """
+
+    __tablename__ = "skills"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    #: Graphe de prérequis — IDs d'autres `Skill` devant être `acquired`
+    #: avant que celle-ci puisse l'être. Fixé à la création, jamais muté
+    #: ensuite — même invariant que `MissionRow.depends_on` (voir
+    #: `apex.missions.dependencies`, réutilisé tel quel pour la détection de
+    #: cycle, aucune duplication de cette logique).
+    prerequisite_skill_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    #: IDs d'`EvalRun` (Phase 5) servant de preuve — vérifiés existants à la
+    #: proposition (`apex.skills.service`) : jamais une preuve inventée.
+    evidence_run_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    #: Confiance éventuellement fournie par l'appelant (ex. déjà calculée
+    #: via `apex.calibration.ConfidenceCalibrator`) — jamais calculée ici,
+    #: jamais un nombre décoratif fabriqué faute de mieux.
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    supersedes_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    decided_by: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "specialty": self.specialty,
+            "description": self.description,
+            "status": self.status,
+            "prerequisite_skill_ids": list(self.prerequisite_skill_ids or []),
+            "evidence_run_ids": list(self.evidence_run_ids or []),
+            "confidence": self.confidence,
+            "supersedes_id": self.supersedes_id,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+            "decided_by": self.decided_by,
+            "decided_at": self.decided_at.isoformat() if self.decided_at else None,
+            "decision_reason": self.decision_reason,
+        }
+
+
+class GenomeVersionRow(Base):
+    """Persistance des MÉTADONNÉES d'un `apex.genome.model.GenomeVersion`
+    (`GenomeStore`, phase 17) — jamais le contenu lui-même.
+
+    Le contenu (« données versionnées mutables, jamais de code »,
+    `docs/COGNITIVE_ARCHITECTURE.md` §1) est stocké par `ArtifactStoreProvider`
+    (STUB réel depuis la Phase 10) sous forme de JSON canonique — `content_hash`
+    est le SEUL lien entre cette ligne et le contenu réel, exactement le
+    `genome_ref: hash` déjà spécifié pour `Clone` (§2.2). Aucune duplication
+    du mécanisme de stockage adressé par contenu : `GenomeStore` compose
+    `ArtifactStore`, ne le réimplémente pas.
+
+    **Mutable comme `SkillRow`, même discipline** : `status` (`proposed` ->
+    `promoted`/`rejected`, UNE seule décision, jamais redécidée) est la
+    SEULE mutation autorisée (`GenomeVersionRepository.decide()`, ciblé).
+    Cycle de décision **HUMAIN**, provisoire en attendant `PromotionGovernor`
+    (`PLANNED`, phase 16, périmètre jugé insuffisamment défini — voir
+    `apex/interfaces/registry.py`) — même patron que `SkillRow`, jamais deux
+    mécanismes de promotion concurrents.
+
+    `parent_version_id`/`parent_version_id_b` portent la généalogie : un
+    seul parent pour une mutation, deux pour un croisement
+    (`apex.genome.mutation`) — jamais une réécriture, une nouvelle ligne à
+    chaque proposition. `origin` documente comment cette version a été
+    produite (`manual`/`mutation`/`crossover`), une donnée de traçabilité,
+    jamais interprétée par ce module.
+    """
+
+    __tablename__ = "genome_versions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    content_hash: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    parent_version_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    parent_version_id_b: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    origin: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    decided_by: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "content_hash": self.content_hash,
+            "parent_version_id": self.parent_version_id,
+            "parent_version_id_b": self.parent_version_id_b,
+            "origin": self.origin,
+            "status": self.status,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+            "decided_by": self.decided_by,
+            "decided_at": self.decided_at.isoformat() if self.decided_at else None,
+            "decision_reason": self.decision_reason,
         }

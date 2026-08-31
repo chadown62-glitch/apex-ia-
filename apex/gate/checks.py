@@ -28,6 +28,8 @@ from apex.config.schema import ApexConfig, HardwareThresholds, PoolStatus
 from apex.version import MIN_PYTHON
 from apex.gate.compose import analyse_compose_file
 from apex.gate.model import Evidence, GateCheckResult, GateStatus
+from apex.sandbox.detect import detect_capabilities
+from apex.sandbox.model import IsolationLevel, SandboxCapabilityReport
 from apex.util.probe import Probe
 
 #: Repli utilisé seulement quand aucune configuration n'est chargée
@@ -58,6 +60,12 @@ class GateContext:
     timeout_s: float = 20.0
     #: Racine du depot, pour les controles qui lisent un fichier du projet.
     project_root: str = "."
+    #: Détection RÉELLE de l'isolation namespaces/cgroups v1 (apex.sandbox.
+    #: detect — SEUL backend SandboxProvider implémenté, étape 7), injectable
+    #: pour les tests exactement comme `probe` l'est déjà. Par défaut, la
+    #: vraie fonction : GATE-19 mesure alors CETTE machine, jamais une
+    #: simulation, sauf override explicite par un test.
+    detect_sandbox_capabilities: Callable[[], SandboxCapabilityReport] = detect_capabilities
 
 
 def _ok(check_id: str, title: str, message: str, **kw: Any) -> GateCheckResult:
@@ -600,6 +608,16 @@ def gate_13_cpu(ctx: GateContext) -> GateCheckResult:
 
 
 def gate_14_virtualization(ctx: GateContext) -> GateCheckResult:
+    """Infrastructure de virtualisation/durcissement — KVM, virtualisation
+    imbriquée, cgroups v2 unifié. ADR-0005 : cette infrastructure sert la
+    « VM dédiée » d'isolation renforcée du Red Team (phase 21), pas le cœur
+    fonctionnel de la phase 3 (Sandbox). La capacité RÉELLE de Sandbox
+    (namespaces + cgroups v1, suffisante pour l'exécution ordinaire de code
+    généré) est mesurée séparément par GATE-19
+    (`apex.sandbox.detect.detect_capabilities`, ADR-0012) — jamais par ce
+    contrôle. Un FAIL ici documente honnêtement l'absence de cgroups v2 sur
+    CETTE machine ; il ne signifie PAS que Sandbox est cassé ou dépourvu de
+    limites réelles (voir GATE-19 pour ce qui est réellement appliqué)."""
     title = "Virtualisation et cgroups"
     cgroups_v2 = ctx.probe.exists("/sys/fs/cgroup/cgroup.controllers")
     kvm = ctx.probe.exists("/dev/kvm")
@@ -610,13 +628,15 @@ def gate_14_virtualization(ctx: GateContext) -> GateCheckResult:
     if not cgroups_v2:
         return _fail(
             "GATE-14", title,
-            "cgroups v2 absent — les limites CPU, mémoire et pids de la sandbox ne seraient pas appliquées",
+            "cgroups v2 (chemin unifié standard) absent sur cette machine — infrastructure "
+            "d'isolation renforcée (VM dédiée, ADR-0005) indisponible ; voir GATE-19 pour la "
+            "capacité Sandbox réellement mesurée (namespaces + cgroups v1)",
             remediation=(
-                "wsl --update puis wsl --shutdown. Sans cgroups v2, la sandbox n'a pas de "
-                "limites de ressources réelles : la fonctionnalité doit rester désactivée "
-                "plutôt que d'être exécutée sans garanties."
+                "wsl --update puis wsl --shutdown. Nécessaire pour l'infrastructure "
+                "d'isolation renforcée du Red Team (phase 21) — PAS un prérequis du cœur "
+                "fonctionnel de la phase 3 (Sandbox), déjà validé via NAMESPACED (GATE-19)."
             ),
-            facts=facts, blocks_phases=(3,),
+            facts=facts, blocks_phases=(21,),
         )
     if not nested:
         return _degraded("GATE-14", title,
@@ -746,35 +766,92 @@ def gate_18_gpu_in_container(ctx: GateContext) -> GateCheckResult:
 
 
 def gate_19_isolation_state(ctx: GateContext) -> GateCheckResult:
-    """Détermine le plafond d'isolation et ce qu'il autorise fonctionnellement."""
+    """Détermine le plafond d'isolation et ce qu'il autorise fonctionnellement.
+
+    Deux familles de mécanismes, jamais confondues :
+
+    - conteneurisation (Docker + runsc), mesurée directement ici, comme avant ;
+    - namespaces Linux directs (`apex.sandbox.detect.detect_capabilities`,
+      injectable via `ctx.detect_sandbox_capabilities` — exactement comme
+      `ctx.probe` l'est déjà). C'est le SEUL backend `SandboxProvider`
+      réellement implémenté (étape 7) ; sa détection n'est jamais dupliquée
+      ici, seulement consultée.
+
+    Avant cette révision, l'absence de Docker (ou l'absence de cgroups v2 au
+    chemin unifié standard) faisait conclure « insuffisant »/UNKNOWN SANS
+    jamais consulter cette détection — sous-déclarant une isolation réelle,
+    déjà utilisée en production par `apex.missions.execution.launch_mission`
+    depuis l'étape 7. Correction de détection, pas un relâchement de
+    politique : `NAMESPACED` n'est JAMAIS promu au niveau `docker_hardened`/
+    `gvisor` — ni seccomp ni jail complet du filesystem (voir
+    `apex.sandbox.model.IsolationLevel`). `code_execution_allowed=True` pour
+    NAMESPACED reflète la politique déjà opérante de `SandboxCapabilityReport.
+    is_available` (NAMESPACED = seuil minimal d'exécution réelle) ;
+    `red_team_allowed` reste False, exactement comme pour `docker_hardened`.
+    """
     title = "État de l'isolation sandbox"
-    if ctx.probe.which("docker") is None:
-        return _unknown("GATE-19", title, "docker absent",
-                         facts={"isolation_level": None, "red_team_allowed": None})
 
-    runtimes_out = ctx.probe.run(["docker", "info", "--format", "{{.Runtimes}}"], timeout_s=ctx.timeout_s)
-    runtimes = runtimes_out.stdout.strip() if runtimes_out.ok else ""
+    docker_present = ctx.probe.which("docker") is not None
+    has_runsc = False
     cgroups_v2 = ctx.probe.exists("/sys/fs/cgroup/cgroup.controllers")
-    has_runsc = "runsc" in runtimes
+    if docker_present:
+        runtimes_out = ctx.probe.run(["docker", "info", "--format", "{{.Runtimes}}"], timeout_s=ctx.timeout_s)
+        runtimes = runtimes_out.stdout.strip() if runtimes_out.ok else ""
+        has_runsc = "runsc" in runtimes
+    else:
+        runtimes = ""
 
-    level = "gvisor" if has_runsc else ("docker_hardened" if cgroups_v2 else "insufficient")
-    facts = {
+    namespace_facts: dict[str, Any] | None = None
+    if has_runsc:
+        level = "gvisor"
+    elif docker_present and cgroups_v2:
+        level = "docker_hardened"
+    else:
+        # Ni gVisor ni Docker durci : avant de conclure « insuffisant », on
+        # consulte la détection RÉELLE des namespaces Linux — le mécanisme
+        # que SandboxProvider utilise réellement, indépendant de Docker.
+        sandbox_report = ctx.detect_sandbox_capabilities()
+        namespace_facts = sandbox_report.facts
+        level = "namespaced" if sandbox_report.level is IsolationLevel.NAMESPACED else "insufficient"
+
+    facts: dict[str, Any] = {
         "isolation_level": level,
         "runsc_declared": has_runsc,
         "cgroups_v2": cgroups_v2,
-        "red_team_allowed": has_runsc,
-        "code_execution_allowed": level in ("gvisor", "docker_hardened"),
+        "red_team_allowed": level == "gvisor",
+        "code_execution_allowed": level in ("gvisor", "docker_hardened", "namespaced"),
     }
+    if namespace_facts is not None:
+        facts["namespace_isolation_facts"] = namespace_facts
 
     if level == "insufficient":
         return _fail(
             "GATE-19", title,
-            "isolation insuffisante — ni runsc ni cgroups v2",
+            "isolation insuffisante — ni conteneur (Docker durci/gVisor) ni namespaces Linux fonctionnels",
             remediation=(
-                "L'exécution de code généré reste DÉSACTIVÉE. Corriger cgroups v2 avant la "
-                "phase 3. Aucune garantie de sécurité n'est abaissée pour débloquer la phase."
+                "L'exécution de code généré reste DÉSACTIVÉE. Corriger Docker+cgroups v2 OU "
+                "les namespaces Linux (unshare/cgroups v1/setpriv/isolation réseau — voir "
+                "apex.sandbox.detect.detect_capabilities) avant la phase 3. Aucune garantie "
+                "de sécurité n'est abaissée pour débloquer la phase."
             ),
             facts=facts, blocks_phases=(3,),
+        )
+    if level == "namespaced":
+        return _degraded(
+            "GATE-19", title,
+            "plafond d'isolation : namespaces Linux (NAMESPACED) — suffisant pour du code "
+            "généré ordinaire, PAS un niveau conteneur",
+            remediation=(
+                "NAMESPACED (namespaces Linux + cgroups v1 + abaissement de privilège réel + "
+                "réseau coupé, apex.sandbox.linux_namespace) n'est ni docker_hardened ni "
+                "gvisor : ni seccomp, ni jail complet du filesystem (pas de pivot_root). "
+                "Conséquence verrouillée, comme pour docker_hardened : le Red Team (§46) "
+                "reste DÉSACTIVÉ jusqu'à une isolation renforcée (Docker+cgroups v2, runsc, "
+                "ou machine séparée). L'exécution ordinaire de code généré reste autorisée — "
+                "c'est déjà la politique réellement appliquée par "
+                "apex.missions.execution.launch_mission."
+            ),
+            facts=facts, blocks_phases=(21,),
         )
     if level == "docker_hardened":
         return _degraded(

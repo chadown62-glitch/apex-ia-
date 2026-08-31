@@ -69,6 +69,14 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # directement (chaîne obligatoire : HUMAN valide/rejette la
             # REVIEW, mais ne lance ni n'exécute lui-même).
             Action.EXECUTE_IN_SANDBOX,
+            # SkillRegistry (phase 14) : CORE peut proposer une compétence à
+            # partir d'une synthèse automatique de preuve (EvalRunner) —
+            # jamais la promouvoir ni la rejeter (décision HUMAN seule).
+            Action.PROPOSE_SKILL,
+            # GenomeStore (phase 17) : même motif — CORE peut proposer une
+            # version (issue d'une mutation/d'un croisement réel), jamais
+            # la promouvoir ni la rejeter.
+            Action.PROPOSE_GENOME_VERSION,
         }
     ),
     Subject.HUMAN: frozenset(
@@ -80,6 +88,17 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # Jamais LAUNCH_MISSION : le lancement effectif reste au CORE.
             Action.CREATE_MISSION, Action.CANCEL_MISSION, Action.VALIDATE_MISSION,
             Action.REJECT_MISSION, Action.REQUEST_MISSION_REVISION,
+            # TaskBank (phase 5) : même motif que CREATE_MISSION — HUMAN
+            # seul, jamais CORE ni un clone.
+            Action.CREATE_TASK,
+            # SkillRegistry (phase 14) : HUMAN peut aussi proposer (saisie
+            # manuelle) ET seul HUMAN décide de la promotion/du rejet —
+            # jamais une compétence qui s'auto-promeut.
+            Action.PROPOSE_SKILL, Action.PROMOTE_SKILL, Action.REJECT_SKILL,
+            # GenomeStore (phase 17) : même motif — seul HUMAIN décide de
+            # promouvoir/rejeter une version de Genome, invariant absolu
+            # (aucun clone, aucun CORE ne modifie le Core via le Genome).
+            Action.PROPOSE_GENOME_VERSION, Action.PROMOTE_GENOME_VERSION, Action.REJECT_GENOME_VERSION,
         }
     ),
     Subject.RESEARCH: frozenset(

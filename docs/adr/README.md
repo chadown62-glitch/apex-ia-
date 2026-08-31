@@ -18,3 +18,5 @@ indéfiniment les mêmes débats.
 | 0009 | Décodage des sorties de processus | Acceptée |
 | 0010 | Persistance PostgreSQL : SQLAlchemy 2.0, Alembic, rôles créés par migration | Acceptée |
 | 0011 | AgentRuntime et CodeIntelligence comme abstractions PLANNED | Acceptée |
+| 0012 | GATE-19 reconnaît NAMESPACED comme un niveau d'isolation distinct | Acceptée |
+| 0013 | GATE-14 bloque la phase 21, plus la phase 3 | Acceptée |

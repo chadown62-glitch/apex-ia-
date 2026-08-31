@@ -320,22 +320,384 @@ class TestHeldoutSplitSeparation(unittest.TestCase):
     """Critère de validation §5.3 du brief : le rôle worker ne doit pas lire
     le split HELDOUT.
 
-    DÉLIBÉRÉMENT SAUTÉ, pas simulé. Ce test exigerait une table de tâches
-    avec une colonne « split » — c'est-à-dire une partie du schéma de
-    TaskBank, qui reste PLANNED (phase 5, apex/interfaces/registry.py).
-    Créer cette table maintenant pour faire passer ce seul test reviendrait
-    exactement à ce qu'interdit ADR-0007 : déclarer une structure avant que
-    l'abstraction qui la possède existe. Ce critère est donc reporté à la
-    phase qui implémente TaskBank, où il pourra être testé contre le vrai
-    schéma plutôt qu'un schéma fictif construit pour la circonstance.
+    Résolu pour de vrai en phase 5 (TaskBank, migration `eda413ca0829`) :
+    `apex_eval` n'a AUCUN `GRANT` sur `tasks`, ni sur le split HELDOUT ni
+    sur TRAIN. La séparation n'est donc PAS appliquée par une clause WHERE
+    ou une règle applicative (contournable) mais par l'absence totale de
+    privilège SQL sur la table entière — le SGBD refuse la lecture avant
+    même qu'une ligne HELDOUT ne soit distinguée d'une ligne TRAIN. Ce test
+    prouve le refus RÉEL par PostgreSQL, contre le vrai schéma, pas un
+    schéma fictif construit pour la circonstance (voir l'historique : ce
+    test était `@unittest.skip`, reporté depuis `docs/PHASE_2_REPORT.md`).
     """
 
-    @unittest.skip(
-        "Reporté à la phase 5 (TaskBank) — voir docstring de la classe et "
-        "docs/PHASE_2_REPORT.md, section critères différés."
-    )
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def _insert_task(self, task_id: str, split: str) -> None:
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO tasks (id, split, specialty, title, description, command, "
+                "created_by, created_at) VALUES "
+                "(%s, %s, 'research', 't', 'd', '[\"true\"]'::jsonb, 'human', now())",
+                (task_id, split),
+            )
+
     def test_worker_role_cannot_read_heldout_split(self) -> None:
-        raise NotImplementedError
+        import psycopg
+
+        self._insert_task("t-heldout", "heldout")
+        with support.role_connection("apex_eval") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM tasks WHERE id = 't-heldout'")
+
+    def test_worker_role_cannot_read_train_split_either(self) -> None:
+        """Le refus est TOTAL, pas seulement sur HELDOUT : `apex_eval` n'a
+        aucun `GRANT` sur `tasks`, quel que soit le split — la table entière
+        est hors de portée, jamais un filtre par ligne qui pourrait, lui,
+        être contourné par une requête différente."""
+        import psycopg
+
+        self._insert_task("t-train", "train")
+        with support.role_connection("apex_eval") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM tasks WHERE id = 't-train'")
+
+
+@unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
+class TestTaskRoleIsWriteRestricted(unittest.TestCase):
+    """`tasks` est INSERT seul pour apex_core — UPDATE est révoqué même pour
+    apex_core (plus strict que `missions`/`memory_records`) : une tâche ne
+    change jamais après coup, voir `apex.db.models.TaskRow`."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def test_apex_core_can_insert_but_not_update_tasks(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO tasks (id, split, specialty, title, description, command, "
+                "created_by, created_at) VALUES "
+                "('t1', 'train', 'research', 't', 'd', '[\"true\"]'::jsonb, 'human', now())"
+            )
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE tasks SET title = 'x' WHERE id = 't1'")
+
+    def test_apex_core_cannot_delete_tasks(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM tasks")
+
+    def test_apex_agent_cannot_write_tasks(self) -> None:
+        """Un clone (rôle apex_agent) n'a aucun accès à `tasks` — pas même
+        en lecture : même motif que `apex_eval` (HELDOUT), mais ici pour
+        TOUT clone, pas seulement l'exécuteur d'évaluation."""
+        import psycopg
+
+        with support.role_connection("apex_agent") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO tasks (id, split, specialty, title, description, command, "
+                        "created_by, created_at) VALUES "
+                        "('rogue', 'train', 'research', 't', 'd', '[\"true\"]'::jsonb, 'research', now())"
+                    )
+
+    def test_apex_readonly_can_select_but_not_insert_tasks(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO tasks (id, split, specialty, title, description, command, "
+                "created_by, created_at) VALUES "
+                "('t2', 'train', 'research', 't', 'd', '[\"true\"]'::jsonb, 'human', now())"
+            )
+        with support.role_connection("apex_readonly") as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM tasks")
+        with support.role_connection("apex_readonly") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO tasks (id, split, specialty, title, description, command, "
+                        "created_by, created_at) VALUES "
+                        "('x', 'train', 'research', 't', 'd', '[\"true\"]'::jsonb, 'human', now())"
+                    )
+
+
+@unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
+class TestEvalRunRoleIsWriteRestricted(unittest.TestCase):
+    """`eval_runs` est INSERT seul, mais accessible en écriture à la fois par
+    apex_core (`EvalRunnerService`) et par apex_eval (rôle réservé sans
+    usage depuis la migration initiale) — jamais par apex_agent : un clone
+    n'écrit jamais son propre résultat d'évaluation."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def _insert_task(self) -> str:
+        import uuid
+
+        task_id = f"t-{uuid.uuid4().hex[:12]}"
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO tasks (id, split, specialty, title, description, command, "
+                "created_by, created_at) VALUES "
+                "(%s, 'train', 'research', 't', 'd', '[\"true\"]'::jsonb, 'human', now())",
+                (task_id,),
+            )
+        return task_id
+
+    def test_apex_core_can_insert_but_not_update_eval_runs(self) -> None:
+        import psycopg
+
+        task_id = self._insert_task()
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO eval_runs (id, task_id, clone_id, method, oracle_verdict, "
+                "sandbox_status, facts, created_by, created_at) VALUES "
+                "('r1', %s, 'c1', 'practice', 'pass', 'success', '{}'::jsonb, 'core', now())",
+                (task_id,),
+            )
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("UPDATE eval_runs SET oracle_verdict = 'fail' WHERE id = 'r1'")
+
+    def test_apex_core_cannot_delete_eval_runs(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM eval_runs")
+
+    def test_apex_eval_can_insert_eval_runs_but_not_read_tasks(self) -> None:
+        """Rôle réservé depuis la migration initiale, enfin exercé : apex_eval
+        peut écrire un résultat d'évaluation, mais reste aveugle au contenu
+        de `tasks` — la garantie HELDOUT tient même pour le rôle qui exécute
+        les évaluations lui-même, pas seulement pour un rôle tiers."""
+        import psycopg
+
+        task_id = self._insert_task()
+        with support.role_connection("apex_eval") as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO eval_runs (id, task_id, clone_id, method, oracle_verdict, "
+                    "sandbox_status, facts, created_by, created_at) VALUES "
+                    "('r2', %s, 'c1', 'practice', 'pass', 'success', '{}'::jsonb, 'core', now())",
+                    (task_id,),
+                )
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM tasks")
+
+    def test_apex_agent_cannot_write_eval_runs(self) -> None:
+        import psycopg
+
+        task_id = self._insert_task()
+        with support.role_connection("apex_agent") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO eval_runs (id, task_id, clone_id, method, oracle_verdict, "
+                        "sandbox_status, facts, created_by, created_at) VALUES "
+                        "('rogue', %s, 'c1', 'practice', 'pass', 'success', '{}'::jsonb, "
+                        "'research', now())",
+                        (task_id,),
+                    )
+
+    def test_apex_readonly_can_select_but_not_insert_eval_runs(self) -> None:
+        import psycopg
+
+        task_id = self._insert_task()
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO eval_runs (id, task_id, clone_id, method, oracle_verdict, "
+                "sandbox_status, facts, created_by, created_at) VALUES "
+                "('r3', %s, 'c1', 'practice', 'pass', 'success', '{}'::jsonb, 'core', now())",
+                (task_id,),
+            )
+        with support.role_connection("apex_readonly") as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM eval_runs")
+        with support.role_connection("apex_readonly") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO eval_runs (id, task_id, clone_id, method, oracle_verdict, "
+                        "sandbox_status, facts, created_by, created_at) VALUES "
+                        "('x', 't-for-run', 'c1', 'practice', 'pass', 'success', '{}'::jsonb, "
+                        "'human', now())"
+                    )
+
+
+@unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
+class TestSkillRoleIsWriteRestricted(unittest.TestCase):
+    """`skills` : apex_core écrit ET met à jour (le SEUL usage réel de cet
+    UPDATE est `decide()`, ciblé) — jamais apex_agent/apex_eval/apex_audit,
+    un clone ne peut jamais se créditer lui-même d'une compétence (§8
+    anti-auto-illusion)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def test_apex_core_can_insert_and_update_skills(self) -> None:
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO skills (id, name, specialty, description, status, "
+                "prerequisite_skill_ids, evidence_run_ids, created_by, created_at) VALUES "
+                "('s1', 'n', 'research', 'd', 'proposed', '[]'::jsonb, '[]'::jsonb, 'human', now())"
+            )
+            cur.execute("UPDATE skills SET status = 'acquired' WHERE id = 's1'")
+
+    def test_apex_core_cannot_delete_skills(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM skills")
+
+    def test_apex_agent_cannot_write_skills(self) -> None:
+        """Un clone (rôle apex_agent) n'a aucun accès à `skills` — pas même
+        en lecture : seul le service écrit pour son compte."""
+        import psycopg
+
+        with support.role_connection("apex_agent") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO skills (id, name, specialty, description, status, "
+                        "prerequisite_skill_ids, evidence_run_ids, created_by, created_at) VALUES "
+                        "('rogue', 'n', 'research', 'd', 'acquired', '[]'::jsonb, '[]'::jsonb, "
+                        "'research', now())"
+                    )
+
+    def test_apex_readonly_can_select_but_not_insert_skills(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO skills (id, name, specialty, description, status, "
+                "prerequisite_skill_ids, evidence_run_ids, created_by, created_at) VALUES "
+                "('s2', 'n', 'research', 'd', 'proposed', '[]'::jsonb, '[]'::jsonb, 'human', now())"
+            )
+        with support.role_connection("apex_readonly") as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM skills")
+        with support.role_connection("apex_readonly") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO skills (id, name, specialty, description, status, "
+                        "prerequisite_skill_ids, evidence_run_ids, created_by, created_at) VALUES "
+                        "('x', 'n', 'research', 'd', 'proposed', '[]'::jsonb, '[]'::jsonb, 'human', now())"
+                    )
+
+
+@unittest.skipUnless(support.postgres_testable(), _SKIP_REASON)
+class TestGenomeVersionRoleIsWriteRestricted(unittest.TestCase):
+    """`genome_versions` : apex_core écrit ET met à jour (le SEUL usage réel
+    de cet UPDATE est `decide()`, ciblé) — jamais apex_agent/apex_eval/
+    apex_audit : invariant absolu (ADR-0001), aucun clone ne peut même
+    proposer une version de Genome, a fortiori la promouvoir."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        support.recreate_test_database()
+        support.run_upgrade()
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        support.drop_test_database()
+        support.drop_application_roles()
+
+    def test_apex_core_can_insert_and_update_genome_versions(self) -> None:
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO genome_versions (id, content_hash, origin, status, "
+                "created_by, created_at) VALUES "
+                "('g1', 'sha256:" + "0" * 64 + "', 'manual', 'proposed', 'human', now())"
+            )
+            cur.execute("UPDATE genome_versions SET status = 'promoted' WHERE id = 'g1'")
+
+    def test_apex_core_cannot_delete_genome_versions(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute("DELETE FROM genome_versions")
+
+    def test_apex_agent_cannot_write_genome_versions(self) -> None:
+        """Un clone (rôle apex_agent) n'a aucun accès à `genome_versions` —
+        pas même en lecture : le Genome ne peut jamais être influencé par
+        un clone, même indirectement via une simple proposition."""
+        import psycopg
+
+        with support.role_connection("apex_agent") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO genome_versions (id, content_hash, origin, status, "
+                        "created_by, created_at) VALUES "
+                        "('rogue', 'sha256:" + "0" * 64 + "', 'manual', 'proposed', 'research', now())"
+                    )
+
+    def test_apex_readonly_can_select_but_not_insert_genome_versions(self) -> None:
+        import psycopg
+
+        with support.role_connection("apex_core") as conn, conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO genome_versions (id, content_hash, origin, status, "
+                "created_by, created_at) VALUES "
+                "('g2', 'sha256:" + "0" * 64 + "', 'manual', 'proposed', 'human', now())"
+            )
+        with support.role_connection("apex_readonly") as conn, conn.cursor() as cur:
+            cur.execute("SELECT count(*) FROM genome_versions")
+        with support.role_connection("apex_readonly") as conn:
+            with self.assertRaises(psycopg.errors.InsufficientPrivilege):
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO genome_versions (id, content_hash, origin, status, "
+                        "created_by, created_at) VALUES "
+                        "('x', 'sha256:" + "0" * 64 + "', 'manual', 'proposed', 'human', now())"
+                    )
 
 
 if __name__ == "__main__":

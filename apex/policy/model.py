@@ -70,6 +70,36 @@ class Action(str, Enum):
     REJECT_MISSION = "reject_mission"          # REVIEW -> FAILED, HUMAN seul
     REQUEST_MISSION_REVISION = "request_mission_revision"  # REVIEW -> DRAFT, HUMAN seul
     LAUNCH_MISSION = "launch_mission"          # QUEUED -> RUNNING, CORE seul (jamais HUMAN ni un clone)
+    # -- TaskBank (phase 5) ---------------------------------------------------
+    # HUMAN seul, même motif que CREATE_MISSION : un clone ne doit jamais
+    # pouvoir écrire sa propre tâche d'évaluation (contournement trivial du
+    # split HELDOUT sinon — un clone qui écrirait ses propres tâches pourrait
+    # s'auto-attribuer des tâches faciles).
+    CREATE_TASK = "create_task"
+    # -- SkillRegistry (phase 14) ----------------------------------------------
+    # PROPOSE_SKILL : CORE (synthèse automatique de preuve depuis EvalRunner)
+    # ET HUMAN (saisie manuelle) — même motif que CANCEL_MISSION, accordée
+    # aux deux sans être un pouvoir de décision. PROMOTE_SKILL/REJECT_SKILL :
+    # HUMAN SEUL, jamais CORE ni un clone — une compétence ne peut jamais
+    # s'auto-promouvoir (§8 anti-auto-illusion : aucune auto-déclaration de
+    # réussite comme preuve suffisante). Distinct de PromotionGovernor
+    # (PLANNED, phase 16, future porte UNIQUE de promotion vers le Core) :
+    # ceci ne promeut qu'une entrée SkillRegistry, jamais le Core lui-même.
+    PROPOSE_SKILL = "propose_skill"
+    PROMOTE_SKILL = "promote_skill"
+    REJECT_SKILL = "reject_skill"
+    # -- GenomeStore (phase 17) -------------------------------------------
+    # Même motif exact que SkillRegistry (phase 14) : PROPOSE_GENOME_VERSION
+    # accordée à CORE (synthèse depuis une mutation/un croisement réel) ET
+    # HUMAIN (saisie manuelle) ; PROMOTE/REJECT_GENOME_VERSION HUMAIN SEUL,
+    # jamais CORE ni un clone — invariant absolu (ADR-0001,
+    # docs/COGNITIVE_ARCHITECTURE.md §1 : « aucun clone, aucune boucle
+    # d'apprentissage... ne modifie le Core »). Cycle HUMAIN provisoire en
+    # attendant PromotionGovernor (PLANNED, phase 16, périmètre jugé
+    # insuffisamment défini pour l'instant, voir apex/interfaces/registry.py).
+    PROPOSE_GENOME_VERSION = "propose_genome_version"
+    PROMOTE_GENOME_VERSION = "promote_genome_version"
+    REJECT_GENOME_VERSION = "reject_genome_version"
     # -- Sandbox (étape 7) ----------------------------------------------------
     # Réservée à CORE, jamais à HUMAN ni à un clone : un clone ne doit jamais
     # pouvoir déclencher lui-même sa propre exécution en sandbox (contournement

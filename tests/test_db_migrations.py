@@ -48,7 +48,12 @@ class TestMigrationUpAndDown(unittest.TestCase):
         engine = _engine()
         tables = set(inspect(engine).get_table_names())
         self.assertTrue(
-            {"compute_pools", "events", "audit_log", "agents", "missions", "alembic_version"} <= tables
+            {
+                "compute_pools", "events", "audit_log", "agents", "missions",
+                "memory_records", "memory_relations", "tasks", "eval_runs", "skills",
+                "genome_versions", "alembic_version",
+            }
+            <= tables
         )
         partitions = {t for t in tables if t.startswith("events_")}
         self.assertIn("events_default", partitions)
@@ -87,6 +92,99 @@ class TestMigrationUpAndDown(unittest.TestCase):
                 text(
                     "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
                     "WHERE table_name = 'agents' AND grantee != 'apex' ORDER BY grantee, privilege_type"
+                )
+            ).all()
+        by_grantee: dict[str, set[str]] = {}
+        for grantee, privilege in rows:
+            by_grantee.setdefault(grantee, set()).add(privilege)
+        self.assertEqual(by_grantee.get("apex_core"), {"SELECT", "INSERT", "UPDATE"})
+        self.assertEqual(by_grantee.get("apex_readonly"), {"SELECT"})
+        self.assertNotIn("apex_agent", by_grantee)
+        self.assertNotIn("apex_eval", by_grantee)
+        self.assertNotIn("apex_audit", by_grantee)
+
+    def test_tasks_table_grants_match_policy_engine(self) -> None:
+        """`tasks` est INSERT seul (jamais UPDATE, même pour apex_core — une
+        tâche ne change jamais après coup) et `apex_eval` n'a AUCUN grant :
+        c'est le mécanisme du critère HELDOUT (ADR-0010), pas une clause
+        WHERE contournable — voir tests/test_db_security.py::TestHeldoutSplitSeparation."""
+        support.run_upgrade()
+        engine = _engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
+                    "WHERE table_name = 'tasks' AND grantee != 'apex' ORDER BY grantee, privilege_type"
+                )
+            ).all()
+        by_grantee: dict[str, set[str]] = {}
+        for grantee, privilege in rows:
+            by_grantee.setdefault(grantee, set()).add(privilege)
+        self.assertEqual(by_grantee.get("apex_core"), {"SELECT", "INSERT"})
+        self.assertEqual(by_grantee.get("apex_readonly"), {"SELECT"})
+        self.assertNotIn("apex_agent", by_grantee)
+        self.assertNotIn("apex_eval", by_grantee, "apex_eval ne doit avoir AUCUN accès à tasks (HELDOUT)")
+        self.assertNotIn("apex_audit", by_grantee)
+
+    def test_eval_runs_table_grants_match_policy_engine(self) -> None:
+        """`eval_runs` est INSERT seul, mais accessible en écriture à la fois
+        par apex_core (EvalRunnerService) et apex_eval (rôle réservé sans
+        usage depuis la migration initiale) — jamais par apex_agent, un
+        clone n'écrit jamais son propre résultat d'évaluation."""
+        support.run_upgrade()
+        engine = _engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
+                    "WHERE table_name = 'eval_runs' AND grantee != 'apex' ORDER BY grantee, privilege_type"
+                )
+            ).all()
+        by_grantee: dict[str, set[str]] = {}
+        for grantee, privilege in rows:
+            by_grantee.setdefault(grantee, set()).add(privilege)
+        self.assertEqual(by_grantee.get("apex_core"), {"SELECT", "INSERT"})
+        self.assertEqual(by_grantee.get("apex_readonly"), {"SELECT"})
+        self.assertEqual(by_grantee.get("apex_eval"), {"SELECT", "INSERT"})
+        self.assertNotIn("apex_agent", by_grantee)
+        self.assertNotIn("apex_audit", by_grantee)
+
+    def test_skills_table_grants_match_policy_engine(self) -> None:
+        """apex_core écrit ET met à jour (decide()) — apex_readonly lit
+        seul — apex_agent/apex_eval/apex_audit n'ont aucun accès, cohérent
+        avec PolicyEngine (PROPOSE/PROMOTE/REJECT_SKILL ne sont accordées
+        qu'à CORE/HUMAN, jamais à un clone)."""
+        support.run_upgrade()
+        engine = _engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
+                    "WHERE table_name = 'skills' AND grantee != 'apex' ORDER BY grantee, privilege_type"
+                )
+            ).all()
+        by_grantee: dict[str, set[str]] = {}
+        for grantee, privilege in rows:
+            by_grantee.setdefault(grantee, set()).add(privilege)
+        self.assertEqual(by_grantee.get("apex_core"), {"SELECT", "INSERT", "UPDATE"})
+        self.assertEqual(by_grantee.get("apex_readonly"), {"SELECT"})
+        self.assertNotIn("apex_agent", by_grantee)
+        self.assertNotIn("apex_eval", by_grantee)
+        self.assertNotIn("apex_audit", by_grantee)
+
+    def test_genome_versions_table_grants_match_policy_engine(self) -> None:
+        """apex_core écrit ET met à jour (decide()) — apex_readonly lit
+        seul — apex_agent/apex_eval/apex_audit n'ont aucun accès, cohérent
+        avec PolicyEngine (PROPOSE/PROMOTE/REJECT_GENOME_VERSION ne sont
+        accordées qu'à CORE/HUMAN, jamais à un clone)."""
+        support.run_upgrade()
+        engine = _engine()
+        with engine.connect() as conn:
+            rows = conn.execute(
+                text(
+                    "SELECT grantee, privilege_type FROM information_schema.role_table_grants "
+                    "WHERE table_name = 'genome_versions' AND grantee != 'apex' "
+                    "ORDER BY grantee, privilege_type"
                 )
             ).all()
         by_grantee: dict[str, set[str]] = {}

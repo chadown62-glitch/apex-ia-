@@ -86,6 +86,31 @@ Résultat de l'exécution dans le conteneur de développement. La colonne
 
 Statut global ici : `FAIL`. `phase_2_authorized: false`.
 
+> **Addendum, pré-phase 3 (ADR-0012, ADR-0013).** Ce tableau reste le relevé
+> historique de la Phase 1 — non modifié. Depuis :
+>
+> - GATE-19 a été réconcilié avec `apex.sandbox.detect.detect_capabilities()`
+>   (le SEUL backend `SandboxProvider` réellement implémenté, étape 7, absent
+>   de ce document à l'origine) : sur une machine avec des namespaces Linux
+>   fonctionnels mais sans Docker, GATE-19 rapporte désormais `DEGRADED`
+>   (`isolation_level: namespaced`, `code_execution_allowed: true`,
+>   `red_team_allowed: false`), plus jamais `UNKNOWN`/`FAIL` par
+>   sous-détection (ADR-0012).
+> - GATE-14 reste `FAIL` sur une machine sans cgroups v2 — sa sévérité n'a
+>   PAS changé — mais ne déclare plus bloquer la phase 3 : cgroups v2/KVM/
+>   virtualisation imbriquée conditionnent l'infrastructure d'isolation
+>   renforcée du Red Team (phase 21, ADR-0005), pas le cœur fonctionnel de
+>   la phase 3 (ADR-0013).
+>
+> **Deux niveaux distincts, à ne jamais confondre** : le Gate d'environnement
+> (`apex gate`) relève ce que CETTE machine offre à l'instant présent — un
+> `FAIL` sur GATE-06/14 est honnête et n'indique aucune régression du code.
+> La validation fonctionnelle de la phase 3 (Sandbox) est indépendante et
+> déjà apportée par des tests d'intégration noyau réels
+> (`tests/test_sandbox_security.py`, `tests/test_scheduler_service.py`) —
+> un Gate global `FAIL` ne signifie jamais que le code de la phase 3 est
+> cassé ou non fonctionnel.
+
 ---
 
 ## 3. Deux contrôles où la sécurité l'emporte sur la complétude

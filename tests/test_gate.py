@@ -32,6 +32,7 @@ from apex.gate.contract import Environment, EnvironmentUnknown, load_environment
 from apex.gate.model import DEPENDENCIES, GateCheckResult, GateStatus
 from apex.gate.report import EnvironmentReport, GateException
 from apex.gate.runner import run_gate
+from apex.sandbox.model import IsolationLevel, SandboxCapabilityReport
 from apex.util.probe import CommandResult, FakeProbe, SystemProbe
 from tests.test_config import config as base_config
 from tests.test_doctor import healthy_probe
@@ -39,6 +40,22 @@ from tests.test_doctor import healthy_probe
 
 def ctx(probe: FakeProbe, **kw) -> GateContext:
     return GateContext(probe=probe, config=parse_config(base_config()), timeout_s=1.0, **kw)
+
+
+def sandbox_report(level: IsolationLevel, **overrides) -> SandboxCapabilityReport:
+    """Rapport `apex.sandbox.detect` synthétique, pour injecter un niveau
+    d'isolation namespace déterministe dans `GateContext.
+    detect_sandbox_capabilities` — même principe que `FakeProbe` pour
+    `ctx.probe` : jamais laisser un test dépendre de CETTE machine réelle."""
+    real = level.is_real_isolation
+    defaults: dict = dict(
+        level=level, namespaces_available=real, cgroups_available=real,
+        privilege_drop_available=real, network_isolation_available=real,
+        docker_daemon_reachable=False, seccomp_available=False,
+        detail=f"test — {level.value}", facts={},
+    )
+    defaults.update(overrides)
+    return SandboxCapabilityReport(**defaults)
 
 
 def make_report(*results: GateCheckResult, real: bool = True, **kw) -> EnvironmentReport:
@@ -92,12 +109,19 @@ class TestSecurityIsNeverRelaxed(unittest.TestCase):
         self.assertIsNone(outcome.facts["windows_version"])
         self.assertIn("ne réactive pas l'interop", outcome.remediation)
 
-    def test_missing_cgroups_blocks_sandbox_phase(self) -> None:
+    def test_missing_cgroups_v2_still_fails_but_blocks_phase_21_not_phase_3(self) -> None:
+        """Décision humaine (correction GATE-14, ADR-0013) : cgroups v2/KVM/
+        virtualisation imbriquée servent l'infrastructure d'isolation
+        renforcée (VM dédiée, Red Team, phase 21) — pas le cœur fonctionnel
+        de la phase 3 (Sandbox), déjà validé via NAMESPACED (GATE-19,
+        ADR-0012). Le FAIL reste honnête et inchangé ; seule l'étiquette de
+        phase bloquée est corrigée."""
         probe = healthy_probe()
         probe.paths.discard("/sys/fs/cgroup/cgroup.controllers")
         outcome = gate_14_virtualization(ctx(probe))
         self.assertIs(outcome.status, GateStatus.FAIL)
-        self.assertIn(3, outcome.blocks_phases)
+        self.assertIn(21, outcome.blocks_phases)
+        self.assertNotIn(3, outcome.blocks_phases)
 
     def test_docker_only_isolation_disables_red_team(self) -> None:
         probe = healthy_probe()
@@ -111,14 +135,83 @@ class TestSecurityIsNeverRelaxed(unittest.TestCase):
         self.assertIn(21, outcome.blocks_phases)
 
     def test_no_isolation_at_all_blocks_code_execution(self) -> None:
+        """Ni Docker durci/gVisor, ni namespaces Linux : le rapport
+        `detect_sandbox_capabilities` est injecté explicitement en
+        RLIMIT_ONLY pour que ce test reste déterministe — sans injection, le
+        code consulterait la VRAIE détection sur la machine qui exécute la
+        suite, ce que ce test n'a jamais voulu mesurer (voir sandbox_report)."""
         probe = healthy_probe()
         probe.paths.discard("/sys/fs/cgroup/cgroup.controllers")
         probe.commands[("docker", "info", "--format", "{{.Runtimes}}")] = CommandResult(
             ("docker",), 0, "map[runc:{}]\n", ""
         )
-        outcome = gate_19_isolation_state(ctx(probe))
+        outcome = gate_19_isolation_state(
+            ctx(probe, detect_sandbox_capabilities=lambda: sandbox_report(IsolationLevel.RLIMIT_ONLY))
+        )
         self.assertIs(outcome.status, GateStatus.FAIL)
         self.assertFalse(outcome.facts["code_execution_allowed"])
+        self.assertEqual(outcome.facts["isolation_level"], "insufficient")
+
+    def test_namespaced_isolation_allows_ordinary_execution_but_not_red_team(self) -> None:
+        """Cœur de la réconciliation GATE-19 ↔ SandboxProvider (étape 11+) :
+        namespaces Linux fonctionnels, sans Docker du tout, doivent être
+        reconnus comme une isolation réelle et distincte — jamais promue au
+        niveau docker_hardened/gvisor, mais jamais sous-déclarée non plus."""
+        probe = healthy_probe()
+        probe.programs.pop("docker", None)  # Docker totalement absent, pas juste sans runsc
+        outcome = gate_19_isolation_state(
+            ctx(probe, detect_sandbox_capabilities=lambda: sandbox_report(IsolationLevel.NAMESPACED))
+        )
+        self.assertIs(outcome.status, GateStatus.DEGRADED)
+        self.assertEqual(outcome.facts["isolation_level"], "namespaced")
+        self.assertTrue(outcome.facts["code_execution_allowed"])
+        self.assertFalse(outcome.facts["red_team_allowed"])
+        self.assertIn(21, outcome.blocks_phases)
+        self.assertNotIn(3, outcome.blocks_phases)
+
+    def test_namespaced_is_never_reported_as_docker_hardened_or_gvisor(self) -> None:
+        probe = healthy_probe()
+        probe.programs.pop("docker", None)
+        outcome = gate_19_isolation_state(
+            ctx(probe, detect_sandbox_capabilities=lambda: sandbox_report(IsolationLevel.NAMESPACED))
+        )
+        self.assertNotEqual(outcome.facts["isolation_level"], "docker_hardened")
+        self.assertNotEqual(outcome.facts["isolation_level"], "gvisor")
+        # La distinction qui compte le plus : docker_hardened ET gvisor
+        # accorderaient déjà code_execution_allowed=True comme NAMESPACED ici
+        # — la différence de sécurité réelle est red_team_allowed, jamais
+        # accordé pour NAMESPACED alors que gvisor l'accorde.
+        self.assertFalse(outcome.facts["red_team_allowed"])
+
+    def test_docker_absent_no_longer_yields_unknown_when_namespaces_work(self) -> None:
+        """Avant cette révision : docker absent -> UNKNOWN immédiat, sans
+        jamais consulter la détection namespace réellement disponible. La
+        Gate mesure maintenant réellement, jamais une supposition ni un
+        abandon prématuré."""
+        probe = healthy_probe()
+        probe.programs.pop("docker", None)
+        outcome = gate_19_isolation_state(
+            ctx(probe, detect_sandbox_capabilities=lambda: sandbox_report(IsolationLevel.NAMESPACED))
+        )
+        self.assertNotEqual(outcome.status, GateStatus.UNKNOWN)
+        self.assertIs(outcome.status, GateStatus.DEGRADED)
+
+    def test_real_machine_consistency_between_gate19_and_sandbox_detect(self) -> None:
+        """Test d'intégration RÉEL (aucun mock) : sur CETTE machine, GATE-19
+        (sans override de detect_sandbox_capabilities, donc la vraie
+        fonction) doit rapporter exactement ce que apex.sandbox.detect.
+        detect_capabilities() mesure réellement — jamais une valeur
+        indépendante ou désynchronisée. Ne suppose PAS quel niveau cette
+        machine atteint (portable : vaut aussi bien sur une machine avec
+        Docker durci que sans aucune isolation)."""
+        from apex.sandbox.detect import detect_capabilities as real_detect
+
+        probe = healthy_probe()
+        probe.programs.pop("docker", None)
+        real_report = real_detect()
+        outcome = gate_19_isolation_state(ctx(probe))
+        expected_level = "namespaced" if real_report.level is IsolationLevel.NAMESPACED else "insufficient"
+        self.assertEqual(outcome.facts["isolation_level"], expected_level)
 
 
 class TestConsentRequiredForSideEffects(unittest.TestCase):

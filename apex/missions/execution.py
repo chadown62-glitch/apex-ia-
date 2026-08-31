@@ -21,6 +21,16 @@ terminal-ish (REVIEW ou FAILED) : `IsolationUnavailable` est la seule
 exception rattrapée après ce point, traduite en échec de mission — jamais
 un contournement silencieux, mais jamais non plus une mission orpheline en
 RUNNING indéfiniment.
+
+**Second chemin d'exécution — `generate_mission_response`** : une Mission
+peut aussi être exécutée par un `ModelProvider` réel plutôt qu'une commande
+sandboxée, HORS sandbox (voir sa docstring pour le raisonnement complet —
+étape intermédiaire reconnue, PAS un contournement, en attendant un vrai
+contrôle d'egress réseau sandboxé). Les deux chemins partagent
+`MissionService` et convergent vers REVIEW/FAILED de façon identique, mais
+ne se composent jamais entre eux : une Mission suit soit `launch_mission`
+(clone + sandbox), soit `generate_mission_response` (modèle), jamais un
+mélange implicite des deux dans la même fonction.
 """
 
 from __future__ import annotations
@@ -29,9 +39,12 @@ from typing import Any
 
 from apex.agents.model import Clone, CloneState
 from apex.agents.runtime import AgentRuntime
-from apex.errors import IsolationUnavailable
+from apex.config.schema import ModelEndpoint
+from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
 from apex.missions.model import Mission
 from apex.missions.service import MissionService
+from apex.models.model import GenerationRequest
+from apex.models.provider import ModelProvider, get_default_provider as get_default_model_provider
 from apex.policy.model import Subject
 from apex.sandbox import (
     CancellationToken,
@@ -129,3 +142,62 @@ def launch_mission(
     return mission_service.mark_failed(
         mission_id, error=result.error_detail or result.status.value,
     )
+
+
+def generate_mission_response(
+    mission_id: str,
+    *,
+    mission_service: MissionService,
+    endpoint: ModelEndpoint,
+    model_provider: ModelProvider | None = None,
+    prompt: str | None = None,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    timeout_s: float = 60.0,
+    requested_by: Subject = Subject.CORE,
+) -> Mission:
+    """DEUXIÈME chemin d'exécution d'une Mission — génération d'une réponse
+    par un modèle réel (`ModelProvider`), HORS sandbox. Étape intermédiaire
+    reconnue et documentée comme telle : la sandbox namespaced actuelle ne
+    supporte que `network="none"` (`apex.sandbox.linux_namespace`, réseau
+    « proxy » `PLANNED` — voir le registre, entrée `ModelProvider`) — un
+    clone sandboxé ne peut donc PAS appeler un `ModelProvider` réseau
+    aujourd'hui. Cet appel a lieu ici, au niveau ORCHESTRATEUR (le même
+    niveau de confiance que le CORE qui appelle déjà
+    `AgentRuntime.execute_in_sandbox` dans `launch_mission`), jamais depuis
+    l'intérieur d'un clone — ce N'EST PAS un contournement de la sandbox,
+    c'est un chemin qui ne la traverse simplement pas encore.
+
+    Même patron de gouvernance que `launch_mission` : `mark_running` exige
+    déjà `Action.LAUNCH_MISSION` (CORE seul, aucune règle dupliquée ici) ;
+    le résultat va dans `Mission.result` (champ déjà existant, aucune
+    migration) exactement comme `result.stdout` pour l'exécution sandboxée
+    — les deux chemins convergent vers la même relecture humaine (REVIEW).
+    Aucune promotion, aucune écriture Genome/Skill : générer une réponse
+    n'est jamais, en soi, une preuve de compétence (voir `apex.skills.
+    service.SkillRegistryService.propose_from_evidence`, qui exige un
+    `EvalRun` jugé indépendamment — jamais un texte généré cru sur parole).
+    """
+    mission = mission_service.get(mission_id)
+    if mission is None:
+        raise LookupError(f"mission « {mission_id} » introuvable")
+
+    mission = mission_service.mark_running(mission_id, requested_by=requested_by)
+
+    resolved_provider = model_provider or get_default_model_provider(endpoint)
+    resolved_prompt = prompt if prompt is not None else mission.objective
+
+    request = GenerationRequest(
+        endpoint=endpoint, prompt=resolved_prompt, max_tokens=max_tokens,
+        temperature=temperature, timeout_s=timeout_s,
+    )
+
+    try:
+        result = resolved_provider.generate(request)
+    except (ModelProviderError, TimeoutExceeded) as exc:
+        # Même discipline que `OllamaProvider` (§72) : `str(exc)` ne porte
+        # jamais le prompt, seulement l'URL de l'endpoint et un résumé
+        # borné — sûr à stocker tel quel dans `Mission.error`.
+        return mission_service.mark_failed(mission_id, error=str(exc))
+
+    return mission_service.mark_review(mission_id, result=result.text)
