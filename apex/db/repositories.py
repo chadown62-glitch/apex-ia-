@@ -995,6 +995,7 @@ class AgentExecutionRepository:
         row = AgentExecutionRow(
             id=id, agent_id=agent_id, mission_id=mission_id, status=status,
             model_id=None, provider_id=None, result=None, error=None, fallback_reason=None,
+            elapsed_s=None, tokens_prompt=None, tokens_completion=None,
             started_at=started_at, completed_at=None,
         )
         self._session.add(row)
@@ -1012,7 +1013,14 @@ class AgentExecutionRepository:
         error: str | None,
         fallback_reason: str | None,
         completed_at: datetime,
+        elapsed_s: float | None = None,
+        tokens_prompt: int | None = None,
+        tokens_completion: int | None = None,
     ) -> AgentExecutionRow | None:
+        """`elapsed_s`/`tokens_prompt`/`tokens_completion` restent optionnels
+        (défaut `None`) — passe « Adaptive Model Router V1 », strictement
+        additifs : tout appelant existant qui ne les fournit pas continue de
+        produire exactement la même ligne qu'avant (colonnes `NULL`)."""
         row = self._session.get(AgentExecutionRow, execution_id)
         if row is None:
             return None
@@ -1022,6 +1030,9 @@ class AgentExecutionRepository:
         row.result = result
         row.error = error
         row.fallback_reason = fallback_reason
+        row.elapsed_s = elapsed_s
+        row.tokens_prompt = tokens_prompt
+        row.tokens_completion = tokens_completion
         row.completed_at = completed_at
         self._session.flush()
         return row
@@ -1043,6 +1054,20 @@ class AgentExecutionRepository:
             select(AgentExecutionRow)
             .where(AgentExecutionRow.mission_id == mission_id)
             .order_by(AgentExecutionRow.started_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_model(self, model_id: str, limit: int = 500) -> list[AgentExecutionRow]:
+        """Passe « Adaptive Model Router V1 » — seule requête d'agrégation
+        par `model_id` : jusqu'ici aucune méthode ne lisait cette colonne en
+        filtre. Ordre déterministe (`started_at desc`, puis `id` pour
+        départager les égalités exactes), jamais l'ordre d'itération
+        implicite d'un résultat SQL non trié."""
+        stmt = (
+            select(AgentExecutionRow)
+            .where(AgentExecutionRow.model_id == model_id)
+            .order_by(AgentExecutionRow.started_at.desc(), AgentExecutionRow.id)
             .limit(limit)
         )
         return list(self._session.scalars(stmt))

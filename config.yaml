@@ -262,6 +262,22 @@ scheduler:
   max_concurrent_missions: 2
 
 # ----------------------------------------------------------------------------
+# Model Router (passe « Adaptive Model Router V1 ») — poids du score de
+# apex.routing.router.select_model. capability_match_weight/
+# local_preference_weight reproduisent exactement le score déjà en
+# production avant cette passe (base 1.0 + préférence locale 0.5) ;
+# reliability_weight/latency_weight ne s'activent que pour un modèle ayant
+# un historique réel d'AgentExecution (voir apex.config.schema.
+# RouterScoringPolicy pour la justification complète de chaque poids —
+# jamais une valeur choisie pour « avoir l'air intelligent »).
+# ----------------------------------------------------------------------------
+routing:
+  capability_match_weight: 1.0
+  local_preference_weight: 0.5
+  reliability_weight: 0.3
+  latency_weight: 0.2
+
+# ----------------------------------------------------------------------------
 # Services d'infrastructure locaux
 # ----------------------------------------------------------------------------
 services:

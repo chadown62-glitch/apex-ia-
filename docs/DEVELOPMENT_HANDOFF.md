@@ -217,6 +217,85 @@ opérationnelle totale).
   unique) → révision (chaîne linéaire), plus `propose_from_evidence()`
   (dérive la preuve de vrais `EvalRun`, jamais d'une auto-déclaration).
 
+### Model Router — Adaptive Model Router V1
+
+Voir `apex/interfaces/registry.py` (entrée `ModelRouter`) pour le détail
+complet et la justification de chaque poids — résumé ici :
+
+- **IMPLEMENTED** : `agent_executions` persiste maintenant `elapsed_s`/
+  `tokens_prompt`/`tokens_completion` (mesurés par `GenerationResult`,
+  jusqu'ici jetés — migration `c3e5f7a9b1d2`) ; `apex.agent_registry.
+  performance.aggregate_model_performance` (fonction pure) construit un
+  `apex.routing.model.ModelPerformanceStats` par `model_id` depuis ces
+  exécutions réelles ; `select_model(..., performance=, scoring_policy=)`
+  intègre `historical_reliability`/`historical_latency` — deux paramètres
+  strictement optionnels, compatibilité stricte prouvée par test
+  (`tests/test_routing_router_scoring.py::TestStrictBackwardCompatibility`)
+  ; le score est un `ScoreBreakdown` structuré et auditable (jamais un
+  chain-of-thought) ; `apex.config.schema.RouterScoringPolicy` (`routing:`
+  dans `config.yaml`) rend les poids explicites/configurables/testés,
+  avec des défauts qui reproduisent exactement le score déjà en
+  production avant cette passe. Poids durcis (passe « Hardening ») :
+  `RouterScoringPolicy.parse` rejette explicitement `NaN`/`+inf`/`-inf`
+  (`math.isfinite`), pas seulement les négatifs — un poids `NaN` passait
+  silencieusement `value < 0` (toute comparaison avec `NaN` vaut `False`
+  en Python) avant ce durcissement.
+- **DORMANT / NOT WIRED — À LIRE avant toute conclusion sur le
+  comportement réel en production** : aucun des 3 sites d'appel réels de
+  `select_model` ne fournit `performance=` — ni `AgentRegistryService.
+  run_execution`, ni `generate_mission_response_via_router`, ni
+  `ConversationService`. Le Router **N'APPREND PAS** des performances des
+  modèles en production aujourd'hui ; le mécanisme est câblé, testé,
+  prêt, mais inactif tant qu'un futur passage ne branche pas
+  explicitement `list_by_model` → `aggregate_model_performance` →
+  `select_model(performance=)` dans ces 3 sites — voir « PLANNED »
+  ci-dessous pour la condition préalable à ce câblage.
+- **PLANNED, honnêtement non simulé** : `eval_quality` (`EvalRunner`
+  n'invoque toujours aucun `ModelProvider` — voir §8, c'est le même
+  changement de périmètre déjà identifié comme prochaine priorité avant
+  cette passe) ; `cost` (aucun prix déclaré nulle part dans le schéma) ;
+  mapping `Mission.specialty` → `Capability` (vérifié absent, pas
+  fabriqué) ; `difficulty` (aucun champ de ce nom sur `Task`/`Mission`) ;
+  activation du feedback historique en production (câblage ci-dessus) ;
+  une stratégie d'exploration/exploitation (epsilon-greedy/UCB/Thompson
+  sampling) **avant** ce câblage — sans elle, une sélection gloutonne
+  top-1 peut durablement favoriser le premier candidat ayant accumulé un
+  historique (starvation des alternatives jamais réessayées), design
+  documenté ci-dessous, non implémenté.
+- Index `agent_executions_model_id_idx` (migration `d4f6a8c0e2b3`, passe
+  « Hardening ») — `list_by_model` filtrait sur `model_id` sans index
+  dédié ; testé UP/DOWN/UP sur PostgreSQL réel avec une ligne réelle,
+  aucune perte de donnée.
+- Tests : `tests/test_routing_router_scoring.py`,
+  `tests/test_agent_registry_performance.py`,
+  `tests/test_db_agent_execution_performance_columns.py` (PostgreSQL
+  réel), `tests/test_adaptive_router_integration.py` (bout-en-bout),
+  `tests/test_config.py::TestRouterScoringPolicy` (incluant les 5 tests
+  de durcissement `NaN`/`+inf`/`-inf`/`0.0`/défauts inchangés).
+
+**Design PLANNED — stratégie d'exploration/exploitation** (analyse
+documentée, aucun code, passe « Hardening ») : avant tout câblage de
+`performance=` dans un site d'appel réel avec plus d'un candidat
+véritablement comparable, un mécanisme d'exploration explicite doit
+exister pour éviter la starvation identifiée par la review R1. Doit
+considérer, sans qu'aucune valeur ne soit choisie ici : un seuil minimal
+d'observations avant qu'un `success_rate` soit considéré statistiquement
+exploitable (`usage_count` déjà disponible, pas encore utilisé comme
+garde de confiance) ; une part d'exploration contrôlée et bornée (ex.
+epsilon-greedy — un candidat `UNKNOWN`/sous-échantillonné choisi avec une
+probabilité non nulle même si son score actuel est inférieur) plutôt
+qu'un choix strictement glouton ; une fenêtre temporelle glissante sur
+`AgentExecution` (`aggregate_model_performance` traite aujourd'hui toute
+la fenêtre uniformément, aucune décroissance temporelle) pour que la
+performance d'un modèle retiré/mis à jour ne pèse pas indéfiniment ;
+un traitement explicite du cas « nouveau modèle/provider ajouté à
+`config.yaml` » (doit démarrer à `UNKNOWN`, jamais hériter du score d'un
+autre candidat) ; un traitement explicite d'une indisponibilité
+temporaire (`Availability.UNAVAILABLE` réel, distinct d'un historique de
+mauvaise performance) ; l'intégration future, sans conversion implicite,
+de `eval_quality`/`cost` une fois mesurables. Ce mécanisme reste
+PLANNED — ne pas l'improviser au moment du câblage.
+
 ### Frontend — UI Foundation V1
 
 Passe purement frontend (aucun fichier backend touché) : fondation visuelle
@@ -591,6 +670,12 @@ qu'une Mission réelle contre Ollama aura été validée par l'utilisateur.
   avant de commencer.
 
 ## 8. Prochaine priorité
+
+**Adaptive Model Router V1 (passe « Intelligence Core V1 », première
+étape) est fait** — voir la sous-section dédiée en §2. `eval_quality`/
+`cost` restent explicitement `PLANNED` dans le `ScoreBreakdown` du
+Router : les rendre mesurables exige toujours le même changement de
+périmètre pour `EvalRunner` décrit ci-dessous, non fait dans cette passe.
 
 **Ne pas décider arbitrairement d'une nouvelle phase.** La priorité
 suivante se détermine à partir du résultat de la première exécution réelle

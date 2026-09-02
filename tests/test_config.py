@@ -109,6 +109,84 @@ class TestParsing(unittest.TestCase):
             parse_config(document)
 
 
+class TestRouterScoringPolicy(unittest.TestCase):
+    """`RouterScoringPolicy` — passe « Adaptive Model Router V1 ». Même
+    discipline que `SchedulerPolicy` : absence de section `routing` dans
+    `config.yaml` ⇒ défauts documentés, jamais une erreur."""
+
+    def test_absent_routing_section_uses_documented_defaults(self) -> None:
+        cfg = parse_config(config())
+        self.assertEqual(cfg.routing.capability_match_weight, 1.0)
+        self.assertEqual(cfg.routing.local_preference_weight, 0.5)
+        self.assertEqual(cfg.routing.reliability_weight, 0.3)
+        self.assertEqual(cfg.routing.latency_weight, 0.2)
+
+    def test_custom_weights_are_applied(self) -> None:
+        cfg = parse_config(config(routing={"reliability_weight": 0.9, "latency_weight": 0.1}))
+        self.assertEqual(cfg.routing.reliability_weight, 0.9)
+        self.assertEqual(cfg.routing.latency_weight, 0.1)
+        # les poids non fournis gardent leur défaut documenté
+        self.assertEqual(cfg.routing.capability_match_weight, 1.0)
+
+    def test_negative_weight_rejected(self) -> None:
+        with self.assertRaises(ConfigError):
+            parse_config(config(routing={"reliability_weight": -0.1}))
+
+    def test_zero_weight_is_a_valid_finite_value(self) -> None:
+        """`0.0` reste une valeur licite (« désactiver » un axe) —
+        distincte de `NaN`/`+inf`/`-inf`, jamais rejetée par erreur par le
+        durcissement de validation."""
+        cfg = parse_config(config(routing={"latency_weight": 0.0}))
+        self.assertEqual(cfg.routing.latency_weight, 0.0)
+
+    def test_nan_weight_rejected_for_every_field(self) -> None:
+        """Passe « Hardening » : `NaN < 0` vaut `False` en Python — sans un
+        test explicite `math.isfinite`, un poids `NaN` traversait la
+        validation en silence. Vérifié sur les 4 champs, pas seulement un."""
+        for field_name in (
+            "capability_match_weight", "local_preference_weight", "reliability_weight", "latency_weight",
+        ):
+            with self.subTest(field=field_name):
+                with self.assertRaises(ConfigError):
+                    parse_config(config(routing={field_name: float("nan")}))
+
+    def test_positive_infinity_weight_rejected_for_every_field(self) -> None:
+        """`+inf` est positif (`>= 0`) donc passait l'ancienne garde — un
+        poids infini rendrait `ScoreBreakdown.total` infini pour tout
+        candidat avec un historique réel."""
+        for field_name in (
+            "capability_match_weight", "local_preference_weight", "reliability_weight", "latency_weight",
+        ):
+            with self.subTest(field=field_name):
+                with self.assertRaises(ConfigError):
+                    parse_config(config(routing={field_name: float("inf")}))
+
+    def test_negative_infinity_weight_rejected_for_every_field(self) -> None:
+        """`-inf` était déjà rejeté par `value < 0`, mais avec un message
+        d'erreur trompeur (« doit être >= 0 » plutôt que « doit être
+        fini ») — vérifié explicitement pour que le message reste correct
+        même si la garde de finitude change un jour d'implémentation."""
+        for field_name in (
+            "capability_match_weight", "local_preference_weight", "reliability_weight", "latency_weight",
+        ):
+            with self.subTest(field=field_name):
+                with self.assertRaises(ConfigError):
+                    parse_config(config(routing={field_name: float("-inf")}))
+
+    def test_default_weights_unchanged_by_hardening(self) -> None:
+        """Le durcissement de la validation ne doit rien changer au score
+        historique par défaut — mêmes 4 valeurs documentées qu'avant cette
+        passe."""
+        cfg = parse_config(config())
+        self.assertEqual(
+            (
+                cfg.routing.capability_match_weight, cfg.routing.local_preference_weight,
+                cfg.routing.reliability_weight, cfg.routing.latency_weight,
+            ),
+            (1.0, 0.5, 0.3, 0.2),
+        )
+
+
 class TestModelRefEndpointSeparation(unittest.TestCase):
     """Principe 7 : identité logique et lieu d'exécution sont distincts."""
 

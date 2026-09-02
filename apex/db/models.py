@@ -861,6 +861,17 @@ class AgentExecutionRow(Base):
     result: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     fallback_reason: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    #: Passe « Adaptive Model Router V1 » — mêmes noms que
+    #: `apex.models.model.GenerationResult` (`elapsed_s`/`tokens_prompt`/
+    #: `tokens_completion`), pour une traçabilité directe entre la mesure
+    #: réelle produite par `ModelProvider.generate()` et sa persistance ici.
+    #: `NULL` tant qu'aucune génération n'a réellement abouti (échec total,
+    #: candidat jamais tenté) OU que le backend n'a pas fourni le comptage
+    #: de tokens (`Measurement.status is not REAL`) — jamais une valeur
+    #: `0` ou devinée à la place d'une mesure absente.
+    elapsed_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    tokens_prompt: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tokens_completion: Mapped[int | None] = mapped_column(Integer, nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
@@ -877,6 +888,9 @@ class AgentExecutionRow(Base):
             "result": self.result,
             "error": self.error,
             "fallback_reason": self.fallback_reason,
+            "elapsed_s": self.elapsed_s,
+            "tokens_prompt": self.tokens_prompt,
+            "tokens_completion": self.tokens_completion,
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }

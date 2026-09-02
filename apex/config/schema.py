@@ -595,6 +595,77 @@ class SchedulerPolicy:
 
 
 @dataclass(frozen=True)
+class RouterScoringPolicy:
+    """Poids du score `apex.routing.router.select_model` — passe « Adaptive
+    Model Router V1 ». Même discipline que `SchedulerPolicy` : un choix
+    d'opérateur reconfigurable, jamais une propriété architecturale figée
+    dans le code.
+
+    **Justification de chaque poids, jamais un chiffre choisi à
+    l'intuition** :
+    - `capability_match_weight` (défaut `1.0`) : reproduit EXACTEMENT la
+      base « 1.0 » déjà attribuée depuis la première version de
+      `select_model` à tout candidat qui satisfait les filtres stricts
+      (capacité/contexte/disponibilité/`ExternalPolicy`) — un changement de
+      cette valeur par défaut changerait un comportement déjà en
+      production, jamais fait sans preuve.
+    - `local_preference_weight` (défaut `0.5`) : reproduit EXACTEMENT le
+      bonus « +0.5 » déjà existant pour `RoutingRequest.prefer_local`.
+    - `reliability_weight` (défaut `0.3`) : multiplie un
+      `ModelPerformanceStats.success_rate` RÉEL (jamais un candidat sans
+      historique — `usage_count=0` ⇒ aucune contribution, voir `apex.
+      routing.model.ModelPerformanceStats`). Une contribution strictement
+      proportionnelle au taux de succès observé, bornée par ce poids.
+    - `latency_weight` (défaut `0.2`) : pondère une décroissance
+      harmonique `1 / (1 + mean_latency_s)` d'un `ModelPerformanceStats.
+      mean_latency_s` RÉEL — une forme monotone décroissante standard
+      (jamais négative, jamais indéfinie), pas un seuil arbitraire choisi
+      pour produire un résultat souhaité.
+
+    Les deux nouveaux poids (`reliability_weight`/`latency_weight`) ne
+    changent AUCUNE décision de routage tant qu'aucun historique réel
+    n'existe pour un candidat (l'environnement actuel — un seul candidat
+    local Ollama, aucune `AgentExecution` avec `model_id` renseigné avant
+    cette passe) : leur contribution est alors structurellement nulle, pas
+    parce que le poids serait nul.
+    """
+
+    capability_match_weight: float = 1.0
+    local_preference_weight: float = 0.5
+    reliability_weight: float = 0.3
+    latency_weight: float = 0.2
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> RouterScoringPolicy:
+        """`math.isfinite` rejette `NaN`/`+inf`/`-inf` en un seul test —
+        passe « Adaptive Model Router V1 — Hardening » : `value < 0` seul
+        ne détectait jamais `NaN` (toute comparaison avec `NaN` vaut `False`
+        en Python) et n'excluait pas explicitement `+inf` (positif, donc
+        accepté par `< 0`), qui rendrait `ScoreBreakdown.total` infini pour
+        tout candidat avec un historique réel — un score qui n'a plus de
+        sens ordonnable. Une configuration mathématiquement invalide ne
+        doit jamais pouvoir entrer dans le router."""
+        import math
+
+        defaults = cls()
+        values = {
+            "capability_match_weight": float(raw.get("capability_match_weight", defaults.capability_match_weight)),
+            "local_preference_weight": float(raw.get("local_preference_weight", defaults.local_preference_weight)),
+            "reliability_weight": float(raw.get("reliability_weight", defaults.reliability_weight)),
+            "latency_weight": float(raw.get("latency_weight", defaults.latency_weight)),
+        }
+        for field_name, value in values.items():
+            if not math.isfinite(value):
+                raise ConfigError(
+                    f"{field_name} doit être un nombre fini (ni NaN, ni +inf, ni -inf)",
+                    field=f"routing.{field_name}",
+                )
+            if value < 0:
+                raise ConfigError(f"{field_name} doit être >= 0", field=f"routing.{field_name}")
+        return cls(**values)
+
+
+@dataclass(frozen=True)
 class ApexConfig:
     version: int
     phase: int
@@ -609,6 +680,7 @@ class ApexConfig:
     sandbox: SandboxDefaults
     gate: GatePolicy
     scheduler: SchedulerPolicy
+    routing: RouterScoringPolicy
 
     # -- invariants transverses -------------------------------------------
 

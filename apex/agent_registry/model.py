@@ -215,6 +215,14 @@ class AgentExecution:
     fallback_reason: FallbackReason | None
     started_at: datetime
     completed_at: datetime | None
+    #: Passe « Adaptive Model Router V1 » — mêmes noms qu'`apex.models.
+    #: model.GenerationResult` (`elapsed_s`/`tokens_prompt`/
+    #: `tokens_completion`). `None` tant qu'aucune génération n'a
+    #: réellement abouti, ou que le backend n'a pas fourni le comptage de
+    #: tokens — jamais une valeur devinée à la place d'une mesure absente.
+    elapsed_s: float | None = None
+    tokens_prompt: int | None = None
+    tokens_completion: int | None = None
 
     @classmethod
     def from_row(cls, row: "AgentExecutionRow") -> AgentExecution:
@@ -224,6 +232,7 @@ class AgentExecution:
             result=row.result, error=row.error,
             fallback_reason=FallbackReason(row.fallback_reason) if row.fallback_reason else None,
             started_at=row.started_at, completed_at=row.completed_at,
+            elapsed_s=row.elapsed_s, tokens_prompt=row.tokens_prompt, tokens_completion=row.tokens_completion,
         )
 
 

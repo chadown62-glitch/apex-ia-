@@ -40,6 +40,20 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _real_measurement(measurement: Any) -> int | None:
+    """Extrait la valeur entière d'un `apex.obs.status.Measurement`
+    UNIQUEMENT si son statut est `REAL` — passe « Adaptive Model Router
+    V1 » : un comptage de tokens `UNKNOWN` (le backend ne l'a pas fourni)
+    ne devient jamais un `0` ni une valeur devinée, il reste `None`
+    (colonne `NULL`), exactement la même discipline que `Measurement`
+    partout ailleurs dans ce dépôt."""
+    from apex.obs.status import DataStatus
+
+    if measurement.status is not DataStatus.REAL:
+        return None
+    return int(measurement.value)
+
+
 class AgentRegistryService:
     def __init__(self, session_factory: Any, *, policy: PolicyEngine | None = None) -> None:
         self.policy = policy or PolicyEngine()
@@ -256,10 +270,14 @@ class AgentRegistryService:
         assert served is not None
         provider_id = f"{served.endpoint.runtime}:{served.endpoint.url}" if served.endpoint is not None else None
         reviewed_mission = mission_service.mark_review(mission_id, result=fallback_result.result.text)
+        generation = fallback_result.result
         return self._complete(
             execution, mission=reviewed_mission, model_id=served.ref.id, provider_id=provider_id,
-            result=fallback_result.result.text, error=None,
+            result=generation.text, error=None,
             fallback_reason=classify_outcome(decision, fallback_result),
+            elapsed_s=generation.elapsed_s,
+            tokens_prompt=_real_measurement(generation.tokens_prompt),
+            tokens_completion=_real_measurement(generation.tokens_completion),
         )
 
     def _complete(
@@ -272,13 +290,22 @@ class AgentRegistryService:
         result: str | None,
         error: str | None,
         fallback_reason: FallbackReason,
+        elapsed_s: float | None = None,
+        tokens_prompt: int | None = None,
+        tokens_completion: int | None = None,
     ) -> AgentExecution:
+        """`elapsed_s`/`tokens_prompt`/`tokens_completion` — passe « Adaptive
+        Model Router V1 » : `None` sur tout chemin qui n'a produit aucun
+        `GenerationResult` réel (aucun candidat sélectionné, tous les
+        candidats ont échoué) — seul le chemin de succès dans
+        `run_execution` les fournit, jamais une valeur devinée."""
         from apex.missions.states import MissionState
 
         status = AgentExecutionStatus.COMPLETED if mission.state is MissionState.REVIEW else AgentExecutionStatus.FAILED
         completed = self._executions.complete(
             execution.id, status=status, model_id=model_id, provider_id=provider_id,
             result=result, error=error, fallback_reason=fallback_reason.value,
+            elapsed_s=elapsed_s, tokens_prompt=tokens_prompt, tokens_completion=tokens_completion,
         )
         assert completed is not None
         self._record_event(

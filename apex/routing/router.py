@@ -4,31 +4,47 @@
 **Ce que ce module fait aujourd'hui, honnêtement** : filtre par capacité
 requise, contexte minimal, disponibilité réelle (`ModelCandidate.
 is_available`) et politique locale/externe (`ExternalPolicy`, jamais
-contournée) ; classe les survivants par une préférence locale explicite et
-un ordre déterministe (jamais aléatoire, jamais dépendant de l'ordre
-d'itération d'un dict).
+contournée) ; classe les survivants par un score TRANSPARENT et auditable
+(`apex.routing.model.ScoreBreakdown`), jamais un chain-of-thought.
 
-**Ce que ce module ne fait PAS encore, et pourquoi** : `historical_quality`/
-`historical_latency`/`historical_cost`/`success_rate` (mentionnés dans la
-directive comme axes futurs du score) ne sont PAS câblés ici — aucune
-source de données réelle n'existe encore pour ces mesures. Les câbler
-maintenant produirait un score qui a l'air de mesurer quelque chose sans
-rien mesurer réellement — exactement l'erreur que `apex.obs.status.
-Measurement` (REAL/UNKNOWN) existe pour empêcher ailleurs dans ce dépôt.
-Le point d'entrée réel pour ces axes, le jour où assez de données
-existeront, est déjà là : `EvalRun.facts["strategy"]` (ajouté lors de la
-passe MetaLearner v2) porte déjà `generation_mode` par run, et
-`apex.selfmodel`/`apex.costgain.CostGainEstimator` savent déjà agréger un
-historique réel par spécialité — pas une nouvelle table à inventer.
+**Passe « Adaptive Model Router V1 »** : le score intègre maintenant, en
+plus de la base (« satisfait les critères ») et de la préférence locale
+(déjà réels depuis la première version) :
+- `historical_reliability`/`historical_latency` — RÉELS SEULEMENT si un
+  historique (`apex.routing.model.ModelPerformanceStats`, construit par
+  `apex.agent_registry.performance.aggregate_model_performance` depuis des
+  `AgentExecution` réelles) est fourni par l'appelant ET porte au moins
+  une exécution exploitable pour ce candidat — sinon la contribution est
+  explicitement `UNKNOWN`, jamais devinée.
+- `eval_quality`/`cost` — restent explicitement `UNKNOWN` dans cette
+  passe : `EvalRunner` n'est relié à aucun `ModelProvider` (aucun lien
+  `model_id` ↔ verdict de qualité n'existe), et aucun prix n'est déclaré
+  nulle part dans le schéma (`ModelEndpoint`/`ModelRef`). Voir le rapport
+  de cette passe pour la proposition de les rendre mesurables — jamais
+  simulés ici.
+
+`performance`/`scoring_policy` sont des paramètres STRICTEMENT optionnels
+(défaut `None`) : tout appel existant qui ne les fournit pas produit
+EXACTEMENT la même `RoutingDecision` qu'avant cette passe — testé
+explicitement (`tests/test_routing_router.py`, non-régression).
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
-from apex.config.schema import ExternalPolicy
+from apex.config.schema import ExternalPolicy, RouterScoringPolicy
 from apex.models.registry import ModelCandidate
-from apex.routing.model import RoutingDecision, RoutingRequest, ScoredCandidate, derive_capabilities
+from apex.obs.status import DataStatus
+from apex.routing.model import (
+    ModelPerformanceStats,
+    RoutingDecision,
+    RoutingRequest,
+    ScoreBreakdown,
+    ScoreContribution,
+    ScoredCandidate,
+    derive_capabilities,
+)
 
 
 def _passes_filters(
@@ -54,24 +70,120 @@ def _passes_filters(
     return True, "satisfait tous les critères"
 
 
-def _score(candidate: ModelCandidate, request: RoutingRequest) -> tuple[float, tuple[str, ...]]:
-    """Score déterministe et transparent — PAS une IA, une formule lisible.
-    `1.0` de base pour tout candidat qui a passé les filtres (déjà un
-    « oui » dur), `+0.5` si `prefer_local` et le candidat est local — le
-    seul signal de préférence réellement disponible aujourd'hui."""
-    score = 1.0
-    reasons = ["satisfait les critères requis (base 1.0)"]
-    if request.prefer_local and candidate.is_local:
-        score += 0.5
-        reasons.append("préférence locale satisfaite (+0.5)")
-    return score, tuple(reasons)
+def _score_breakdown(
+    candidate: ModelCandidate,
+    request: RoutingRequest,
+    *,
+    policy: RouterScoringPolicy,
+    performance: ModelPerformanceStats | None,
+) -> ScoreBreakdown:
+    """Décomposition NOMMÉE et auditable — jamais un nombre nu, jamais un
+    chain-of-thought. Chaque `ScoreContribution` explique fonctionnellement
+    sa propre valeur ; `ScoreBreakdown.total` en fait la somme (contributions
+    `REAL` seulement)."""
+    contributions: list[ScoreContribution] = [
+        ScoreContribution(
+            name="capability_match",
+            value=policy.capability_match_weight,
+            status=DataStatus.REAL,
+            reason=f"satisfait les critères requis (poids {policy.capability_match_weight})",
+        )
+    ]
+
+    local_ok = request.prefer_local and candidate.is_local
+    contributions.append(
+        ScoreContribution(
+            name="local_preference",
+            value=policy.local_preference_weight if local_ok else 0.0,
+            status=DataStatus.REAL,
+            reason=(
+                f"préférence locale satisfaite (poids {policy.local_preference_weight})"
+                if local_ok
+                else "préférence locale non applicable (non demandée, ou candidat non local)"
+            ),
+        )
+    )
+
+    if performance is not None and performance.usage_count > 0 and performance.success_rate.status is DataStatus.REAL:
+        rate = performance.success_rate.value
+        contributions.append(
+            ScoreContribution(
+                name="historical_reliability",
+                value=policy.reliability_weight * rate,
+                status=DataStatus.REAL,
+                reason=(
+                    f"taux de succès observé {rate:.0%} sur {performance.usage_count} "
+                    f"exécution(s) réelle(s) (poids {policy.reliability_weight})"
+                ),
+            )
+        )
+    else:
+        contributions.append(
+            ScoreContribution(
+                name="historical_reliability",
+                value=0.0,
+                status=DataStatus.UNKNOWN,
+                reason="aucun historique réel d'exécution pour ce modèle (AgentExecution)",
+            )
+        )
+
+    if performance is not None and performance.mean_latency_s.status is DataStatus.REAL:
+        latency = performance.mean_latency_s.value
+        contribution_value = policy.latency_weight / (1.0 + latency)
+        contributions.append(
+            ScoreContribution(
+                name="historical_latency",
+                value=contribution_value,
+                status=DataStatus.REAL,
+                reason=(
+                    f"latence moyenne observée {latency:.3f}s — décroissance harmonique "
+                    f"poids/(1+latence) (poids {policy.latency_weight})"
+                ),
+            )
+        )
+    else:
+        contributions.append(
+            ScoreContribution(
+                name="historical_latency",
+                value=0.0,
+                status=DataStatus.UNKNOWN,
+                reason="aucune latence mesurée pour ce modèle (AgentExecution.elapsed_s)",
+            )
+        )
+
+    contributions.append(
+        ScoreContribution(
+            name="eval_quality",
+            value=0.0,
+            status=DataStatus.UNKNOWN,
+            reason=(
+                "EvalRunner n'est relié à aucun ModelProvider — aucun verdict de qualité "
+                "n'est aujourd'hui associé à un model_id (voir le rapport « Adaptive Model "
+                "Router V1 »)"
+            ),
+        )
+    )
+    contributions.append(
+        ScoreContribution(
+            name="cost",
+            value=0.0,
+            status=DataStatus.UNKNOWN,
+            reason="aucun prix déclaré dans le schéma (ModelEndpoint/ModelRef) — coût non mesurable",
+        )
+    )
+
+    return ScoreBreakdown(contributions=tuple(contributions))
 
 
-def _sort_key(scored: ScoredCandidate) -> tuple[float, str, str, str]:
-    """Tri déterministe : score décroissant, puis ordre alphabétique stable
-    (rôle, famille, version) — jamais l'ordre d'itération d'un dict."""
+def _sort_key(scored: ScoredCandidate) -> tuple[float, str, str, str, str]:
+    """Tri déterministe : score décroissant, puis rôle/famille/version/id
+    alphabétique stable — jamais l'ordre d'itération d'un dict. `ref.id`
+    ajouté en dernier départage (passe « Adaptive Model Router V1 ») les
+    égalités exactes désormais possibles entre deux candidats partageant
+    rôle/famille/version mais un `model_id` distinct (quantizations
+    différentes, par ex.)."""
     c = scored.candidate
-    return (-scored.score, c.role, c.ref.family, c.ref.version)
+    return (-scored.score, c.role, c.ref.family, c.ref.version, c.ref.id)
 
 
 def select_model(
@@ -79,15 +191,33 @@ def select_model(
     request: RoutingRequest,
     *,
     external_policy: ExternalPolicy | None = None,
+    performance: Mapping[str, ModelPerformanceStats] | None = None,
+    scoring_policy: RouterScoringPolicy | None = None,
 ) -> RoutingDecision:
+    """`performance`/`scoring_policy` optionnels — voir la docstring du
+    module pour la garantie de non-régression stricte quand ils sont
+    omis."""
+    policy = scoring_policy if scoring_policy is not None else RouterScoringPolicy()
+    perf_map = performance if performance is not None else {}
+
     scored: list[ScoredCandidate] = []
     for candidate in candidates:
         ok, reason = _passes_filters(candidate, request, external_policy=external_policy)
         if not ok:
             scored.append(ScoredCandidate(candidate=candidate, score=0.0, reasons=(f"exclu : {reason}",)))
             continue
-        value, reasons = _score(candidate, request)
-        scored.append(ScoredCandidate(candidate=candidate, score=value, reasons=reasons))
+        breakdown = _score_breakdown(
+            candidate, request, policy=policy, performance=perf_map.get(candidate.ref.id),
+        )
+        #: `reasons` (compat) ne garde que les contributions RÉELLES et
+        #: STRICTEMENT POSITIVES — même sémantique que l'ancien `_score`
+        #: (justifier ce qui a compté, pas auditer chaque axe vérifié).
+        #: L'audit complet, axe par axe (y compris `value == 0`/`UNKNOWN`),
+        #: reste dans `breakdown`, jamais perdu.
+        reasons = tuple(c.reason for c in breakdown.contributions if c.status is DataStatus.REAL and c.value > 0)
+        scored.append(
+            ScoredCandidate(candidate=candidate, score=breakdown.total, reasons=reasons, breakdown=breakdown)
+        )
 
     eligible = [s for s in scored if s.score > 0.0]
     ranked = tuple(sorted(scored, key=_sort_key))

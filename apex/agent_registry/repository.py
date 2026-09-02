@@ -105,6 +105,9 @@ class AgentExecutionRepository:
         result: str | None,
         error: str | None,
         fallback_reason: str | None,
+        elapsed_s: float | None = None,
+        tokens_prompt: int | None = None,
+        tokens_completion: int | None = None,
     ) -> AgentExecution | None:
         from apex.agent_registry.model import _utcnow
         from apex.db.engine import session_scope
@@ -114,6 +117,7 @@ class AgentExecutionRepository:
             row = _DbExecutionRepository(session).complete(
                 execution_id, status=status.value, model_id=model_id, provider_id=provider_id,
                 result=result, error=error, fallback_reason=fallback_reason, completed_at=_utcnow(),
+                elapsed_s=elapsed_s, tokens_prompt=tokens_prompt, tokens_completion=tokens_completion,
             )
             return AgentExecution.from_row(row) if row is not None else None
 
@@ -140,6 +144,16 @@ class AgentExecutionRepository:
         with session_scope(self._session_factory) as session:
             row = _DbExecutionRepository(session).latest_for_agent(agent_id)
             return AgentExecution.from_row(row) if row is not None else None
+
+    def list_by_model(self, model_id: str, limit: int = 500) -> list[AgentExecution]:
+        """Passe « Adaptive Model Router V1 » — alimente
+        `apex.agent_registry.performance.aggregate_model_performance`."""
+        from apex.db.engine import session_scope
+        from apex.db.repositories import AgentExecutionRepository as _DbExecutionRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbExecutionRepository(session).list_by_model(model_id, limit=limit)
+            return [AgentExecution.from_row(row) for row in rows]
 
 
 class AgentTeamRepository:

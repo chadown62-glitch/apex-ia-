@@ -26,6 +26,7 @@ from apex.config.schema import (
     ModelEndpoint,
     ModelRole,
     Paths,
+    RouterScoringPolicy,
     SandboxDefaults,
     SchedulerPolicy,
     ServiceEndpoint,
@@ -122,6 +123,7 @@ def parse_config(raw: dict[str, Any]) -> ApexConfig:
         sandbox=SandboxDefaults.parse(raw.get("sandbox") or {}),
         gate=GatePolicy.parse(raw.get("gate") or {}),
         scheduler=SchedulerPolicy.parse(raw.get("scheduler") or {}),
+        routing=RouterScoringPolicy.parse(raw.get("routing") or {}),
     )
     config.validate()
     return config
