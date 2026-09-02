@@ -13,7 +13,8 @@ from apex.config.loader import parse_config
 from apex.doctor.check import CheckContext, Severity
 from apex.doctor.checks import environment, platform, services
 from apex.doctor.runner import render_text, run_checks
-from apex.util.probe import CommandResult, FakeProbe, HttpResult
+from apex.errors import ConfigError
+from apex.util.probe import CommandResult, FakeProbe, HttpResult, Probe
 from tests.test_config import config as base_config
 
 
@@ -207,6 +208,125 @@ class TestServiceChecks(unittest.TestCase):
         """Le registre ne doit jamais déclarer disponible ce qui n'existe pas."""
         outcome = services.check_interfaces_integrity(context(healthy_probe()))
         self.assertIs(outcome.severity, Severity.PASS, outcome.message)
+
+
+class TestOllamaHardwareAwareDoctor(unittest.TestCase):
+    """Passe « hardware-aware doctor » (audit blocker POSTGRES/Ollama/GPU).
+
+    Un modèle de référence qui ne tient structurellement pas sur la VRAM du
+    pool local ACTIVE (ex. une référence à 18 Go sur une machine à 8 Go) ne
+    doit jamais provoquer un FAIL « modèle manquant » : c'est un
+    dimensionnement matériel attendu, pas un défaut d'installation. Voir
+    `apex.doctor.checks.services._reference_is_hardware_compatible`.
+
+    Le catalogue de `config.yaml` (candidats, `selection: benchmark_driven`)
+    n'est jamais modifié par cette passe : seule l'interprétation d'une
+    absence change selon la compatibilité matérielle.
+    """
+
+    @staticmethod
+    def _ctx(document: dict, present: list[str]) -> CheckContext:
+        probe = healthy_probe()
+        probe.open_ports.add(("127.0.0.1", 11434))
+        models = ", ".join(f'{{"name": "{name}"}}' for name in present)
+        probe.http["http://127.0.0.1:11434/api/tags"] = HttpResult(200, f'{{"models": [{models}]}}')
+        document["services"]["ollama"] = {"host": "127.0.0.1", "port": 11434, "required": False}
+        return CheckContext(probe=probe, config=parse_config(document), timeout_s=1.0)
+
+    def test_a_8gb_hw_18gb_reference_is_incompatible_not_missing_install(self) -> None:
+        """A. 8 Go de VRAM + référence à 18 Go ⇒ incompatible, jamais un FAIL."""
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        ctx = self._ctx(document, ["gemma4:12b-q4_K_M"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.WARN)
+        self.assertIn(
+            "coder_main:qwen3-coder:30b-a3b-instruct:q4_k_m",
+            outcome.facts["missing_reference_incompatible"],
+        )
+        self.assertEqual(outcome.facts["missing_reference"], [])
+
+    def test_b_8gb_hw_5gb_reference_stays_compatible_and_blocking(self) -> None:
+        """B. 8 Go de VRAM + référence à 5 Go ⇒ compatible ; absente ⇒ FAIL."""
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        document["models"]["endpoints"][0]["vram_gb"] = 5.0
+        ctx = self._ctx(document, ["gemma4:12b-q4_K_M"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.FAIL)
+        self.assertIn(
+            "coder_main:qwen3-coder:30b-a3b-instruct:q4_k_m", outcome.facts["missing_reference"]
+        )
+
+    def test_c_24gb_hw_18gb_reference_stays_compatible_and_blocking(self) -> None:
+        """C. 24 Go + 18 Go ⇒ compatible — comportement historique inchangé."""
+        ctx = self._ctx(base_config(), ["gemma4:12b-q4_K_M"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.FAIL)
+        self.assertIn(
+            "coder_main:qwen3-coder:30b-a3b-instruct:q4_k_m", outcome.facts["missing_reference"]
+        )
+
+    def test_d_24gb_hw_17gb_reference_stays_compatible_and_blocking(self) -> None:
+        """D. 24 Go + 17 Go ⇒ compatible ⇒ absence toujours bloquante."""
+        document = base_config()
+        document["models"]["endpoints"][0]["vram_gb"] = 17.0
+        ctx = self._ctx(document, ["gemma4:12b-q4_K_M"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.FAIL)
+
+    def test_e_small_hardware_never_removes_large_models_from_catalog(self) -> None:
+        """E. 8 Go de VRAM ne doit jamais faire disparaître un gros modèle du catalogue."""
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        cfg = parse_config(document)
+        families = {c.family for c in cfg.model_roles["coder_main"].candidates}
+        self.assertEqual(families, {"qwen3-coder", "devstral-2"})
+        # Le candidat de référence (index 0) reste bien le 30B, jamais remplacé.
+        self.assertEqual(cfg.model_roles["coder_main"].reference.family, "qwen3-coder")
+
+    def test_f_selection_benchmark_driven_is_never_altered(self) -> None:
+        """F. `selection: benchmark_driven` reste inchangé après la passe doctor."""
+        document = base_config()
+        document["models"]["roles"]["coder_main"]["selection"] = "benchmark_driven"
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        ctx = self._ctx(document, ["gemma4:12b-q4_K_M"])
+        services.check_ollama_models(ctx)
+        self.assertEqual(ctx.config.model_roles["coder_main"].selection, "benchmark_driven")
+
+    def test_g_doctor_cannot_install_or_download_anything(self) -> None:
+        """G. Aucune installation/téléchargement automatique n'est possible.
+
+        `Probe` (apex/util/probe.py) est un protocole intégralement en lecture
+        seule (§53) : aucune méthode d'écriture, d'installation ou de
+        téléchargement n'existe sur lui, donc `check_ollama_models` ne peut
+        matériellement pas déclencher de `ollama pull`.
+        """
+        writer_like = {
+            name
+            for name in dir(Probe)
+            if not name.startswith("_")
+            and any(word in name for word in ("pull", "install", "download", "write", "fetch"))
+        }
+        self.assertEqual(writer_like, set())
+
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        ctx = self._ctx(document, ["gemma4:12b-q4_K_M"])
+        services.check_ollama_models(ctx)
+        self.assertNotIn(
+            "run", {kind for kind, _ in ctx.probe.calls}
+        )  # aucune commande shell exécutée par ce check
+        self.assertFalse(any("pull" in payload for _, payload in ctx.probe.calls))
+
+    def test_h_genuinely_invalid_config_still_raises_a_real_error(self) -> None:
+        """H. Une configuration invalide continue de provoquer une vraie erreur —
+        la passe hardware-aware ne doit jamais rendre le doctor artificiellement
+        vert en avalant une erreur de configuration réelle."""
+        document = base_config()
+        del document["paths"]["artifacts"]
+        with self.assertRaises(ConfigError):
+            parse_config(document)
 
 
 class TestRunner(unittest.TestCase):
