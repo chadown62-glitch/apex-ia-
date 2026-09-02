@@ -170,7 +170,61 @@ detect_python() {
     return 1
 }
 
-# -- Préflight environnement (commit 1 : rien au-delà) -----------------------
+# -- Infrastructure via docker compose ---------------------------------------
+#
+# N'utilise QUE le `docker-compose.yml` déjà versionné du dépôt (postgres,
+# redis, minio) — Ollama n'y figure jamais et ce script ne l'y ajoute pas.
+# `up -d --wait` est nativement idempotent (Compose ne recrée un conteneur
+# que si sa configuration a changé) et attend les healthchecks déjà déclarés
+# dans le fichier compose — rien de cela n'est réimplémenté ici. Ce script ne
+# démarre JAMAIS Docker Engine lui-même (dockerd) : si le démon n'est pas
+# joignable, `docker compose` échoue avec son propre message, relayé tel
+# quel — jamais une tentative de le démarrer (encore moins via `sudo`).
+docker_cli_available() {
+    command -v docker >/dev/null 2>&1
+}
+
+compose_plugin_available() {
+    docker compose version >/dev/null 2>&1
+}
+
+# Démarre l'infrastructure existante. N'exécute jamais `docker compose
+# down`/`rm`/`prune` : seul `up -d --wait` est utilisé, jamais un arrêt.
+compose_up() {
+    local project_root="$1"
+
+    if ! docker_cli_available; then
+        log_err "docker introuvable dans PATH."
+        log_err "remédiation : installer Docker vous-même — ce script n'installe rien."
+        return 1
+    fi
+
+    if ! compose_plugin_available; then
+        log_err "le plugin 'docker compose' est indisponible (Docker installé sans, ou démon injoignable)."
+        log_err "remédiation : vérifier votre installation Docker — ce script ne la modifie pas."
+        return 1
+    fi
+
+    log_info "démarrage de l'infrastructure (docker compose up -d --wait)..."
+    local output
+    local status=0
+    output="$(cd -- "${project_root}" && docker compose up -d --wait 2>&1)" || status=$?
+    if [[ -n "${output}" ]]; then
+        while IFS= read -r line; do
+            log_info "  docker: ${line}"
+        done <<< "${output}"
+    fi
+
+    if (( status != 0 )); then
+        log_err "docker compose up a échoué (code ${status}) — voir les lignes ci-dessus."
+        return 1
+    fi
+
+    log_info "infrastructure démarrée (postgres, redis, minio)."
+    return 0
+}
+
+# -- Préflight environnement --------------------------------------------------
 
 main() {
     local project_root
@@ -192,7 +246,11 @@ main() {
     fi
     log_info "interpréteur retenu : ${python_bin}"
 
-    log_info "préflight environnement OK."
+    if ! compose_up "${project_root}"; then
+        exit "${EXIT_DOCKER_FAIL}"
+    fi
+
+    log_info "préflight OK (environnement + infrastructure)."
     exit "${EXIT_OK}"
 }
 

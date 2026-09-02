@@ -1,7 +1,9 @@
 """Tests du launcher Linux/WSL (`scripts/apex-launch.sh`).
 
 Commit 1 : squelette — résolution de racine, chargement contrôlé de `.env`,
-détection Python/venv. Ni Docker, ni `apex doctor`, ni `apex gate` n'existent
+détection Python/venv.
+Commit 2 : démarrage de l'infrastructure existante via
+`docker compose up -d --wait`. Ni `apex doctor` ni `apex gate` n'existent
 encore dans le script à ce stade (voir son en-tête).
 
 Chaque scénario construit un projet factice isolé (`tempfile`) contenant
@@ -25,7 +27,10 @@ LAUNCHER = Path(__file__).resolve().parent.parent / "scripts" / "apex-launch.sh"
 # Un PATH minimal portant seulement les utilitaires dont le script a besoin
 # pour SE LANCER lui-même (bash, coreutils) — jamais un `python3` réel, pour
 # que les tests décident précisément quel interpréteur est "vu" par le script.
-_COREUTILS = ("dirname", "basename", "stat", "cat", "grep", "mktemp", "env", "bash", "sh", "readlink")
+_COREUTILS = (
+    "dirname", "basename", "stat", "cat", "grep", "mktemp", "env", "bash", "sh", "readlink",
+    "sleep",  # requis par le faux `docker` du test SIGINT — jamais par le launcher lui-même
+)
 
 
 class LauncherFixture:
@@ -51,6 +56,8 @@ class LauncherFixture:
         if with_python3:
             self._write_fake_python(self.bin_dir / "python3", compatible=True)
 
+        self.docker_calls_log = self.root / "docker_calls.log"
+
     def _write_fake_python(self, path: Path, *, compatible: bool) -> None:
         """Faux interpréteur déterministe : réussit ou échoue le test de
         version selon `compatible`, sans dépendre de la version réelle de
@@ -70,6 +77,35 @@ class LauncherFixture:
         python_path = venv_bin / "python3"
         self._write_fake_python(python_path, compatible=compatible)
         return python_path
+
+    def write_fake_docker(
+        self,
+        *,
+        compose_version_ok: bool = True,
+        compose_up_exit: int = 0,
+        compose_up_output: str = "fake: containers started",
+    ) -> Path:
+        """Faux `docker` déterministe : répond à `compose version` et
+        `compose up -d --wait` sans dépendre d'un vrai démon Docker.
+        Journalise chaque invocation (args + cwd) dans `self.docker_calls_log`
+        pour vérifier ce que le launcher a réellement exécuté."""
+        docker_path = self.bin_dir / "docker"
+        version_exit = 0 if compose_version_ok else 1
+        docker_path.write_text(
+            "#!/usr/bin/env bash\n"
+            f'echo "$* (cwd=$(pwd))" >> "{self.docker_calls_log}"\n'
+            'if [[ "$1 $2" == "compose version" ]]; then\n'
+            f"  exit {version_exit}\n"
+            "fi\n"
+            'if [[ "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
+            f'  echo "{compose_up_output}"\n'
+            f"  exit {compose_up_exit}\n"
+            "fi\n"
+            'echo "unexpected docker invocation: $*" >&2\n'
+            "exit 99\n"
+        )
+        docker_path.chmod(docker_path.stat().st_mode | stat.S_IEXEC)
+        return docker_path
 
     def run(self, *, cwd: Path | None = None, extra_path: str = "") -> subprocess.CompletedProcess[str]:
         env = {
@@ -134,6 +170,7 @@ class TestPythonDetection(LauncherTestCase):
         fx = LauncherFixture(self.tmp)
         fx.write_env("FOO=bar\n")
         venv_python = fx.write_venv_python(compatible=True)
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertIn(str(venv_python), result.stderr)
@@ -143,6 +180,7 @@ class TestPythonDetection(LauncherTestCase):
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("FOO=bar\n")
         fx.write_venv_python(compatible=False)
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertIn("version Python insuffisante", result.stderr)
@@ -158,6 +196,7 @@ class TestPythonDetection(LauncherTestCase):
     def test_system_python_used_when_no_venv(self) -> None:
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("FOO=bar\n")
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertIn("python3 système utilisé", result.stderr)
@@ -167,6 +206,7 @@ class TestEnvLoadingIsSafe(LauncherTestCase):
     def test_secret_value_never_appears_in_output(self) -> None:
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("POSTGRES_PASSWORD=correct-horse-battery-staple\n")
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertNotIn("correct-horse-battery-staple", result.stdout)
@@ -176,6 +216,7 @@ class TestEnvLoadingIsSafe(LauncherTestCase):
     def test_malformed_line_is_warned_and_skipped_without_crashing(self) -> None:
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("VALID=ok\nthis is not a valid line\nOTHER=2\n")
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertIn("ligne .env ignorée", result.stderr)
@@ -186,6 +227,7 @@ class TestEnvLoadingIsSafe(LauncherTestCase):
         fx.write_env('DANGEROUS="$(touch pwned)"\n')
         canary = self.tmp / "pwned"
         fx.write_venv_python(compatible=True)
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertFalse(canary.exists(), "la valeur .env a été évaluée comme du code — injection possible")
@@ -193,6 +235,7 @@ class TestEnvLoadingIsSafe(LauncherTestCase):
     def test_world_readable_env_warns_but_does_not_block(self) -> None:
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("FOO=bar\n", mode=0o644)
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertIn("lisible au-delà du propriétaire", result.stderr)
@@ -200,6 +243,7 @@ class TestEnvLoadingIsSafe(LauncherTestCase):
     def test_strict_env_permissions_produce_no_warning(self) -> None:
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("FOO=bar\n", mode=0o600)
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertNotIn("lisible au-delà du propriétaire", result.stderr)
@@ -214,6 +258,7 @@ class TestPathsWithSpaces(LauncherTestCase):
         spaced_root.mkdir()
         fx = LauncherFixture(spaced_root, with_python3=True)
         fx.write_env("FOO=bar\n")
+        fx.write_fake_docker()
         result = fx.run()
         self.assertEqual(result.returncode, 0)
         self.assertIn(f"racine du projet : {spaced_root}", result.stderr)
@@ -223,6 +268,7 @@ class TestRootResolution(LauncherTestCase):
     def test_root_is_the_launcher_project_regardless_of_cwd(self) -> None:
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("FOO=bar\n")
+        fx.write_fake_docker()
         other_cwd = Path(tempfile.mkdtemp())
         try:
             result = fx.run(cwd=other_cwd)
@@ -236,6 +282,7 @@ class TestRootResolution(LauncherTestCase):
         un lien symbolique (cas réel : `PATH` ou raccourci)."""
         fx = LauncherFixture(self.tmp, with_python3=True)
         fx.write_env("FOO=bar\n")
+        fx.write_fake_docker()
         link = Path(tempfile.mkdtemp()) / "apex-launch-link.sh"
         try:
             link.symlink_to(fx.launcher)
@@ -258,6 +305,7 @@ class TestIdempotence(LauncherTestCase):
         fx = LauncherFixture(self.tmp)
         env_path = fx.write_env("FOO=bar\n")
         venv_python = fx.write_venv_python(compatible=True)
+        fx.write_fake_docker()
         env_before = env_path.read_bytes()
         venv_before = venv_python.read_bytes()
         env_mtime_before = env_path.stat().st_mtime_ns
@@ -273,11 +321,18 @@ class TestIdempotence(LauncherTestCase):
         self.assertEqual(env_path.stat().st_mtime_ns, env_mtime_before)
         self.assertEqual(venv_python.stat().st_mtime_ns, venv_mtime_before)
 
+        # `docker compose up -d --wait` est nativement idempotent : deux
+        # exécutions appellent la même commande deux fois, jamais `down`.
+        calls = fx.docker_calls_log.read_text()
+        self.assertEqual(calls.count("compose up -d --wait"), 2)
+        self.assertNotIn("compose down", calls)
+
 
 class TestNoUnauthorizedInstallOrStart(LauncherTestCase):
-    """Le launcher ne doit ni installer ni démarrer quoi que ce soit à ce
-    stade (commit 1) — aucune commande `apt`, `curl | sh`, `ollama`, `docker`
-    n'apparaît dans le script."""
+    """Le launcher ne doit ni installer ni démarrer quoi que ce soit au-delà
+    de `docker compose up` sur le compose déjà versionné — aucune commande
+    `apt`, `curl | sh`, `ollama`, `sudo`, `dockerd`, ni un `docker compose
+    down`/`rm`/`prune` n'apparaît dans le script."""
 
     def test_script_never_mentions_install_or_service_start_commands(self) -> None:
         # Ignore les commentaires : le script DOCUMENTE volontairement ces
@@ -287,10 +342,126 @@ class TestNoUnauthorizedInstallOrStart(LauncherTestCase):
             line for line in LAUNCHER.read_text().splitlines()
             if not line.strip().startswith("#")
         )
-        forbidden = ("apt-get install", "apt install", "ollama pull", "ollama serve",
-                     "curl -fsSL", "wsl --shutdown", "systemctl start docker", "dockerd")
+        forbidden = (
+            "apt-get install", "apt install", "ollama pull", "ollama serve",
+            "curl -fsSL", "wsl --shutdown", "systemctl start docker", "dockerd",
+            "sudo", "compose down", "compose rm", "compose kill", "system prune",
+        )
         for pattern in forbidden:
             self.assertNotIn(pattern, code_lines, f"motif interdit trouvé dans le launcher : {pattern!r}")
+
+
+class TestDockerComposeIntegration(LauncherTestCase):
+    """Commit 2 : `docker compose up -d --wait` sur le compose existant
+    (postgres/redis/minio) — jamais Ollama, jamais un arrêt, jamais une
+    installation de Docker lui-même."""
+
+    def test_docker_not_found_exits_2_without_offering_to_install(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)  # pas de docker dans _bin
+        fx.write_env("FOO=bar\n")
+        result = fx.run()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("docker introuvable", result.stderr)
+        self.assertIn("ce script n'installe rien", result.stderr)
+
+    def test_compose_plugin_unavailable_exits_2(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        fx.write_fake_docker(compose_version_ok=False)
+        result = fx.run()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("plugin 'docker compose' est indisponible", result.stderr)
+
+    def test_compose_up_success_exits_0_and_runs_from_project_root(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        fx.write_fake_docker(compose_up_output="fake: containers started")
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("infrastructure démarrée", result.stderr)
+        self.assertIn("préflight OK", result.stderr)
+        calls = fx.docker_calls_log.read_text()
+        self.assertIn(f"compose up -d --wait (cwd={self.tmp})", calls)
+
+    def test_compose_up_failure_exits_2_and_relays_docker_stderr(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        fx.write_fake_docker(compose_up_exit=1, compose_up_output="Error response from daemon: boom")
+        result = fx.run()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("Error response from daemon: boom", result.stderr)
+        self.assertIn("docker compose up a échoué", result.stderr)
+
+    def test_never_invokes_compose_down_or_destructive_commands(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        fx.write_fake_docker()
+        fx.run()
+        calls = fx.docker_calls_log.read_text()
+        for destructive in ("compose down", "compose rm", "compose kill", "system prune", " rm "):
+            self.assertNotIn(destructive, calls)
+
+    def test_docker_not_invoked_at_all_when_env_missing(self) -> None:
+        """Un échec avant l'étape Docker (`.env` absent) ne doit déclencher
+        aucun appel `docker`, même en présence d'un `docker` fonctionnel."""
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_fake_docker()
+        result = fx.run()
+        self.assertEqual(result.returncode, 1)
+        self.assertFalse(fx.docker_calls_log.exists() and fx.docker_calls_log.read_text().strip())
+
+    def test_sigint_during_compose_up_exits_130_end_to_end(self) -> None:
+        """Test de bout en bout promis au commit 1 : `docker compose up
+        -d --wait` est le premier point d'attente réel du launcher — un
+        Ctrl+C pendant cette étape doit produire l'exit code 130, sans que
+        le launcher n'exécute quoi que ce soit après l'interruption.
+
+        Nuance constatée en écrivant ce test : ce script signale le seul PID
+        du launcher (`Popen.send_signal`), pas tout le groupe de processus —
+        bash défère alors le trap jusqu'à la fin de la substitution de
+        commande en cours (`$(docker compose up ...)`), ici les 5 s de
+        `sleep` du faux docker. Un vrai Ctrl+C terminal envoie SIGINT à tout
+        le groupe : `docker compose` le recevrait aussi et s'arrêterait de
+        lui-même, rendant la substitution quasi immédiate. Le test reste
+        valide dans les deux cas — seul le délai diffère — d'où le timeout
+        généreux ci-dessous plutôt qu'une assertion de latence."""
+        import signal
+        import time
+
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        docker_path = fx.bin_dir / "docker"
+        docker_path.write_text(
+            "#!/usr/bin/env bash\n"
+            f'echo "$* (cwd=$(pwd))" >> "{fx.docker_calls_log}"\n'
+            'if [[ "$1 $2" == "compose version" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
+            "  sleep 5\n"
+            "  exit 0\n"
+            "fi\n"
+            "exit 99\n"
+        )
+        docker_path.chmod(docker_path.stat().st_mode | stat.S_IEXEC)
+
+        proc = subprocess.Popen(
+            [str(fx.launcher)],
+            cwd=str(fx.root),
+            env={"PATH": str(fx.bin_dir), "HOME": str(fx.root)},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            # Laisse le temps au launcher d'atteindre `docker compose up`
+            # (résolution racine + .env + venv sont quasi instantanés).
+            time.sleep(0.5)
+            proc.send_signal(signal.SIGINT)
+            _stdout, stderr = proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            raise
+        self.assertEqual(proc.returncode, 130)
+        self.assertIn("interrompu (Ctrl+C)", stderr)
 
 
 class TestInterruptHandlerIsIsolated(LauncherTestCase):
