@@ -40,30 +40,32 @@ export function SystemPage() {
         {health.isLoading ? (
           <LoadingState />
         ) : healthData ? (
-          <table className="kv-table">
-            <thead>
-              <tr>
-                <th>Composant</th>
-                <th>Statut</th>
-                <th>Détail</th>
-                <th>Version</th>
-                <th>Fallback</th>
-              </tr>
-            </thead>
-            <tbody>
-              {healthData.components.map((c) => (
-                <tr key={c.component}>
-                  <td className="mono">{c.component}</td>
-                  <td>
-                    <HealthStatusBadge status={c.status} />
-                  </td>
-                  <td>{c.detail}</td>
-                  <td className="mono">{c.version ?? "—"}</td>
-                  <td>{c.fallback_active ? "actif" : "—"}</td>
+          <div className="kv-table-wrap">
+            <table className="kv-table">
+              <thead>
+                <tr>
+                  <th>Composant</th>
+                  <th>Statut</th>
+                  <th>Détail</th>
+                  <th>Version</th>
+                  <th>Fallback</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {healthData.components.map((c) => (
+                  <tr key={c.component}>
+                    <td className="mono">{c.component}</td>
+                    <td>
+                      <HealthStatusBadge status={c.status} />
+                    </td>
+                    <td>{c.detail}</td>
+                    <td className="mono">{c.version ?? "—"}</td>
+                    <td>{c.fallback_active ? "actif" : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <ErrorState detail={health.data?.detail} />
         )}
@@ -73,30 +75,32 @@ export function SystemPage() {
         {registry.isLoading ? (
           <LoadingState />
         ) : registryData ? (
-          <table className="kv-table">
-            <thead>
-              <tr>
-                <th>Nom</th>
-                <th>Statut</th>
-                <th>Objet</th>
-                <th>Module</th>
-                <th>Fallback</th>
-              </tr>
-            </thead>
-            <tbody>
-              {registryData.abstractions.map((a) => (
-                <tr key={a.name}>
-                  <td className="mono">{a.name}</td>
-                  <td>
-                    <StatusBadge status={ABSTRACTION_BADGE[a.status]} title={a.status.toUpperCase()} />
-                  </td>
-                  <td>{a.purpose}</td>
-                  <td className="mono">{a.module ?? "—"}</td>
-                  <td>{a.fallback}</td>
+          <div className="kv-table-wrap">
+            <table className="kv-table">
+              <thead>
+                <tr>
+                  <th>Nom</th>
+                  <th>Statut</th>
+                  <th>Objet</th>
+                  <th>Module</th>
+                  <th>Fallback</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {registryData.abstractions.map((a) => (
+                  <tr key={a.name}>
+                    <td className="mono">{a.name}</td>
+                    <td>
+                      <StatusBadge status={ABSTRACTION_BADGE[a.status]} title={a.status.toUpperCase()} />
+                    </td>
+                    <td>{a.purpose}</td>
+                    <td className="mono">{a.module ?? "—"}</td>
+                    <td>{a.fallback}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <ErrorState detail={registry.data?.detail} />
         )}

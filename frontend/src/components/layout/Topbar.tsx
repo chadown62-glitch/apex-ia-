@@ -1,19 +1,38 @@
 import type { ReactNode } from "react";
 
-import { useGate, useHealth } from "../../api/hooks";
+import { useGate, useHealth, useMissions } from "../../api/hooks";
+import { IconButton } from "../ui/Button";
+import { ApexStatusBadge, deriveApexStatus } from "../status/ApexStatus";
 import { GateStatusBadge, HealthStatusBadge } from "../status/StatusBadge";
+import { ThemeToggle } from "../../theme/ThemeToggle";
 import { GlobalSearch } from "./GlobalSearch";
+import { useSidebar } from "./SidebarContext";
 import "./layout.css";
 
 export function Topbar() {
   const health = useHealth();
   const gate = useGate();
+  const missions = useMissions();
+  const { setMobileOpen } = useSidebar();
+
+  const missionsData = missions.data?.status === "real" ? missions.data.data ?? [] : [];
+  const systemStatus = deriveApexStatus(health.data?.data?.status ?? null, health.data?.status === "real", missionsData);
 
   return (
     <header className="topbar">
-      <div className="topbar__title">APEX Control Center</div>
+      <div className="topbar__left">
+        <IconButton
+          className="topbar__hamburger"
+          aria-label="Ouvrir la navigation"
+          onClick={() => setMobileOpen(true)}
+        >
+          ☰
+        </IconButton>
+        <div className="topbar__title">APEX Control Center</div>
+      </div>
       <GlobalSearch />
       <div className="topbar__status">
+        <ApexStatusBadge status={systemStatus} />
         <StatusGroup label="Système">
           {health.data?.data ? (
             <HealthStatusBadge status={health.data.data.status} />
@@ -30,6 +49,7 @@ export function Topbar() {
             <span className="topbar__pending">…</span>
           )}
         </StatusGroup>
+        <ThemeToggle />
       </div>
     </header>
   );

@@ -54,36 +54,40 @@ export function HardwarePage() {
           </div>
 
           <Panel title="Empreinte machine">
-            <table className="kv-table">
-              <tbody>
-                <tr><th>Machine</th><td>{data.machine_label ?? "non étiquetée"}</td></tr>
-                <tr><th>Mesuré sur cette machine</th><td>{data.measured_on_target_machine ? "OUI" : "NON"}</td></tr>
-                <tr><th>Empreinte</th><td className="mono">{data.fingerprint}</td></tr>
-              </tbody>
-            </table>
+            <div className="kv-table-wrap">
+              <table className="kv-table">
+                <tbody>
+                  <tr><th>Machine</th><td>{data.machine_label ?? "non étiquetée"}</td></tr>
+                  <tr><th>Mesuré sur cette machine</th><td>{data.measured_on_target_machine ? "OUI" : "NON"}</td></tr>
+                  <tr><th>Empreinte</th><td className="mono">{data.fingerprint}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </Panel>
 
           <Panel title={`${hardwareChecks.length} contrôles matériels (sur ${data.checks.length} au total)`} dense>
-            <table className="kv-table">
-              <thead>
-                <tr>
-                  <th>Contrôle</th>
-                  <th>Statut</th>
-                  <th>Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                {hardwareChecks.map((check) => (
-                  <tr key={check.check_id}>
-                    <td className="mono">{check.check_id}</td>
-                    <td>
-                      <GateStatusBadge status={check.status} />
-                    </td>
-                    <td>{check.message}</td>
+            <div className="kv-table-wrap">
+              <table className="kv-table">
+                <thead>
+                  <tr>
+                    <th>Contrôle</th>
+                    <th>Statut</th>
+                    <th>Message</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {hardwareChecks.map((check) => (
+                    <tr key={check.check_id}>
+                      <td className="mono">{check.check_id}</td>
+                      <td>
+                        <GateStatusBadge status={check.status} />
+                      </td>
+                      <td>{check.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Panel>
         </>
       )}

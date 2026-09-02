@@ -16,6 +16,12 @@
   gap: 6px;
   font-size: 12px;
   color: var(--text-muted);
+  /* Sans ceci, un grid/flex item garde `min-width: auto` par défaut — sa
+     largeur de contenu intrinsèque (ex. un <select> avec une option longue)
+     peut alors forcer la piste de grille au-delà de `1fr` et déborder du
+     conteneur. C'est la cause racine du débordement horizontal observé sur
+     la page Agents sous ~900px (audit UI V1, Priorité 2). */
+  min-width: 0;
 }
 
 .mission-form__field select,
@@ -28,6 +34,19 @@
   padding: 8px 10px;
   font-size: 13px;
   font-family: inherit;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* En dessous de ce seuil, deux champs côte à côte (ex. Rôle + Modèle
+   préféré) n'ont plus assez de place pour rester utilisables — bascule en
+   colonne unique, comme le reste du formulaire. Seul un changement de
+   layout, jamais une réduction de contenu ou un `overflow-x: hidden`. */
+@media (max-width: 700px) {
+  .mission-form__row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .mission-form__field--checkbox {

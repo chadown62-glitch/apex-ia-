@@ -10,8 +10,9 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid var(--border);
-  background: var(--surface-2);
+  background: var(--surface-hover);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .configured-agent-status--idle { color: var(--text); }
@@ -50,10 +51,59 @@
   text-align: left;
   font: inherit;
   color: inherit;
+  flex-wrap: wrap;
+  row-gap: 6px;
 }
 
 .configured-agent-list__header:hover {
-  background: var(--surface-2);
+  background: var(--surface-hover);
+}
+
+/* `min-width: 0` est nécessaire pour qu'un enfant flex puisse rétrécir en
+   dessous de la largeur intrinsèque de son contenu (nom/rôle/modèle) —
+   sinon il pousse `ConfiguredAgentStatusPill` hors du conteneur au lieu de
+   tronquer proprement. */
+.configured-agent-list__title {
+  min-width: 0;
+  flex: 1 1 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* -- Templates d'agent (AgentTemplatesPanel) — mêmes garanties anti-
+   débordement que la liste d'agents ci-dessus. */
+
+.agent-template-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.agent-template-list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.agent-template-list__title {
+  min-width: 0;
+  flex: 1 1 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-template-list__badge {
+  margin-top: 4px;
 }
 
 .configured-agent-detail {

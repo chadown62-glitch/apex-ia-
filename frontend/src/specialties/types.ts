@@ -24,6 +24,14 @@ import type { CloneType } from "../api/types";
 
 export type SpecialtyStatus = "real" | "planned";
 
+/** Regroupement visuel de navigation (Sidebar) — une décision de
+ * présentation côté client, comme `Specialty` elle-même, jamais une donnée
+ * mesurée. Fermé aujourd'hui à 6 valeurs (§ demande « UI Foundation V1 »)
+ * mais consommé par un `Record` dans data.ts : ajouter une 7e catégorie un
+ * jour = une entrée de plus dans `SPECIALTY_CATEGORIES`, aucun changement
+ * dans Sidebar.tsx. */
+export type SpecialtyCategory = "workspace" | "intelligence" | "cognition" | "creative" | "data" | "system";
+
 /**
  * Où en est réellement l'implémentation, pour être honnête au-delà du seul
  * REAL/PLANNED binaire :
@@ -59,6 +67,7 @@ export interface Specialty {
   path: string;
   status: SpecialtyStatus;
   devStage: DevStage;
+  category: SpecialtyCategory;
   /** Rendu si présent, quel que soit `status` — une spécialité PLANNED peut
    * avoir sa propre page ("ui-scaffold") ; sinon la page générique PLANNED
    * s'en charge (voir pages/PlannedSpecialtyPage.tsx). */

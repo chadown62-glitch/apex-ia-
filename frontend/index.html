@@ -4,6 +4,29 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>APEX Control Center</title>
+    <!--
+      Résolution du thème AVANT le premier paint — évite le flash clair->sombre
+      (ou l'inverse) le temps que React s'hydrate. Doit rester en synchronisation
+      exacte avec src/theme/useTheme.ts (même clé localStorage, même ordre de
+      priorité : choix explicite > préférence système > "dark" par défaut).
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("apex-theme");
+          var theme =
+            stored === "light" || stored === "dark"
+              ? stored
+              : window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+                ? "light"
+                : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+          /* localStorage indisponible (mode privé strict, etc.) — le défaut
+             data-theme="dark" déjà posé sur <html> reste en place. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

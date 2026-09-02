@@ -201,7 +201,7 @@ function ConfiguredAgentsPanel() {
               {list.map((a) => (
                 <li key={a.id} className="configured-agent-list__item">
                   <button className="configured-agent-list__header" onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}>
-                    <div>
+                    <div className="configured-agent-list__title">
                       <strong>{a.name}</strong>
                       <span className="mono" style={{ color: "var(--text-faint)" }}> · {a.role}</span>
                       {a.model_role && <span className="mono" style={{ color: "var(--text-faint)" }}> · {a.model_role}</span>}
@@ -232,26 +232,28 @@ function ConfiguredAgentDetail({ agentId, onDelete }: { agentId: string; onDelet
         ) : list.length === 0 ? (
           <p style={{ fontSize: 12, color: "var(--text-faint)" }}>Aucune exécution pour l'instant.</p>
         ) : (
-          <table className="kv-table">
-            <thead>
-              <tr>
-                <th>Mission</th>
-                <th>Statut</th>
-                <th>Modèle</th>
-                <th>Raison</th>
-              </tr>
-            </thead>
-            <tbody>
-              {list.map((e) => (
-                <tr key={e.id}>
-                  <td className="mono">{e.mission_id.slice(0, 8)}</td>
-                  <td>{e.status}</td>
-                  <td className="mono">{e.model_id ?? "—"}</td>
-                  <td>{e.fallback_reason ?? "—"}</td>
+          <div className="agent-table-wrap">
+            <table className="kv-table">
+              <thead>
+                <tr>
+                  <th>Mission</th>
+                  <th>Statut</th>
+                  <th>Modèle</th>
+                  <th>Raison</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {list.map((e) => (
+                  <tr key={e.id}>
+                    <td className="mono">{e.mission_id.slice(0, 8)}</td>
+                    <td>{e.status}</td>
+                    <td className="mono">{e.model_id ?? "—"}</td>
+                    <td>{e.fallback_reason ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
       <button className="action-button action-button--live" onClick={onDelete}>
@@ -339,18 +341,12 @@ function AgentTemplatesPanel() {
           ) : list.length === 0 ? (
             <ErrorState detail="Aucun template créé pour l'instant." />
           ) : (
-            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+            <ul className="agent-template-list">
               {list.map((t) => (
-                <li
-                  key={t.id}
-                  style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
-                  }}
-                >
-                  <div>
+                <li key={t.id} className="agent-template-list__item">
+                  <div className="agent-template-list__title">
                     <strong>{t.name}</strong> <span className="mono" style={{ color: "var(--text-faint)" }}>· {t.role}</span>
-                    <div style={{ marginTop: 4 }}>
+                    <div className="agent-template-list__badge">
                       <StatusBadge status="planned" title="Définition seule — spawn réel non câblé" />
                     </div>
                   </div>

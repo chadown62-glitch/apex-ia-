@@ -44,26 +44,28 @@ export function SecurityGatePage() {
           </Panel>
 
           <Panel title={`${data.checks.length} contrôles`} dense>
-            <table className="kv-table">
-              <thead>
-                <tr>
-                  <th>Contrôle</th>
-                  <th>Statut</th>
-                  <th>Message</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.checks.map((check) => (
-                  <tr key={check.check_id}>
-                    <td className="mono">{check.check_id}</td>
-                    <td>
-                      <GateStatusBadge status={check.status} />
-                    </td>
-                    <td>{check.message}</td>
+            <div className="kv-table-wrap">
+              <table className="kv-table">
+                <thead>
+                  <tr>
+                    <th>Contrôle</th>
+                    <th>Statut</th>
+                    <th>Message</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {data.checks.map((check) => (
+                    <tr key={check.check_id}>
+                      <td className="mono">{check.check_id}</td>
+                      <td>
+                        <GateStatusBadge status={check.status} />
+                      </td>
+                      <td>{check.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </Panel>
         </>
       )}

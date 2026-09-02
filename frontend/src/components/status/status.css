@@ -72,20 +72,33 @@
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 13px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
   font-weight: 650;
   letter-spacing: 0.02em;
   background: var(--bg-hover);
   border: 1px solid var(--border-strong);
+  transition: border-color var(--duration-base) var(--ease-standard);
 }
 
-.apex-status--ready { color: var(--status-real); }
-.apex-status--using_tool { color: var(--status-simulated); }
-.apex-status--waiting { color: var(--status-simulated); }
-.apex-status--error { color: var(--status-fail); }
-.apex-status--analyzing { color: var(--accent); }
-.apex-status--learning { color: var(--status-planned); }
+.apex-status--ready { color: var(--apex-ready); }
+.apex-status--using_tool { color: var(--apex-using-tool); border-color: var(--apex-using-tool); }
+.apex-status--waiting { color: var(--apex-waiting); }
+.apex-status--error { color: var(--apex-error); border-color: var(--apex-error); }
+.apex-status--analyzing { color: var(--apex-analyzing); border-color: var(--apex-analyzing); }
+.apex-status--learning { color: var(--apex-learning); }
+
+/* Pulse RÉSERVÉ à `using_tool` — le seul état qui reflète une activité
+   backend réellement en cours (une Mission RUNNING). Jamais appliqué à
+   `analyzing`/`waiting`/`learning`, qui ne prouvent aucun travail continu. */
+.apex-status--using_tool span:first-child {
+  animation: apex-status-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes apex-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
 
 .measurement-value {
   display: inline-flex;

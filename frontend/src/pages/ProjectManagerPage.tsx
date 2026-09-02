@@ -87,24 +87,26 @@ export function ProjectManagerPage() {
           ) : projectList.length === 0 ? (
             <ErrorState detail="Aucun projet créé pour l'instant." />
           ) : (
-            <table className="kv-table">
-              <thead>
-                <tr>
-                  <th>Nom</th>
-                  <th>Conversations</th>
-                  <th>Créé le</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projectList.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>{conversationList.filter((c) => c.project_id === p.id).length}</td>
-                    <td className="mono">{new Date(p.created_at).toLocaleDateString("fr-FR")}</td>
+            <div className="kv-table-wrap">
+              <table className="kv-table">
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Conversations</th>
+                    <th>Créé le</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {projectList.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.name}</td>
+                      <td>{conversationList.filter((c) => c.project_id === p.id).length}</td>
+                      <td className="mono">{new Date(p.created_at).toLocaleDateString("fr-FR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Panel>
       </div>

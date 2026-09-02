@@ -69,30 +69,32 @@ export function ModelsPage() {
         ) : providerList.length === 0 ? (
           <ErrorState detail="Aucun provider déclaré dans config.yaml." />
         ) : (
-          <table className="kv-table">
-            <thead>
-              <tr>
-                <th>Provider</th>
-                <th>Runtime</th>
-                <th>Local/Externe</th>
-                <th>Secret</th>
-                <th>Activé</th>
-                <th>Modèles servis</th>
-              </tr>
-            </thead>
-            <tbody>
-              {providerList.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.display_name}</td>
-                  <td className="mono">{p.runtime}</td>
-                  <td>{p.local ? "Local" : "Externe"}</td>
-                  <td className="mono">{p.secret_key ?? "— aucun —"}</td>
-                  <td>{p.enabled ? "Oui" : "Non"}</td>
-                  <td>{p.model_ids.length}</td>
+          <div className="kv-table-wrap">
+            <table className="kv-table">
+              <thead>
+                <tr>
+                  <th>Provider</th>
+                  <th>Runtime</th>
+                  <th>Local/Externe</th>
+                  <th>Secret</th>
+                  <th>Activé</th>
+                  <th>Modèles servis</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {providerList.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.display_name}</td>
+                    <td className="mono">{p.runtime}</td>
+                    <td>{p.local ? "Local" : "Externe"}</td>
+                    <td className="mono">{p.secret_key ?? "— aucun —"}</td>
+                    <td>{p.enabled ? "Oui" : "Non"}</td>
+                    <td>{p.model_ids.length}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Panel>
 
@@ -104,52 +106,54 @@ export function ModelsPage() {
         ) : modelList.length === 0 ? (
           <ErrorState detail="Aucun modèle déclaré dans config.yaml." />
         ) : (
-          <table className="kv-table">
-            <thead>
-              <tr>
-                <th>Modèle</th>
-                <th>Rôle</th>
-                <th>Local/Externe</th>
-                <th>Runtime</th>
-                <th>Contexte</th>
-                <th>Capacités</th>
-                <th>Disponibilité</th>
-              </tr>
-            </thead>
-            <tbody>
-              {modelList.map((m) => (
-                // `model_id` seul n'est pas unique : le même modèle peut être
-                // candidat de plusieurs rôles (ex. qwen3.6 en coder_main ET
-                // generalist, config.yaml) — chaque ligne du catalogue est
-                // une entrée (rôle, modèle) distincte, jamais un doublon visuel.
-                <tr key={`${m.role}:${m.model_id}`}>
-                  <td>
-                    <div className="models-page__model-name">{m.display_name}</div>
-                    <div className="models-page__model-id mono">{m.model_id}</div>
-                  </td>
-                  <td>{m.role}</td>
-                  <td>{m.is_local ? "Local" : "Externe"}</td>
-                  <td className="mono">{m.runtime ?? "— non configuré —"}</td>
-                  <td>{m.max_context ? m.max_context.toLocaleString("fr-FR") : "—"}</td>
-                  <td>
-                    <div className="models-page__caps">
-                      {m.capabilities.map((c) => (
-                        <span key={c} className="models-page__cap-chip">
-                          {c}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`status-badge status-badge--${AVAILABILITY_CLASS[m.availability]}`}>
-                      <span className="status-badge__dot" aria-hidden="true" />
-                      {AVAILABILITY_LABEL[m.availability]}
-                    </span>
-                  </td>
+          <div className="kv-table-wrap">
+            <table className="kv-table">
+              <thead>
+                <tr>
+                  <th>Modèle</th>
+                  <th>Rôle</th>
+                  <th>Local/Externe</th>
+                  <th>Runtime</th>
+                  <th>Contexte</th>
+                  <th>Capacités</th>
+                  <th>Disponibilité</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {modelList.map((m) => (
+                  // `model_id` seul n'est pas unique : le même modèle peut être
+                  // candidat de plusieurs rôles (ex. qwen3.6 en coder_main ET
+                  // generalist, config.yaml) — chaque ligne du catalogue est
+                  // une entrée (rôle, modèle) distincte, jamais un doublon visuel.
+                  <tr key={`${m.role}:${m.model_id}`}>
+                    <td>
+                      <div className="models-page__model-name">{m.display_name}</div>
+                      <div className="models-page__model-id mono">{m.model_id}</div>
+                    </td>
+                    <td>{m.role}</td>
+                    <td>{m.is_local ? "Local" : "Externe"}</td>
+                    <td className="mono">{m.runtime ?? "— non configuré —"}</td>
+                    <td>{m.max_context ? m.max_context.toLocaleString("fr-FR") : "—"}</td>
+                    <td>
+                      <div className="models-page__caps">
+                        {m.capabilities.map((c) => (
+                          <span key={c} className="models-page__cap-chip">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`status-badge status-badge--${AVAILABILITY_CLASS[m.availability]}`}>
+                        <span className="status-badge__dot" aria-hidden="true" />
+                        {AVAILABILITY_LABEL[m.availability]}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Panel>
 

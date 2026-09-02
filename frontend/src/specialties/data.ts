@@ -8,7 +8,7 @@
  */
 
 import type { CloneType } from "../api/types";
-import type { DevStage, SpecialtyStatus, SpecialtyWorkspaceMeta } from "./types";
+import type { DevStage, SpecialtyCategory, SpecialtyStatus, SpecialtyWorkspaceMeta } from "./types";
 
 export interface SpecialtyDefinition {
   id: string;
@@ -18,8 +18,22 @@ export interface SpecialtyDefinition {
   path: string;
   status: SpecialtyStatus;
   devStage: DevStage;
+  category: SpecialtyCategory;
   workspace?: SpecialtyWorkspaceMeta;
 }
+
+/** Libellé + ordre d'affichage de chaque catégorie de Sidebar — la SEULE
+ * source de vérité pour le regroupement visuel (Sidebar.tsx ne fait que
+ * `Object.entries` dessus, jamais une liste de sections codée en dur
+ * ailleurs). */
+export const SPECIALTY_CATEGORIES: Record<SpecialtyCategory, string> = {
+  workspace: "Workspace",
+  intelligence: "Intelligence",
+  cognition: "Cognition",
+  creative: "Creative",
+  data: "Data",
+  system: "System",
+};
 
 const dev = (types: CloneType[]): CloneType[] => types;
 
@@ -33,21 +47,23 @@ export function specialtyForAgentType(type: CloneType): SpecialtyDefinition | un
 export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
   {
     id: "dashboard",
-    label: "Dashboard",
+    label: "Home",
     icon: "🏠",
     description: "Vue d'ensemble : santé système, Gate, agents, événements récents.",
     path: "/",
     status: "real",
     devStage: "connected",
+    category: "workspace",
   },
   {
     id: "chat",
     label: "Chat",
     icon: "💬",
-    description: "Conversation réelle avec APEX — Model Router, provider réel, sauvegarde des échanges.",
+    description: "Conversation réelle avec APEX — Model Router, provider réel, sauvegarde des échanges. La liste des conversations vit dans ce workspace, jamais dans une page séparée.",
     path: "/chat",
     status: "real",
     devStage: "connected",
+    category: "workspace",
   },
   {
     id: "agents",
@@ -57,6 +73,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/agents",
     status: "real",
     devStage: "connected",
+    category: "intelligence",
     workspace: {
       compatibleAgentTypes: dev([
         "research", "learning", "developer", "experiment",
@@ -73,6 +90,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/models",
     status: "real",
     devStage: "connected",
+    category: "system",
   },
   {
     id: "code-intelligence",
@@ -82,6 +100,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/code-intelligence",
     status: "planned",
     devStage: "ui-scaffold",
+    category: "intelligence",
     workspace: {
       capabilities: ["analyse statique", "revue de diff", "exécution de tests existants"],
       tools: ["éditeur diff", "linter", "runner de tests"],
@@ -97,19 +116,51 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/design-studio",
     status: "planned",
     devStage: "ui-scaffold",
+    category: "creative",
     workspace: {
       capabilities: ["composition visuelle", "export d'artefacts"],
       tools: ["canvas", "bibliothèque de composants"],
     },
   },
   {
+    id: "images",
+    label: "Images",
+    icon: "🖼️",
+    description: "Génération/édition d'images — aucun provider image réel connecté à ce jour.",
+    path: "/images",
+    status: "planned",
+    devStage: "concept",
+    category: "creative",
+  },
+  {
+    id: "media",
+    label: "Media",
+    icon: "🎬",
+    description: "Composition vidéo/média — aucune capacité réelle à ce jour.",
+    path: "/media",
+    status: "planned",
+    devStage: "concept",
+    category: "creative",
+  },
+  {
+    id: "audio",
+    label: "Audio",
+    icon: "🎙️",
+    description: "Synthèse/transcription audio — aucune capacité réelle à ce jour.",
+    path: "/audio",
+    status: "planned",
+    devStage: "concept",
+    category: "creative",
+  },
+  {
     id: "project-manager",
-    label: "Project Manager",
+    label: "Projects",
     icon: "📁",
     description: "Regroupement réel de conversations par projet — tâches/kanban/timeline restent planifiés.",
     path: "/project-manager",
     status: "real",
     devStage: "connected",
+    category: "workspace",
     workspace: {
       capabilities: ["créer un projet", "associer des conversations"],
       compatibleAgentTypes: dev(["integrator"]),
@@ -123,17 +174,49 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/research",
     status: "planned",
     devStage: "concept",
+    category: "intelligence",
     workspace: { compatibleAgentTypes: dev(["research"]) },
   },
   {
+    id: "multi-agent-teams",
+    label: "Multi-IA / Teams",
+    icon: "🕸️",
+    description: "AgentTeam (apex.agent_registry) est réel côté backend (créer/lister une équipe d'agents) mais n'a encore aucune interface dédiée — aucune orchestration multi-agent autonome n'existe.",
+    path: "/multi-agent-teams",
+    status: "planned",
+    devStage: "concept",
+    category: "intelligence",
+  },
+  {
     id: "learning-center",
-    label: "Learning Center",
+    label: "Learning",
     icon: "🧠",
     description: "Apprentissage par Domain — voir docs/COGNITIVE_ARCHITECTURE.md §3.",
     path: "/learning-center",
     status: "planned",
     devStage: "concept",
+    category: "cognition",
     workspace: { compatibleAgentTypes: dev(["learning", "teacher"]) },
+  },
+  {
+    id: "skills",
+    label: "Skills",
+    icon: "🧩",
+    description: "SkillRegistry (apex.skills) est réel côté backend (proposition/promotion/rejet) mais n'a encore aucune interface dédiée.",
+    path: "/skills",
+    status: "planned",
+    devStage: "concept",
+    category: "cognition",
+  },
+  {
+    id: "weaknesses",
+    label: "Weaknesses",
+    icon: "📉",
+    description: "WeaknessDetector (apex.weakness) est réel côté backend mais n'a encore aucune interface dédiée.",
+    path: "/weaknesses",
+    status: "planned",
+    devStage: "concept",
+    category: "cognition",
   },
   {
     id: "experiment-lab",
@@ -143,6 +226,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/experiment-lab",
     status: "planned",
     devStage: "concept",
+    category: "cognition",
     workspace: { compatibleAgentTypes: dev(["experiment"]) },
   },
   {
@@ -153,6 +237,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/benchmark-center",
     status: "planned",
     devStage: "concept",
+    category: "cognition",
     workspace: { compatibleAgentTypes: dev(["benchmark"]) },
   },
   {
@@ -163,6 +248,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/genome-evolution",
     status: "planned",
     devStage: "concept",
+    category: "cognition",
   },
   {
     id: "memory-knowledge-graph",
@@ -172,6 +258,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/memory-knowledge-graph",
     status: "planned",
     devStage: "concept",
+    category: "cognition",
   },
   {
     id: "security-gate",
@@ -181,6 +268,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/security-gate",
     status: "real",
     devStage: "connected",
+    category: "system",
   },
   {
     id: "files",
@@ -190,6 +278,27 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/files",
     status: "planned",
     devStage: "ui-scaffold",
+    category: "data",
+  },
+  {
+    id: "rag",
+    label: "RAG",
+    icon: "📚",
+    description: "Retrieval-augmented generation — aucun pipeline réel connecté à ce jour.",
+    path: "/rag",
+    status: "planned",
+    devStage: "concept",
+    category: "data",
+  },
+  {
+    id: "datasets",
+    label: "Datasets",
+    icon: "🗃️",
+    description: "Jeux de données pour l'évaluation/l'entraînement — aucune interface dédiée à ce jour.",
+    path: "/datasets",
+    status: "planned",
+    devStage: "concept",
+    category: "data",
   },
   {
     id: "evals",
@@ -199,6 +308,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/evals",
     status: "planned",
     devStage: "concept",
+    category: "cognition",
   },
   {
     id: "hardware",
@@ -208,6 +318,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/hardware",
     status: "real",
     devStage: "connected",
+    category: "system",
   },
   {
     id: "resources",
@@ -217,24 +328,27 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     path: "/resources",
     status: "real",
     devStage: "connected",
+    category: "system",
   },
   {
     id: "evolution-timeline",
-    label: "Evolution Timeline",
+    label: "Logs",
     icon: "📜",
     description: "audit_log — chaque décision de gouvernance, en lecture seule.",
     path: "/evolution-timeline",
     status: "real",
     devStage: "connected",
+    category: "system",
   },
   {
     id: "mission-center",
-    label: "Mission Center",
+    label: "Missions",
     icon: "🎯",
     description: "Mission Engine — création, liste, consultation et annulation réelles (PostgreSQL).",
     path: "/mission-center",
     status: "real",
     devStage: "connected",
+    category: "intelligence",
     workspace: {
       capabilities: ["composition de mission", "sélection de clone compatible", "annulation"],
       requiredPermissions: ["validation humaine requise avant COMPLETED (ADR-0011) — validate/reject pas encore atteignables depuis l'UI"],
@@ -242,11 +356,12 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
   },
   {
     id: "system",
-    label: "System / Configuration",
+    label: "Settings",
     icon: "⚙️",
     description: "Registre des abstractions APEX et détail de santé des composants.",
     path: "/system",
     status: "real",
     devStage: "connected",
+    category: "system",
   },
 ];

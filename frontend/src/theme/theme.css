@@ -1,22 +1,39 @@
-/* APEX Control Center — jetons de design. Dark-first (demande explicite) :
-   la palette sombre est la valeur par défaut de :root ; le mode clair est
-   l'exception, activée par [data-theme="light"]. */
+/* APEX Control Center — jetons de design (design tokens).
+   Dark-first (demande explicite d'origine) : la palette sombre est la
+   valeur par défaut de :root ; le mode clair est l'exception, activée par
+   [data-theme="light"] (voir useTheme.ts pour la logique de résolution —
+   préférence explicite > préférence système > dark par défaut, jamais un
+   flash au chargement grâce au script bloquant dans index.html). */
 
 :root {
+  /* -- surfaces ------------------------------------------------------- */
   --bg: #0a0d12;
   --bg-elevated: #10141b;
   --bg-panel: #141920;
   --bg-hover: #1b222c;
+  /* Alias sémantiques utilisés par le design system (mêmes valeurs —
+     jamais une seconde échelle de couleurs, juste un nommage plus neutre
+     pour des composants génériques comme Card/Modal/Dropdown). */
+  --surface: var(--bg-elevated);
+  --surface-panel: var(--bg-panel);
+  --surface-hover: var(--bg-hover);
+  --surface-overlay: rgba(6, 8, 11, 0.72);
+
   --border: #232b36;
   --border-strong: #2f3946;
 
   --text: #e6ebf2;
   --text-muted: #8b96a5;
   --text-faint: #5a6577;
+  --text-on-accent: #051119;
 
   --accent: #4da3ff;
   --accent-dim: #2c6bb0;
+  --accent-rgb: 77, 163, 255;
 
+  /* -- vocabulaire DataStatus/Gate/Health (apex.obs.status) — INCHANGÉ,
+     jamais fusionné avec la sévérité générique ci-dessous : deux
+     vocabulaires distincts pour deux questions distinctes. */
   --status-real: #35d07f;
   --status-real-bg: rgba(53, 208, 127, 0.12);
   --status-simulated: #f2b84b;
@@ -30,15 +47,87 @@
   --status-degraded: #f2b84b;
   --status-degraded-bg: rgba(242, 184, 75, 0.12);
 
+  /* -- sévérité générique UI (Toast, validation de formulaire, alertes) —
+     couleurs délibérément identiques aux tokens status-* équivalents,
+     mais un nom distinct : ce sont deux questions différentes ("l'action a
+     réussi ?" vs "la donnée est-elle réelle ?"), jamais à confondre. */
+  --success: #35d07f;
+  --success-bg: rgba(53, 208, 127, 0.12);
+  --warning: #f2b84b;
+  --warning-bg: rgba(242, 184, 75, 0.12);
+  --error: #f2554b;
+  --error-bg: rgba(242, 85, 75, 0.12);
+  --info: #4da3ff;
+  --info-bg: rgba(77, 163, 255, 0.12);
+
+  /* -- APEX status (état système, cf. components/status/ApexStatus.tsx) */
+  --apex-ready: #35d07f;
+  --apex-analyzing: #4da3ff;
+  --apex-learning: #a37cf0;
+  --apex-using-tool: #f2934b;
+  --apex-waiting: #f2b84b;
+  --apex-error: #f2554b;
+
+  /* -- rayons ----------------------------------------------------------- */
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
+  --radius-full: 999px;
 
-  --sidebar-width: 248px;
-  --topbar-height: 56px;
+  /* -- espacement (échelle 4px) ------------------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
+  /* -- typographie -------------------------------------------------------- */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
   --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* -- ombres (légères, cohérentes avec un fond sombre) -------------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.44);
+  --shadow-glow-accent: 0 0 0 1px rgba(var(--accent-rgb), 0.4), 0 0 20px rgba(var(--accent-rgb), 0.18);
+
+  /* -- mouvement ------------------------------------------------------------ */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+
+  /* -- focus --------------------------------------------------------------- */
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+
+  /* -- z-index scale --------------------------------------------------------- */
+  --z-dropdown: 300;
+  --z-overlay: 400;
+  --z-modal: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+
+  /* -- dimensions du shell ----------------------------------------------------- */
+  --sidebar-width: 248px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 56px;
 }
 
 :root[data-theme="light"] {
@@ -46,15 +135,45 @@
   --bg-elevated: #ffffff;
   --bg-panel: #ffffff;
   --bg-hover: #eef1f5;
+  --surface-overlay: rgba(23, 27, 33, 0.4);
   --border: #dde3ea;
   --border-strong: #c7d0dc;
 
   --text: #171b21;
   --text-muted: #5a6577;
   --text-faint: #8b96a5;
+  --text-on-accent: #ffffff;
 
   --accent: #1c6fd6;
   --accent-dim: #4da3ff;
+  --accent-rgb: 28, 111, 214;
+
+  --shadow-sm: 0 1px 2px rgba(23, 27, 33, 0.06);
+  --shadow-md: 0 4px 16px rgba(23, 27, 33, 0.08);
+  --shadow-lg: 0 12px 40px rgba(23, 27, 33, 0.14);
+
+  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+}
+
+/* Système sans préférence explicite ni choix persisté — le script
+   bloquant (index.html) gère déjà le cas normal ; ce bloc ne sert que de
+   filet si JS est indisponible et data-theme absent. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]):not([data-theme="light"]) {
+    --bg: #f5f7fa;
+    --bg-elevated: #ffffff;
+    --bg-panel: #ffffff;
+    --bg-hover: #eef1f5;
+    --border: #dde3ea;
+    --border-strong: #c7d0dc;
+    --text: #171b21;
+    --text-muted: #5a6577;
+    --text-faint: #8b96a5;
+    --text-on-accent: #ffffff;
+    --accent: #1c6fd6;
+    --accent-dim: #4da3ff;
+    --accent-rgb: 28, 111, 214;
+  }
 }
 
 * {
@@ -72,8 +191,9 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
-  font-size: 14px;
+  font-size: var(--text-md);
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--duration-base) var(--ease-standard), color var(--duration-base) var(--ease-standard);
 }
 
 code,
@@ -87,4 +207,24 @@ a {
 
 button {
   font-family: inherit;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Respect absolu de prefers-reduced-motion — jamais contourné par un
+   composant individuel : toute transition/animation déclarée ailleurs doit
+   rester couverte par cette règle globale. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

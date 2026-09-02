@@ -217,6 +217,64 @@ opérationnelle totale).
   unique) → révision (chaîne linéaire), plus `propose_from_evidence()`
   (dérive la preuve de vrais `EvalRun`, jamais d'une auto-déclaration).
 
+### Frontend — UI Foundation V1
+
+Passe purement frontend (aucun fichier backend touché) : fondation visuelle
+réutilisable par toutes les pages, sans réécrire ce qui fonctionnait déjà.
+
+- **AppShell** (`components/layout/`) — `Sidebar` regroupe désormais les 27
+  entrées de `SPECIALTY_DEFINITIONS` (20 déjà réelles + 7 nouvelles entrées
+  honnêtement `PLANNED`/`concept` — Multi-IA/Teams, Skills, Weaknesses,
+  Images, Media, Audio, RAG, Datasets, toutes rendues par la page générique
+  `PlannedSpecialtyPage`, aucun code de simulation) en 6 catégories
+  (`SpecialtyCategory` : Workspace/Intelligence/Cognition/Creative/Data/
+  System, définies dans `specialties/data.ts`). Réductible (`SidebarContext`,
+  persisté `localStorage`), hors-écran sur mobile (<900px, `SidebarContext.
+  mobileOpen`), navigation clavier native (`NavLink`). `TopBar` intègre
+  désormais `ApexStatusBadge` (déjà réel, seulement déplacé du Dashboard
+  vers un emplacement global) + `ThemeToggle`, garde `GlobalSearch` inchangé.
+- **Design system** (`components/ui/`) — primitives réellement
+  interactives, aucune bibliothèque externe ajoutée : `Button`/`IconButton`,
+  `Input`/`Textarea`/`Select`/`Checkbox`/`Switch`, `Card`/`Skeleton`,
+  `Tabs` (navigation clavier flèches/Home/End, roving tabindex), `Tooltip`
+  (survol ET focus clavier), `Dropdown` (ferme sur clic extérieur/Échap),
+  `Modal` (portail, focus initial, restitution du focus, Échap/backdrop),
+  `Toast`/`ToastProvider` (auto-disparition + fermeture manuelle). CSS
+  entièrement pilotée par les jetons de `theme/theme.css` (aucune valeur
+  arbitraire). `DataTable` volontairement PAS créé — `kv-table` existant
+  suffit, pas de besoin réel identifié.
+- **Thème** (`theme/useTheme.ts`) — persisté (`localStorage` clé
+  `apex-theme`), priorité choix explicite > préférence système
+  (`prefers-color-scheme`, suivie en direct tant qu'aucun choix n'est fait)
+  > `dark` par défaut. Un script bloquant dans `index.html` pose
+  `data-theme` avant le premier paint (même logique que le hook, dupliquée
+  intentionnellement côté HTML pur — aucun flash visuel).
+- **Motion** — jetons `--duration-*`/`--ease-*` (theme.css), appliqués au
+  collapse de sidebar, au scrim mobile, aux primitives du design system, au
+  pulse d'`ApexStatusBadge` (RÉSERVÉ à `using_tool`, le seul état qui
+  prouve une activité backend réellement en cours — jamais sur
+  `analyzing`/`waiting`/`learning`). `prefers-reduced-motion: reduce` est
+  respecté GLOBALEMENT (une seule règle dans theme.css, jamais contournée
+  composant par composant).
+- **Dashboard** — réorganisé en sections nommées (System status / Hardware
+  / Active agents / Recent missions / Models-Providers / Recent activity),
+  toutes des vues sur des hooks déjà réels (`useHealth`/`useGate`/
+  `useAgents`/`useMissions`/`useCatalogModels`/`useProviders`/`useEvents`/
+  `useAuditLog`) — aucune nouvelle mesure, aucun chiffre inventé. « Active
+  agents » filtre désormais réellement par état (spawning/ready/working/
+  reporting), au lieu d'afficher les 6 derniers clones sans distinction.
+  « Recent activity » utilise `Tabs` pour Événements/Gouvernance au lieu de
+  deux panneaux empilés. Le badge d'état APEX en tête de page a été retiré
+  (doublon avec celui, désormais global, de la TopBar).
+- **Non fait dans cette passe** (scope délibérément limité à la fondation,
+  pas une réécriture de chaque page) : Chat/Agents/Mission Center héritent
+  des nouveaux jetons via la cascade CSS mais leur logique/markup interne
+  n'a pas été réécrite — aucune régression (71 tests existants toujours
+  verts), mais pas encore de refonte visuelle profonde de ces trois pages.
+  `AgentTeam` (réel côté backend, `apex.agent_registry`) reste sans
+  interface dédiée — l'entrée Sidebar "Multi-IA / Teams" le documente
+  honnêtement comme `PLANNED` plutôt que de le cacher ou de le simuler.
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant
@@ -254,7 +312,8 @@ opérationnelle totale).
   configuré (`tests/test_models_openai_compatible.py`) — structurel dans ce
   conteneur de développement (voir §7), pas un bug.
 - Frontend (`cd frontend && npx tsc -b && npx vitest run`) : compilation
-  TypeScript propre, **9 fichiers de test, 45 tests, 0 échec**.
+  TypeScript propre, **13 fichiers de test, 71 tests, 0 échec** (dernière
+  exécution complète, après la passe « UI Foundation V1 »).
 - Avant de relancer la suite : `rm -f .apex/environment.json` (régénéré par
   `apex gate`, contamine un test si laissé en place).
 - Aucun warning significatif au-delà d'un avertissement de dépréciation

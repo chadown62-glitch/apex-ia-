@@ -234,25 +234,27 @@ export function MissionCenterPage() {
                 <strong>{selectedMission.title}</strong>
                 <MissionStatePill state={selectedMission.state} />
               </div>
-              <table className="kv-table">
-                <tbody>
-                  <tr><th>ID</th><td className="mono">{selectedMission.id}</td></tr>
-                  <tr><th>État</th><td>{STATE_LABEL[selectedMission.state] ?? selectedMission.state}</td></tr>
-                  <tr><th>Spécialité</th><td>{selectedMission.specialty}</td></tr>
-                  <tr><th>Agent assigné (Clone)</th><td className="mono">{selectedMission.assigned_agent ?? "— aucun —"}</td></tr>
-                  <tr><th>Mon Agent assigné</th><td className="mono">{selectedMission.agent_id ?? "— aucun —"}</td></tr>
-                  <tr><th>Priorité</th><td>{selectedMission.priority}</td></tr>
-                  <tr><th>Décision humaine</th><td>{selectedMission.validation_status ?? "— aucune —"}</td></tr>
-                  {latestExecution && (
-                    <>
-                      <tr><th>Modèle utilisé</th><td className="mono">{latestExecution.model_id ?? "— inconnu —"}</td></tr>
-                      <tr><th>Provider utilisé</th><td className="mono">{latestExecution.provider_id ?? "— inconnu —"}</td></tr>
-                    </>
-                  )}
-                  {selectedMission.result && <tr><th>Résultat</th><td>{selectedMission.result}</td></tr>}
-                  {selectedMission.error && <tr><th>Erreur</th><td>{selectedMission.error}</td></tr>}
-                </tbody>
-              </table>
+              <div className="kv-table-wrap">
+                <table className="kv-table">
+                  <tbody>
+                    <tr><th>ID</th><td className="mono">{selectedMission.id}</td></tr>
+                    <tr><th>État</th><td>{STATE_LABEL[selectedMission.state] ?? selectedMission.state}</td></tr>
+                    <tr><th>Spécialité</th><td>{selectedMission.specialty}</td></tr>
+                    <tr><th>Agent assigné (Clone)</th><td className="mono">{selectedMission.assigned_agent ?? "— aucun —"}</td></tr>
+                    <tr><th>Mon Agent assigné</th><td className="mono">{selectedMission.agent_id ?? "— aucun —"}</td></tr>
+                    <tr><th>Priorité</th><td>{selectedMission.priority}</td></tr>
+                    <tr><th>Décision humaine</th><td>{selectedMission.validation_status ?? "— aucune —"}</td></tr>
+                    {latestExecution && (
+                      <>
+                        <tr><th>Modèle utilisé</th><td className="mono">{latestExecution.model_id ?? "— inconnu —"}</td></tr>
+                        <tr><th>Provider utilisé</th><td className="mono">{latestExecution.provider_id ?? "— inconnu —"}</td></tr>
+                      </>
+                    )}
+                    {selectedMission.result && <tr><th>Résultat</th><td>{selectedMission.result}</td></tr>}
+                    {selectedMission.error && <tr><th>Erreur</th><td>{selectedMission.error}</td></tr>}
+                  </tbody>
+                </table>
+              </div>
 
               <div className="mission-detail__actions">
                 <button
@@ -322,31 +324,33 @@ export function MissionCenterPage() {
         {missions.isLoading ? (
           <LoadingState />
         ) : missions.data?.status === "real" && missions.data.data && missions.data.data.length > 0 ? (
-          <table className="kv-table">
-            <thead>
-              <tr>
-                <th>Titre</th>
-                <th>Spécialité</th>
-                <th>État</th>
-                <th>Créée</th>
-              </tr>
-            </thead>
-            <tbody>
-              {missions.data.data.map((m) => (
-                <tr
-                  key={m.id}
-                  className="mission-row"
-                  onClick={() => setSelectedMissionId(m.id)}
-                  style={{ cursor: "pointer", background: m.id === selectedMissionId ? "var(--bg-hover)" : undefined }}
-                >
-                  <td>{m.title}</td>
-                  <td>{m.specialty}</td>
-                  <td><MissionStatePill state={m.state} /></td>
-                  <td className="mono">{new Date(m.created_at).toLocaleString("fr-FR")}</td>
+          <div className="kv-table-wrap">
+            <table className="kv-table">
+              <thead>
+                <tr>
+                  <th>Titre</th>
+                  <th>Spécialité</th>
+                  <th>État</th>
+                  <th>Créée</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {missions.data.data.map((m) => (
+                  <tr
+                    key={m.id}
+                    className="mission-row"
+                    onClick={() => setSelectedMissionId(m.id)}
+                    style={{ cursor: "pointer", background: m.id === selectedMissionId ? "var(--bg-hover)" : undefined }}
+                  >
+                    <td>{m.title}</td>
+                    <td>{m.specialty}</td>
+                    <td><MissionStatePill state={m.state} /></td>
+                    <td className="mono">{new Date(m.created_at).toLocaleString("fr-FR")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <ErrorState detail={missions.data?.detail ?? "Aucune mission créée pour l'instant."} />
         )}

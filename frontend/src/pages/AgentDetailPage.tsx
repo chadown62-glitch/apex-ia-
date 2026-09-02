@@ -45,6 +45,7 @@ export function AgentDetailPage() {
 
       <div className="two-col">
         <Panel title="Identité" dense>
+          <div className="kv-table-wrap">
           <table className="kv-table">
             <tbody>
               <tr>
@@ -104,6 +105,7 @@ export function AgentDetailPage() {
               )}
             </tbody>
           </table>
+          </div>
         </Panel>
 
         <Panel title="Ressources">

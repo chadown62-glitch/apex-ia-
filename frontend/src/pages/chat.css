@@ -60,6 +60,13 @@
 }
 
 .chat-sidebar__item {
+  /* Sans `min-width: 0`, ce bouton flex garde sa largeur de contenu
+     intrinsèque (le titre en `white-space: nowrap`) au lieu de se limiter à
+     la colonne — `.chat-sidebar__item-title` ne tronque alors jamais avec
+     l'ellipse, le texte déborde et se fait couper sans « … » par le scroll
+     du panneau au lieu de se réorganiser proprement (audit UI Foundation V1
+     global). */
+  min-width: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -267,4 +274,76 @@
 .chat-composer textarea:focus {
   outline: none;
   border-color: var(--accent);
+}
+
+.chat-mobile-back {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--accent);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  padding: 4px 6px;
+  margin-right: auto;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.chat-mobile-back:hover {
+  background: var(--surface-hover);
+}
+
+/* En dessous de ce seuil, la disposition à deux colonnes (liste de
+   conversations + zone de messages) ne laisse plus assez de place à la
+   seconde colonne pour rester utilisable — bascule vers une seule vue à la
+   fois (liste, PUIS conversation), pilotée par l'état déjà réel
+   `selectedId` (ChatPage.tsx) via `data-has-selection`, jamais un second
+   état dupliqué. */
+@media (max-width: 760px) {
+  .chat-page {
+    height: calc(100vh - var(--topbar-height) - 24px);
+    max-height: calc(100vh - var(--topbar-height) - 24px);
+  }
+
+  .chat-layout {
+    display: block;
+  }
+
+  .chat-sidebar,
+  .chat-main {
+    height: 100%;
+  }
+
+  .chat-sidebar {
+    display: flex;
+  }
+
+  .chat-main {
+    display: none;
+  }
+
+  .chat-layout[data-has-selection="true"] .chat-sidebar {
+    display: none;
+  }
+
+  .chat-layout[data-has-selection="true"] .chat-main {
+    display: flex;
+  }
+
+  .chat-mobile-back {
+    display: inline-flex;
+  }
+
+  .chat-toolbar {
+    justify-content: space-between;
+  }
+
+  .chat-bubble {
+    max-width: 88%;
+  }
 }

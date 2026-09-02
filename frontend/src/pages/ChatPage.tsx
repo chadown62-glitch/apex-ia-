@@ -107,8 +107,10 @@ export function ChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messageList.length]);
 
+  const hasAutoSelected = useRef(false);
   useEffect(() => {
-    if (!selectedId && conversationList.length > 0) {
+    if (!hasAutoSelected.current && !selectedId && conversationList.length > 0) {
+      hasAutoSelected.current = true;
       setSelectedId(conversationList[0].id);
     }
   }, [selectedId, conversationList]);
@@ -145,7 +147,7 @@ export function ChatPage() {
         </div>
       </div>
 
-      <div className="chat-layout">
+      <div className="chat-layout" data-has-selection={selectedId ? "true" : "false"}>
         <aside className="chat-sidebar">
           <button className="chat-sidebar__new" onClick={handleNewConversation} disabled={createConversation.isPending}>
             + Nouvelle conversation
@@ -203,6 +205,14 @@ export function ChatPage() {
           ) : (
             <>
               <div className="chat-toolbar">
+                <button
+                  type="button"
+                  className="chat-mobile-back"
+                  onClick={() => setSelectedId(null)}
+                  aria-label="Retour aux conversations"
+                >
+                  ← Conversations
+                </button>
                 <label className="chat-toolbar__model">
                   <span>Modèle</span>
                   <select value={modelRole} onChange={(e) => setModelRole(e.target.value)}>

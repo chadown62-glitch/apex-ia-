@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell";
+import { ToastProvider } from "./components/ui/Toast";
 import { AgentDetailPage } from "./pages/AgentDetailPage";
 import { PlannedSpecialtyPage } from "./pages/PlannedSpecialtyPage";
 import { SPECIALTIES } from "./specialties/registry";
@@ -23,22 +24,24 @@ const queryClient = new QueryClient({
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppShell>
-        <Routes>
-          {SPECIALTIES.map((specialty) => {
-            const Component = specialty.component;
-            return (
-              <Route
-                key={specialty.id}
-                path={specialty.path}
-                element={Component ? <Component /> : <PlannedSpecialtyPage specialty={specialty} />}
-              />
-            );
-          })}
-          <Route path="/agents/:cloneId" element={<AgentDetailPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </AppShell>
+      <ToastProvider>
+        <AppShell>
+          <Routes>
+            {SPECIALTIES.map((specialty) => {
+              const Component = specialty.component;
+              return (
+                <Route
+                  key={specialty.id}
+                  path={specialty.path}
+                  element={Component ? <Component /> : <PlannedSpecialtyPage specialty={specialty} />}
+                />
+              );
+            })}
+            <Route path="/agents/:cloneId" element={<AgentDetailPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AppShell>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

@@ -101,3 +101,26 @@
   border-radius: var(--radius-lg);
   overflow-x: auto;
 }
+
+/* Cibles tactiles plus généreuses en dessous de ce seuil — les puces
+   (filtres État/Type, outils/permissions d'agent) restent denses sur
+   desktop (souris), mais une cible de 3px 9px est trop petite au doigt. */
+@media (max-width: 700px) {
+  .agent-center-toolbar {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .agent-center-filter-group {
+    max-width: none;
+  }
+
+  .chip {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .agent-center-view-toggle button {
+    padding: 9px 14px;
+  }
+}

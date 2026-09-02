@@ -3,6 +3,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  transition: border-color var(--duration-base) var(--ease-standard);
 }
 
 .panel__header {
@@ -39,6 +40,12 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  transition: border-color var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard);
+}
+
+.stat-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .stat-card__top {
