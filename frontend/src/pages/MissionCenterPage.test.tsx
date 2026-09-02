@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Agent, DataEnvelope, Mission } from "../api/types";
+import type { Agent, AgentExecution, ConfiguredAgent, DataEnvelope, Mission } from "../api/types";
 import { MissionCenterPage } from "./MissionCenterPage";
 
 function makeAgent(overrides: Partial<Agent>): Agent {
@@ -39,6 +39,7 @@ function makeMission(overrides: Partial<Mission>): Mission {
     priority: "normal",
     constraints: null,
     assigned_agent: null,
+    agent_id: null,
     state: "queued",
     result: null,
     error: null,
@@ -47,6 +48,16 @@ function makeMission(overrides: Partial<Mission>): Mission {
     created_at: "2026-01-01T00:00:00Z",
     started_at: null,
     completed_at: null,
+    ...overrides,
+  };
+}
+
+function makeConfiguredAgent(overrides: Partial<ConfiguredAgent>): ConfiguredAgent {
+  return {
+    id: "ca-1", name: "Mon développeur Python", description: "", role: "coder", specialty: null,
+    model_role: "coder_main", required_capabilities: [], tools: [], permissions: [], instructions: null,
+    enabled: true, status: "idle", project_id: null, template_id: null, created_by: "human",
+    created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -182,5 +193,70 @@ describe("MissionCenterPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /créer la mission/i }));
 
     await waitFor(() => expect(screen.getByText(/PLANNED/)).toBeInTheDocument());
+  });
+
+  it("includes the selected Configured Agent's id when creating a mission (Agents V1, distinct from the Clone selector)", async () => {
+    const configuredAgent = makeConfiguredAgent({});
+    const created = makeMission({ id: "new-mission-id", title: "Ma mission", agent_id: "ca-1" });
+    let createBody: Record<string, unknown> | null = null;
+    globalThis.fetch = mockFetchRouter({
+      "/agents": () => ({ status: "real", data: [], detail: null } satisfies DataEnvelope<Agent[]>),
+      "/configured-agents": () => ({ status: "real", data: [configuredAgent], detail: null } satisfies DataEnvelope<ConfiguredAgent[]>),
+      "/missions/new-mission-id": () => ({ status: "real", data: created, detail: null } satisfies DataEnvelope<Mission>),
+      "/missions": (init) => {
+        if (init?.method === "POST") {
+          createBody = JSON.parse(init.body as string);
+          return { status: "real", data: created, detail: null } satisfies DataEnvelope<Mission>;
+        }
+        return { status: "real", data: [created], detail: null } satisfies DataEnvelope<Mission[]>;
+      },
+    });
+
+    renderPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Titre de la mission"), { target: { value: "Ma mission" } });
+    fireEvent.change(screen.getByPlaceholderText(/ce que la mission doit accomplir/i), { target: { value: "trouver" } });
+    await waitFor(() => expect(screen.getByLabelText(/mon agent/i)).not.toBeDisabled());
+    fireEvent.change(screen.getByLabelText(/mon agent/i), { target: { value: "ca-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /créer la mission/i }));
+
+    await waitFor(() => expect(createBody).not.toBeNull());
+    expect(createBody).toMatchObject({ agent_id: "ca-1" });
+  });
+
+  it("runs a queued mission via its assigned Agent and shows the real model/provider used, never a fabricated result", async () => {
+    const configuredAgent = makeConfiguredAgent({});
+    const queued = makeMission({ id: "m-agent", state: "queued", agent_id: "ca-1", title: "Mission avec agent" });
+    const running = makeMission({ id: "m-agent", state: "review", agent_id: "ca-1", title: "Mission avec agent", result: "def add(a, b): return a + b" });
+    const execution: AgentExecution = {
+      id: "exec-1", agent_id: "ca-1", mission_id: "m-agent", status: "completed",
+      model_id: "coder_main:qwen3.6:27b", provider_id: "ollama:http://localhost:11434",
+      result: "def add(a, b): return a + b", error: null, fallback_reason: "success",
+      started_at: "2026-01-01T00:00:00Z", completed_at: "2026-01-01T00:00:05Z",
+    };
+    let missionState: Mission = queued;
+    globalThis.fetch = mockFetchRouter({
+      "/agents": () => ({ status: "real", data: [], detail: null } satisfies DataEnvelope<Agent[]>),
+      "/configured-agents": () => ({ status: "real", data: [configuredAgent], detail: null } satisfies DataEnvelope<ConfiguredAgent[]>),
+      "/missions/m-agent/run": () => {
+        missionState = running;
+        return { status: "real", data: execution, detail: null } satisfies DataEnvelope<AgentExecution>;
+      },
+      "/missions/m-agent/executions": () =>
+        ({ status: "real", data: missionState === running ? [execution] : [], detail: null } satisfies DataEnvelope<AgentExecution[]>),
+      "/missions/m-agent": () => ({ status: "real", data: missionState, detail: null } satisfies DataEnvelope<Mission>),
+      "/missions": () => ({ status: "real", data: [queued], detail: null } satisfies DataEnvelope<Mission[]>),
+    });
+
+    renderPage();
+
+    fireEvent.click(await screen.findByText("Mission avec agent"));
+
+    const runButton = await screen.findByRole("button", { name: /lancer via agent/i });
+    await waitFor(() => expect(runButton).not.toBeDisabled());
+    fireEvent.click(runButton);
+
+    await waitFor(() => expect(screen.getByText("coder_main:qwen3.6:27b")).toBeInTheDocument());
+    expect(screen.getByText("ollama:http://localhost:11434")).toBeInTheDocument();
   });
 });

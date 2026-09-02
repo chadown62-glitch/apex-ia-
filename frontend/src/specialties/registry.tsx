@@ -9,11 +9,15 @@
  */
 
 import { AgentsPage } from "../pages/AgentsPage";
+import { ChatPage } from "../pages/ChatPage";
 import { CodeIntelligencePage } from "../pages/CodeIntelligencePage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DesignStudioPage } from "../pages/DesignStudioPage";
 import { EvolutionTimelinePage } from "../pages/EvolutionTimelinePage";
+import { FilesPage } from "../pages/FilesPage";
+import { HardwarePage } from "../pages/HardwarePage";
 import { MissionCenterPage } from "../pages/MissionCenterPage";
+import { ModelsPage } from "../pages/ModelsPage";
 import { ProjectManagerPage } from "../pages/ProjectManagerPage";
 import { ResourcesPage } from "../pages/ResourcesPage";
 import { SecurityGatePage } from "../pages/SecurityGatePage";
@@ -23,12 +27,16 @@ import type { Specialty } from "./types";
 
 const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   dashboard: DashboardPage,
+  chat: ChatPage,
   agents: AgentsPage,
+  models: ModelsPage,
   "code-intelligence": CodeIntelligencePage,
   "design-studio": DesignStudioPage,
   "project-manager": ProjectManagerPage,
   "security-gate": SecurityGatePage,
   resources: ResourcesPage,
+  hardware: HardwarePage,
+  files: FilesPage,
   "evolution-timeline": EvolutionTimelinePage,
   "mission-center": MissionCenterPage,
   system: SystemPage,

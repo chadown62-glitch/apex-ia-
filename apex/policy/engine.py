@@ -77,6 +77,9 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # version (issue d'une mutation/d'un croisement réel), jamais
             # la promouvoir ni la rejeter.
             Action.PROPOSE_GENOME_VERSION,
+            # Agents V1 : CORE lance une exécution déjà créée/assignée par
+            # HUMAIN — même chaîne que LAUNCH_MISSION, jamais CREATE_AGENT.
+            Action.RUN_AGENT_EXECUTION,
         }
     ),
     Subject.HUMAN: frozenset(
@@ -99,6 +102,16 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # promouvoir/rejeter une version de Genome, invariant absolu
             # (aucun clone, aucun CORE ne modifie le Core via le Genome).
             Action.PROPOSE_GENOME_VERSION, Action.PROMOTE_GENOME_VERSION, Action.REJECT_GENOME_VERSION,
+            # Chat/Conversations/Projects/AgentTemplate (passe « Première
+            # interface utilisable ») : HUMAIN seul, même motif que
+            # CREATE_MISSION — jamais un clone, jamais le CORE en autonomie.
+            Action.CREATE_CONVERSATION, Action.UPDATE_CONVERSATION, Action.DELETE_CONVERSATION,
+            Action.SEND_MESSAGE, Action.CREATE_PROJECT,
+            Action.CREATE_AGENT_TEMPLATE, Action.DELETE_AGENT_TEMPLATE,
+            # Agents V1 : HUMAIN crée/édite/supprime un Agent et une Team —
+            # jamais RUN_AGENT_EXECUTION (réservé à CORE, même motif que
+            # LAUNCH_MISSION jamais accordé à HUMAIN directement).
+            Action.CREATE_AGENT, Action.UPDATE_AGENT, Action.DELETE_AGENT, Action.CREATE_AGENT_TEAM,
         }
     ),
     Subject.RESEARCH: frozenset(

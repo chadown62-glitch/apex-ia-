@@ -37,6 +37,14 @@ ce qui ne l'est pas encore, composant par composant) :
   traçabilité complète d'une compétence jusqu'à ses `EvalRun` d'origine.
 - **`MissionEngine → ModelProvider → OllamaProvider`** — raccordement réel,
   HORS sandbox (voir §6) : `apex.missions.execution.generate_mission_response`.
+- **`AgentRegistry`** (passe « Agents V1 ») — `Agent` (config réutilisable,
+  table `configured_agents`) → Mission (`Mission.agent_id`) →
+  `AgentRegistryService.run_execution` → Model Router
+  (`select_model`/`generate_with_fallback`) → provider réel. Bout en bout
+  réel, prouvé par test d'intégration réel (`tests/test_api_agent_registry.
+  py::test_full_chain_mission_run_via_agent_with_a_fake_provider`, double
+  fidèle du seul point réseau — `OllamaProvider.generate`/`.detect` — jamais
+  du reste de la chaîne).
 
 Rien n'est prétendu `IMPLEMENTED` sans preuve empirique. Tout ce qui reste
 `PLANNED`/déféré est documenté avec sa raison exacte dans le registre
@@ -62,6 +70,102 @@ opérationnelle totale).
   voir §7) ; le test d'intégration réel existe et s'auto-exécute dès qu'un
   Ollama devient joignable (`tests/test_missions_model_generation.py::
   TestRealOllamaMissionIntegration`).
+- **ModelRouter / SecretBroker / OpenAICompatibleProvider** (passe
+  « Multi-Model/Provider Fabric ») — tous STUB réels, zéro provider payant
+  prouvé. `apex.models.registry` dérive des `ModelCandidate` depuis
+  `ApexConfig` (roles + endpoints déjà réels, aucune duplication).
+  `apex.routing.select_model` filtre/classe par capacité/contexte/
+  localité/`ExternalPolicy` (score transparent, historique de
+  qualité/coût/latence explicitement PAS câblé — aucune donnée réelle
+  encore). `apex.routing.generate_with_fallback`/`generate_all_candidates`
+  composent `ModelProvider.generate()` sur plusieurs candidats, jamais de
+  sélection auto de « meilleure réponse » (lacune documentée : comparer du
+  texte libre exigerait un jugement que `Tier0Judge` ne couvre pas).
+  `apex.secrets.EnvSecretBroker` résout `ModelEndpoint.secret_key`
+  (`APEX_SECRET_<CLÉ>`, jamais une clé en dur) à chaque appel.
+  `OpenAICompatibleProvider` (`apex.models.openai_compatible`) : UN adapter
+  HTTP générique pour tout service `/v1/chat/completions` (OpenAI,
+  OpenRouter, Together, Groq, Fireworks, DeepSeek, Mistral, xAI, Qwen
+  compatible) — `get_default_provider()` dispatche réellement sur
+  `ModelEndpoint.runtime`. Testé contre un serveur HTTP de test fidèle,
+  **jamais contre un vrai service payant** — le test réel existe
+  (`tests/test_models_openai_compatible.py::
+  TestRealOpenAICompatibleIntegration`), sauté sans
+  `APEX_OPENAI_COMPATIBLE_URL`/clé réels.
+- **Model/Provider Catalog** (`apex.models.catalog`, passe « Model/Provider
+  Catalog ») — extension de la couche de préparation du Router, PAS une
+  nouvelle abstraction ni une seconde registry : `build_model_catalog()`/
+  `build_provider_catalog()` sont des vues DÉRIVÉES et STATIQUES d'
+  `ApexConfig` (via `resolve_candidates`/`derive_capabilities` déjà réels),
+  recalculées à chaque appel, jamais stockées. `Availability` (AVAILABLE/
+  UNAVAILABLE/UNKNOWN/DISABLED) reste `UNKNOWN` pour tout candidat déclaré
+  tant que `discover_live()` (seul point réseau du module, jamais appelé
+  implicitement) n'a pas exécuté un vrai `ModelProvider.detect()` —
+  `UNKNOWN` n'est jamais promu à `AVAILABLE` sans preuve. `DiscoverySource`
+  distingue `CONFIGURED`/`DISCOVERED` (réels) de `VERIFIED`, qui reste
+  **PLANNED** : aucune Mission ne persiste aujourd'hui quel `ModelEndpoint`
+  l'a réellement servie (`Mission.result` ne porte que le texte généré),
+  donc rien à interroger pour prouver un usage réel — câbler `VERIFIED`
+  exigerait d'abord cette traçabilité, hors périmètre de cette passe.
+  `Capability` (`apex.routing.model`) étendu de `TEXT`/`AUDIO`/`VOICE`/
+  `VIDEO`/`SCREEN` (vocabulaire fermé, prêt pour de futurs endpoints
+  multimodaux réels — vision d'images, captures d'écran, messages/réponses
+  vocales, compréhension puis génération vidéo) ; seule `TEXT` est dérivée
+  aujourd'hui (chaque backend réel est une API de génération de texte,
+  vérifié par construction), les 4 autres ne sont **JAMAIS** dérivées faute
+  de tout signal réel dans le schéma actuel — aucune capacité multimodale
+  n'est ni implémentée ni simulée. `PerformanceHistory` toujours vide par
+  construction (`usage_count=0`) — emplacement prêt pour un futur
+  agrégat par modèle, jamais une statistique inventée.
+  `ModelEndpoint.enabled` (nouveau champ, défaut `True`) distingue une
+  désactivation explicite en configuration (`DISABLED`, jamais sondé) d'une
+  indisponibilité constatée. 32 tests dédiés
+  (`tests/test_models_catalog.py`), y compris une preuve de bout en bout
+  `RoutingRequest` -> Model Catalog -> `select_model` -> dispatch réel
+  `get_default_provider()` -> vrai `OpenAICompatibleProvider` contre un
+  serveur HTTP de test local (jamais un service payant réel).
+- **AgentRegistry** (`apex.agent_registry`, passe « Agents V1 ») — STUB.
+  `Agent` (dataclass, table `configured_agents` — délibérément PAS `agents`,
+  déjà pris par `Clone`/`AgentRuntime`, ni `AgentOut`, déjà pris par les
+  routes `/agents` existantes) : configuration réutilisable et réellement
+  exécutable, distincte à la fois du `Clone`/`AgentRuntime` (instance
+  OS-level spawnée) et de l'`AgentTemplate` (blueprint jamais exécutable).
+  Aucun outil (`ToolName`, 8 valeurs) ni permission (`Permission`, 6
+  valeurs : `READ_ONLY`/`WORKSPACE_WRITE`/`EXECUTE`/`NETWORK`/`GIT_READ`/
+  `GIT_WRITE`) n'est jamais accordé par défaut — validé à la création.
+  `AgentStatus` (7 valeurs, dont `WAITING`) n'est **jamais stocké** :
+  `derive_agent_status()` le dérive à chaque lecture de `enabled` + la
+  dernière `AgentExecution` réelle — `DISABLED` si désactivé, `IDLE` si
+  aucune exécution, sinon calque `AgentExecutionStatus` ; `WAITING` reste
+  déclaré, jamais produit (aucun signal réel ne le justifie encore).
+  `AgentExecution` (table `agent_executions`) trace agent/mission/modèle/
+  provider/résultat/erreur/`FallbackReason`, **sans aucun champ token/coût/
+  latence** (pas seulement `NULL` — le champ n'existe pas : `GenerationResult`
+  ne fournit pas ces données, donc rien à stocker sans les inventer).
+  `AgentRegistryService.run_execution()` compose les primitives déjà
+  réelles du Model Router (`select_model`, `generate_with_fallback`) et de
+  `MissionService` (`mark_running`/`mark_review`/`mark_failed`) — une
+  troisième composition, jamais un second moteur d'orchestration parallèle
+  à `generate_mission_response`/`generate_mission_response_via_router`.
+  `classify_outcome()` (`apex.agent_registry.fallback`) ne produit
+  aujourd'hui que `SUCCESS`/`TIMEOUT`/`CAPABILITY_MISSING`/
+  `PROVIDER_ERROR` parmi les 9 valeurs de `FallbackReason` — les 5 autres
+  (`QUOTA_EXCEEDED`/`RATE_LIMITED`/`OFFLINE`/`AUTH_ERROR`/
+  `CONTEXT_TOO_LONG`) restent déclarées mais jamais fabriquées, faute d'un
+  code d'erreur HTTP structuré remonté par `ModelProviderError`.
+  `AgentTeam` (table `agent_teams`) reste minimal V1 : nom/description/
+  membres, aucune communication autonome entre agents. Routes API :
+  `/configured-agents` (CRUD + instantiation depuis un `AgentTemplate` via
+  `template_id`), `/configured-agents/{id}/executions`, `/agent-teams`,
+  et sur `/missions` : `POST /{id}/run` (exécute via l'agent assigné) et
+  `GET /{id}/executions`. `PolicyEngine` : HUMAIN seul crée/modifie/
+  supprime un `Agent` et crée une `AgentTeam` ; CORE seul déclenche
+  `RUN_AGENT_EXECUTION` (même chaîne « HUMAIN assigne, CORE lance » que
+  `LAUNCH_MISSION`). 42 tests dédiés (`tests/test_agent_registry_service.py`,
+  `tests/test_api_agent_registry.py`), dont un chemin complet Mission → Agent
+  → Model Router → provider (double fidèle) → résultat, et une preuve que le
+  Model Router refuse honnêtement (`FAILED`, jamais un succès simulé) quand
+  aucun provider n'est joignable.
 - **ArtifactStore** — STUB. `LocalFilesystemArtifactStore`
   (`apex.artifacts.local_filesystem`) réel : identité par hash SHA-256,
   écriture atomique, vérification d'intégrité à la lecture, path traversal
@@ -141,12 +245,16 @@ opérationnelle totale).
 
 ## 3. Tests
 
-- **931 tests** collectés, **0 échec** (`python -m pytest -q`, exit 0).
-- Quelques dizaines de tests `skipped` : PostgreSQL réel non configuré dans
-  cet environnement, et le SEUL test d'intégration contre un vrai Ollama
-  (`tests/test_missions_model_generation.py::TestRealOllamaMissionIntegration`)
-  — sauté ici car aucun Ollama n'est joignable dans ce conteneur de
-  développement (voir §7, c'est structurel, pas un bug).
+- **1125 tests** collectés, **1122 passed, 3 skipped, 0 failed, 0 errors**
+  (`python -m pytest -q -rA`, exit 0 — dernière exécution complète, après
+  la passe « Agents V1 »).
+- Les 3 `skipped` : aucun Ollama réel joignable
+  (`tests/test_missions_model_generation.py::TestRealOllamaMissionIntegration`,
+  `tests/test_models_ollama.py`) et aucun endpoint OpenAI-compatible réel
+  configuré (`tests/test_models_openai_compatible.py`) — structurel dans ce
+  conteneur de développement (voir §7), pas un bug.
+- Frontend (`cd frontend && npx tsc -b && npx vitest run`) : compilation
+  TypeScript propre, **9 fichiers de test, 45 tests, 0 échec**.
 - Avant de relancer la suite : `rm -f .apex/environment.json` (régénéré par
   `apex gate`, contamine un test si laissé en place).
 - Aucun warning significatif au-delà d'un avertissement de dépréciation
@@ -186,11 +294,22 @@ adaptez à votre VRAM réelle :
 |---|---|
 | ≥ 18 Go | `qwen3-coder:30b-a3b-instruct-q4_K_M` (référence `coder_main`) |
 | ~14-17 Go | `qwen3.6:27b-q4_K_M` ou `devstral-2:22b-q4_K_M` |
-| ~8 Go | `gemma4:12b-q4_K_M` |
-| ~5 Go | `qwen3-coder:8b-q4_K_M` (rôle `fast`, résident) |
+| ~13 Go | `gpt-oss:20b-q4_K_M` (rôle `judge`, pas pour la génération) |
+| **8 Go (ex. RTX 4060 Ti)** | **`qwen2.5-coder:7b-instruct`** (rôle `fast`, résident, `vram_gb: 5.0` déclaré — ~3 Go de marge réelle) |
+
+**Ne jamais utiliser `gemma4:12b-q4_K_M` comme modèle principal sur une carte
+8 Go** : `config.yaml` le déclare à `vram_gb: 8.0`, soit la totalité de la
+VRAM disponible sur ce type de carte — aucune marge pour le contexte CUDA
+ni le KV-cache. Il est de plus classé `capability_class: judge`, pas
+`coder` : ce n'est pas le modèle prévu pour *générer* une réponse à une
+Mission, seulement pour en juger une autre indépendamment (`JudgeTier`,
+`apex.judge`). `qwen2.5-coder:7b-instruct` est le bon choix sur ce type de
+carte : même famille que le modèle de référence `coder_main`
+(`qwen3-coder`), correctement dimensionné, et déjà déclaré comme endpoint
+réel dans `config.yaml` (`models.endpoints`) — rien à ajouter.
 
 ```bash
-ollama pull qwen3-coder:30b-a3b-instruct-q4_K_M   # ou le modèle choisi ci-dessus
+ollama pull qwen2.5-coder:7b-instruct   # référence pour une carte 8 Go (RTX 4060 Ti et similaires)
 ```
 
 ### 5.4 Vérifier avec `/api/tags`
@@ -206,21 +325,24 @@ refusera honnêtement (`UNAVAILABLE_ON_DEV`, jamais un faux succès).
 ### 5.5 Configurer `ModelEndpoint`
 
 `config.yaml` en déclare déjà 7, prêts à l'emploi si Ollama tourne en local
-sur le port par défaut (section `models.endpoints`) :
+sur le port par défaut (section `models.endpoints`). Pour une carte 8 Go
+(ex. RTX 4060 Ti) :
 
 ```yaml
 {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
- served_model: "qwen3-coder:30b-a3b-instruct-q4_K_M", max_context: 65536, vram_gb: 18.0}
+ served_model: "qwen2.5-coder:7b-instruct", max_context: 32768, vram_gb: 5.0}
 ```
 
 Ajustez `served_model` si votre tag diffère, ou `url` si Ollama tourne sur
-une autre machine/port de votre réseau.
+une autre machine/port de votre réseau. Les 6 autres endpoints déclarés
+(30B/27B/22B/20B/12B) restent disponibles pour une machine plus dotée en
+VRAM — ne les utilisez pas sur une carte 8 Go (voir §5.3).
 
 ### 5.6 Variables d'environnement (optionnelles, pour les tests automatisés)
 
 ```bash
 export APEX_OLLAMA_URL="http://127.0.0.1:11434"
-export APEX_OLLAMA_MODEL="qwen3-coder:30b-a3b-instruct-q4_K_M"
+export APEX_OLLAMA_MODEL="qwen2.5-coder:7b-instruct"   # ajustez si votre machine porte plus de VRAM (voir §5.3)
 ```
 
 Sans ces variables, le test réel se rabat sur `127.0.0.1:11434` (port par
@@ -247,9 +369,11 @@ from apex.missions.execution import generate_mission_response
 from apex.missions.service import MissionService
 from apex.policy.model import Subject
 
-# SQLite fichier local — aucune dépendance externe pour un premier essai
-# (PostgreSQL reste l'option de production, voir apex/db/).
-engine = create_engine("sqlite:////home/apex/apex-data/first-run.db", future=True)
+# SQLite fichier local, créé dans le répertoire courant — aucune dépendance
+# externe pour un premier essai (ni Docker, ni PostgreSQL/Redis/MinIO :
+# generate_mission_response() ne passe jamais par apex.api.dependencies.
+# get_session_factory(), qui est la seule voie exigeant PostgreSQL).
+engine = create_engine("sqlite:///./first-run.db", future=True)
 Base.metadata.create_all(engine)
 session_factory = build_session_factory(engine)
 
@@ -267,7 +391,7 @@ mission = mission_service.create(
 
 endpoint = ModelEndpoint(
     pool_id="local-gpu", runtime="ollama", url="http://127.0.0.1:11434",
-    served_model="qwen3-coder:30b-a3b-instruct-q4_K_M", max_context=65536,
+    served_model="qwen2.5-coder:7b-instruct", max_context=32768,   # référence pour 8 Go VRAM (RTX 4060 Ti et similaires)
 )
 
 final = generate_mission_response(mission.id, mission_service=mission_service, endpoint=endpoint)
@@ -329,6 +453,34 @@ Ollama (sur VOTRE machine)
   v
 résultat (Mission.result, état REVIEW ou FAILED)
 ```
+
+### Mission via un Agent réel (passe « Agents V1 »)
+
+```
+Agent (configuré, Model Router non contourné)
+  |
+  v
+Mission.agent_id
+  |
+  v
+AgentRegistryService.run_execution (POST /missions/{id}/run)
+  |
+  v
+select_model / generate_with_fallback (apex.routing — inchangé, réutilisé)
+  |
+  v
+ModelProvider -> OllamaProvider (ou tout autre provider configuré)
+  |
+  v
+AgentExecution (modèle/provider réellement utilisés, jamais fabriqués)
+  |
+  v
+Mission.state = REVIEW (succès) ou FAILED (échec réel, jamais simulé)
+```
+
+Ce chemin est un troisième point d'entrée vers le Model Router (à côté de
+`generate_mission_response`/`generate_mission_response_via_router`), jamais
+un second moteur : mêmes primitives, mêmes garanties d'échec honnête.
 
 ### Boucle d'apprentissage (composants déjà réels, `run_experiment_cycle`)
 

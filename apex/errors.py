@@ -123,6 +123,22 @@ class ModelProviderError(ApexError):
         super().__init__(f"« {component} » a échoué sur {endpoint_url} : {detail}")
 
 
+class SecretNotFound(ApexError):
+    """Un secret référencé par sa clé logique n'a pas pu être résolu.
+
+    Ne porte jamais la clé recherchée dans un contexte qui laisserait deviner
+    un motif de nommage exploitable au-delà de ce que l'appelant connaît déjà
+    (il a fourni la clé) — seule la clé elle-même et la source consultée sont
+    rapportées, jamais une valeur candidate ni un secret partiel."""
+
+    exit_code = 10
+
+    def __init__(self, key: str, *, source: str) -> None:
+        self.key = key
+        self.source = source
+        super().__init__(f"secret « {key} » introuvable (source : {source})")
+
+
 class IsolationUnavailable(ApexError):
     """Le niveau d'isolation exigé n'est pas disponible sur cet hôte.
 

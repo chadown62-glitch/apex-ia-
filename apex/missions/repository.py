@@ -29,7 +29,7 @@ class MissionRepository:
                 id=mission.id, title=mission.title, description=mission.description,
                 specialty=mission.specialty, objective=mission.objective,
                 priority=mission.priority.value, constraints=mission.constraints,
-                assigned_agent=mission.assigned_agent, state=mission.state.value,
+                assigned_agent=mission.assigned_agent, agent_id=mission.agent_id, state=mission.state.value,
                 created_by=mission.created_by, created_at=mission.created_at,
                 depends_on=mission.depends_on,
             )

@@ -98,11 +98,110 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "`apex.sandbox.linux_namespace` lève `NotImplementedYet` pour "
               "tout `network` autre que `\"none\"` — mode `\"proxy\"` "
               "encore PLANNED, un changement de surface de sécurité réel, "
-              "délibérément hors périmètre de cette passe.",
+              "délibérément hors périmètre de cette passe. **Second backend "
+              "réel : `OpenAICompatibleProvider`** (passe « Multi-Model/"
+              "Provider Fabric ») — UN SEUL adapter HTTP générique pour "
+              "tout service exposant `/v1/chat/completions`/`/v1/models` "
+              "(OpenAI, OpenRouter, Together, Groq, Fireworks, DeepSeek, "
+              "Mistral, xAI, Qwen en mode compatible), jamais une classe "
+              "par fournisseur. `get_default_provider()` dispatche "
+              "désormais réellement sur `ModelEndpoint.runtime` "
+              "(`\"ollama\"` -> `OllamaProvider`, tout le reste -> "
+              "`OpenAICompatibleProvider`) — le point de choix unique déjà "
+              "prévu par sa propre docstring, pas une bifurcation "
+              "nouvelle. Authentification via `SecretBroker` "
+              "(`ModelEndpoint.secret_key`, nouveau champ additif — jamais "
+              "une clé en dur, jamais journalisée). **Aucun appel réel "
+              "contre un vrai service payant n'a été prouvé** — testé "
+              "contre un serveur HTTP de test imitant la forme exacte des "
+              "réponses OpenAI-compatible (`tests/"
+              "test_models_openai_compatible.py`), plus un test "
+              "d'intégration réel explicitement sauté sans "
+              "`APEX_OPENAI_COMPATIBLE_URL`/clé fournie — jamais simulé "
+              "comme un provider externe opérationnel.",
     ),
     Abstraction(
         "EmbeddingProvider", "vectorisation pour la mémoire", 4, 8,
         ImplStatus.PLANNED, "bge-m3 local",
+    ),
+    Abstraction(
+        "ModelRouter", "sélection d'un ModelProvider selon capacité/coût/latence/préférence", 6, 6,
+        ImplStatus.STUB, "un seul candidat local (Ollama), sélection triviale",
+        module="apex.routing.router",
+        notes="STUB et non IMPLEMENTED délibérément — nouvelle abstraction "
+              "explicitement autorisée (directive « Multi-LLM/Provider "
+              "Fabric »), passée au test en 4 points avant création : aucun "
+              "composant existant ne porte la responsabilité de comparer "
+              "plusieurs `ModelCandidate` et d'en choisir un (`Placement`, "
+              "PLANNED phase 6, couvre l'assignation run -> pool de calcul, "
+              "un axe différent) ; l'ajouter à `ModelProvider` violerait son "
+              "contrat (un provider ne sait pas comparer d'autres "
+              "providers) ; ≥2 consommateurs réels dès cette passe "
+              "(`generate_mission_response_via_router`, et tout futur appel "
+              "multi-candidats) ; aucun doublon (`docs/EXTERNAL_INTELLIGENCE"
+              ".md`/`docs/VISION_INTEGRATION.md` concluaient qu'aucune "
+              "abstraction séparée n'était nécessaire AU NIVEAU CONCEPTUEL, "
+              "mais aucun des deux documents ne fournissait de logique de "
+              "sélection réelle — celle-ci n'existait nulle part avant "
+              "cette passe). `select_model()` (`apex.routing.router`) est "
+              "une fonction pure et déterministe : filtre par capacité "
+              "requise (`apex.routing.model.Capability`, vocabulaire fermé, "
+              "dérivée UNIQUEMENT de signaux réels — `ModelRef."
+              "capability_class`, localité, `max_context` ; `REASONING`/"
+              "`VISION`/`TOOL_USE` restent dans le vocabulaire mais ne sont "
+              "JAMAIS dérivées faute de signal réel dans le schéma actuel), "
+              "contexte minimal, disponibilité réelle (`ModelCandidate."
+              "is_available`, jamais une intention `ModelRef` confondue "
+              "avec un `ModelEndpoint` réel), et `ExternalPolicy` (jamais "
+              "contournée). Score TRANSPARENT (base 1.0 + 0.5 préférence "
+              "locale), PAS un `historical_quality`/`cost_score`/"
+              "`latency_score` inventé — ces axes restent explicitement "
+              "`PLANNED`, faute de source de données réelle aujourd'hui : "
+              "le point d'entrée existe déjà (`EvalRun.facts[\"strategy\"]`, "
+              "`apex.selfmodel`, `apex.costgain.CostGainEstimator`) sans "
+              "être câblé, plutôt que simulé. `generate_with_fallback`/"
+              "`generate_all_candidates` (`apex.routing.generation`) "
+              "composent `ModelProvider.generate()` sur plusieurs candidats "
+              "classés — le second n'exécute AUCUNE sélection de « meilleure "
+              "réponse » (lacune réelle, documentée : comparer du texte "
+              "libre exigerait un jugement que `Tier0Judge` — contrat "
+              "`judge(sandbox_result, task)` — ne couvre pas). Aucun secret "
+              "en dur : tout provider payant futur passera par "
+              "`SecretBroker`, jamais une clé hors de ce point unique.\n\n"
+              "Passe « Model/Provider Catalog » (`apex.models.catalog`) : "
+              "PAS une nouvelle abstraction — extension de la couche de "
+              "PRÉPARATION en amont du Router, retestée en 4 points : (1) "
+              "aucun composant existant ne porte déjà une vue structurée "
+              "provider+modèle avec disponibilité/découverte/capacités — "
+              "`apex.models.registry.ModelCandidate` reste une résolution "
+              "brute, `select_model` un choix, ni l'un ni l'autre une vue "
+              "consultable ; (2) l'ajouter à `select_model()` violerait son "
+              "contrat (une fonction de décision, pas un catalogue "
+              "parcourable/filtrable indépendamment d'une requête) ; (3) "
+              "≥2 consommateurs réels : `usable_candidates()` alimente "
+              "`select_model` sans rien dupliquer, et toute future API/CLI "
+              "de listing de modèles/providers (aucune n'existe encore) ; "
+              "(4) aucun doublon — `CatalogModel`/`ProviderInfo` sont des "
+              "vues DÉRIVÉES de `ModelCandidate`/`ModelEndpoint` déjà réels, "
+              "jamais stockées, recalculées à chaque appel. `Availability` "
+              "(AVAILABLE/UNAVAILABLE/UNKNOWN/DISABLED) et `DiscoverySource` "
+              "(CONFIGURED/DISCOVERED/VERIFIED) sont deux vocabulaires "
+              "fermés distincts et honnêtes : `UNKNOWN` n'est JAMAIS promu "
+              "à `AVAILABLE` sans un `detect()` réel via `discover_live()` "
+              "(seul point du module qui touche le réseau, jamais appelé "
+              "implicitement) ; `VERIFIED` reste explicitement PLANNED — "
+              "aucune Mission ne persiste aujourd'hui QUEL `ModelEndpoint` "
+              "l'a réellement servie (`Mission.result` ne porte que le "
+              "texte), donc rien à interroger pour prouver un usage réel. "
+              "`Capability` (`apex.routing.model`) étendu de `TEXT`/`AUDIO`/"
+              "`VOICE`/`VIDEO`/`SCREEN` (vocabulaire fermé, prêt pour de "
+              "futurs `ModelEndpoint` multimodaux réels) — seule `TEXT` est "
+              "dérivée aujourd'hui (chaque backend réel est une API de "
+              "génération de texte, une affirmation vérifiée par "
+              "construction) ; les 4 autres ne sont JAMAIS dérivées, faute "
+              "de tout signal réel dans le schéma. `PerformanceHistory` "
+              "toujours vide par construction (`usage_count=0`) — aucune "
+              "statistique inventée, un emplacement prêt, pas une mesure.",
     ),
     Abstraction(
         "ArtifactStore", "workspaces adressés par contenu", 3, 3,
@@ -187,7 +286,29 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     ),
     Abstraction(
         "SecretBroker", "injection de secrets hors contexte modèle", 2, 7,
-        ImplStatus.PLANNED, "fichier chiffré local",
+        ImplStatus.STUB, "variables d'environnement uniquement",
+        module="apex.secrets.provider",
+        notes="STUB et non IMPLEMENTED délibérément : `EnvSecretBroker` est "
+              "réel — `resolve()` lit une variable d'environnement "
+              "réellement, dans un espace de noms dédié "
+              "(`APEX_SECRET_<CLÉ>`, jamais partagé avec `APEX_DB_*_PASSWORD`/"
+              "`POSTGRES_PASSWORD`), lève `SecretNotFound` (jamais une "
+              "valeur vide ou devinée) si absent ou vide. `has()` sonde sans "
+              "lever, pour un futur routeur qui doit décider entre "
+              "plusieurs providers sans se bloquer sur celui qui n'est pas "
+              "configuré. Aucune valeur n'est jamais journalisée par ce "
+              "module (`apex.obs.logging.redact()` reste la défense en "
+              "profondeur si un appelant faisait l'erreur). **Désormais "
+              "réellement consommé** : `OpenAICompatibleProvider` "
+              "(`apex.models.openai_compatible`) résout `ModelEndpoint."
+              "secret_key` via ce broker à chaque appel, jamais mis en "
+              "cache — testé contre un serveur HTTP de test qui vérifie "
+              "réellement l'en-tête `Authorization` reçu (secret manquant "
+              "-> aucune tentative HTTP ; mauvais secret -> rejeté par le "
+              "serveur, jamais simulé comme accepté). Restent `PLANNED` : "
+              "fichier chiffré local, rotation, secret "
+              "manager distant — des backends supplémentaires du même "
+              "contrat, jamais un second contrat.",
     ),
     Abstraction(
         "MemoryProvider", "écriture/récupération avec provenance", 5, 8,
@@ -882,6 +1003,140 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "`MemoryProvider`, STUB depuis l'étape 9). N'exécute jamais de "
               "contenu lui-même — un scan qui a besoin d'exécuter délègue à "
               "`SandboxProvider`, jamais un chemin d'exécution parallèle.",
+    ),
+
+    # -- Ajouts passe « APEX — Première interface utilisable » — Chat réel,
+    # Conversations, Projects, AgentTemplate. Testé au 4-points avant
+    # création : (1) aucun composant existant ne porte déjà ces
+    # responsabilités — `apex.missions` gouverne un travail asynchrone
+    # soumis à REVIEW humaine (ADR-0011), un tour de Chat est une action
+    # humaine directe à réponse immédiate, jamais soumise à cette
+    # gouvernance ; (2) les ajouter à `MissionEngine` violerait son contrat
+    # (mélanger un cycle de vie synchrone et un cycle de vie asynchrone
+    # gouverné) ; (3) ≥2 consommateurs réels dès cette passe (l'UI Chat, et
+    # l'API elle-même comme second appelant indépendant des services) ; (4)
+    # aucun doublon — `ConversationService.send_message` RÉUTILISE
+    # directement `apex.routing.select_model`/`generate_with_fallback`/
+    # `apex.models.registry.resolve_candidates`, rien n'est recalculé. -----
+    Abstraction(
+        "ConversationEngine", "Chat réel — conversations, messages, génération via ModelRouter", 23, 23,
+        ImplStatus.STUB,
+        "aucun secours conversationnel — un échec de génération revient "
+        "comme message d'erreur explicite, jamais un texte inventé",
+        module="apex.conversations.service",
+        notes="STUB et non IMPLEMENTED délibérément : `create`/`rename`/"
+              "`delete`/`list_all`/`list_messages` sont réels (PostgreSQL, "
+              "SQLite en mémoire pour les tests). `send_message` est le "
+              "chemin réel complet : UI -> API -> `ConversationService."
+              "send_message` -> `apex.routing.select_model` -> `apex."
+              "routing.generate_with_fallback` -> `apex.models.provider."
+              "get_default_provider` -> `OllamaProvider`/"
+              "`OpenAICompatibleProvider` -> backend réel -> réponse "
+              "réelle, persistée (`MessageRow`). Limites RÉELLES, "
+              "documentées plutôt que masquées : (1) pas de streaming — "
+              "`generate()` reste bloquant, `generate_stream` "
+              "(`OllamaProvider`) n'est pas branché ici ; (2) pas de "
+              "mémoire de conversation envoyée au modèle — chaque message "
+              "n'envoie QUE son propre contenu comme prompt, jamais "
+              "l'historique (un vrai contexte multi-tour exigerait de "
+              "composer les messages précédents dans le prompt, non fait "
+              "cette passe) ; (3) sélection de modèle sans historique de "
+              "qualité/coût/latence — même limite déjà documentée pour "
+              "`ModelRouter`, réutilisée telle quelle, jamais dupliquée.",
+    ),
+    Abstraction(
+        "ProjectStore", "regroupement nommé de conversations", 23, 23,
+        ImplStatus.STUB,
+        "aucun projet — une conversation reste alors non classée (project_id=None)",
+        module="apex.projects.service",
+        notes="STUB : `create`/`get`/`list_all` réels (PostgreSQL). Aucune "
+              "mutation ni suppression dans cette passe — un projet "
+              "regroupant déjà des conversations, le supprimer "
+              "orphelinerait leur `project_id` (voir `apex.db.repositories."
+              "ProjectRepository`, docstring). Volontairement SANS jalons, "
+              "kanban ni timeline — `ProjectManagerPage` (frontend) reste "
+              "`ui-scaffold` pour ces aspects, seule l'association "
+              "conversation <-> projet est réelle.",
+    ),
+    Abstraction(
+        "AgentTemplate", "définition déclarative d'agent (rôle, modèle, outils)", 23, 23,
+        ImplStatus.STUB,
+        "aucun template — un rôle d'agent doit être choisi manuellement à chaque Mission",
+        module="apex.agent_templates.service",
+        notes="STUB : `create`/`list_all`/`delete` réels (PostgreSQL). "
+              "**Jamais un spawn réel** — distinct par construction "
+              "d'`AgentRuntime`/`SPAWN_CLONE` : un `AgentTemplate` "
+              "persiste un nom/rôle/modèle préféré/outils déclarés, "
+              "toujours `status=DEFINED`, jamais une autre valeur qui "
+              "laisserait croire à une exécution. `AgentRole` (CODER/"
+              "RESEARCHER/TESTER/ANALYST/DESIGNER/SECURITY/EVALUATOR) est "
+              "un vocabulaire délibérément DISTINCT de `Subject`/"
+              "`CloneType` (research/learning/developer/...) — faire "
+              "tourner un template exigerait un mapping vers un "
+              "`CloneType` réel au moment du spawn, non câblé ici. "
+              "`tools` reste une liste déclarée, jamais appliquée : "
+              "`ToolProvider` est lui-même `PLANNED`.",
+    ),
+
+    # -- Ajout passe « Agents V1 » — un Agent réel, exécutable, assignable à
+    # une Mission, réutilisant le Model Router déjà réel. Testé au 4-points :
+    # (1) aucun composant existant ne porte cette responsabilité —
+    # `AgentTemplate` reste un blueprint jamais exécutable, `Clone`/
+    # `AgentRuntime` est une instance OS-level spawnée, ni l'un ni l'autre
+    # ne configure « quel modèle/quels outils/quelles permissions une
+    # exécution utilisera » de façon réutilisable entre plusieurs Missions ;
+    # (2) l'ajouter à `MissionEngine` violerait son contrat (Mission gouverne
+    # un cycle de vie, pas une configuration réutilisable d'exécutant) ;
+    # (3) ≥2 consommateurs réels dès cette passe (`POST /missions/{id}/run`,
+    # et l'UI Agents indépendamment de toute Mission particulière) ; (4)
+    # aucun doublon — `run_execution` RÉUTILISE directement `apex.routing.
+    # select_model`/`generate_with_fallback`/`apex.missions.service.
+    # MissionService.mark_running/mark_review/mark_failed`, une troisième
+    # composition après `generate_mission_response`/`generate_mission_
+    # response_via_router`, jamais une architecture parallèle. ---------------
+    Abstraction(
+        "AgentRegistry", "Agent réel — configuration réutilisable, exécutable via le Model Router", 24, 24,
+        ImplStatus.STUB,
+        "aucun agent réutilisable — chaque exécution doit composer candidats/permissions manuellement",
+        module="apex.agent_registry.service",
+        notes="STUB et non IMPLEMENTED délibérément : `create`/`update`/"
+              "`delete`/`list_all`/`instantiate_from_template` sont réels "
+              "(PostgreSQL, SQLite en mémoire pour les tests). `run_execution` "
+              "est le chemin réel complet : UI -> API (`POST /missions/{id}/"
+              "run`) -> `AgentRegistryService.run_execution` -> `apex.routing."
+              "select_model` -> `apex.routing.generate_with_fallback` -> "
+              "`get_default_provider()` -> provider réel -> réponse réelle, "
+              "la Mission traversant son cycle de vie RÉEL (`MissionService."
+              "mark_running`/`mark_review`/`mark_failed`, ADR-0011 inchangée). "
+              "Permissions (`Permission` — READ_ONLY/WORKSPACE_WRITE/EXECUTE/"
+              "NETWORK/GIT_READ/GIT_WRITE) et outils (`ToolName`) JAMAIS "
+              "accordés par défaut — un `Agent` créé sans permission "
+              "explicite ne peut pas être exécuté (`run_execution` refuse "
+              "sans `Permission.EXECUTE`, vérifié réellement). `AgentStatus` "
+              "(IDLE/QUEUED/RUNNING/WAITING/COMPLETED/FAILED/DISABLED) n'est "
+              "JAMAIS stocké — toujours dérivé (`derive_agent_status`) de "
+              "`Agent.enabled` + la dernière `AgentExecution` réelle ; "
+              "`WAITING` reste dans le vocabulaire fermé mais n'est produit "
+              "par aucune source aujourd'hui. `FallbackReason` (9 valeurs "
+              "fermées) : seuls SUCCESS/TIMEOUT/CAPABILITY_MISSING/"
+              "PROVIDER_ERROR sont réellement dérivés (`classify_outcome`) — "
+              "QUOTA_EXCEEDED/RATE_LIMITED/OFFLINE/AUTH_ERROR/"
+              "CONTEXT_TOO_LONG restent déclarés mais jamais produits, faute "
+              "de code d'erreur structuré exposé par les providers actuels "
+              "(`apex.errors.ModelProviderError` ne porte qu'un message "
+              "texte, jamais un code HTTP — deviner depuis ce texte serait "
+              "exactement l'erreur que ce dépôt interdit ailleurs). Aucun "
+              "champ token/coût/latence sur `AgentExecution` — faute d'être "
+              "réellement fourni par `apex.models.model.GenerationResult` "
+              "aujourd'hui, jamais inventé. `ToolName.is_operational` est "
+              "toujours `False` : `ToolRegistry`/`ToolProvider` restent "
+              "`PLANNED` (registre, zéro code) — déclarer un outil sur un "
+              "Agent n'en fait jamais un outil réellement exécutable. "
+              "`AgentTeam` volontairement minimal (nom/membres) — aucune "
+              "communication autonome entre agents, aucun orchestrateur "
+              "multi-agent : ce workflow avancé (Planner -> Agent A -> "
+              "Agent B -> Agent C -> Evaluator) reste explicitement "
+              "`PLANNED`, aucun code ne le prétend implémenté.",
     ),
 )
 

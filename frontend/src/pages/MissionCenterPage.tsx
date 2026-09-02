@@ -1,6 +1,19 @@
 import { useMemo, useState } from "react";
 
-import { useAgents, useCancelMission, useCreateMission, useEvents, useMission, useMissions, useRejectMission, useValidateMission } from "../api/hooks";
+import {
+  useAgents,
+  useCancelMission,
+  useConfiguredAgents,
+  useCreateMission,
+  useEvents,
+  useLaunchMission,
+  useMission,
+  useMissionExecutions,
+  useMissions,
+  useRejectMission,
+  useRunMissionViaAgent,
+  useValidateMission,
+} from "../api/hooks";
 import type { MissionPriority } from "../api/types";
 import { ErrorState, LoadingState } from "../components/common/EmptyState";
 import { Panel } from "../components/common/Panel";
@@ -29,29 +42,35 @@ function MissionStatePill({ state }: { state: MissionState }) {
 /**
  * Mission Engine (apex.missions.service) est réellement câblé : créer,
  * lister, consulter et annuler une mission le sont bout en bout via
- * PostgreSQL. Valider/rejeter exigent l'état REVIEW — non atteignable
- * depuis cette page (AGENT RUNTIME n'est pas câblé sur Mission Engine dans
- * cette étape, voir apex/missions/service.py) : ces boutons restent
- * désactivés tant que la mission sélectionnée n'est pas réellement REVIEW,
- * jamais activés par supposition.
+ * PostgreSQL. Depuis la passe « Agents V1 », une mission portant un
+ * `agent_id` peut réellement atteindre REVIEW via « Lancer via Agent »
+ * (AgentRegistryService.run_execution → Model Router → provider) ; Valider/
+ * rejeter restent désactivés tant que la mission sélectionnée n'est pas
+ * réellement REVIEW, jamais activés par supposition.
  */
 export function MissionCenterPage() {
   const agents = useAgents();
+  const configuredAgents = useConfiguredAgents();
   const missions = useMissions();
   const createMission = useCreateMission();
   const cancelMission = useCancelMission();
   const validateMission = useValidateMission();
   const rejectMission = useRejectMission();
+  const launchMission = useLaunchMission();
+  const runViaAgent = useRunMissionViaAgent();
 
   const [specialtyId, setSpecialtyId] = useState("research");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [objective, setObjective] = useState("");
   const [agentId, setAgentId] = useState("");
+  const [configuredAgentId, setConfiguredAgentId] = useState("");
   const [priority, setPriority] = useState<MissionPriority>("normal");
   const [constraints, setConstraints] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
+
+  const configuredAgentList = configuredAgents.data?.status === "real" ? configuredAgents.data.data ?? [] : [];
 
   const specialty = SPECIALTY_DEFINITIONS.find((s) => s.id === specialtyId) ?? SPECIALTY_DEFINITIONS[0];
   const compatibleTypes = specialty.workspace?.compatibleAgentTypes ?? [];
@@ -63,6 +82,9 @@ export function MissionCenterPage() {
 
   const selected = useMission(selectedMissionId ?? undefined);
   const selectedMission = selected.data?.status === "real" ? selected.data.data : null;
+  const missionExecutions = useMissionExecutions(selectedMissionId ?? undefined);
+  const executionList = missionExecutions.data?.status === "real" ? missionExecutions.data.data ?? [] : [];
+  const latestExecution = executionList[0] ?? null;
   const events = useEvents(200);
   const history = selectedMissionId
     ? (events.data?.data?.filter((e) => e.context.mission_id === selectedMissionId) ?? [])
@@ -73,6 +95,7 @@ export function MissionCenterPage() {
     const envelope = await createMission.mutateAsync({
       title, description, specialty: specialtyId, objective, priority,
       constraints: constraints || null, assigned_agent: agentId || null,
+      agent_id: configuredAgentId || null,
     });
     if (envelope.status === "real" && envelope.data) {
       setSelectedMissionId(envelope.data.id);
@@ -80,6 +103,7 @@ export function MissionCenterPage() {
       setDescription("");
       setObjective("");
       setAgentId("");
+      setConfiguredAgentId("");
       setConstraints("");
     } else {
       setCreateError(envelope.detail ?? "Création refusée par le backend.");
@@ -97,7 +121,7 @@ export function MissionCenterPage() {
         </div>
       </div>
 
-      <PlannedBanner note="Validation/rejet exigent l'état REVIEW — non atteignable depuis cette page : AGENT RUNTIME n'est pas encore câblé sur Mission Engine (apex/missions/service.py)." />
+      <PlannedBanner note="Validation/rejet exigent l'état REVIEW — atteignable en assignant « Mon Agent » à la mission puis « Lancer via Agent » (Agents V1, apex/agent_registry/service.py) ; sinon la mission reste en file, ces boutons restent désactivés tant qu'elle n'est pas réellement REVIEW." />
 
       <div className="two-col">
         <Panel title="Nouvelle mission">
@@ -141,6 +165,22 @@ export function MissionCenterPage() {
                 {compatibleAgents.map((a) => (
                   <option key={a.clone_id} value={a.clone_id}>
                     {a.type} · {a.clone_id.slice(0, 8)} · {a.state}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="mission-form__field">
+              <span>Mon Agent ({configuredAgentList.length} disponible{configuredAgentList.length > 1 ? "s" : ""}, exécutable via le Model Router, optionnel)</span>
+              <select
+                value={configuredAgentId}
+                onChange={(e) => setConfiguredAgentId(e.target.value)}
+                disabled={configuredAgentList.length === 0}
+              >
+                <option value="">— aucun —</option>
+                {configuredAgentList.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name} · {a.role}
                   </option>
                 ))}
               </select>
@@ -199,15 +239,44 @@ export function MissionCenterPage() {
                   <tr><th>ID</th><td className="mono">{selectedMission.id}</td></tr>
                   <tr><th>État</th><td>{STATE_LABEL[selectedMission.state] ?? selectedMission.state}</td></tr>
                   <tr><th>Spécialité</th><td>{selectedMission.specialty}</td></tr>
-                  <tr><th>Agent assigné</th><td className="mono">{selectedMission.assigned_agent ?? "— aucun —"}</td></tr>
+                  <tr><th>Agent assigné (Clone)</th><td className="mono">{selectedMission.assigned_agent ?? "— aucun —"}</td></tr>
+                  <tr><th>Mon Agent assigné</th><td className="mono">{selectedMission.agent_id ?? "— aucun —"}</td></tr>
                   <tr><th>Priorité</th><td>{selectedMission.priority}</td></tr>
                   <tr><th>Décision humaine</th><td>{selectedMission.validation_status ?? "— aucune —"}</td></tr>
+                  {latestExecution && (
+                    <>
+                      <tr><th>Modèle utilisé</th><td className="mono">{latestExecution.model_id ?? "— inconnu —"}</td></tr>
+                      <tr><th>Provider utilisé</th><td className="mono">{latestExecution.provider_id ?? "— inconnu —"}</td></tr>
+                    </>
+                  )}
                   {selectedMission.result && <tr><th>Résultat</th><td>{selectedMission.result}</td></tr>}
                   {selectedMission.error && <tr><th>Erreur</th><td>{selectedMission.error}</td></tr>}
                 </tbody>
               </table>
 
               <div className="mission-detail__actions">
+                <button
+                  className="action-button action-button--live"
+                  disabled={selectedMission.state !== "queued" || launchMission.isPending}
+                  title={selectedMission.state === "queued" ? undefined : "Mission pas en file — rien à ordonnancer"}
+                  onClick={() => launchMission.mutate(selectedMission.id)}
+                >
+                  {launchMission.isPending ? "Lancement…" : "Lancer"}
+                </button>
+                <button
+                  className="action-button action-button--live"
+                  disabled={!selectedMission.agent_id || selectedMission.state !== "queued" || runViaAgent.isPending}
+                  title={
+                    !selectedMission.agent_id
+                      ? "Aucun Agent assigné à cette mission"
+                      : selectedMission.state === "queued"
+                        ? undefined
+                        : "Mission pas en file — rien à exécuter"
+                  }
+                  onClick={() => runViaAgent.mutate({ missionId: selectedMission.id })}
+                >
+                  {runViaAgent.isPending ? "Exécution…" : "Lancer via Agent"}
+                </button>
                 <button
                   className="action-button action-button--live"
                   disabled={!selectedMission || ["completed", "failed", "cancelled"].includes(selectedMission.state) || cancelMission.isPending}
@@ -232,6 +301,12 @@ export function MissionCenterPage() {
                   Rejeter
                 </button>
               </div>
+              {launchMission.data && launchMission.data.status !== "real" && (
+                <ErrorState detail={launchMission.data.detail} />
+              )}
+              {runViaAgent.data && runViaAgent.data.status !== "real" && (
+                <ErrorState detail={runViaAgent.data.detail} />
+              )}
             </div>
           )}
         </Panel>

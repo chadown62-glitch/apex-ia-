@@ -144,6 +144,9 @@ class MissionOut(BaseModel):
     priority: str
     constraints: str | None
     assigned_agent: str | None
+    #: Passe « Agents V1 » — référence un `Agent` (`ConfiguredAgentOut`),
+    #: DISTINCT d'`assigned_agent` ci-dessus (un clone OS-level réel).
+    agent_id: str | None
     state: str
     result: str | None
     error: str | None
@@ -166,6 +169,7 @@ class MissionCreateIn(BaseModel):
     priority: Literal["low", "normal", "high", "critical"] = "normal"
     constraints: str | None = None
     assigned_agent: str | None = None
+    agent_id: str | None = None
 
 
 class MissionRejectIn(BaseModel):
@@ -173,6 +177,210 @@ class MissionRejectIn(BaseModel):
 
 
 # -- scheduler (étape 11) -----------------------------------------------------
+
+
+class ProjectOut(BaseModel):
+    id: str
+    name: str
+    description: str
+    created_by: str
+    created_at: str
+
+
+class ProjectCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+
+
+class ConversationOut(BaseModel):
+    id: str
+    title: str
+    project_id: str | None
+    created_by: str
+    created_at: str
+    updated_at: str
+
+
+class ConversationCreateIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    project_id: str | None = None
+
+
+class ConversationRenameIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+
+
+class MessageOut(BaseModel):
+    id: str
+    conversation_id: str
+    role: str
+    content: str
+    model_id: str | None
+    provider_id: str | None
+    status: str
+    error: str | None
+    created_at: str
+
+
+class SendMessageIn(BaseModel):
+    content: str = Field(min_length=1)
+    model_role: str | None = None
+
+
+class SendMessageOut(BaseModel):
+    """Les DEUX messages produits par un tour de Chat — jamais seulement la
+    réponse : le message utilisateur porte l'horodatage/l'id que le client
+    doit utiliser pour l'afficher sans le reconstruire lui-même."""
+
+    user_message: MessageOut
+    assistant_message: MessageOut
+
+
+# -- agent templates (passe « Première interface utilisable ») ---------------
+
+
+class AgentTemplateOut(BaseModel):
+    id: str
+    name: str
+    role: str
+    model_role: str | None
+    tools: list[str]
+    description: str
+    status: str
+    created_by: str
+    created_at: str
+
+
+class AgentTemplateCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    role: str
+    description: str = ""
+    model_role: str | None = None
+    tools: list[str] = Field(default_factory=list)
+
+
+# -- Agent / AgentExecution / AgentTeam (passe « Agents V1 ») -----------------
+#
+# `AgentOut` existe DÉJÀ (ligne ~114, projection d'un `Clone` réel —
+# `AgentRuntime`) : ces schémas portent le préfixe `Configured`/`AgentEntity`
+# pour ne jamais entrer en collision, ni côté nommage ni côté sens — un
+# `ConfiguredAgentOut` est une configuration réutilisable, jamais une
+# instance de clone OS-level en cours d'exécution.
+
+
+class ConfiguredAgentOut(BaseModel):
+    id: str
+    name: str
+    description: str
+    role: str
+    specialty: str | None
+    model_role: str | None
+    required_capabilities: list[str]
+    tools: list[str]
+    permissions: list[str]
+    instructions: str | None
+    enabled: bool
+    status: str
+    project_id: str | None
+    template_id: str | None
+    created_by: str
+    created_at: str
+    updated_at: str
+
+
+class ConfiguredAgentCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    role: str
+    description: str = ""
+    specialty: str | None = None
+    model_role: str | None = None
+    required_capabilities: list[str] = Field(default_factory=list)
+    tools: list[str] = Field(default_factory=list)
+    permissions: list[str] = Field(default_factory=list)
+    instructions: str | None = None
+    enabled: bool = True
+    project_id: str | None = None
+    #: Si fourni, copie la configuration du template (§3 de la directive) —
+    #: `role`/`model_role` du corps sont alors ignorés au profit du template.
+    template_id: str | None = None
+
+
+class ConfiguredAgentUpdateIn(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    model_role: str | None = None
+    required_capabilities: list[str] | None = None
+    tools: list[str] | None = None
+    permissions: list[str] | None = None
+    instructions: str | None = None
+    enabled: bool | None = None
+
+
+class AgentExecutionOut(BaseModel):
+    id: str
+    agent_id: str
+    mission_id: str
+    status: str
+    model_id: str | None
+    provider_id: str | None
+    result: str | None
+    error: str | None
+    fallback_reason: str | None
+    started_at: str
+    completed_at: str | None
+
+
+class RunAgentExecutionIn(BaseModel):
+    prompt: str | None = None
+
+
+class AgentTeamOut(BaseModel):
+    id: str
+    name: str
+    description: str
+    agent_ids: list[str]
+    created_by: str
+    created_at: str
+
+
+class AgentTeamCreateIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str = ""
+    agent_ids: list[str] = Field(default_factory=list)
+
+
+# -- model/provider catalog (passe « Model/Provider Catalog ») ---------------
+
+
+class ProviderInfoOut(BaseModel):
+    id: str
+    display_name: str
+    runtime: str
+    base_url: str
+    secret_key: str | None
+    local: bool
+    enabled: bool
+    model_ids: list[str]
+
+
+class CatalogModelOut(BaseModel):
+    model_id: str
+    display_name: str
+    role: str
+    family: str
+    version: str
+    quantization: str
+    capability_class: str
+    is_local: bool
+    is_declared_available: bool
+    capabilities: list[str]
+    availability: str
+    discovery: str
+    provider_id: str
+    runtime: str | None
+    served_model: str | None
+    max_context: int | None
+    vram_gb: float | None
 
 
 class SchedulerStatusOut(BaseModel):

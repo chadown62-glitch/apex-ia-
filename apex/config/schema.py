@@ -168,12 +168,22 @@ class ModelEndpoint:
     """Point de service **physique** d'un ModelRef sur un pool donné."""
 
     pool_id: str
-    runtime: str             # ollama, vllm, external
+    runtime: str             # ollama, vllm, external, openai_compatible
     url: str
     served_model: str        # nom tel que connu du runtime
     max_context: int
     vram_gb: float | None = None          # DOCUMENTÉ — hypothèse, pas une mesure
     measured: MeasuredCapability | None = None
+    #: Clé LOGIQUE d'un secret (`apex.secrets.SecretBroker`), JAMAIS la
+    #: valeur elle-même — `None` pour un backend sans authentification
+    #: (Ollama local). Résolue par le `ModelProvider` au moment de l'appel,
+    #: jamais stockée ni journalisée par cette dataclass.
+    secret_key: str | None = None
+    #: Désactivation explicite en configuration — distincte d'une
+    #: indisponibilité constatée (`CapabilityStatus`) : un endpoint
+    #: `enabled=False` n'est jamais sondé, jamais candidat, quel que soit
+    #: son état réel (`apex.models.catalog.Availability.DISABLED`).
+    enabled: bool = True
 
     @property
     def is_measured(self) -> bool:
@@ -210,6 +220,8 @@ class ModelEndpoint:
                 if raw.get("measured")
                 else None
             ),
+            secret_key=str(raw["secret_key"]) if raw.get("secret_key") is not None else None,
+            enabled=as_bool(raw.get("enabled", True), field=f"{where}.enabled"),
         )
 
 

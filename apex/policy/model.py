@@ -105,6 +105,34 @@ class Action(str, Enum):
     # pouvoir déclencher lui-même sa propre exécution en sandbox (contournement
     # direct de la chaîne CORE -> POLICY -> AGENT RUNTIME -> SANDBOX).
     EXECUTE_IN_SANDBOX = "execute_in_sandbox"
+    # -- Chat / Conversations (passe « Première interface utilisable ») ------
+    # HUMAIN seul, même motif que CREATE_MISSION/CREATE_TASK : un tour de
+    # conversation est une action humaine directe, jamais celle d'un clone
+    # ni du CORE en autonomie (aucune automatisation de Chat n'existe).
+    CREATE_CONVERSATION = "create_conversation"
+    UPDATE_CONVERSATION = "update_conversation"      # renommer un fil existant
+    DELETE_CONVERSATION = "delete_conversation"
+    SEND_MESSAGE = "send_message"
+    # -- Projects (passe « Première interface utilisable ») ------------------
+    CREATE_PROJECT = "create_project"
+    # -- AgentTemplate (passe « Première interface utilisable ») -------------
+    # Une DÉFINITION d'agent, jamais un spawn réel (SPAWN_CLONE, inchangé) —
+    # même distinction que documentée dans `apex.db.models.AgentTemplateRow`.
+    CREATE_AGENT_TEMPLATE = "create_agent_template"
+    DELETE_AGENT_TEMPLATE = "delete_agent_template"
+    # -- Agent (passe « Agents V1 ») ------------------------------------------
+    # Distinct d'AgentTemplate (une définition, jamais exécutable) : un
+    # `Agent` est une entité réelle, assignable à une Mission, exécutable.
+    # CREATE/UPDATE/DELETE_AGENT : HUMAIN seul, même motif que
+    # CREATE_CONVERSATION — création/édition d'une entité humaine directe.
+    # RUN_AGENT_EXECUTION : CORE seul, même motif exact que LAUNCH_MISSION —
+    # jamais HUMAIN ni un clone ne déclenche directement une exécution ;
+    # HUMAIN crée/assigne, CORE lance (même chaîne de gouvernance).
+    CREATE_AGENT = "create_agent"
+    UPDATE_AGENT = "update_agent"
+    DELETE_AGENT = "delete_agent"
+    RUN_AGENT_EXECUTION = "run_agent_execution"
+    CREATE_AGENT_TEAM = "create_agent_team"
 
     # -- Interdits absolus — jamais accordables, à quiconque -----------------
     MODIFY_CORE = "modify_core"

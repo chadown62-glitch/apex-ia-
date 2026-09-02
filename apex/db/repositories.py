@@ -13,20 +13,28 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from apex.config.schema import ComputePool
 from apex.db.models import (
+    AgentExecutionRow,
     AgentRow,
+    AgentTeamRow,
+    AgentTemplateRow,
     AuditLogRow,
     ComputePoolRow,
+    ConfiguredAgentRow,
+    ConversationRow,
     EvalRunRow,
     EventRow,
     GenomeVersionRow,
     MemoryRecordRow,
     MemoryRelationRow,
+    MessageRow,
     MissionRow,
+    ProjectRow,
     SkillRow,
     TaskRow,
 )
@@ -202,11 +210,12 @@ class MissionRepository:
         created_by: str,
         created_at: datetime,
         depends_on: tuple[str, ...] = (),
+        agent_id: str | None = None,
     ) -> MissionRow:
         row = MissionRow(
             id=id, title=title, description=description, specialty=specialty,
             objective=objective, priority=priority, constraints=constraints,
-            assigned_agent=assigned_agent, state=state, result=None, error=None,
+            assigned_agent=assigned_agent, agent_id=agent_id, state=state, result=None, error=None,
             validation_status=None, created_by=created_by, created_at=created_at,
             depends_on=list(depends_on),
         )
@@ -220,6 +229,7 @@ class MissionRepository:
         *,
         state: str | None = None,
         assigned_agent: str | None = None,
+        agent_id: str | None = None,
         result: str | None = None,
         error: str | None = None,
         validation_status: str | None = None,
@@ -234,6 +244,8 @@ class MissionRepository:
             row.state = state
         if assigned_agent is not None:
             row.assigned_agent = assigned_agent
+        if agent_id is not None:
+            row.agent_id = agent_id
         if result is not None:
             row.result = result
         if error is not None:
@@ -706,3 +718,367 @@ class GenomeVersionRepository:
             .limit(1)
         )
         return self._session.scalars(stmt).first()
+
+
+class ProjectRepository:
+    """Persistance de `apex.projects` (passe « Première interface
+    utilisable »). N'importe jamais `apex.projects` : même règle de couche
+    que `MissionRepository` — méthodes en mots-clés, jamais un objet
+    `Project`. Aucune méthode de suppression : un projet regroupant déjà des
+    conversations, le supprimer silencieusement orphelinerait leur
+    `project_id` — hors scope MVP, à traiter si le besoin réel apparaît."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, *, id: str, name: str, description: str, created_by: str, created_at: datetime) -> ProjectRow:
+        row = ProjectRow(id=id, name=name, description=description, created_by=created_by, created_at=created_at)
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, project_id: str) -> ProjectRow | None:
+        return self._session.get(ProjectRow, project_id)
+
+    def list_all(self, limit: int = 200) -> list[ProjectRow]:
+        stmt = select(ProjectRow).order_by(ProjectRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+
+class ConversationRepository:
+    """Persistance de `apex.conversations.model.Conversation`. N'importe
+    jamais `apex.conversations` — même règle de couche que
+    `MissionRepository`."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self, *, id: str, title: str, project_id: str | None, created_by: str, created_at: datetime,
+    ) -> ConversationRow:
+        row = ConversationRow(
+            id=id, title=title, project_id=project_id, created_by=created_by,
+            created_at=created_at, updated_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def rename(self, conversation_id: str, *, title: str, updated_at: datetime) -> ConversationRow | None:
+        row = self._session.get(ConversationRow, conversation_id)
+        if row is None:
+            return None
+        row.title = title
+        row.updated_at = updated_at
+        self._session.flush()
+        return row
+
+    def touch(self, conversation_id: str, *, updated_at: datetime) -> ConversationRow | None:
+        """Avance `updated_at` sans autre changement — appelé après chaque
+        message réellement enregistré (`ConversationService.send_message`),
+        pour que « conversations récentes » (tri par `updated_at`) reflète
+        l'activité réelle, jamais seulement la date de création."""
+        row = self._session.get(ConversationRow, conversation_id)
+        if row is None:
+            return None
+        row.updated_at = updated_at
+        self._session.flush()
+        return row
+
+    def get(self, conversation_id: str) -> ConversationRow | None:
+        return self._session.get(ConversationRow, conversation_id)
+
+    def list_all(self, limit: int = 200) -> list[ConversationRow]:
+        stmt = select(ConversationRow).order_by(ConversationRow.updated_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def delete(self, conversation_id: str) -> bool:
+        row = self._session.get(ConversationRow, conversation_id)
+        if row is None:
+            return False
+        self._session.delete(row)
+        # Les messages de cette conversation n'ont pas de ForeignKey
+        # (même simplification documentée que `MissionRow.assigned_agent`) —
+        # supprimés explicitement ici, jamais laissés orphelins en base.
+        self._session.execute(sa_delete(MessageRow).where(MessageRow.conversation_id == conversation_id))
+        self._session.flush()
+        return True
+
+
+class MessageRepository:
+    """Persistance de `apex.conversations.model.Message`. INSERT seul, comme
+    `EventRepository`/`AuditLogRepository` — un message envoyé n'est jamais
+    réécrit après coup, une correction serait un nouveau message."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        conversation_id: str,
+        role: str,
+        content: str,
+        model_id: str | None,
+        provider_id: str | None,
+        status: str,
+        error: str | None,
+        created_at: datetime,
+    ) -> MessageRow:
+        row = MessageRow(
+            id=id, conversation_id=conversation_id, role=role, content=content,
+            model_id=model_id, provider_id=provider_id, status=status, error=error, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def list_by_conversation(self, conversation_id: str, limit: int = 500) -> list[MessageRow]:
+        stmt = (
+            select(MessageRow)
+            .where(MessageRow.conversation_id == conversation_id)
+            .order_by(MessageRow.created_at.asc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+
+class AgentTemplateRepository:
+    """Persistance de `apex.agent_templates.model.AgentTemplate`. N'importe
+    jamais `apex.agent_templates` — même règle de couche que
+    `MissionRepository`."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        name: str,
+        role: str,
+        model_role: str | None,
+        tools: tuple[str, ...],
+        description: str,
+        status: str,
+        created_by: str,
+        created_at: datetime,
+    ) -> AgentTemplateRow:
+        row = AgentTemplateRow(
+            id=id, name=name, role=role, model_role=model_role, tools=list(tools),
+            description=description, status=status, created_by=created_by, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, template_id: str) -> AgentTemplateRow | None:
+        return self._session.get(AgentTemplateRow, template_id)
+
+    def list_all(self, limit: int = 200) -> list[AgentTemplateRow]:
+        stmt = select(AgentTemplateRow).order_by(AgentTemplateRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def delete(self, template_id: str) -> bool:
+        row = self._session.get(AgentTemplateRow, template_id)
+        if row is None:
+            return False
+        self._session.delete(row)
+        self._session.flush()
+        return True
+
+
+class ConfiguredAgentRepository:
+    """Persistance de `apex.agent_registry.model.Agent` (passe « Agents
+    V1 »). N'importe jamais `apex.agent_registry` — même règle de couche
+    que `MissionRepository`."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        name: str,
+        description: str,
+        role: str,
+        specialty: str | None,
+        model_role: str | None,
+        required_capabilities: tuple[str, ...],
+        tools: tuple[str, ...],
+        permissions: tuple[str, ...],
+        instructions: str | None,
+        enabled: bool,
+        project_id: str | None,
+        template_id: str | None,
+        created_by: str,
+        created_at: datetime,
+    ) -> ConfiguredAgentRow:
+        row = ConfiguredAgentRow(
+            id=id, name=name, description=description, role=role, specialty=specialty,
+            model_role=model_role, required_capabilities=list(required_capabilities),
+            tools=list(tools), permissions=list(permissions), instructions=instructions,
+            enabled=enabled, project_id=project_id, template_id=template_id,
+            created_by=created_by, created_at=created_at, updated_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def update(
+        self,
+        agent_id: str,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        model_role: str | None = None,
+        required_capabilities: tuple[str, ...] | None = None,
+        tools: tuple[str, ...] | None = None,
+        permissions: tuple[str, ...] | None = None,
+        instructions: str | None = None,
+        enabled: bool | None = None,
+        updated_at: datetime,
+    ) -> ConfiguredAgentRow | None:
+        row = self._session.get(ConfiguredAgentRow, agent_id)
+        if row is None:
+            return None
+        if name is not None:
+            row.name = name
+        if description is not None:
+            row.description = description
+        if model_role is not None:
+            row.model_role = model_role
+        if required_capabilities is not None:
+            row.required_capabilities = list(required_capabilities)
+        if tools is not None:
+            row.tools = list(tools)
+        if permissions is not None:
+            row.permissions = list(permissions)
+        if instructions is not None:
+            row.instructions = instructions
+        if enabled is not None:
+            row.enabled = enabled
+        row.updated_at = updated_at
+        self._session.flush()
+        return row
+
+    def get(self, agent_id: str) -> ConfiguredAgentRow | None:
+        return self._session.get(ConfiguredAgentRow, agent_id)
+
+    def list_all(self, limit: int = 200) -> list[ConfiguredAgentRow]:
+        stmt = select(ConfiguredAgentRow).order_by(ConfiguredAgentRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def delete(self, agent_id: str) -> bool:
+        row = self._session.get(ConfiguredAgentRow, agent_id)
+        if row is None:
+            return False
+        self._session.delete(row)
+        self._session.flush()
+        return True
+
+
+class AgentExecutionRepository:
+    """Persistance de `apex.agent_registry.model.AgentExecution`. `complete`
+    est le SEUL `UPDATE` — mêmes garanties que `SkillRepository.decide` :
+    aucune méthode générale de modification n'existe, jamais un contenu
+    déjà écrit qui change silencieusement."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self, *, id: str, agent_id: str, mission_id: str, status: str, started_at: datetime,
+    ) -> AgentExecutionRow:
+        row = AgentExecutionRow(
+            id=id, agent_id=agent_id, mission_id=mission_id, status=status,
+            model_id=None, provider_id=None, result=None, error=None, fallback_reason=None,
+            started_at=started_at, completed_at=None,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def complete(
+        self,
+        execution_id: str,
+        *,
+        status: str,
+        model_id: str | None,
+        provider_id: str | None,
+        result: str | None,
+        error: str | None,
+        fallback_reason: str | None,
+        completed_at: datetime,
+    ) -> AgentExecutionRow | None:
+        row = self._session.get(AgentExecutionRow, execution_id)
+        if row is None:
+            return None
+        row.status = status
+        row.model_id = model_id
+        row.provider_id = provider_id
+        row.result = result
+        row.error = error
+        row.fallback_reason = fallback_reason
+        row.completed_at = completed_at
+        self._session.flush()
+        return row
+
+    def get(self, execution_id: str) -> AgentExecutionRow | None:
+        return self._session.get(AgentExecutionRow, execution_id)
+
+    def list_by_agent(self, agent_id: str, limit: int = 200) -> list[AgentExecutionRow]:
+        stmt = (
+            select(AgentExecutionRow)
+            .where(AgentExecutionRow.agent_id == agent_id)
+            .order_by(AgentExecutionRow.started_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_mission(self, mission_id: str, limit: int = 200) -> list[AgentExecutionRow]:
+        stmt = (
+            select(AgentExecutionRow)
+            .where(AgentExecutionRow.mission_id == mission_id)
+            .order_by(AgentExecutionRow.started_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def latest_for_agent(self, agent_id: str) -> AgentExecutionRow | None:
+        stmt = (
+            select(AgentExecutionRow)
+            .where(AgentExecutionRow.agent_id == agent_id)
+            .order_by(AgentExecutionRow.started_at.desc())
+            .limit(1)
+        )
+        return self._session.scalars(stmt).first()
+
+
+class AgentTeamRepository:
+    """Persistance de `apex.agent_registry.model.AgentTeam` — structure V1
+    minimale (voir `AgentTeamRow`)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self, *, id: str, name: str, description: str, agent_ids: tuple[str, ...],
+        created_by: str, created_at: datetime,
+    ) -> AgentTeamRow:
+        row = AgentTeamRow(
+            id=id, name=name, description=description, agent_ids=list(agent_ids),
+            created_by=created_by, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, team_id: str) -> AgentTeamRow | None:
+        return self._session.get(AgentTeamRow, team_id)
+
+    def list_all(self, limit: int = 200) -> list[AgentTeamRow]:
+        stmt = select(AgentTeamRow).order_by(AgentTeamRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))

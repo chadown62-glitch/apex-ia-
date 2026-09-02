@@ -1,0 +1,91 @@
+/* Agents V1 — Mes Agents (apex.agent_registry) : statut, liste, détail. */
+
+.configured-agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.configured-agent-status--idle { color: var(--text); }
+.configured-agent-status--queued { color: #b8860b; }
+.configured-agent-status--running { color: #2563eb; }
+.configured-agent-status--waiting { color: #b8860b; }
+.configured-agent-status--completed { color: #16a34a; }
+.configured-agent-status--failed { color: #dc2626; }
+.configured-agent-status--disabled { color: var(--text-faint); }
+
+.configured-agent-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.configured-agent-list__item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.configured-agent-list__header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.configured-agent-list__header:hover {
+  background: var(--surface-2);
+}
+
+.configured-agent-detail {
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.configured-agent-detail__section h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+}
+
+.agent-registry-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.agent-registry-chips__label {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.agent-registry-chips > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

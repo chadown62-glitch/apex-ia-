@@ -252,6 +252,15 @@ class MissionRow(Base):
     priority: Mapped[str] = mapped_column(String(16), nullable=False)
     constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
     assigned_agent: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    #: Passe « Agents V1 » — référence un `ConfiguredAgentRow.id` (l'entité
+    #: `Agent` réutilisable), délibérément DISTINCT d'`assigned_agent`
+    #: ci-dessus (qui référence un `AgentRow.id`, un clone OS-level réel,
+    #: validé par `MissionService.create` contre `compatible_agent_types`).
+    #: Conflater les deux aurait cassé cette validation existante — les deux
+    #: champs coexistent, chacun pour son propre chemin d'exécution
+    #: (`launch_mission` via sandbox pour `assigned_agent`, `POST /missions/
+    #: {id}/run` via `AgentRegistryService` pour `agent_id`).
+    agent_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     state: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     result: Mapped[str | None] = mapped_column(Text, nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -279,6 +288,7 @@ class MissionRow(Base):
             "priority": self.priority,
             "constraints": self.constraints,
             "assigned_agent": self.assigned_agent,
+            "agent_id": self.agent_id,
             "state": self.state,
             "result": self.result,
             "error": self.error,
@@ -638,4 +648,264 @@ class GenomeVersionRow(Base):
             "decided_by": self.decided_by,
             "decided_at": self.decided_at.isoformat() if self.decided_at else None,
             "decision_reason": self.decision_reason,
+        }
+
+
+class ProjectRow(Base):
+    """Persiste `apex.projects.model.Project` (passe « Première interface
+    utilisable ») — structure MINIMALE : un projet n'est qu'un regroupement
+    nommé de conversations, sans jalons/kanban/timeline (délibérément hors
+    scope, voir `ProjectManagerPage`, resté `ui-scaffold` pour ces aspects)."""
+
+    __tablename__ = "projects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class ConversationRow(Base):
+    """Persiste `apex.conversations.model.Conversation` — un fil de Chat,
+    distinct d'une `MissionRow` : un tour de conversation n'est jamais
+    soumis à la gouvernance REVIEW (ADR-0011), voir `apex.conversations.
+    service.ConversationService.send_message`. Pas de `ForeignKey` vers
+    `projects.id` : même simplification documentée que `MissionRow.
+    assigned_agent` — l'existence est vérifiée au niveau service, pas ici."""
+
+    __tablename__ = "conversations"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "project_id": self.project_id,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+class MessageRow(Base):
+    """Un tour de `ConversationRow`. `model_id`/`provider_id` restent `NULL`
+    pour un message `role="user"` (jamais générés) ; pour `role="assistant"`,
+    `NULL` signifie « aucun candidat n'a pu être résolu avant même une
+    tentative de génération » (`status="error"`, voir `ConversationService.
+    send_message`) — distinct d'un `provider_id` renseigné dont l'appel a
+    échoué (`status="error"` également, mais `content` porte alors le détail
+    de l'échec, jamais un texte inventé à sa place)."""
+
+    __tablename__ = "messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    model_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    provider_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "conversation_id": self.conversation_id,
+            "role": self.role,
+            "content": self.content,
+            "model_id": self.model_id,
+            "provider_id": self.provider_id,
+            "status": self.status,
+            "error": self.error,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class AgentTemplateRow(Base):
+    """Persiste `apex.agent_templates.model.AgentTemplate` — une DÉFINITION
+    d'agent (nom, rôle, modèle préféré, outils déclarés), distincte d'un
+    `AgentRow` (une instance de clone RÉELLEMENT en cours d'exécution,
+    `AgentRuntime`). Créer/lister/supprimer un template est réel (cette
+    table) ; le FAIRE TOURNER (spawn réel depuis un template) reste
+    `PLANNED` — `apex.interfaces.registry` le documente explicitement,
+    jamais présenté comme exécutable ici. `tools` reste une liste déclarée,
+    non appliquée : `ToolProvider`/`ToolRegistry` sont eux-mêmes `PLANNED`
+    (voir le registre), aucune vérification d'usage réel n'existe encore."""
+
+    __tablename__ = "agent_templates"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    role: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    model_role: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tools: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "role": self.role,
+            "model_role": self.model_role,
+            "tools": list(self.tools or []),
+            "description": self.description,
+            "status": self.status,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class ConfiguredAgentRow(Base):
+    """Persiste `apex.agent_registry.model.Agent` — passe « Agents V1 ».
+    Nommée `configured_agents` (jamais `agents`, déjà pris par `AgentRow` —
+    l'instance de clone OS-level réelle, `AgentRuntime`) : cette table décrit
+    une CONFIGURATION réutilisable (modèle préféré, outils/permissions
+    déclarés, instructions), jamais un processus en cours d'exécution.
+    `required_capabilities`/`tools`/`permissions` sont des listes JSON de
+    valeurs de vocabulaires FERMÉS (`apex.routing.model.Capability`, `apex.
+    agent_registry.model.ToolName`/`Permission`), validées au niveau service,
+    pas ici — même discipline que `MissionRow.specialty`."""
+
+    __tablename__ = "configured_agents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    specialty: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    model_role: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    required_capabilities: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    tools: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    permissions: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Désactivation explicite — un agent `enabled=False` n'est jamais
+    #: exécutable, vérifié par `AgentRegistryService.run_execution` avant
+    #: toute tentative (jamais une simple convention UI).
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    template_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "role": self.role,
+            "specialty": self.specialty,
+            "model_role": self.model_role,
+            "required_capabilities": list(self.required_capabilities or []),
+            "tools": list(self.tools or []),
+            "permissions": list(self.permissions or []),
+            "instructions": self.instructions,
+            "enabled": self.enabled,
+            "project_id": self.project_id,
+            "template_id": self.template_id,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
+class AgentExecutionRow(Base):
+    """Persiste `apex.agent_registry.model.AgentExecution` — INSERT + un
+    seul `UPDATE` ciblé (`AgentExecutionRepository.complete`, champs de
+    complétion uniquement), même discipline que `SkillRow.decide`. `model_id`/
+    `provider_id`/`result` restent `NULL` tant qu'aucun candidat n'a
+    réellement été servi — jamais une valeur devinée. `error` porte
+    TOUJOURS le détail complet des tentatives (`generate_with_fallback`),
+    jamais seulement la dernière."""
+
+    __tablename__ = "agent_executions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    agent_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    mission_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    model_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    provider_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    fallback_reason: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "agent_id": self.agent_id,
+            "mission_id": self.mission_id,
+            "status": self.status,
+            "model_id": self.model_id,
+            "provider_id": self.provider_id,
+            "result": self.result,
+            "error": self.error,
+            "fallback_reason": self.fallback_reason,
+            "started_at": self.started_at.isoformat(),
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+        }
+
+
+class AgentTeamRow(Base):
+    """Persiste `apex.agent_registry.model.AgentTeam` — structure V1
+    délibérément minimale (directive « Agents V1 » §13) : nom, description,
+    membres. Aucune communication autonome, aucun ordre d'exécution imposé
+    ici — un futur workflow multi-agent réel étendrait cette table plutôt
+    que d'en créer une seconde."""
+
+    __tablename__ = "agent_teams"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    agent_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "agent_ids": list(self.agent_ids or []),
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
         }

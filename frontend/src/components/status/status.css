@@ -67,6 +67,26 @@
   background: var(--status-degraded);
 }
 
+.apex-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-strong);
+}
+
+.apex-status--ready { color: var(--status-real); }
+.apex-status--using_tool { color: var(--status-simulated); }
+.apex-status--waiting { color: var(--status-simulated); }
+.apex-status--error { color: var(--status-fail); }
+.apex-status--analyzing { color: var(--accent); }
+.apex-status--learning { color: var(--status-planned); }
+
 .measurement-value {
   display: inline-flex;
   align-items: center;

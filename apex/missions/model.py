@@ -59,6 +59,10 @@ class Mission:
     #: création (voir apex.missions.dependencies pour l'invariant d'absence
     #: de cycle que cette immuabilité garantit).
     depends_on: tuple[str, ...] = ()
+    #: Passe « Agents V1 » — référence un `apex.agent_registry.model.Agent`,
+    #: délibérément DISTINCT d'`assigned_agent` ci-dessus (un clone OS-level
+    #: réel). Voir `apex.db.models.MissionRow.agent_id` pour le motif complet.
+    agent_id: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     started_at: datetime | None = None
     completed_at: datetime | None = None
@@ -75,6 +79,7 @@ class Mission:
         priority: MissionPriority = MissionPriority.NORMAL,
         constraints: str | None = None,
         assigned_agent: str | None = None,
+        agent_id: str | None = None,
         depends_on: tuple[str, ...] = (),
     ) -> Mission:
         return cls(
@@ -86,6 +91,7 @@ class Mission:
             priority=priority,
             constraints=constraints,
             assigned_agent=assigned_agent,
+            agent_id=agent_id,
             state=MissionState.DRAFT,
             result=None,
             error=None,
@@ -105,6 +111,7 @@ class Mission:
             priority=MissionPriority(row.priority),
             constraints=row.constraints,
             assigned_agent=row.assigned_agent,
+            agent_id=row.agent_id,
             state=MissionState(row.state),
             result=row.result,
             error=row.error,

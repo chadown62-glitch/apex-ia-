@@ -117,9 +117,13 @@ models:
     fast:
       selection: static_prior
       resident: true
-      notes: Routage, classification, extraction, parsing d'erreurs. Résident.
+      notes: >
+        Routage, classification, extraction, parsing d'erreurs. Résident.
+        qwen2.5-coder:7b-instruct (pas qwen3-coder:8b — tag inexistant dans le
+        registre Ollama réel, corrigé après vérification empirique sur une
+        RTX 4060 Ti 8 Go : téléchargé et testé, génère réellement).
       candidates:
-        - {family: qwen3-coder, version: 8b, quantization: q4_k_m, capability_class: fast}
+        - {family: qwen2.5-coder, version: 7b-instruct, quantization: q4_k_m, capability_class: fast}
 
     embed:
       selection: static_prior
@@ -140,7 +144,7 @@ models:
     - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
        served_model: "gpt-oss:20b-q4_K_M", max_context: 32768, vram_gb: 13.0}
     - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
-       served_model: "qwen3-coder:8b-q4_K_M", max_context: 32768, vram_gb: 5.0}
+       served_model: "qwen2.5-coder:7b-instruct", max_context: 32768, vram_gb: 5.0}
     - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
        served_model: "bge-m3:latest", max_context: 8192, vram_gb: 0.6}
 

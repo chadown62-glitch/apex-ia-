@@ -31,21 +31,36 @@ contrôle d'egress réseau sandboxé). Les deux chemins partagent
 ne se composent jamais entre eux : une Mission suit soit `launch_mission`
 (clone + sandbox), soit `generate_mission_response` (modèle), jamais un
 mélange implicite des deux dans la même fonction.
+
+**Troisième chemin — `generate_mission_response_via_router`** : comme
+`generate_mission_response`, mais le `ModelEndpoint` n'est plus fourni par
+l'appelant — `apex.routing.select_model` le choisit parmi des
+`ModelCandidate` déjà réels (`apex.models.registry.resolve_candidates`),
+puis `apex.routing.generate_with_fallback` essaie les candidats classés
+dans l'ordre jusqu'au premier succès. `generate_mission_response` n'est PAS
+modifiée par ce troisième chemin — un appelant qui fournit déjà son
+`ModelEndpoint` continue de l'utiliser sans aucun changement de
+comportement.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from apex.agents.model import Clone, CloneState
 from apex.agents.runtime import AgentRuntime
-from apex.config.schema import ModelEndpoint
+from apex.config.schema import ExternalPolicy, ModelEndpoint
 from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
 from apex.missions.model import Mission
 from apex.missions.service import MissionService
 from apex.models.model import GenerationRequest
 from apex.models.provider import ModelProvider, get_default_provider as get_default_model_provider
+from apex.models.registry import ModelCandidate
 from apex.policy.model import Subject
+from apex.routing.generation import generate_with_fallback
+from apex.routing.model import RoutingRequest
+from apex.routing.router import select_model
 from apex.sandbox import (
     CancellationToken,
     ExecutionStatus,
@@ -201,3 +216,65 @@ def generate_mission_response(
         return mission_service.mark_failed(mission_id, error=str(exc))
 
     return mission_service.mark_review(mission_id, result=result.text)
+
+
+def generate_mission_response_via_router(
+    mission_id: str,
+    *,
+    mission_service: MissionService,
+    candidates: Sequence[ModelCandidate],
+    routing_request: RoutingRequest | None = None,
+    external_policy: ExternalPolicy | None = None,
+    prompt: str | None = None,
+    max_tokens: int | None = None,
+    temperature: float | None = None,
+    timeout_s: float = 60.0,
+    requested_by: Subject = Subject.CORE,
+    provider_factory: Callable[[ModelCandidate], ModelProvider] | None = None,
+) -> Mission:
+    """TROISIÈME chemin d'exécution d'une Mission — comme
+    `generate_mission_response`, mais le `ModelEndpoint` est choisi par
+    `apex.routing.select_model` parmi `candidates` (typiquement
+    `apex.models.registry.resolve_candidates(config)`), puis
+    `apex.routing.generate_with_fallback` essaie les candidats classés dans
+    l'ordre jusqu'au premier succès.
+
+    Même gouvernance que `generate_mission_response` (HUMAIN par défaut via
+    `mark_running`/`Action.LAUNCH_MISSION`, HORS sandbox, aucune promotion).
+    `generate_mission_response` reste intacte et continue de fonctionner
+    exactement comme avant — ce chemin est additif, jamais un remplacement.
+
+    Un échec total (aucun candidat sélectionné, ou tous les candidats
+    essayés ont échoué) ne masque JAMAIS le détail des tentatives
+    individuelles : `Mission.error` les porte toutes, jamais seulement la
+    dernière.
+    """
+    mission = mission_service.get(mission_id)
+    if mission is None:
+        raise LookupError(f"mission « {mission_id} » introuvable")
+
+    mission = mission_service.mark_running(mission_id, requested_by=requested_by)
+
+    decision = select_model(candidates, routing_request or RoutingRequest(), external_policy=external_policy)
+    if decision.selected is None:
+        return mission_service.mark_failed(
+            mission_id, error=f"aucun modèle disponible pour cette Mission : {decision.reason}",
+        )
+
+    ranked = [sc.candidate for sc in decision.ranked_candidates if sc.score > 0.0]
+    resolved_prompt = prompt if prompt is not None else mission.objective
+
+    fallback_kwargs: dict[str, Any] = dict(
+        prompt=resolved_prompt, max_tokens=max_tokens, temperature=temperature, timeout_s=timeout_s,
+    )
+    if provider_factory is not None:
+        fallback_kwargs["provider_factory"] = provider_factory
+    fallback_result = generate_with_fallback(ranked, **fallback_kwargs)
+
+    if fallback_result.result is None:
+        detail = "; ".join(f"{a.candidate.ref.id} : {a.error}" for a in fallback_result.attempts)
+        return mission_service.mark_failed(
+            mission_id, error=f"tous les candidats ont échoué ({len(fallback_result.attempts)}) — {detail}",
+        )
+
+    return mission_service.mark_review(mission_id, result=fallback_result.result.text)

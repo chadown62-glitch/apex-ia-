@@ -60,6 +60,7 @@ class MissionService:
         priority: MissionPriority = MissionPriority.NORMAL,
         constraints: str | None = None,
         assigned_agent: str | None = None,
+        agent_id: str | None = None,
         depends_on: tuple[str, ...] = (),
     ) -> Mission:
         self.policy.authorize(created_by, Action.CREATE_MISSION)
@@ -88,6 +89,13 @@ class MissionService:
                     f"(types compatibles : {sorted(s.value for s in spec.compatible_agent_types) or 'aucun'})"
                 )
 
+        if agent_id is not None:
+            configured = self._get_configured_agent_row(agent_id)
+            if configured is None:
+                raise ValueError(f"agent « {agent_id} » introuvable")
+            if not configured.enabled:
+                raise ValueError(f"agent « {agent_id} » désactivé — ne peut être assigné à une mission")
+
         depends_on = tuple(depends_on)
         if depends_on:
             # Vérification TRANSACTIONNELLE (étape 8) : un seul aller-retour
@@ -105,7 +113,7 @@ class MissionService:
         mission = Mission.new(
             title=title, description=description, specialty=specialty, objective=objective,
             created_by=created_by.value, priority=priority, constraints=constraints,
-            assigned_agent=assigned_agent, depends_on=depends_on,
+            assigned_agent=assigned_agent, agent_id=agent_id, depends_on=depends_on,
         )
         self._repo.create(mission)
         self._record_event(mission, "mission.created", {})
@@ -275,6 +283,16 @@ class MissionService:
 
         with session_scope(self._session_factory) as session:
             return AgentRepository(session).get(clone_id)
+
+    def _get_configured_agent_row(self, agent_id: str) -> Any:
+        """Distinct d'`_get_agent_row` ci-dessus (un clone OS-level réel) —
+        vérifie l'existence d'un `apex.agent_registry.model.Agent` (passe
+        « Agents V1 »), jamais le même vocabulaire."""
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ConfiguredAgentRepository
+
+        with session_scope(self._session_factory) as session:
+            return ConfiguredAgentRepository(session).get(agent_id)
 
     def _record_event(self, mission: Mission, kind: str, details: dict[str, Any]) -> None:
         from apex.db.engine import session_scope

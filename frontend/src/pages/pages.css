@@ -122,3 +122,21 @@
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+/* Modificateur pour un bouton dont l'action est RÉELLEMENT câblée (pas
+   seulement la maquette) — même sémantique partout (Mission Center, Chat,
+   Agents, Projects) : couleur d'accent, curseur pointeur, jamais le style
+   "désactivé" par défaut de `.action-button` ci-dessus. */
+.action-button--live {
+  cursor: pointer;
+  opacity: 1;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.action-button--live:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+}

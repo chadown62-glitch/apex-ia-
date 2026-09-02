@@ -1,0 +1,29 @@
+.models-page__checked-at {
+  margin: -8px 0 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.models-page__model-name {
+  font-weight: 550;
+}
+
+.models-page__model-id {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.models-page__caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.models-page__cap-chip {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}

@@ -41,9 +41,19 @@ class ModelProvider(ABC):
 
 def get_default_provider(endpoint: ModelEndpoint) -> ModelProvider:
     """Seul point de construction utilisé par de futurs consommateurs —
-    c'est ICI, et seulement ici, qu'un backend différent (vLLM, un
-    fournisseur distant) serait choisi une fois réellement implémenté.
-    Aujourd'hui : `OllamaProvider`, le seul backend réel."""
+    c'est ICI, et seulement ici, qu'un backend différent est choisi, selon
+    `endpoint.runtime` (déjà le champ prévu pour ça, `apex.config.schema`).
+    `"ollama"` -> `OllamaProvider` (réel, Phase 6). Tout le reste
+    (`"openai_compatible"`, mais aussi les alias usuels des fournisseurs
+    compatibles) -> `OpenAICompatibleProvider` (réel, un seul adapter pour
+    OpenAI/OpenRouter/Together/Groq/Fireworks/DeepSeek/Mistral/xAI/Qwen en
+    mode compatible — même contrat HTTP, jamais une classe par
+    fournisseur). Aucun autre backend n'est réel aujourd'hui — `"vllm"`
+    resterait `OpenAICompatibleProvider` (l'API vLLM native est déjà
+    compatible OpenAI) tant qu'un besoin réel n'exige pas davantage."""
     from apex.models.ollama import OllamaProvider
+    from apex.models.openai_compatible import OpenAICompatibleProvider
 
-    return OllamaProvider(endpoint)
+    if endpoint.runtime == "ollama":
+        return OllamaProvider(endpoint)
+    return OpenAICompatibleProvider(endpoint)

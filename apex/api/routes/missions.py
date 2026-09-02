@@ -40,7 +40,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from apex.api.schemas import DataEnvelope, MissionCreateIn, MissionOut, MissionRejectIn
+from apex.api.schemas import (
+    AgentExecutionOut,
+    DataEnvelope,
+    MissionCreateIn,
+    MissionOut,
+    MissionRejectIn,
+    RunAgentExecutionIn,
+)
 
 router = APIRouter(prefix="/missions", tags=["missions"])
 
@@ -55,6 +62,7 @@ def _to_mission_out(mission: object) -> MissionOut:
         priority=mission.priority.value,  # type: ignore[attr-defined]
         constraints=mission.constraints,  # type: ignore[attr-defined]
         assigned_agent=mission.assigned_agent,  # type: ignore[attr-defined]
+        agent_id=mission.agent_id,  # type: ignore[attr-defined]
         state=mission.state.value,  # type: ignore[attr-defined]
         result=mission.result,  # type: ignore[attr-defined]
         error=mission.error,  # type: ignore[attr-defined]
@@ -105,7 +113,7 @@ def create_mission(payload: MissionCreateIn) -> DataEnvelope[MissionOut]:
             title=payload.title, description=payload.description, specialty=payload.specialty,
             objective=payload.objective, created_by=Subject.HUMAN,
             priority=MissionPriority(payload.priority), constraints=payload.constraints,
-            assigned_agent=payload.assigned_agent,
+            assigned_agent=payload.assigned_agent, agent_id=payload.agent_id,
         )
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
@@ -220,3 +228,55 @@ def reject_mission(mission_id: str, payload: MissionRejectIn | None = None) -> D
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=_to_mission_out(mission))
+
+
+@router.post("/{mission_id}/run", response_model=DataEnvelope[AgentExecutionOut])
+def run_mission_via_agent(mission_id: str, payload: RunAgentExecutionIn | None = None) -> DataEnvelope[AgentExecutionOut]:
+    """TROISIÈME point d'entrée d'exécution de Mission (passe « Agents V1 »)
+    — DISTINCT de `/launch` (sandbox réelle, `apex.missions.execution.
+    launch_mission`, spécialité « research » seule) : `/run` pilote
+    `AgentRegistryService.run_execution` pour la `Mission.agent_id`
+    (l'entité `Agent`, jamais `assigned_agent`/un clone). Réutilise
+    `apex.routing.select_model`/`generate_with_fallback` et le cycle de vie
+    RÉEL de `MissionService` — jamais un second Model Router ni un second
+    moteur de Mission."""
+    try:
+        from apex.agent_registry.service import AgentRegistryService
+        from apex.api.dependencies import get_session_factory
+        from apex.missions.service import MissionService
+        from apex.policy.model import Subject
+
+        session_factory = get_session_factory()
+        mission_service = MissionService(session_factory)
+        mission = mission_service.get(mission_id)
+        if mission is None:
+            return DataEnvelope(status="unknown", data=None, detail=f"mission « {mission_id} » introuvable")
+        if mission.agent_id is None:
+            return DataEnvelope(
+                status="unknown", data=None,
+                detail=f"mission « {mission_id} » n'a aucun agent_id assigné — rien à exécuter via un Agent",
+            )
+        prompt = payload.prompt if payload is not None else None
+        execution = AgentRegistryService(session_factory).run_execution(
+            mission.agent_id, mission_id, mission_service=mission_service,
+            prompt=prompt, requested_by=Subject.CORE,
+        )
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    from apex.api.routes.agent_registry import _to_execution_out
+
+    return DataEnvelope(status="real", data=_to_execution_out(execution))
+
+
+@router.get("/{mission_id}/executions", response_model=DataEnvelope[list[AgentExecutionOut]])
+def list_mission_executions(mission_id: str) -> DataEnvelope[list[AgentExecutionOut]]:
+    try:
+        from apex.agent_registry.service import AgentRegistryService
+        from apex.api.dependencies import get_session_factory
+
+        executions = AgentRegistryService(get_session_factory()).list_executions_for_mission(mission_id)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    from apex.api.routes.agent_registry import _to_execution_out
+
+    return DataEnvelope(status="real", data=[_to_execution_out(e) for e in executions])

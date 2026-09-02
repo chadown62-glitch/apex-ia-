@@ -1,14 +1,375 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { useAgents } from "../api/hooks";
-import type { Agent, CloneState, CloneType } from "../api/types";
+import {
+  useAgentExecutions,
+  useAgents,
+  useAgentTemplates,
+  useConfiguredAgents,
+  useCreateAgentTemplate,
+  useCreateConfiguredAgent,
+  useDeleteAgentTemplate,
+  useDeleteConfiguredAgent,
+} from "../api/hooks";
+import type {
+  Agent,
+  AgentRole,
+  CloneState,
+  CloneType,
+  ConfiguredAgentRole,
+  ConfiguredAgentStatus,
+  Permission,
+  ToolName,
+} from "../api/types";
 import { AgentCard, AgentStatePill } from "../components/agents/AgentCard";
 import { ErrorState, LoadingState } from "../components/common/EmptyState";
+import { Panel } from "../components/common/Panel";
 import { MeasurementValue } from "../components/status/MeasurementValue";
+import { StatusBadge } from "../components/status/StatusBadge";
 import { specialtyForAgentType, SPECIALTY_DEFINITIONS } from "../specialties/data";
 import "./pages.css";
 import "./agent-center.css";
+import "./mission-center.css";
+import "./agent-registry.css";
+
+const AGENT_ROLES: AgentRole[] = ["coder", "researcher", "tester", "analyst", "designer", "security", "evaluator"];
+
+const CONFIGURED_AGENT_ROLES: ConfiguredAgentRole[] = [
+  "coder", "researcher", "tester", "analyst", "designer", "security", "evaluator", "project_manager", "generalist",
+];
+
+const ALL_TOOLS: ToolName[] = [
+  "files", "terminal", "tests", "git-read", "sandbox", "memory", "static-analysis", "web-research",
+];
+
+const ALL_PERMISSIONS: Permission[] = [
+  "read_only", "workspace_write", "execute", "network", "git_read", "git_write",
+];
+
+const STATUS_LABEL: Record<ConfiguredAgentStatus, string> = {
+  idle: "IDLE", queued: "QUEUED", running: "RUNNING", waiting: "WAITING",
+  completed: "COMPLETED", failed: "FAILED", disabled: "DISABLED",
+};
+
+const STATUS_DOT: Record<ConfiguredAgentStatus, string> = {
+  idle: "🟢", queued: "🟡", running: "🔵", waiting: "🟡",
+  completed: "🟢", failed: "🔴", disabled: "⚪",
+};
+
+function ConfiguredAgentStatusPill({ status }: { status: ConfiguredAgentStatus }) {
+  return (
+    <span className={`configured-agent-status configured-agent-status--${status}`}>
+      <span aria-hidden="true">{STATUS_DOT[status]}</span>
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
+/**
+ * `Agent` réel (`apex.agent_registry`) — une configuration réutilisable,
+ * réellement exécutable via le Model Router, assignable à des Missions.
+ * DISTINCT des Templates (blueprints, jamais exécutables, panneau
+ * ci-dessous) et des Clones (`AgentRuntime`, instances OS-level, liste plus
+ * bas). Aucun outil/permission n'est jamais accordé par défaut.
+ */
+function ConfiguredAgentsPanel() {
+  const agents = useConfiguredAgents();
+  const createAgent = useCreateConfiguredAgent();
+  const deleteAgent = useDeleteConfiguredAgent();
+
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<ConfiguredAgentRole>("coder");
+  const [description, setDescription] = useState("");
+  const [modelRole, setModelRole] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [selectedTools, setSelectedTools] = useState<Set<ToolName>>(new Set());
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<Permission>>(new Set());
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const list = agents.data?.status === "real" ? agents.data.data ?? [] : [];
+
+  function toggle<T>(set: Set<T>, value: T, setter: (s: Set<T>) => void) {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value);
+    else next.add(value);
+    setter(next);
+  }
+
+  async function handleCreate() {
+    setCreateError(null);
+    const envelope = await createAgent.mutateAsync({
+      name, role, description, model_role: modelRole || null,
+      tools: Array.from(selectedTools), permissions: Array.from(selectedPermissions),
+      instructions: instructions || null,
+    });
+    if (envelope.status === "real") {
+      setName("");
+      setDescription("");
+      setInstructions("");
+      setSelectedTools(new Set());
+      setSelectedPermissions(new Set());
+    } else {
+      setCreateError(envelope.detail ?? "Création refusée par le backend.");
+    }
+  }
+
+  return (
+    <Panel title="Mes Agents (réels, exécutables via le Model Router)">
+      <div className="two-col">
+        <div className="mission-form">
+          <label className="mission-form__field">
+            <span>Nom</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. Mon développeur Python" />
+          </label>
+          <div className="mission-form__row">
+            <label className="mission-form__field">
+              <span>Rôle</span>
+              <select value={role} onChange={(e) => setRole(e.target.value as ConfiguredAgentRole)}>
+                {CONFIGURED_AGENT_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mission-form__field">
+              <span>Modèle préféré (optionnel)</span>
+              <input value={modelRole} onChange={(e) => setModelRole(e.target.value)} placeholder="ex. fast, coder_main" />
+            </label>
+          </div>
+          <label className="mission-form__field">
+            <span>Description</span>
+            <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+          <label className="mission-form__field">
+            <span>Instructions (comportement de mission)</span>
+            <textarea rows={2} value={instructions} onChange={(e) => setInstructions(e.target.value)} placeholder="ex. Tu es spécialisé dans le développement Python…" />
+          </label>
+
+          <div className="agent-registry-chips">
+            <span className="agent-registry-chips__label">Outils autorisés (aucun par défaut)</span>
+            <div>
+              {ALL_TOOLS.map((tool) => (
+                <button
+                  key={tool}
+                  type="button"
+                  className={`chip ${selectedTools.has(tool) ? "chip--active" : ""}`}
+                  onClick={() => toggle(selectedTools, tool, setSelectedTools)}
+                >
+                  {tool}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="agent-registry-chips">
+            <span className="agent-registry-chips__label">Permissions (aucune par défaut)</span>
+            <div>
+              {ALL_PERMISSIONS.map((perm) => (
+                <button
+                  key={perm}
+                  type="button"
+                  className={`chip ${selectedPermissions.has(perm) ? "chip--active" : ""}`}
+                  onClick={() => toggle(selectedPermissions, perm, setSelectedPermissions)}
+                >
+                  {perm}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button
+            className="action-button action-button--live"
+            disabled={!name.trim() || createAgent.isPending}
+            onClick={handleCreate}
+          >
+            {createAgent.isPending ? "Création…" : "Créer l'agent"}
+          </button>
+          {createError && <ErrorState detail={createError} />}
+        </div>
+
+        <div>
+          {agents.isLoading ? (
+            <LoadingState />
+          ) : agents.data?.status !== "real" ? (
+            <ErrorState detail={agents.data?.detail} />
+          ) : list.length === 0 ? (
+            <ErrorState detail="Aucun agent créé pour l'instant." />
+          ) : (
+            <ul className="configured-agent-list">
+              {list.map((a) => (
+                <li key={a.id} className="configured-agent-list__item">
+                  <button className="configured-agent-list__header" onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}>
+                    <div>
+                      <strong>{a.name}</strong>
+                      <span className="mono" style={{ color: "var(--text-faint)" }}> · {a.role}</span>
+                      {a.model_role && <span className="mono" style={{ color: "var(--text-faint)" }}> · {a.model_role}</span>}
+                    </div>
+                    <ConfiguredAgentStatusPill status={a.status} />
+                  </button>
+                  {expandedId === a.id && <ConfiguredAgentDetail agentId={a.id} onDelete={() => deleteAgent.mutate(a.id)} />}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function ConfiguredAgentDetail({ agentId, onDelete }: { agentId: string; onDelete: () => void }) {
+  const executions = useAgentExecutions(agentId);
+  const list = executions.data?.status === "real" ? executions.data.data ?? [] : [];
+
+  return (
+    <div className="configured-agent-detail">
+      <div className="configured-agent-detail__section">
+        <h4>Exécutions récentes</h4>
+        {executions.isLoading ? (
+          <LoadingState />
+        ) : list.length === 0 ? (
+          <p style={{ fontSize: 12, color: "var(--text-faint)" }}>Aucune exécution pour l'instant.</p>
+        ) : (
+          <table className="kv-table">
+            <thead>
+              <tr>
+                <th>Mission</th>
+                <th>Statut</th>
+                <th>Modèle</th>
+                <th>Raison</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((e) => (
+                <tr key={e.id}>
+                  <td className="mono">{e.mission_id.slice(0, 8)}</td>
+                  <td>{e.status}</td>
+                  <td className="mono">{e.model_id ?? "—"}</td>
+                  <td>{e.fallback_reason ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <button className="action-button action-button--live" onClick={onDelete}>
+        Supprimer l'agent
+      </button>
+    </div>
+  );
+}
+
+/**
+ * DÉFINITIONS d'agent (`apex.agent_templates`) — distinctes des instances
+ * réelles listées plus bas (`AgentRuntime`, `/agents`). Créer/lister/
+ * supprimer un template est réel ; chaque carte porte explicitement
+ * `DEFINED` — jamais présentée comme un agent en cours d'exécution.
+ */
+function AgentTemplatesPanel() {
+  const templates = useAgentTemplates();
+  const createTemplate = useCreateAgentTemplate();
+  const deleteTemplate = useDeleteAgentTemplate();
+
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<AgentRole>("coder");
+  const [description, setDescription] = useState("");
+  const [modelRole, setModelRole] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const list = templates.data?.status === "real" ? templates.data.data ?? [] : [];
+
+  async function handleCreate() {
+    setCreateError(null);
+    const envelope = await createTemplate.mutateAsync({
+      name, role, description, model_role: modelRole || null,
+    });
+    if (envelope.status === "real") {
+      setName("");
+      setDescription("");
+    } else {
+      setCreateError(envelope.detail ?? "Création refusée par le backend.");
+    }
+  }
+
+  return (
+    <Panel title="Templates d'agent (définitions)">
+      <div className="two-col">
+        <div className="mission-form">
+          <label className="mission-form__field">
+            <span>Nom</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex. Codeur Python" />
+          </label>
+          <div className="mission-form__row">
+            <label className="mission-form__field">
+              <span>Rôle</span>
+              <select value={role} onChange={(e) => setRole(e.target.value as AgentRole)}>
+                {AGENT_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {r.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="mission-form__field">
+              <span>Rôle modèle (optionnel)</span>
+              <input value={modelRole} onChange={(e) => setModelRole(e.target.value)} placeholder="ex. fast, coder_main" />
+            </label>
+          </div>
+          <label className="mission-form__field">
+            <span>Description</span>
+            <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} />
+          </label>
+          <button
+            className="action-button action-button--live"
+            disabled={!name.trim() || createTemplate.isPending}
+            onClick={handleCreate}
+          >
+            {createTemplate.isPending ? "Création…" : "Créer le template"}
+          </button>
+          {createError && <ErrorState detail={createError} />}
+        </div>
+
+        <div>
+          {templates.isLoading ? (
+            <LoadingState />
+          ) : templates.data?.status !== "real" ? (
+            <ErrorState detail={templates.data?.detail} />
+          ) : list.length === 0 ? (
+            <ErrorState detail="Aucun template créé pour l'instant." />
+          ) : (
+            <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+              {list.map((t) => (
+                <li
+                  key={t.id}
+                  style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)",
+                  }}
+                >
+                  <div>
+                    <strong>{t.name}</strong> <span className="mono" style={{ color: "var(--text-faint)" }}>· {t.role}</span>
+                    <div style={{ marginTop: 4 }}>
+                      <StatusBadge status="planned" title="Définition seule — spawn réel non câblé" />
+                    </div>
+                  </div>
+                  <button
+                    className="action-button action-button--live"
+                    onClick={() => deleteTemplate.mutate(t.id)}
+                    disabled={deleteTemplate.isPending}
+                  >
+                    Supprimer
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </Panel>
+  );
+}
 
 const ALL_STATES: CloneState[] = [
   "spawning", "ready", "working", "reporting", "terminating", "terminated", "crashed", "recovering", "failed",
@@ -100,6 +461,10 @@ export function AgentsPage() {
           <p className="page__subtitle">AgentRuntime — registre : STUB (cycle de vie réel, isolation OS non garantie)</p>
         </div>
       </div>
+
+      <ConfiguredAgentsPanel />
+
+      <AgentTemplatesPanel />
 
       <div className="agent-center-toolbar">
         <input
