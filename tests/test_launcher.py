@@ -6,6 +6,9 @@ Commit 2 : démarrage de l'infrastructure existante via
 `docker compose up -d --wait`.
 Commit 3 : exécution de `apex doctor` puis `apex gate` (dans cet ordre),
 relais fidèle de leurs codes de sortie — jamais réinterprétés.
+Commit 4 : gestion robuste de SIGINT (trap exécuté une seule fois) et
+sous-commande `stop`, explicite et séparée de Ctrl+C, qui n'arrête que
+l'infrastructure que ce launcher a lui-même fait démarrer.
 
 Chaque scénario construit un projet factice isolé (`tempfile`) contenant
 uniquement `scripts/apex-launch.sh` — jamais le vrai `.env`/`.venv` du
@@ -30,7 +33,8 @@ LAUNCHER = Path(__file__).resolve().parent.parent / "scripts" / "apex-launch.sh"
 # que les tests décident précisément quel interpréteur est "vu" par le script.
 _COREUTILS = (
     "dirname", "basename", "stat", "cat", "grep", "mktemp", "env", "bash", "sh", "readlink",
-    "sleep",  # requis par le faux `docker` du test SIGINT — jamais par le launcher lui-même
+    "mkdir", "mv", "rm", "date",  # requis par le launcher pour l'état d'ownership compose (commit 4)
+    "sleep", "touch",  # requis par le faux `docker` (test SIGINT, marqueur d'état) — jamais par le launcher
 )
 
 
@@ -55,6 +59,8 @@ class LauncherFixture:
                     link.symlink_to(real)
 
         self.docker_calls_log = self.root / "docker_calls.log"
+        self.docker_running_flag = self.root / "_docker_running.flag"
+        self.compose_state_file = self.root / ".apex" / "launcher-compose-state.json"
         self.python_calls_log = self.root / "python_calls.log"
 
         if with_python3:
@@ -120,12 +126,21 @@ class LauncherFixture:
         compose_version_ok: bool = True,
         compose_up_exit: int = 0,
         compose_up_output: str = "fake: containers started",
+        compose_down_exit: int = 0,
+        initially_running: bool = False,
     ) -> Path:
-        """Faux `docker` déterministe : répond à `compose version` et
-        `compose up -d --wait` sans dépendre d'un vrai démon Docker.
-        Journalise chaque invocation (args + cwd) dans `self.docker_calls_log`
-        pour vérifier ce que le launcher a réellement exécuté."""
+        """Faux `docker` déterministe, avec un état MUTABLE de « conteneurs
+        en cours » (fichier marqueur `self.docker_running_flag`) pour
+        simuler `compose ps --status running`, `compose up -d --wait` et
+        `compose down` de façon cohérente entre plusieurs invocations
+        successives du launcher (nécessaire pour tester l'ownership et
+        `stop`) — sans dépendre d'un vrai démon Docker. Journalise chaque
+        invocation (args + cwd) dans `self.docker_calls_log`."""
         docker_path = self.bin_dir / "docker"
+        if initially_running:
+            self.docker_running_flag.write_text("1")
+        elif self.docker_running_flag.exists():
+            self.docker_running_flag.unlink()
         version_exit = 0 if compose_version_ok else 1
         docker_path.write_text(
             "#!/usr/bin/env bash\n"
@@ -133,9 +148,19 @@ class LauncherFixture:
             'if [[ "$1 $2" == "compose version" ]]; then\n'
             f"  exit {version_exit}\n"
             "fi\n"
+            'if [[ "$1 $2 $3 $4" == "compose ps --status running" ]]; then\n'
+            f'  if [[ -f "{self.docker_running_flag}" ]]; then echo "fake-container-id"; fi\n'
+            "  exit 0\n"
+            "fi\n"
             'if [[ "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
             f'  echo "{compose_up_output}"\n'
+            f'  if [[ {compose_up_exit} -eq 0 ]]; then : > "{self.docker_running_flag}"; fi\n'
             f"  exit {compose_up_exit}\n"
+            "fi\n"
+            'if [[ "$1 $2" == "compose down" ]]; then\n'
+            '  echo "fake: containers removed"\n'
+            f'  if [[ {compose_down_exit} -eq 0 ]]; then rm -f "{self.docker_running_flag}"; fi\n'
+            f"  exit {compose_down_exit}\n"
             "fi\n"
             'echo "unexpected docker invocation: $*" >&2\n'
             "exit 99\n"
@@ -150,6 +175,17 @@ class LauncherFixture:
         }
         return subprocess.run(
             [str(self.launcher)],
+            cwd=str(cwd or self.root),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+    def run_stop(self, *, cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
+        env = {"PATH": str(self.bin_dir), "HOME": str(self.root)}
+        return subprocess.run(
+            [str(self.launcher), "stop"],
             cwd=str(cwd or self.root),
             env=env,
             capture_output=True,
@@ -381,10 +417,25 @@ class TestNoUnauthorizedInstallOrStart(LauncherTestCase):
         forbidden = (
             "apt-get install", "apt install", "ollama pull", "ollama serve",
             "curl -fsSL", "wsl --shutdown", "systemctl start docker", "dockerd",
-            "sudo", "compose down", "compose rm", "compose kill", "system prune",
+            "sudo", "compose rm", "compose kill", "system prune",
+            "killall", "pkill",
+            # down oui (via `stop`) mais suppression de volumes jamais.
+            "compose down -v", "compose down --volumes",
         )
         for pattern in forbidden:
             self.assertNotIn(pattern, code_lines, f"motif interdit trouvé dans le launcher : {pattern!r}")
+
+    def test_no_bare_kill_command_anywhere(self) -> None:
+        """Ni `kill`, ni `killall`, ni `pkill` : ce launcher ne cible jamais
+        un PID pour lui envoyer un signal — SIGINT est géré par un `trap`
+        sur le process courant, jamais en signalant un autre process."""
+        import re
+
+        code_lines = "\n".join(
+            line for line in LAUNCHER.read_text().splitlines()
+            if not line.strip().startswith("#")
+        )
+        self.assertIsNone(re.search(r"\bkill\b", code_lines), "commande 'kill' trouvée dans le launcher")
 
 
 class TestDockerComposeIntegration(LauncherTestCase):
@@ -618,12 +669,144 @@ class TestDoctorGateIntegration(LauncherTestCase):
         self.assertNotIn("gate", calls)
 
 
+class TestStopSubcommand(LauncherTestCase):
+    """Commit 4 : `./apex-launch.sh stop` — arrêt EXPLICITE, séparé de
+    Ctrl+C, de l'infrastructure que CE launcher a lui-même fait démarrer.
+    Idempotent, jamais destructeur d'un état qu'il n'a pas créé, jamais
+    dépendant de la vivacité d'un PID."""
+
+    def _launched_fixture(self, **docker_kwargs: object) -> LauncherFixture:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        fx.write_fake_docker(**docker_kwargs)
+        result = fx.run()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return fx
+
+    def test_stop_with_no_state_is_noop_exit_0(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        fx.write_fake_docker()
+        result = fx.run_stop()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("rien à arrêter", result.stderr)
+        calls = fx.docker_calls_log.read_text() if fx.docker_calls_log.exists() else ""
+        self.assertNotIn("down", calls)
+
+    def test_stop_after_launch_tears_down_infra(self) -> None:
+        fx = self._launched_fixture()
+        self.assertTrue(fx.compose_state_file.exists())
+        self.assertTrue(fx.docker_running_flag.exists())
+
+        result = fx.run_stop()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("infrastructure arrêtée", result.stderr)
+        self.assertFalse(fx.compose_state_file.exists())
+        self.assertFalse(fx.docker_running_flag.exists())
+        calls = fx.docker_calls_log.read_text()
+        self.assertIn("compose down", calls)
+
+    def test_double_stop_is_idempotent(self) -> None:
+        fx = self._launched_fixture()
+        first = fx.run_stop()
+        second = fx.run_stop()
+        self.assertEqual(first.returncode, 0)
+        self.assertEqual(second.returncode, 0)
+        self.assertIn("infrastructure arrêtée", first.stderr)
+        self.assertIn("rien à arrêter", second.stderr)
+        calls = fx.docker_calls_log.read_text()
+        self.assertEqual(calls.count("compose down"), 1, "un seul appel réel à 'compose down' attendu")
+
+    def test_stop_never_touches_infra_it_did_not_start(self) -> None:
+        """Infrastructure déjà active AVANT le launcher (jamais démarrée
+        par lui) : aucune ownership enregistrée, 'stop' ne doit jamais
+        l'arrêter — c'est exactement le cas d'une infra externe/partagée."""
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        fx.write_fake_docker(initially_running=True)
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        self.assertFalse(fx.compose_state_file.exists())
+        self.assertTrue(fx.docker_running_flag.exists(), "l'infra externe doit rester active")
+
+        stop_result = fx.run_stop()
+        self.assertEqual(stop_result.returncode, 0)
+        self.assertIn("rien à arrêter", stop_result.stderr)
+        self.assertTrue(fx.docker_running_flag.exists(), "'stop' ne doit pas arrêter une infra externe")
+        calls = fx.docker_calls_log.read_text()
+        self.assertNotIn("compose down", calls)
+
+    def test_stop_ignores_state_not_affirming_ownership(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        fx.write_fake_docker(initially_running=True)
+        fx.compose_state_file.parent.mkdir(parents=True, exist_ok=True)
+        fx.compose_state_file.write_text('{"compose_started_by_launcher": false, "pid": 999999}\n')
+
+        result = fx.run_stop()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("rien à arrêter", result.stderr)
+        self.assertFalse(fx.compose_state_file.exists(), "l'état non-affirmatif doit être nettoyé")
+        self.assertTrue(fx.docker_running_flag.exists())
+
+    def test_stop_with_stale_or_reused_pid_still_works(self) -> None:
+        """Le PID enregistré est purement informatif : un PID périmé (ex.
+        1, presque certainement un process totalement différent aujourd'hui)
+        ne doit ni bloquer 'stop' ni provoquer un signal vers ce PID."""
+        fx = LauncherFixture(self.tmp)
+        fx.write_fake_docker(initially_running=True)
+        fx.compose_state_file.parent.mkdir(parents=True, exist_ok=True)
+        fx.compose_state_file.write_text(
+            '{"compose_started_by_launcher": true, "pid": 1, "started_at": "1970-01-01T00:00:00Z"}\n'
+        )
+
+        result = fx.run_stop()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("infrastructure arrêtée", result.stderr)
+        self.assertFalse(fx.compose_state_file.exists())
+        self.assertFalse(fx.docker_running_flag.exists())
+
+    def test_stop_docker_unavailable_preserves_state_for_retry(self) -> None:
+        fx = self._launched_fixture()
+        (fx.bin_dir / "docker").unlink()  # docker disparaît entre le lancement et le stop
+
+        result = fx.run_stop()
+        self.assertEqual(result.returncode, 2)  # EXIT_DOCKER_FAIL
+        self.assertTrue(fx.compose_state_file.exists(), "l'état doit être conservé pour un nouvel essai")
+
+    def test_stop_failure_preserves_state_for_retry(self) -> None:
+        fx = self._launched_fixture(compose_down_exit=1)
+        result = fx.run_stop()
+        self.assertEqual(result.returncode, 2)  # EXIT_DOCKER_FAIL
+        self.assertTrue(fx.compose_state_file.exists(), "un échec de 'down' ne doit pas effacer l'état")
+
+    def test_stop_state_file_content_never_leaks_secrets(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("POSTGRES_PASSWORD=correct-horse-battery-staple\n")
+        fx.write_fake_docker()
+        fx.run()
+        content = fx.compose_state_file.read_text()
+        self.assertNotIn("correct-horse-battery-staple", content)
+        self.assertIn("compose_started_by_launcher", content)
+
+    def test_compose_down_only_appears_within_cmd_stop_never_in_main(self) -> None:
+        """`docker compose down` est une action EXPLICITE de `stop` — elle
+        ne doit jamais apparaître dans `main()` (le préflight normal),
+        seulement dans `cmd_stop()`."""
+        text = LAUNCHER.read_text()
+        main_start = text.index("\nmain() {")
+        main_end = text.index("\n}\n", main_start)
+        main_body = text[main_start:main_end]
+        self.assertNotIn("compose down", main_body)
+
+        stop_start = text.index("\ncmd_stop() {")
+        stop_end = text.index("\n}\n", stop_start)
+        stop_body = text[stop_start:stop_end]
+        self.assertIn("compose down", stop_body)
+
+
 class TestInterruptHandlerIsIsolated(LauncherTestCase):
     """`on_interrupt` doit produire l'exit code 130 sans agir sur autre chose
     que le process courant — testé en isolation (source sans exécuter
-    `main`) car le préflight de ce commit est trop rapide pour un vrai
-    SIGINT concurrent fiable ; un test de bout en bout viendra naturellement
-    avec `docker compose up -d --wait` (commit 2), point d'attente réel."""
+    `main`) et de bout en bout (vrai SIGINT, vrai sous-processus)."""
 
     def test_on_interrupt_exits_130(self) -> None:
         fx = LauncherFixture(self.tmp)
@@ -636,6 +819,67 @@ class TestInterruptHandlerIsIsolated(LauncherTestCase):
         fx = LauncherFixture(self.tmp)
         result = fx.source_and_call("trap -p INT")
         self.assertIn("on_interrupt", result.stdout)
+
+    def test_trap_disables_further_int_as_first_action(self) -> None:
+        """`on_interrupt` doit désarmer INT en toute première ligne — la
+        garantie structurelle qui rend son exécution unique, vérifiée
+        directement sur le source plutôt que par une course de signaux
+        (fiable, contrairement à un timing de délivrance de signal)."""
+        text = LAUNCHER.read_text()
+        start = text.index("on_interrupt() {")
+        end = text.index("\n}", start)
+        body = text[start:end]
+        body_lines = body.splitlines()[1:]
+        first_statement = next(
+            line.strip() for line in body_lines if line.strip() and not line.strip().startswith("#")
+        )
+        self.assertEqual(first_statement, "trap '' INT")
+
+    def test_double_sigint_produces_exactly_one_interrupt_message_and_exit_130(self) -> None:
+        """Test de bout en bout : deux SIGINT envoyés coup sur coup pendant
+        un `apex doctor` volontairement lent ne doivent produire qu'UNE
+        seule exécution du handler — un seul message, un seul exit 130,
+        jamais une sortie dupliquée ou un état incohérent."""
+        import signal
+        import time
+
+        fx = LauncherFixture(self.tmp)
+        fx.write_env("FOO=bar\n")
+        fx.write_venv_python(compatible=True)
+        fx.write_fake_docker()
+        python_path = fx.root / ".venv" / "bin" / "python3"
+        python_path.write_text(
+            "#!/usr/bin/env bash\n"
+            'if [[ "$1" == "-c" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3" == "-m apex.cli.main doctor" ]]; then\n'
+            "  sleep 5\n"
+            "  exit 0\n"
+            "fi\n"
+            "exit 99\n"
+        )
+        python_path.chmod(python_path.stat().st_mode | stat.S_IEXEC)
+
+        proc = subprocess.Popen(
+            [str(fx.launcher)],
+            cwd=str(fx.root),
+            env={"PATH": str(fx.bin_dir), "HOME": str(fx.root)},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            time.sleep(1.0)
+            proc.send_signal(signal.SIGINT)
+            proc.send_signal(signal.SIGINT)  # second Ctrl+C immédiat
+            _stdout, stderr = proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            raise
+        self.assertEqual(proc.returncode, 130)
+        self.assertEqual(
+            stderr.count("interrompu (Ctrl+C)"), 1,
+            f"le handler doit s'exécuter exactement une fois — sortie : {stderr!r}",
+        )
 
 
 class TestBashSyntax(unittest.TestCase):
