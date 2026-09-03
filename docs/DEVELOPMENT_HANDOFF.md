@@ -44,6 +44,19 @@ Rien n'est prétendu `IMPLEMENTED` sans preuve empirique. Tout ce qui reste
 sandboxé, §6) et `PromotionGovernor` (réévalué, toujours non justifié par
 le test en 4 points).
 
+**Launcher officiel** (`scripts/apex-launch.sh` + `apex.bat`) — hors
+`apex.interfaces.registry` (pure orchestration, aucune abstraction
+métier) : point d'entrée réel qui enchaîne `.env`/`.venv` → `docker
+compose up -d --wait` → `apex doctor` → `apex gate`, avec relais fidèle
+de chaque code de sortie (jamais de FAIL réinterprété), sous-commande
+`stop` explicite bornée à l'infrastructure que CE launcher a lui-même
+démarrée, et `apex.bat` comme délégateur Windows pur vers WSL (aucune
+logique dupliquée). 74 tests (`tests/test_launcher.py`,
+`tests/test_windows_launcher.py`) ; `apex.bat` n'a pu être testé que
+statiquement — aucun `cmd.exe`/WSL réel dans les environnements de
+développement de ce dépôt à ce jour. Usage : voir `README.md` §« Lancer
+APEX » ou `make launch`/`make launch-stop`.
+
 ## 2. État détaillé par système
 
 Statut au sens `apex.interfaces.registry.ImplStatus` : `PLANNED` (rien de

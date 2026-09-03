@@ -54,6 +54,8 @@ apex.bat stop
 `apex.bat` cible la distribution WSL par défaut du système ; définir la
 variable d'environnement `APEX_WSL_DISTRO` pour en cibler une autre.
 
+Équivalent via `make` (WSL2/Linux) : `make launch` / `make launch-stop`.
+
 ## Commandes disponibles
 
 | Commande | Rôle |

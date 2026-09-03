@@ -894,5 +894,29 @@ class TestBashSyntax(unittest.TestCase):
         self.assertTrue(mode & stat.S_IXUSR, "scripts/apex-launch.sh doit être exécutable (chmod +x)")
 
 
+class TestMakefileIntegration(unittest.TestCase):
+    """Commit 6 : `make launch`/`make launch-stop` délèguent au launcher
+    officiel — vérification statique, cohérente avec le reste de la suite
+    (aucune exécution réelle de `make` requise pour cette propriété)."""
+
+    MAKEFILE = LAUNCHER.parent.parent / "Makefile"
+
+    def test_launch_target_calls_apex_launch_sh_directly(self) -> None:
+        text = self.MAKEFILE.read_text()
+        self.assertIn("launch:", text)
+        launch_start = text.index("launch:")
+        launch_end = text.index("\n\n", launch_start)
+        body = text[launch_start:launch_end]
+        self.assertIn("bash scripts/apex-launch.sh", body)
+        self.assertNotIn("stop", body)  # `launch` seul ne doit jamais arrêter quoi que ce soit
+
+    def test_launch_stop_target_calls_stop_subcommand(self) -> None:
+        text = self.MAKEFILE.read_text()
+        self.assertIn("launch-stop:", text)
+        stop_start = text.index("launch-stop:")
+        body = text[stop_start:stop_start + 200]
+        self.assertIn("bash scripts/apex-launch.sh stop", body)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
