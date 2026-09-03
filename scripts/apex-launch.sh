@@ -224,6 +224,37 @@ compose_up() {
     return 0
 }
 
+# -- apex doctor / apex gate --------------------------------------------------
+#
+# Relais fidèle, jamais un jugement propre : ce launcher ne réimplémente
+# aucun seuil matériel, aucune règle de compatibilité, aucune notion de
+# « environnement sain » — `apex doctor` et `apex gate` restent l'unique
+# source de vérité. Leur sortie est héritée telle quelle (jamais capturée
+# puis reformatée) : ce que l'utilisateur voit est exactement ce que
+# `python -m apex.cli.main doctor`/`gate` afficherait exécuté directement.
+# Un FAIL de l'un ou l'autre arrête le launcher sans exécuter la suite —
+# jamais recatégorisé en WARN, jamais ignoré, jamais contourné par un
+# drapeau (aucune option `--allow-container-exec`/`--allow-network-probe`
+# n'est ajoutée par ce script : leurs valeurs par défaut, les plus
+# conservatrices, sont conservées).
+run_doctor() {
+    local project_root="$1"
+    local python_bin="$2"
+    log_info "exécution de apex doctor..."
+    local status=0
+    (cd -- "${project_root}" && "${python_bin}" -m apex.cli.main doctor) || status=$?
+    return "${status}"
+}
+
+run_gate() {
+    local project_root="$1"
+    local python_bin="$2"
+    log_info "exécution de apex gate..."
+    local status=0
+    (cd -- "${project_root}" && "${python_bin}" -m apex.cli.main gate) || status=$?
+    return "${status}"
+}
+
 # -- Préflight environnement --------------------------------------------------
 
 main() {
@@ -250,7 +281,17 @@ main() {
         exit "${EXIT_DOCKER_FAIL}"
     fi
 
-    log_info "préflight OK (environnement + infrastructure)."
+    if ! run_doctor "${project_root}" "${python_bin}"; then
+        log_err "apex doctor a signalé un échec (FAIL) — voir le rapport ci-dessus."
+        exit "${EXIT_DOCTOR_FAIL}"
+    fi
+
+    if ! run_gate "${project_root}" "${python_bin}"; then
+        log_err "apex gate a signalé un échec — voir le rapport ci-dessus."
+        exit "${EXIT_GATE_FAIL}"
+    fi
+
+    log_info "préflight OK (environnement + infrastructure + doctor + gate)."
     exit "${EXIT_OK}"
 }
 

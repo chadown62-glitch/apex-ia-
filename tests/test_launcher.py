@@ -3,8 +3,9 @@
 Commit 1 : squelette — résolution de racine, chargement contrôlé de `.env`,
 détection Python/venv.
 Commit 2 : démarrage de l'infrastructure existante via
-`docker compose up -d --wait`. Ni `apex doctor` ni `apex gate` n'existent
-encore dans le script à ce stade (voir son en-tête).
+`docker compose up -d --wait`.
+Commit 3 : exécution de `apex doctor` puis `apex gate` (dans cet ordre),
+relais fidèle de leurs codes de sortie — jamais réinterprétés.
 
 Chaque scénario construit un projet factice isolé (`tempfile`) contenant
 uniquement `scripts/apex-launch.sh` — jamais le vrai `.env`/`.venv` du
@@ -53,16 +54,46 @@ class LauncherFixture:
                 if not link.exists():
                     link.symlink_to(real)
 
+        self.docker_calls_log = self.root / "docker_calls.log"
+        self.python_calls_log = self.root / "python_calls.log"
+
         if with_python3:
             self._write_fake_python(self.bin_dir / "python3", compatible=True)
 
-        self.docker_calls_log = self.root / "docker_calls.log"
-
-    def _write_fake_python(self, path: Path, *, compatible: bool) -> None:
-        """Faux interpréteur déterministe : réussit ou échoue le test de
-        version selon `compatible`, sans dépendre de la version réelle de
-        Python installée sur la machine qui exécute les tests."""
-        path.write_text(f"#!/usr/bin/env bash\nexit {0 if compatible else 1}\n")
+    def _write_fake_python(
+        self,
+        path: Path,
+        *,
+        compatible: bool,
+        doctor_exit: int = 0,
+        doctor_output: str = "APEX DOCTOR (fake): 0 fail",
+        gate_exit: int = 0,
+        gate_output: str = "APEX GATE (fake): authorized",
+    ) -> None:
+        """Faux interpréteur déterministe — même esprit que `FakeProbe` côté
+        `apex doctor` : répond au test de version (`-c ...`) et, invoqué
+        comme `-m apex.cli.main doctor|gate`, simule ces commandes sans
+        dépendre d'une vraie installation APEX ni de Docker/PostgreSQL/GPU
+        réels. Chaque invocation `-m ...` est journalisée dans
+        `self.python_calls_log` pour vérifier l'ordre doctor → gate."""
+        script = (
+            "#!/usr/bin/env bash\n"
+            'if [[ "$1" == "-c" ]]; then\n'
+            f"  exit {0 if compatible else 1}\n"
+            "fi\n"
+            f'echo "$*" >> "{self.python_calls_log}"\n'
+            'if [[ "$1 $2 $3" == "-m apex.cli.main doctor" ]]; then\n'
+            f'  echo "{doctor_output}"\n'
+            f"  exit {doctor_exit}\n"
+            "fi\n"
+            'if [[ "$1 $2 $3" == "-m apex.cli.main gate" ]]; then\n'
+            f'  echo "{gate_output}"\n'
+            f"  exit {gate_exit}\n"
+            "fi\n"
+            'echo "unexpected fake python invocation: $*" >&2\n'
+            "exit 99\n"
+        )
+        path.write_text(script)
         path.chmod(path.stat().st_mode | stat.S_IEXEC)
 
     def write_env(self, content: str, *, mode: int = 0o600) -> Path:
@@ -71,11 +102,16 @@ class LauncherFixture:
         env_path.chmod(mode)
         return env_path
 
-    def write_venv_python(self, *, compatible: bool) -> Path:
+    def write_venv_python(self, *, compatible: bool, **apex_behavior: object) -> Path:
         venv_bin = self.root / ".venv" / "bin"
         venv_bin.mkdir(parents=True, exist_ok=True)
         python_path = venv_bin / "python3"
-        self._write_fake_python(python_path, compatible=compatible)
+        self._write_fake_python(python_path, compatible=compatible, **apex_behavior)
+        return python_path
+
+    def write_system_python(self, *, compatible: bool = True, **apex_behavior: object) -> Path:
+        python_path = self.bin_dir / "python3"
+        self._write_fake_python(python_path, compatible=compatible, **apex_behavior)
         return python_path
 
     def write_fake_docker(
@@ -462,6 +498,124 @@ class TestDockerComposeIntegration(LauncherTestCase):
             raise
         self.assertEqual(proc.returncode, 130)
         self.assertIn("interrompu (Ctrl+C)", stderr)
+
+
+class TestDoctorGateIntegration(LauncherTestCase):
+    """Commit 3 : `apex doctor` puis `apex gate`, dans cet ordre, relais
+    fidèle de leurs codes de sortie — jamais un FAIL contourné ou
+    réinterprété en succès."""
+
+    def _fixture(self, **apex_behavior: object) -> LauncherFixture:
+        fx = LauncherFixture(self.tmp)
+        fx.write_env("FOO=bar\n")
+        fx.write_venv_python(compatible=True, **apex_behavior)
+        fx.write_fake_docker()
+        return fx
+
+    def test_doctor_and_gate_success_exits_0(self) -> None:
+        fx = self._fixture(doctor_exit=0, gate_exit=0)
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("APEX DOCTOR (fake): 0 fail", result.stdout)
+        self.assertIn("APEX GATE (fake): authorized", result.stdout)
+        self.assertIn("préflight OK (environnement + infrastructure + doctor + gate)", result.stderr)
+
+    def test_doctor_failure_exits_4_and_never_runs_gate(self) -> None:
+        fx = self._fixture(doctor_exit=1, doctor_output="APEX DOCTOR (fake): 1 fail")
+        result = fx.run()
+        self.assertEqual(result.returncode, 4)
+        self.assertIn("APEX DOCTOR (fake): 1 fail", result.stdout)
+        self.assertIn("apex doctor a signalé un échec", result.stderr)
+        calls = fx.python_calls_log.read_text() if fx.python_calls_log.exists() else ""
+        self.assertNotIn("gate", calls)
+
+    def test_gate_failure_exits_5(self) -> None:
+        fx = self._fixture(gate_exit=1, gate_output="APEX GATE (fake): not authorized")
+        result = fx.run()
+        self.assertEqual(result.returncode, 5)
+        self.assertIn("APEX GATE (fake): not authorized", result.stdout)
+        self.assertIn("apex gate a signalé un échec", result.stderr)
+
+    def test_doctor_runs_before_gate_in_order(self) -> None:
+        fx = self._fixture()
+        fx.run()
+        calls = fx.python_calls_log.read_text().splitlines()
+        doctor_calls = [c for c in calls if "doctor" in c]
+        gate_calls = [c for c in calls if "gate" in c]
+        self.assertEqual(len(doctor_calls), 1)
+        self.assertEqual(len(gate_calls), 1)
+        self.assertLess(calls.index(doctor_calls[0]), calls.index(gate_calls[0]))
+
+    def test_doctor_and_gate_invoked_from_project_root(self) -> None:
+        """`apex doctor`/`gate` doivent trouver `config.yaml` relatif à la
+        racine — vérifié indirectement : le launcher ne passe aucun chemin
+        codé en dur, `cd` explicitement dans project_root avant l'appel."""
+        text = LAUNCHER.read_text()
+        self.assertIn('cd -- "${project_root}" && "${python_bin}" -m apex.cli.main doctor', text)
+        self.assertIn('cd -- "${project_root}" && "${python_bin}" -m apex.cli.main gate', text)
+
+    def test_no_extra_gate_flags_are_added(self) -> None:
+        """Le launcher ne doit jamais ajouter --allow-container-exec ni
+        --allow-network-probe : ce serait contourner le consentement
+        explicite qu'exige le Gate pour ses vérifications les plus
+        invasives."""
+        code_lines = "\n".join(
+            line for line in LAUNCHER.read_text().splitlines()
+            if not line.strip().startswith("#")
+        )
+        self.assertNotIn("--allow-container-exec", code_lines)
+        self.assertNotIn("--allow-network-probe", code_lines)
+
+    def test_secret_value_never_appears_in_doctor_gate_output(self) -> None:
+        fx = self._fixture()
+        fx.write_env("POSTGRES_PASSWORD=correct-horse-battery-staple\n")
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("correct-horse-battery-staple", result.stdout)
+        self.assertNotIn("correct-horse-battery-staple", result.stderr)
+
+    def test_sigint_between_doctor_and_gate_exits_130(self) -> None:
+        """Ctrl+C pendant `apex doctor` (lui-même lent ici) doit interrompre
+        avant que `apex gate` ne soit jamais invoqué."""
+        import signal
+        import time
+
+        fx = LauncherFixture(self.tmp)
+        fx.write_env("FOO=bar\n")
+        fx.write_venv_python(compatible=True)
+        fx.write_fake_docker()
+        python_path = fx.root / ".venv" / "bin" / "python3"
+        python_path.write_text(
+            "#!/usr/bin/env bash\n"
+            'if [[ "$1" == "-c" ]]; then exit 0; fi\n'
+            f'echo "$*" >> "{fx.python_calls_log}"\n'
+            'if [[ "$1 $2 $3" == "-m apex.cli.main doctor" ]]; then\n'
+            "  sleep 5\n"
+            "  exit 0\n"
+            "fi\n"
+            "exit 99\n"
+        )
+        python_path.chmod(python_path.stat().st_mode | stat.S_IEXEC)
+
+        proc = subprocess.Popen(
+            [str(fx.launcher)],
+            cwd=str(fx.root),
+            env={"PATH": str(fx.bin_dir), "HOME": str(fx.root)},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            time.sleep(1.0)  # laisse compose_up (fake, instantané) + démarrage doctor
+            proc.send_signal(signal.SIGINT)
+            _stdout, stderr = proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            raise
+        self.assertEqual(proc.returncode, 130)
+        self.assertIn("interrompu (Ctrl+C)", stderr)
+        calls = fx.python_calls_log.read_text() if fx.python_calls_log.exists() else ""
+        self.assertNotIn("gate", calls)
 
 
 class TestInterruptHandlerIsIsolated(LauncherTestCase):
