@@ -265,6 +265,32 @@ class TestOutputRedaction(unittest.TestCase):
     def setUp(self) -> None:
         self.sandbox = LinuxNamespaceSandbox()
 
+    def test_multiple_distinct_secrets_in_the_same_output_are_all_redacted(self) -> None:
+        """Deux secrets de nature différente (motifs distincts) dans la même
+        sortie — la rédaction ne doit jamais s'arrêter au premier trouvé."""
+        key = "sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        token = "ghp_" + "A" * 24
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", f"echo first {key} second {token} third"))
+        )
+        self.assertNotIn(key, result.stdout)
+        self.assertNotIn(token, result.stdout)
+        self.assertEqual(result.stdout.count("***redacted***"), 2)
+        self.assertIn("first", result.stdout)
+        self.assertIn("second", result.stdout)
+        self.assertIn("third", result.stdout)
+
+    def test_repeated_secret_in_the_same_output_is_redacted_every_occurrence(self) -> None:
+        """Le même secret répété plusieurs fois — chaque occurrence doit être
+        masquée, jamais seulement la première (`re.sub` remplace tout par
+        défaut, mais ce comportement doit être prouvé, pas supposé)."""
+        secret = "sk-REPEATEDSECRETVALUE0000000000000"
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", f"echo {secret}; echo {secret}; echo {secret}"))
+        )
+        self.assertNotIn(secret, result.stdout)
+        self.assertEqual(result.stdout.count("***redacted***"), 3)
+
     def test_openai_style_key_in_stdout_is_redacted(self) -> None:
         # Espace comme délimiteur : le motif de secret (`[A-Za-z0-9_-]+`)
         # est glouton et engloberait un `-after` collé, ce qui ne serait pas
