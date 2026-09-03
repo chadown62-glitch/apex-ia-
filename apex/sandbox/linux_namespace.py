@@ -27,6 +27,7 @@ import uuid
 from typing import Any
 
 from apex.errors import IsolationUnavailable
+from apex.obs.logging import redact
 from apex.obs.status import Measurement
 from apex.sandbox.detect import detect_capabilities
 from apex.sandbox.model import (
@@ -137,6 +138,21 @@ class LinuxNamespaceSandbox(SandboxProvider):
         stderr_truncated = len(stderr) > _MAX_CAPTURE_BYTES
         stdout = stdout[:_MAX_CAPTURE_BYTES]
         stderr = stderr[:_MAX_CAPTURE_BYTES]
+
+        # Rédaction en profondeur (§72) : la sortie d'un programme exécuté en
+        # sandbox peut contenir un secret (variable d'environnement échouée,
+        # jeton codé en dur par erreur, etc.) — `SandboxResult.stdout`/`stderr`
+        # ne passent aujourd'hui par AUCUN des deux seuls points de rédaction
+        # du dépôt (`apex.obs.logging.JsonFormatter`, `DatabaseEventSink.
+        # emit()`) : `apex.missions.execution.launch_mission` persiste
+        # `result.stdout` tel quel dans `Mission.result`, et le dernier segment
+        # de `stderr` (`_error_summary`) tel quel dans `Mission.error` — l'un
+        # et l'autre exposés sans authentification par `GET /missions/{id}`.
+        # Rédaction appliquée ici, à la source, pour couvrir ce chemin ET tout
+        # consommateur futur de `SandboxResult`, jamais seulement le site
+        # d'appel qui l'expose aujourd'hui.
+        stdout = redact(stdout)
+        stderr = redact(stderr)
 
         # Annulation explicitement demandée : un drapeau distinct, jamais
         # deviné depuis le seul signal 9 (qui coïncide avec un timeout ou
