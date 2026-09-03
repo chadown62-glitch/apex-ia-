@@ -31,6 +31,29 @@ docker compose up -d
 python -m apex.cli.main doctor
 ```
 
+## Lancer APEX
+
+Le launcher orchestre le préflight (infrastructure, `apex doctor`,
+`apex gate`) sans dupliquer leur logique — il se contente de les enchaîner
+et de relayer fidèlement leurs résultats.
+
+```bash
+# Depuis WSL2/Linux, à la racine du dépôt :
+./scripts/apex-launch.sh          # préflight complet
+./scripts/apex-launch.sh stop     # arrête l'infrastructure démarrée par le launcher (jamais une infra déjà active avant lui)
+```
+
+```bat
+:: Depuis Windows, à la racine du dépôt (point d'entrée qui délègue à
+:: scripts/apex-launch.sh dans WSL — aucune logique n'est dupliquée côté
+:: Windows) :
+apex.bat
+apex.bat stop
+```
+
+`apex.bat` cible la distribution WSL par défaut du système ; définir la
+variable d'environnement `APEX_WSL_DISTRO` pour en cibler une autre.
+
 ## Commandes disponibles
 
 | Commande | Rôle |
