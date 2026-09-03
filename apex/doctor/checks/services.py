@@ -23,7 +23,14 @@ une machine visée future ne doit jamais rendre un modèle de référence
 
 from __future__ import annotations
 
-from apex.config.schema import ApexConfig, ModelEndpoint, PoolLocation, PoolStatus
+from apex.config.schema import (
+    ApexConfig,
+    ModelEndpoint,
+    ModelRef,
+    PoolLocation,
+    PoolStatus,
+    model_ref_matches_endpoint,
+)
 from apex.doctor.check import CheckContext, CheckResult, Severity, result
 from apex.interfaces.registry import ABSTRACTIONS, ImplStatus, module_importable
 
@@ -147,15 +154,22 @@ def check_ollama_models(ctx: CheckContext) -> CheckResult:
     except (ValueError, AttributeError):
         return result("ollama.models", CATEGORY_SVC, Severity.WARN, "réponse Ollama illisible")
 
-    def served_endpoints(family: str) -> list[ModelEndpoint]:
-        return [e for e in ctx.config.endpoints if e.served_model.startswith(family)]
+    def served_endpoints(ref: ModelRef) -> list[ModelEndpoint]:
+        """Endpoints qui servent RÉELLEMENT ce candidat précis — jamais tout
+        endpoint d'une même famille (voir `model_ref_matches_endpoint`) :
+        deux candidats de rôles différents peuvent partager une famille avec
+        des versions distinctes (ex. une référence 30B et un rôle résident
+        8B tous deux « qwen3-coder »), et confondre les deux ferait juger un
+        rôle résident absent/incompatible sur la VRAM d'un tout autre
+        modèle, ou l'inverse."""
+        return [e for e in ctx.config.endpoints if model_ref_matches_endpoint(ref, e)]
 
     missing_reference: list[str] = []
     missing_reference_incompatible: list[str] = []
     missing_candidates: list[str] = []
     for role in ctx.config.model_roles.values():
         for index, candidate in enumerate(role.candidates):
-            endpoints = served_endpoints(candidate.family)
+            endpoints = served_endpoints(candidate)
             if not endpoints:
                 continue
             names = {e.served_model for e in endpoints}

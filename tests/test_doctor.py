@@ -319,6 +319,66 @@ class TestOllamaHardwareAwareDoctor(unittest.TestCase):
         )  # aucune commande shell exécutée par ce check
         self.assertFalse(any("pull" in payload for _, payload in ctx.probe.calls))
 
+    def test_i_same_family_different_size_are_never_confused_by_served_endpoints(self) -> None:
+        """`served_endpoints()` doit apparier par family+version, jamais par
+        famille seule : un endpoint 18 Go qwen3-coder 30B (coder_main, non
+        résident) sur une machine 8 Go est incompatible ; un endpoint 5 Go
+        qwen3-coder 8B (fast) est compatible — le Doctor ne doit jamais
+        confondre les deux uniquement parce qu'ils partagent la famille
+        « qwen3-coder »."""
+        document = base_config()
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        document["models"]["roles"] = {
+            "coder_main": {
+                "selection": "benchmark_driven",
+                "resident": False,
+                "candidates": [
+                    {"family": "qwen3-coder", "version": "30b-a3b-instruct",
+                     "quantization": "q4_k_m", "capability_class": "coder"},
+                ],
+            },
+            "fast": {
+                "selection": "static_prior",
+                "resident": True,
+                "candidates": [
+                    {"family": "qwen3-coder", "version": "8b",
+                     "quantization": "q4_k_m", "capability_class": "fast"},
+                ],
+            },
+            "judge": {
+                "candidates": [
+                    {"family": "gemma4", "version": "12b",
+                     "quantization": "q4_k_m", "capability_class": "judge"}
+                ]
+            },
+        }
+        document["models"]["endpoints"] = [
+            {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
+             "served_model": "qwen3-coder:30b-a3b-instruct-q4_K_M", "max_context": 65536, "vram_gb": 18.0},
+            {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
+             "served_model": "qwen3-coder:8b-q4_K_M", "max_context": 32768, "vram_gb": 5.0},
+        ]
+        # Ni l'un ni l'autre n'est réellement installé dans Ollama ici — seul
+        # le Judge (déjà présent) l'est, pour isoler le comportement testé.
+        ctx = self._ctx(document, ["gemma4:12b-q4_K_M"])
+        outcome = services.check_ollama_models(ctx)
+
+        # coder_main (18 Go sur 8 Go dispo) : incompatible, jamais un FAIL.
+        self.assertIn(
+            "coder_main:qwen3-coder:30b-a3b-instruct:q4_k_m",
+            outcome.facts["missing_reference_incompatible"],
+        )
+        # fast (5 Go sur 8 Go dispo) : compatible et absent ⇒ bloquant.
+        self.assertIn("fast:qwen3-coder:8b:q4_k_m", outcome.facts["missing_reference"])
+        # Aucune confusion croisée entre les deux candidats de la famille.
+        self.assertNotIn(
+            "fast:qwen3-coder:8b:q4_k_m", outcome.facts["missing_reference_incompatible"]
+        )
+        self.assertNotIn(
+            "coder_main:qwen3-coder:30b-a3b-instruct:q4_k_m", outcome.facts["missing_reference"]
+        )
+        self.assertIs(outcome.severity, Severity.FAIL)
+
     def test_h_genuinely_invalid_config_still_raises_a_real_error(self) -> None:
         """H. Une configuration invalide continue de provoquer une vraie erreur —
         la passe hardware-aware ne doit jamais rendre le doctor artificiellement

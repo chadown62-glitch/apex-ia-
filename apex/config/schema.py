@@ -252,6 +252,47 @@ class ModelRole:
         )
 
 
+def model_ref_matches_endpoint(ref: ModelRef, endpoint: ModelEndpoint) -> bool:
+    """Un `ModelEndpoint` sert-il réellement CE `ModelRef` précis ?
+
+    Aucune clé étrangère stricte n'existe entre les deux — décision
+    délibérée, principe 7 : `ModelRef` est une identité logique,
+    `ModelEndpoint.served_model` le nom tel que connu du runtime. Ajouter un
+    champ explicite (`role_endpoint` ou assimilé) anticiperait `Placement`
+    (PLANNED, phase 6), qui n'existe pas encore — voir `apex.interfaces.
+    registry`.
+
+    La meilleure identité disponible SANS inventer de champ est `family` +
+    `version` : `served_model` suit systématiquement, dans `config.yaml`, la
+    forme `"<family>:<version>"` ou `"<family>:<version>-<variante>"`
+    (vérifié sur les 7 endpoints déclarés — la variante est le plus souvent
+    la quantification, mais sous une casse qui ne correspond pas forcément à
+    `quantization`, ex. `q4_K_M` vs `q4_k_m` déclaré). Comparer sur `family`
+    SEUL — l'ancien comportement — est insuffisant : deux rôles peuvent
+    légitimement partager une famille avec des versions différentes (deux
+    tailles du même modèle), et un tel matching agrège alors, à tort, un
+    endpoint non concerné dans un calcul qui suppose une correspondance
+    précise (résidence VRAM, présence Ollama).
+
+    Le préfixe doit être suivi de la fin de chaîne ou d'un séparateur `-` —
+    jamais d'un caractère arbitraire — pour qu'une version plus courte
+    (`8b`) ne matche jamais, par accident, une version plus longue qui la
+    prolonge sans séparateur (`8binstruct`).
+
+    **Limite honnête, documentée plutôt que masquée** : la quantification
+    n'est PAS comparée — `served_model` ne l'encode pas de façon fiable
+    (casse différente du champ déclaré, parfois absente du tag, ex.
+    `qwen2.5-coder:7b-instruct`). Une normalisation de casse pour la
+    déduire serait une heuristique inventée pour combler cette absence,
+    écartée plutôt que fabriquée.
+    """
+    prefix = f"{ref.family}:{ref.version}"
+    served = endpoint.served_model
+    if served == prefix:
+        return True
+    return served.startswith(prefix) and served[len(prefix) : len(prefix) + 1] == "-"
+
+
 # --------------------------------------------------------------------------
 # Calcul
 # --------------------------------------------------------------------------
@@ -656,12 +697,17 @@ class ApexConfig:
             raise ConfigError("réseau de sandbox non autorisé", field="sandbox.network")
 
         # Cohérence VRAM : les modèles résidents doivent tenir sur le pool local.
+        # Appariement par identité réelle (family + version, voir
+        # `model_ref_matches_endpoint`) — jamais par simple préfixe de
+        # famille, qui agrégerait à tort l'endpoint d'un AUTRE candidat de
+        # la même famille (ex. une référence 30B non résidente vs un rôle
+        # résident 8B de la même famille).
         vram = max((p.total_vram_gb for p in local), default=0.0)
         resident = [
             e
             for e in self.endpoints
             for role in self.model_roles.values()
-            if role.resident and e.served_model.startswith(role.reference.family)
+            if role.resident and model_ref_matches_endpoint(role.reference, e)
         ]
         needed = sum(e.effective_vram_gb or 0.0 for e in resident)
         if vram and needed > vram:

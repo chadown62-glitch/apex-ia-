@@ -17,7 +17,15 @@ import copy
 import unittest
 
 from apex.config.loader import parse_config, substitute_env
-from apex.config.schema import HardwareThresholds, PoolLocation, PoolStatus, TrustLevel
+from apex.config.schema import (
+    HardwareThresholds,
+    ModelEndpoint,
+    ModelRef,
+    PoolLocation,
+    PoolStatus,
+    TrustLevel,
+    model_ref_matches_endpoint,
+)
 from apex.errors import ConfigError
 
 BASE: dict = {
@@ -60,8 +68,12 @@ BASE: dict = {
             },
         },
         "endpoints": [
+            # Forme réelle de `config.yaml` : "<family>:<version>-<quant>"
+            # (voir `apex.config.schema.model_ref_matches_endpoint`) — pas
+            # une version tronquée qui ne matcherait plus que par un
+            # accident de préfixe de famille.
             {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
-             "served_model": "qwen3-coder:30b", "max_context": 65536, "vram_gb": 18.0}
+             "served_model": "qwen3-coder:30b-a3b-instruct-q4_K_M", "max_context": 65536, "vram_gb": 18.0}
         ],
     },
     "external": {
@@ -124,6 +136,132 @@ class TestModelRefEndpointSeparation(unittest.TestCase):
         document["models"]["endpoints"][0]["pool_id"] = "pool-fantome"
         with self.assertRaises(ConfigError):
             parse_config(document)
+
+
+class TestModelRefEndpointMatching(unittest.TestCase):
+    """`model_ref_matches_endpoint` — appariement par identité réelle
+    (family + version), pas par simple préfixe de famille. Corrige un bug
+    architectural précis : un rôle résident et un rôle non résident de la
+    même famille (deux tailles du même modèle) étaient confondus, gonflant
+    à tort le calcul de VRAM résidente avec l'endpoint du rôle non résident.
+    """
+
+    def _endpoint(self, served_model: str, vram_gb: float) -> ModelEndpoint:
+        return ModelEndpoint(
+            pool_id="local-gpu", runtime="ollama", url="http://127.0.0.1:11434",
+            served_model=served_model, max_context=32768, vram_gb=vram_gb,
+        )
+
+    def test_same_family_different_version_are_not_the_same_endpoint(self) -> None:
+        """Échoue avec l'ancien matching par préfixe de famille seule
+        (`served_model.startswith(ref.family)`), passe avec family+version."""
+        coder_main_ref = ModelRef(
+            family="qwen3-coder", version="30b-a3b-instruct",
+            quantization="q4_k_m", capability_class="coder",
+        )
+        fast_ref = ModelRef(
+            family="qwen3-coder", version="8b",
+            quantization="q4_k_m", capability_class="fast",
+        )
+        coder_main_endpoint = self._endpoint("qwen3-coder:30b-a3b-instruct-q4_K_M", 18.0)
+        fast_endpoint = self._endpoint("qwen3-coder:8b-q4_K_M", 5.0)
+
+        # L'ancien comportement (préfixe de famille seule) aurait fait
+        # matcher CHACUN des deux endpoints contre CHACUNE des deux
+        # références, puisque les deux partagent la famille "qwen3-coder".
+        old_family_only_would_match = coder_main_endpoint.served_model.startswith(fast_ref.family)
+        self.assertTrue(
+            old_family_only_would_match,
+            "prémisse du test : les deux doivent partager la même famille",
+        )
+
+        self.assertTrue(model_ref_matches_endpoint(coder_main_ref, coder_main_endpoint))
+        self.assertTrue(model_ref_matches_endpoint(fast_ref, fast_endpoint))
+        # Le point précis du correctif : chaque référence ne matche QUE son
+        # propre endpoint, jamais celui de l'autre candidat de la famille.
+        self.assertFalse(model_ref_matches_endpoint(fast_ref, coder_main_endpoint))
+        self.assertFalse(model_ref_matches_endpoint(coder_main_ref, fast_endpoint))
+
+    def test_family_prefix_boundary_requires_a_real_separator(self) -> None:
+        """Une version plus courte ne doit jamais matcher, par accident de
+        préfixe, un `served_model` qui la prolonge sans séparateur — ex.
+        version "8b" contre un endpoint "8b2-instruct" (un AUTRE modèle)."""
+        short_ref = ModelRef(
+            family="qwen3-coder", version="8b", quantization="q4_k_m", capability_class="fast",
+        )
+        unrelated_endpoint = self._endpoint("qwen3-coder:8b2-instruct-q4_K_M", 6.0)
+        self.assertFalse(model_ref_matches_endpoint(short_ref, unrelated_endpoint))
+
+    def test_exact_served_model_without_quantization_suffix_matches(self) -> None:
+        """Convention réelle observée dans `config.yaml` : certains tags
+        Ollama ne portent aucun suffixe de quantification du tout (ex.
+        `qwen2.5-coder:7b-instruct`, `bge-m3:latest`)."""
+        ref = ModelRef(
+            family="bge-m3", version="latest", quantization="fp16", capability_class="embed",
+        )
+        endpoint = self._endpoint("bge-m3:latest", 0.6)
+        self.assertTrue(model_ref_matches_endpoint(ref, endpoint))
+
+    def test_mandatory_case_coder_main_30b_vs_fast_8b_resident_vram(self) -> None:
+        """CAS DE TEST OBLIGATOIRE : `coder_main` (30B, ~18 Go, non résident)
+        et `fast` (8B, ~5 Go, résident) partagent la famille `qwen3-coder`.
+        `embed` (résident, ~0.6 Go) est d'une famille différente. Le calcul
+        résident doit valoir ~5.6 Go et NE DOIT PAS inclure les 18 Go du
+        `coder_main` — reproduit exactement le défaut rapporté (23.6 Go
+        calculés à tort pour 8 Go réellement disponibles)."""
+        document = config()
+        document["models"]["roles"] = {
+            "coder_main": {
+                "selection": "benchmark_driven",
+                "resident": False,
+                "candidates": [
+                    {"family": "qwen3-coder", "version": "30b-a3b-instruct",
+                     "quantization": "q4_k_m", "capability_class": "coder"},
+                ],
+            },
+            "fast": {
+                "selection": "static_prior",
+                "resident": True,
+                "candidates": [
+                    {"family": "qwen3-coder", "version": "8b",
+                     "quantization": "q4_k_m", "capability_class": "fast"},
+                ],
+            },
+            "embed": {
+                "selection": "static_prior",
+                "resident": True,
+                "candidates": [
+                    {"family": "bge-m3", "version": "latest",
+                     "quantization": "fp16", "capability_class": "embed"},
+                ],
+            },
+        }
+        document["models"]["endpoints"] = [
+            {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
+             "served_model": "qwen3-coder:30b-a3b-instruct-q4_K_M", "max_context": 65536, "vram_gb": 18.0},
+            {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
+             "served_model": "qwen3-coder:8b-q4_K_M", "max_context": 32768, "vram_gb": 5.0},
+            {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
+             "served_model": "bge-m3:latest", "max_context": 8192, "vram_gb": 0.6},
+        ]
+        # Pool ACTIVE dimensionné comme la machine cible du défaut rapporté
+        # (RTX 4060 Ti, 8 Go) — 23.6 Go y dépasserait, 5.6 Go y tient.
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+
+        cfg = parse_config(document)  # ne doit PAS lever : 5.6 Go <= 8 Go
+
+        resident = [
+            e
+            for e in cfg.endpoints
+            for role in cfg.model_roles.values()
+            if role.resident and model_ref_matches_endpoint(role.reference, e)
+        ]
+        needed = round(sum(e.effective_vram_gb or 0.0 for e in resident), 1)
+        self.assertEqual(needed, 5.6)
+        self.assertNotIn(
+            "qwen3-coder:30b-a3b-instruct-q4_K_M", {e.served_model for e in resident},
+            "l'endpoint du coder_main NON résident ne doit jamais entrer dans le calcul résident",
+        )
 
 
 class TestLockedPrinciples(unittest.TestCase):
@@ -302,11 +440,15 @@ class TestCapabilityAwareArchitecture(unittest.TestCase):
         # coder_main est résident et sa référence vaut ~qwen3-coder — on force
         # un vram_gb d'endpoint qui tient dans le pool ACTIVE (24 Go) mais pas
         # dans le pool ACTIVE si le calcul incluait par erreur la cible.
+        # `served_model` doit correspondre par family+version (voir
+        # `model_ref_matches_endpoint`) — un simple préfixe de famille ne
+        # suffit plus à faire matcher intentionnellement cet endpoint.
         document["models"]["roles"]["coder_main"]["resident"] = True
+        reference = document["models"]["roles"]["coder_main"]["candidates"][0]
         document["models"]["endpoints"] = [
             {
                 "pool_id": "local-gpu", "runtime": "ollama", "url": "http://localhost:11434",
-                "served_model": document["models"]["roles"]["coder_main"]["candidates"][0]["family"],
+                "served_model": f"{reference['family']}:{reference['version']}-q4_K_M",
                 "max_context": 8192, "vram_gb": 20,
             }
         ]
