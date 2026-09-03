@@ -251,6 +251,73 @@ class TestCleanupAndNoLeaks(unittest.TestCase):
         self.assertEqual(out.stdout.strip(), "", f"processus orphelin détecté : {out.stdout}")
 
 
+class TestOutputRedaction(unittest.TestCase):
+    """`SandboxResult.stdout`/`stderr` sont le seul chemin qui persiste une
+    sortie de sandbox dans une donnée exposée sans authentification
+    (`apex.missions.execution.launch_mission` -> `Mission.result`/`Mission.
+    error` -> `GET /missions/{id}`) SANS jamais passer par l'un des deux
+    seuls points de rédaction du dépôt (`apex.obs.logging.JsonFormatter`,
+    `apex.db.event_sink.DatabaseEventSink.emit`). Ces tests exercent la
+    MÊME rédaction (`apex.obs.logging.redact`), appliquée à la source,
+    contre un VRAI sous-processus sandboxé — pas une simulation de ce que
+    la rédaction ferait."""
+
+    def setUp(self) -> None:
+        self.sandbox = LinuxNamespaceSandbox()
+
+    def test_openai_style_key_in_stdout_is_redacted(self) -> None:
+        # Espace comme délimiteur : le motif de secret (`[A-Za-z0-9_-]+`)
+        # est glouton et engloberait un `-after` collé, ce qui ne serait pas
+        # un défaut de la rédaction mais un choix de test invalide.
+        secret = "sk-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", f"echo before {secret} after"))
+        )
+        self.assertNotIn(secret, result.stdout)
+        self.assertIn("***redacted***", result.stdout)
+        self.assertIn("before", result.stdout)
+        self.assertIn("after", result.stdout)
+
+    def test_bearer_token_in_stderr_is_redacted(self) -> None:
+        secret = "abcdefghijklmnopqrstuvwxyz012345"
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", f"echo 'Authorization: Bearer {secret}' 1>&2"))
+        )
+        self.assertNotIn(secret, result.stderr)
+        self.assertIn("***redacted***", result.stderr)
+
+    def test_error_detail_tail_of_stderr_is_also_redacted(self) -> None:
+        """`error_detail` (`_error_summary`) dérive du dernier segment de
+        `stderr` — doit hériter de la même rédaction, jamais un second
+        chemin non couvert."""
+        secret = "sk-SECRETVALUEINERRORDETAILTAIL0000"
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", f"echo failing-{secret} 1>&2; exit 1"))
+        )
+        self.assertIsNotNone(result.error_detail)
+        assert result.error_detail is not None
+        self.assertNotIn(secret, result.error_detail)
+
+    def test_ordinary_output_without_secret_shape_is_unaffected(self) -> None:
+        """Non-régression : la rédaction ne doit jamais altérer une sortie
+        normale qui ne correspond à aucun des motifs de secret connus."""
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", "echo hello-world; echo normal-error 1>&2"))
+        )
+        self.assertEqual(result.stdout.strip(), "hello-world")
+        self.assertEqual(result.stderr.strip(), "normal-error")
+
+    def test_postgres_connection_string_password_in_stdout_is_redacted(self) -> None:
+        result = self.sandbox.execute(
+            _spec(("bash", "-c", "echo postgres://apex_agent:MyRealPassw0rd@127.0.0.1:5432/apex"))
+        )
+        self.assertNotIn("MyRealPassw0rd", result.stdout)
+        self.assertIn("***redacted***", result.stdout)
+        # L'hôte/le port/le nom d'utilisateur, non sensibles, restent lisibles
+        # — la rédaction masque la valeur, jamais toute la ligne.
+        self.assertIn("postgres://apex_agent:", result.stdout)
+
+
 class TestNeverClaimsFalseIsolation(unittest.TestCase):
     def test_execute_refuses_when_isolation_is_not_available(self) -> None:
         fake_report = SandboxCapabilityReport(
