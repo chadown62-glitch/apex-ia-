@@ -7,12 +7,17 @@ interface utilisable »), `/projects` (structure minimale), `/agent-templates`
 (DÉFINITIONS, jamais un spawn réel), `/models`/`/providers` (Model/Provider
 Catalog, `apex.models.catalog`), `/configured-agents`/`/agent-teams` (passe
 « Agents V1 » — `apex.agent_registry`, une entité `Agent` réellement
-exécutable via le Model Router, distincte d'`/agents`) — les seules données/
-actions réellement disponibles aujourd'hui.
-Learning/Code/Design/Research/Experiments/Benchmarks/Memory/Genome N'ONT PAS
-de route ici : leurs abstractions propriétaires restent `PLANNED`, et
-exposer une route qui ne peut renvoyer que des données inventées serait
-exactement l'erreur que ce projet entier s'interdit.
+exécutable via le Model Router, distincte d'`/agents`), `/tasks`,
+`/eval-runs`, `/weakness/{specialty}`, `/self-model/{specialty}`,
+`POST /experiment-cycles` (passe « API Évaluation/Apprentissage » —
+`apex/api/routes/evals.py`, expose TaskBank/EvalRunner/WeaknessDetector/
+SelfModel/`run_experiment_cycle`, déjà réels depuis les phases 5/12/18/22,
+jamais réimplémentés ici) — les seules données/actions réellement
+disponibles aujourd'hui.
+Code/Design/Skills/Genome/Benchmarks/RAG/ToolRegistry N'ONT PAS de route
+ici : leurs abstractions propriétaires restent `PLANNED` ou hors périmètre
+de cette passe, et exposer une route qui ne peut renvoyer que des données
+inventées serait exactement l'erreur que ce projet entier s'interdit.
 
 Authentification (passe « API Authentication Hardening ») : `apex.api.auth.
 require_api_token` est appliquée comme dépendance UNIFORME sur chaque routeur
@@ -72,6 +77,7 @@ from apex.api.routes import (
     agents,
     audit,
     conversations,
+    evals,
     events,
     gate,
     health,
@@ -123,7 +129,7 @@ def create_app() -> FastAPI:
         health.router, gate.router, registry.router, events.router, audit.router,
         agents.router, missions.router, scheduler.router,
         conversations.router, projects.router, agent_templates.router, models.router,
-        agent_registry.router,
+        agent_registry.router, evals.router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 

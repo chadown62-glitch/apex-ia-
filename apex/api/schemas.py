@@ -395,3 +395,140 @@ class SchedulerStatusOut(BaseModel):
     available_slots: int
     tracked_executions: int
     heartbeat: MeasurementOut
+
+
+# -- évaluation / apprentissage (passe « API Évaluation/Apprentissage ») -----
+# Projections directes de `apex.tasks`/`apex.evalrunner`/`apex.weakness`/
+# `apex.calibration`/`apex.costgain`/`apex.skills`/`apex.selfmodel` — aucun
+# champ calculé ici, aucune deuxième représentation métier.
+
+
+class TaskOut(BaseModel):
+    id: str
+    split: str
+    specialty: str
+    title: str
+    description: str
+    command: list[str]
+    dataset_ref: str | None
+    created_by: str
+    expected_answer: str | None
+    created_at: str
+
+
+class EvalRunOut(BaseModel):
+    id: str
+    task_id: str
+    method: str
+    oracle_verdict: str
+    oracle_detail: str | None
+    exit_code: int | None
+    elapsed_s: float | None
+    facts: dict[str, Any]
+    created_by: str
+    clone_id: str | None
+    sandbox_status: str | None
+    model_id: str | None
+    seed: int | None
+    dataset_ref: str | None
+    experiment_ref: str | None
+    started_at: str | None
+    completed_at: str | None
+    created_at: str
+
+
+class WeaknessReportOut(BaseModel):
+    category: str
+    pass_count: int
+    fail_count: int
+    error_count: int
+    timeout_count: int
+    unknown_count: int
+    failure_rate: float | None
+    evidence_run_ids: list[str]
+    reason: str
+
+
+class SkillOut(BaseModel):
+    id: str
+    name: str
+    specialty: str
+    description: str
+    status: str
+    prerequisite_skill_ids: list[str]
+    evidence_run_ids: list[str]
+    confidence: float | None
+    supersedes_id: str | None
+    created_by: str
+    created_at: str
+    decided_by: str | None
+    decided_at: str | None
+    decision_reason: str | None
+
+
+class CalibratedConfidenceOut(BaseModel):
+    status: str
+    sample_size: int
+    observed_success_rate: float | None
+    calibrated_point_estimate: float | None
+    calibrated_lower_bound: float | None
+    calibrated_upper_bound: float | None
+    declared_confidence: float | None
+    calibration_gap: float | None
+    reason: str
+
+
+class ResourceCostOut(BaseModel):
+    elapsed_s: MeasurementOut
+    cpu_time_s: MeasurementOut
+    memory_peak_mb: MeasurementOut
+    token_count: MeasurementOut
+    experiment_count: int
+
+
+class SelfModelSpecialtyOut(BaseModel):
+    specialty: str
+    acquired_skills: list[SkillOut]
+    proposed_skills: list[SkillOut]
+    weakness_report: WeaknessReportOut
+    calibrated_confidence: CalibratedConfidenceOut
+    eval_run_count: int
+    methods_used: list[str]
+    genome_refs_used: list[str]
+    cost: ResourceCostOut
+    last_skill_validated_at: str | None
+
+
+class ExperimentCycleCreateIn(BaseModel):
+    """`clone_id` doit référencer un clone déjà réellement spawné
+    (`AgentRuntime.spawn`, hors périmètre de cette route) — cette phase ne
+    crée aucun mécanisme de spawn additionnel."""
+
+    specialty: str
+    current_level: int = Field(ge=1)
+    clone_id: str = Field(min_length=1)
+    method: str = "practice"
+    split: str = "train"
+
+
+class CurriculumDecisionOut(BaseModel):
+    current_level: int
+    recommended_level: int
+    direction: str
+    reason: str
+
+
+class StrategyDecisionOut(BaseModel):
+    specialty: str
+    mode: str | None
+    level: int
+    curriculum_decision: CurriculumDecisionOut
+    reason: str
+
+
+class ExperimentCycleOut(BaseModel):
+    decision: StrategyDecisionOut
+    task: TaskOut
+    eval_run: EvalRunOut
+    weakness_before: WeaknessReportOut
+    weakness_after: WeaknessReportOut
