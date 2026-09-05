@@ -514,6 +514,95 @@ curl -X POST http://127.0.0.1:8000/api/v1/learning/cycles \
 curl http://127.0.0.1:8000/api/v1/learning/status -H "Authorization: Bearer $APEX_API_TOKEN"
 ```
 
+### Skill + Genome Integration into the Autonomous Learning Loop
+
+Connecte le cycle d'apprentissage autonome (`AutonomousLearningService`,
+ci-dessus) aux systèmes Skill (`apex.skills`) et Genome
+(`apex.genome`) déjà réels — ils cessent d'être des sous-systèmes isolés
+sans devenir une seconde implémentation de leur logique métier.
+
+- **`apex.metalearner.feedback.LearningFeedbackService`** — nouveau,
+  petit, appelé UNIQUEMENT depuis `AutonomousLearningService._run_cycle`
+  après un `ExperimentCycleResult` réussi, juste avant de passer l'état à
+  `COMPLETED`. `process_cycle_result(result, experiment_ref=...)` ne
+  réimplémente ni l'évaluation, ni la détection de faiblesse, ni la
+  calibration : il appelle `WeaknessDetectorService.detect_for_specialty`
+  + `ConfidenceCalibrator.calibrate_from_weakness_report` (Skills, via
+  `SkillRegistryService.propose_from_evidence`, déjà réel et inchangé) et
+  la même paire pour Genome (nouveau, mais même mécanisme de preuve —
+  aucun second calcul de confiance).
+- **Skill** — `SkillRegistryService.propose_from_evidence(...,
+  created_by=Subject.CORE)` est appelé tel quel ; refuse déjà lui-même
+  (`ValueError`) si la preuve calibrée est insuffisante
+  (`CalibrationStatus.INSUFFICIENT_DATA` ou borne inférieure calibrée
+  sous `MIN_CALIBRATED_LOWER_BOUND_FOR_SKILL_EVIDENCE = 0.7`) — ce garde-
+  fou n'est jamais dupliqué ni contourné. Le candidat reste `PROPOSED` ;
+  `PROMOTE_SKILL`/`REJECT_SKILL` restent `Subject.HUMAN`-only, inchangés.
+- **Genome** — plus petite frontière d'intégration sûre possible, comme
+  demandé explicitement par la mission tant que le contenu d'une
+  `GenomeVersion` n'est câblé à aucun comportement réel de clone
+  (limite déjà documentée dans `GenomeStoreService`) : seule une
+  **mutation** (`apex.genome.mutation.mutate`, réutilisée telle quelle,
+  jamais réimplémentée) de la `GenomeVersion` actuellement `PROMOTED` est
+  proposée (`GenomeStoreService.propose(..., created_by=Subject.CORE,
+  origin=GenomeVersionOrigin.MUTATION)`), avec la même preuve calibrée que
+  Skill. Jamais de `crossover`, jamais de sélection multi-génération,
+  jamais de promotion automatique — délibérément différé (voir
+  ci-dessous). Seed déterministe
+  (`sha256(experiment_ref)[:16]` en entier) : rejouer le même
+  `experiment_ref` produit la même mutation, jamais un résultat différent
+  à chaque relecture.
+- **Sécurité contre l'accumulation non contrôlée** (garde-fou symétrique,
+  Skill ET Genome — aucune notion de `Population` n'existe dans le code,
+  voir `apex/genome/selection.py` ; ce garde-fou en tient lieu sans
+  inventer un second framework d'évolution) : si une compétence
+  `PROPOSED` existe déjà pour la spécialité (`list_by_specialty`), ou une
+  `GenomeVersion` `PROPOSED` existe déjà (`list_all`, toute spécialité
+  confondue — une seule lignée de Genome), aucun nouveau candidat n'est
+  créé ; la raison exacte est renvoyée dans `LearningFeedbackOutcome`.
+- **Idempotence (obligatoire)** — aucune nouvelle table : chaque appel
+  réussi écrit un événement `learning.feedback_processed`
+  (`EventRepository`, déjà réel, même patron que
+  `AutonomousLearningService.history()`) avec `experiment_ref` dans son
+  contexte JSON. `process_cycle_result` cherche d'abord cet événement
+  avant de créer quoi que ce soit — un `experiment_ref` déjà traité
+  renvoie le résultat déjà enregistré (mêmes `skill_candidate_id`/
+  `genome_candidate_id`), jamais un doublon.
+- **Isolation des pannes** — le traitement Skill et Genome sont chacun
+  dans leur propre `try/except Exception` : un échec de l'un
+  (`learning.skill_feedback_failed`/`learning.genome_feedback_failed`,
+  journalisé, jamais avalé silencieusement) ne bloque jamais l'autre, et
+  aucun des deux ne peut faire échouer le cycle d'apprentissage —
+  `AutonomousLearningService._process_feedback` capture toute exception
+  (`cycle.feedback_failed`) et renvoie `(None, None)`, le cycle atteint
+  toujours `COMPLETED`. Le résultat d'expérience lui-même
+  (`ExperimentCycleResult`, `EvalRun`) reste durable et inchangé quoi
+  qu'il arrive côté Skill/Genome.
+- **Observabilité** — `skill_candidate_id`/`genome_candidate_id` exposés
+  sur `CycleStatus`/`CycleHistoryEntry` (donc `GET /learning/status` et
+  `GET /learning/history`, et le panneau « Apprentissage autonome » du
+  frontend) ; traçable de bout en bout via `experiment_ref` dans les
+  événements `learning.*` déjà cités.
+- **API** — aucune nouvelle route. Les schémas `LearningCycleStatusOut`/
+  `LearningCycleHistoryEntryOut` existants portent simplement les deux
+  nouveaux champs, décision volontairement conservatrice (§9 de la
+  mission : pas de surface d'API spéculative) — `GET /learning/skills`,
+  `/genomes`, `/population` non ajoutées faute de besoin réel non couvert
+  autrement.
+- **Sécurité/Policy inchangée** — `Subject.CORE` en dur pour toute
+  proposition automatique (jamais négociable depuis l'extérieur, aucun
+  paramètre d'identité sur `process_cycle_result`) ; aucune promotion
+  automatique, jamais ; `PolicyEngine` inchangé.
+- **Non fait dans cette passe (différé explicitement)** : aucun domaine
+  `Population`/`Experiment` réel (n'existe pas dans le code, non inventé
+  ici) ; aucune promotion automatique de Skill ou de Genome ; le contenu
+  d'une `GenomeVersion` reste sans effet sur le comportement réel d'un
+  clone/`AgentRuntime` ; `crossover` jamais utilisé ; aucun orchestrateur
+  de sélection/évolution multi-génération ; aucune nouvelle migration de
+  base de données (schémas `SkillRow`/`GenomeVersionRow` réutilisés tels
+  quels, idempotence/provenance entièrement portée par
+  `EventRepository`).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

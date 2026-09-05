@@ -583,6 +583,10 @@ export interface LearningCycleStatus {
   eval_run_id: string | null;
   task_id: string | null;
   oracle_verdict: string | null;
+  /** Toujours PROPOSED, jamais promu par ce chemin — voir
+   * apex/metalearner/feedback.py. `null` = aucun candidat pour ce cycle. */
+  skill_candidate_id: string | null;
+  genome_candidate_id: string | null;
 }
 
 export interface LearningCycleHistoryEntry {
@@ -594,6 +598,8 @@ export interface LearningCycleHistoryEntry {
   oracle_verdict: string | null;
   error: string | null;
   completed_at: string;
+  skill_candidate_id: string | null;
+  genome_candidate_id: string | null;
 }
 
 export interface AutonomousLearningStatus {

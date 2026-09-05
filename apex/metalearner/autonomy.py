@@ -41,13 +41,16 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apex.agents.runtime import AgentRuntime
 from apex.errors import CycleAlreadyRunning
 from apex.evalrunner.model import EvalMethod
 from apex.policy.model import Subject
 from apex.sandbox.model import CancellationToken
+
+if TYPE_CHECKING:
+    from apex.metalearner.model import ExperimentCycleResult
 from apex.tasks.model import TaskSplit
 
 #: Préfixe d'`EvalRun.experiment_ref` pour tout cycle déclenché via CE
@@ -91,6 +94,11 @@ class CycleStatus:
     eval_run_id: str | None = None
     task_id: str | None = None
     oracle_verdict: str | None = None
+    #: Renseignés par `apex.metalearner.feedback.LearningFeedbackService`
+    #: après un cycle `COMPLETED` — jamais promus (`None` par défaut :
+    #: preuve insuffisante, panne isolée, ou candidat non encore traité).
+    skill_candidate_id: str | None = None
+    genome_candidate_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -109,6 +117,8 @@ class CycleHistoryEntry:
     oracle_verdict: str | None
     error: str | None
     completed_at: datetime
+    skill_candidate_id: str | None = None
+    genome_candidate_id: str | None = None
 
 
 class AutonomousLearningService:
@@ -162,6 +172,8 @@ class AutonomousLearningService:
                         state=CycleState(ctx.get("state", CycleState.FAILED.value)),
                         eval_run_id=ctx.get("eval_run_id"), task_id=ctx.get("task_id"),
                         oracle_verdict=ctx.get("oracle_verdict"), error=ctx.get("error"),
+                        skill_candidate_id=ctx.get("skill_candidate_id"),
+                        genome_candidate_id=ctx.get("genome_candidate_id"),
                         completed_at=row.ts,
                     )
                 )
@@ -260,20 +272,50 @@ class AutonomousLearningService:
             )
             return
 
+        experiment_ref = f"{EXPERIMENT_REF_PREFIX}{cycle_id}"
+        skill_candidate_id, genome_candidate_id = self._process_feedback(result, experiment_ref)
+
         with self._lock:
             self._status.state = CycleState.COMPLETED
             self._status.completed_at = _utcnow()
             self._status.eval_run_id = result.eval_run.id
             self._status.task_id = result.task.id
             self._status.oracle_verdict = result.eval_run.oracle_verdict.value
+            self._status.skill_candidate_id = skill_candidate_id
+            self._status.genome_candidate_id = genome_candidate_id
         self._record_event(
             "cycle.completed",
             {
                 "cycle_id": cycle_id, "specialty": specialty, "state": CycleState.COMPLETED.value,
                 "eval_run_id": result.eval_run.id, "task_id": result.task.id,
                 "oracle_verdict": result.eval_run.oracle_verdict.value,
+                "skill_candidate_id": skill_candidate_id, "genome_candidate_id": genome_candidate_id,
             },
         )
+
+    def _process_feedback(
+        self, result: ExperimentCycleResult, experiment_ref: str,
+    ) -> tuple[str | None, str | None]:
+        """Traitement Skill/Genome — jamais susceptible de faire échouer un
+        cycle dont l'expérience elle-même a réussi (§7 isolation des
+        pannes) : `LearningFeedbackService` isole déjà ses propres pannes
+        Skill/Genome individuellement, mais une panne plus large (DB
+        indisponible au moment d'écrire l'événement final, par exemple)
+        est capturée ICI aussi, en dernier recours — le cycle reste
+        `COMPLETED`, seuls les deux candidats restent `None`."""
+        from apex.metalearner.feedback import LearningFeedbackService
+
+        try:
+            outcome = LearningFeedbackService(self._session_factory).process_cycle_result(
+                result, experiment_ref=experiment_ref,
+            )
+        except Exception as exc:
+            self._record_event(
+                "cycle.feedback_failed",
+                {"experiment_ref": experiment_ref, "error": f"{exc.__class__.__name__}: {exc}"},
+            )
+            return None, None
+        return outcome.skill_candidate_id, outcome.genome_candidate_id
 
     def _spawn_clone(self, specialty: str) -> str:
         """Provisionne un clone jetable pour CE cycle — `Subject.LEARNING`

@@ -559,6 +559,12 @@ class LearningCycleStatusOut(BaseModel):
     eval_run_id: str | None
     task_id: str | None
     oracle_verdict: str | None
+    #: Renseignés par `apex.metalearner.feedback.LearningFeedbackService`
+    #: — toujours `PROPOSED`, jamais promus par ce chemin (voir
+    #: apex/metalearner/feedback.py). `None` = aucun candidat pour ce
+    #: cycle (preuve insuffisante, doublon évité, ou panne isolée).
+    skill_candidate_id: str | None = None
+    genome_candidate_id: str | None = None
 
 
 class LearningCycleHistoryEntryOut(BaseModel):
@@ -570,6 +576,8 @@ class LearningCycleHistoryEntryOut(BaseModel):
     oracle_verdict: str | None
     error: str | None
     completed_at: str
+    skill_candidate_id: str | None = None
+    genome_candidate_id: str | None = None
 
 
 class AutonomousLearningStatusOut(BaseModel):

@@ -178,6 +178,7 @@ describe("ExperimentLabPage — autonomous learning panel", () => {
     return {
       state: "idle", cycle_id: null, specialty: null, started_at: null, completed_at: null,
       error: null, eval_run_id: null, task_id: null, oracle_verdict: null,
+      skill_candidate_id: null, genome_candidate_id: null,
     };
   }
 
@@ -213,6 +214,7 @@ describe("ExperimentLabPage — autonomous learning panel", () => {
           state: "completed", cycle_id: "cyc-1", specialty: "research",
           started_at: "2025-01-01T00:00:00Z", completed_at: "2025-01-01T00:00:01Z",
           error: null, eval_run_id: "run-9", task_id: "task-9", oracle_verdict: "pass",
+          skill_candidate_id: "skill-1", genome_candidate_id: "genome-1",
         };
         return jsonResponse({ status: "real", data: cycleState, detail: null });
       }
@@ -234,6 +236,8 @@ describe("ExperimentLabPage — autonomous learning panel", () => {
 
     await waitFor(() => expect(screen.getByText("terminé")).toBeInTheDocument());
     expect(screen.getByText("pass")).toBeInTheDocument();
+    expect(screen.getByText("skill-1 (proposé)")).toBeInTheDocument();
+    expect(screen.getByText("genome-1 (proposé)")).toBeInTheDocument();
 
     expect(postHeaders?.Authorization).toBe("Bearer test-suite-token");
     const parsedBody = JSON.parse(postBody ?? "{}");
@@ -248,6 +252,7 @@ describe("ExperimentLabPage — autonomous learning panel", () => {
     let cycleState: LearningCycleStatus = {
       state: "running", cycle_id: "cyc-2", specialty: "research", started_at: "2025-01-01T00:00:00Z",
       completed_at: null, error: null, eval_run_id: null, task_id: null, oracle_verdict: null,
+      skill_candidate_id: null, genome_candidate_id: null,
     };
     let cancelCalled = false;
 

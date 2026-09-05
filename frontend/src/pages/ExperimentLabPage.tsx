@@ -230,7 +230,19 @@ function AutonomousLearningPanel({
                 status={VERDICT_BADGE[cycle.oracle_verdict] ?? "unknown"}
               />
             )}
+            {cycle.skill_candidate_id && (
+              <StatCard label="Candidat Skill" value={`${cycle.skill_candidate_id.slice(0, 8)} (proposé)`} status="unknown" />
+            )}
+            {cycle.genome_candidate_id && (
+              <StatCard label="Candidat Genome" value={`${cycle.genome_candidate_id.slice(0, 8)} (proposé)`} status="unknown" />
+            )}
           </div>
+          {cycle.state === "completed" && !cycle.skill_candidate_id && !cycle.genome_candidate_id && (
+            <p className="page__subtitle">
+              Aucun candidat Skill/Genome proposé pour ce cycle (preuve insuffisante, ou un candidat non
+              décidé existe déjà pour cette spécialité — voir <code>apex.metalearner.feedback</code>).
+            </p>
+          )}
           {cycle.error && <ErrorState detail={cycle.error} />}
           <p className="mission-form__hint">
             Réutilise spécialité=&quot;{specialty}&quot;, niveau {currentLevel}, méthode={method}, split={split}

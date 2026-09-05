@@ -61,7 +61,8 @@ def _to_status_out(status: CycleStatus) -> LearningCycleStatusOut:
         started_at=status.started_at.isoformat() if status.started_at else None,
         completed_at=status.completed_at.isoformat() if status.completed_at else None,
         error=status.error, eval_run_id=status.eval_run_id, task_id=status.task_id,
-        oracle_verdict=status.oracle_verdict,
+        oracle_verdict=status.oracle_verdict, skill_candidate_id=status.skill_candidate_id,
+        genome_candidate_id=status.genome_candidate_id,
     )
 
 
@@ -70,6 +71,7 @@ def _to_history_entry_out(entry: CycleHistoryEntry) -> LearningCycleHistoryEntry
         cycle_id=entry.cycle_id, specialty=entry.specialty, state=entry.state.value,
         eval_run_id=entry.eval_run_id, task_id=entry.task_id, oracle_verdict=entry.oracle_verdict,
         error=entry.error, completed_at=entry.completed_at.isoformat(),
+        skill_candidate_id=entry.skill_candidate_id, genome_candidate_id=entry.genome_candidate_id,
     )
 
 

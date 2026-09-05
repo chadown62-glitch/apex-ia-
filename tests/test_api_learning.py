@@ -182,6 +182,14 @@ class TestLearningRoutesWithRealDatabase(unittest.TestCase):
         self.assertEqual(final["state"], "completed")
         self.assertEqual(final["cycle_id"], cycle_id)
         self.assertIsNotNone(final["eval_run_id"])
+        # Feedback Skill/Genome (voir apex.metalearner.feedback) s'exécute
+        # réellement contre PostgreSQL ici, pas seulement SQLite en mémoire —
+        # un seul cycle est une preuve insuffisante pour un candidat, mais les
+        # deux champs doivent être présents et non provoquer d'échec du cycle.
+        self.assertIn("skill_candidate_id", final)
+        self.assertIn("genome_candidate_id", final)
+        self.assertIsNone(final["skill_candidate_id"])
+        self.assertIsNone(final["genome_candidate_id"])
 
         eval_run = self.client.get(f"/api/v1/eval-runs/{final['eval_run_id']}").json()
         self.assertEqual(eval_run["status"], "real")
