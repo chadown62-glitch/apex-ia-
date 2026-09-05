@@ -402,3 +402,151 @@ export interface ProviderInfo {
   enabled: boolean;
   model_ids: string[];
 }
+
+// -- évaluation / apprentissage (passe « API Évaluation/Apprentissage » +
+// « Frontend API Integration ») — miroir de apex/api/schemas.py -----------
+
+export type TaskSplit = "train" | "heldout";
+
+export interface Task {
+  id: string;
+  split: TaskSplit;
+  specialty: string;
+  title: string;
+  description: string;
+  command: string[];
+  dataset_ref: string | null;
+  created_by: string;
+  expected_answer: string | null;
+  created_at: string;
+}
+
+export type OracleVerdict = "pass" | "fail" | "error" | "timeout" | "unknown";
+
+export interface EvalRun {
+  id: string;
+  task_id: string;
+  method: string;
+  oracle_verdict: OracleVerdict;
+  oracle_detail: string | null;
+  exit_code: number | null;
+  elapsed_s: number | null;
+  facts: Record<string, unknown>;
+  created_by: string;
+  clone_id: string | null;
+  sandbox_status: string | null;
+  model_id: string | null;
+  seed: number | null;
+  dataset_ref: string | null;
+  experiment_ref: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export type WeaknessCategory =
+  | "insufficient_data"
+  | "no_weakness"
+  | "isolated_failure"
+  | "repeated_weakness"
+  | "statistically_credible_weakness";
+
+export interface WeaknessReport {
+  category: WeaknessCategory;
+  pass_count: number;
+  fail_count: number;
+  error_count: number;
+  timeout_count: number;
+  unknown_count: number;
+  failure_rate: number | null;
+  evidence_run_ids: string[];
+  reason: string;
+}
+
+export type SkillStatus = "proposed" | "acquired" | "rejected" | "superseded";
+
+export interface Skill {
+  id: string;
+  name: string;
+  specialty: string;
+  description: string;
+  status: SkillStatus;
+  prerequisite_skill_ids: string[];
+  evidence_run_ids: string[];
+  confidence: number | null;
+  supersedes_id: string | null;
+  created_by: string;
+  created_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_reason: string | null;
+}
+
+export type CalibrationStatus = "insufficient_data" | "calibrated";
+
+export interface CalibratedConfidence {
+  status: CalibrationStatus;
+  sample_size: number;
+  observed_success_rate: number | null;
+  calibrated_point_estimate: number | null;
+  calibrated_lower_bound: number | null;
+  calibrated_upper_bound: number | null;
+  declared_confidence: number | null;
+  calibration_gap: number | null;
+  reason: string;
+}
+
+export interface ResourceCost {
+  elapsed_s: Measurement<number>;
+  cpu_time_s: Measurement<number>;
+  memory_peak_mb: Measurement<number>;
+  token_count: Measurement<number>;
+  experiment_count: number;
+}
+
+export interface SelfModelSpecialty {
+  specialty: string;
+  acquired_skills: Skill[];
+  proposed_skills: Skill[];
+  weakness_report: WeaknessReport;
+  calibrated_confidence: CalibratedConfidence;
+  eval_run_count: number;
+  methods_used: string[];
+  genome_refs_used: string[];
+  cost: ResourceCost;
+  last_skill_validated_at: string | null;
+}
+
+/** Champs EXACTS de `apex.api.schemas.ExperimentCycleCreateIn` — aucun champ
+ * d'identité/sujet ici : le backend force `Subject.HUMAN` lui-même, jamais
+ * transmis par l'appelant (voir apex/api/routes/evals.py). */
+export interface ExperimentCycleCreateInput {
+  specialty: string;
+  current_level: number;
+  clone_id: string;
+  method?: string;
+  split?: string;
+}
+
+export interface CurriculumDecision {
+  current_level: number;
+  recommended_level: number;
+  direction: string;
+  reason: string;
+}
+
+export interface StrategyDecision {
+  specialty: string;
+  mode: string | null;
+  level: number;
+  curriculum_decision: CurriculumDecision;
+  reason: string;
+}
+
+export interface ExperimentCycle {
+  decision: StrategyDecision;
+  task: Task;
+  eval_run: EvalRun;
+  weakness_before: WeaknessReport;
+  weakness_after: WeaknessReport;
+}

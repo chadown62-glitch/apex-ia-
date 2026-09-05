@@ -354,6 +354,56 @@ réutilisable par toutes les pages, sans réécrire ce qui fonctionnait déjà.
   interface dédiée — l'entrée Sidebar "Multi-IA / Teams" le documente
   honnêtement comme `PLANNED` plutôt que de le cacher ou de le simuler.
 
+### Frontend — API Integration (Skills / Weaknesses / Experiment Lab)
+
+Raccorde le frontend à l'API d'évaluation/apprentissage déjà réelle côté
+backend (`apex/api/routes/evals.py` : `GET /tasks`, `GET /tasks/{id}`,
+`GET /eval-runs`, `GET /eval-runs/{id}`, `GET /weakness/{specialty}`,
+`GET /self-model/{specialty}`, `POST /experiment-cycles`).
+
+- **Authentification centralisée** (`src/api/client.ts`) — `fetchEnvelope`
+  exige désormais un jeton (`VITE_APEX_API_TOKEN`, voir
+  `frontend/.env.example`) envoyé comme `Authorization: Bearer <jeton>` sur
+  CHAQUE requête ; jamais lu ni exposé ailleurs dans le code (seul un
+  booléen, `isApiTokenConfigured()`, sort de ce module). Jeton absent →
+  échec clair (`DataEnvelope(status:"unknown")`), jamais un appel réseau
+  silencieusement non authentifié. `fetchEnvelope` distingue maintenant
+  deux formes de réponse HTTP : l'enveloppe `DataEnvelope` existante
+  (routes historiques, dégradation 500/DB indisponible) et la forme brute
+  `{"detail": ...}` de `HTTPException` FastAPI (401/404/422 des nouvelles
+  routes) — cette dernière est levée comme `ApiError` typée (`status`,
+  `message`), jamais mélangée à l'enveloppe.
+- **Client API étendu** (`src/api/{types,endpoints,hooks}.ts`) :
+  `listTasks`/`getTask`/`listEvalRuns`/`getEvalRun`/`getWeakness`/
+  `getSelfModel`/`createExperimentCycle`, chacun un miroir champ-à-champ
+  des schémas Pydantic du backend — aucune logique métier dupliquée côté
+  client.
+- **Skills** (`pages/SkillsPage.tsx`) — reste volontairement LECTURE SEULE :
+  aucun endpoint `/skills` dédié n'existe, seul `GET /self-model/{specialty}`
+  porte `acquired_skills`/`proposed_skills`. Aucune action
+  proposer/promouvoir/rejeter n'est simulée.
+- **Weaknesses** (`pages/WeaknessesPage.tsx`) — `GET /weakness/{specialty}`
+  pour le rapport de faiblesse, `GET /self-model/{specialty}` pour le
+  contexte calibration/coût ; état `insufficient_data` affiché honnêtement,
+  jamais une faiblesse fabriquée.
+- **Experiment Lab** (`pages/ExperimentLabPage.tsx`) — liste/détail des
+  `EvalRun` réels + déclenchement réel d'un cycle
+  (`apex.metalearner.cycle.run_experiment_cycle` via
+  `POST /experiment-cycles`). **Aucun champ d'identité/sujet n'est envoyé
+  par le frontend** — le backend force déjà `Subject.HUMAN` — propriété
+  vérifiée par un test dédié (corps JSON de la requête comparé
+  strictement, `not.toHaveProperty("subject"/"requested_by")`). Le
+  sélecteur de clone réutilise `useAgents()` existant (aucun mécanisme de
+  spawn ajouté).
+- **Registre** (`specialties/data.ts`/`registry.tsx`) — `skills`,
+  `weaknesses`, `experiment-lab` passent de `planned`/`concept` à
+  `real`/`connected` (les 3 seules entrées touchées ; `evals` reste
+  volontairement non connecté cette passe).
+- **Non fait dans cette passe** : aucune fonctionnalité de gestion de
+  tâches (Task view reste hors périmètre, lecture/investigation
+  uniquement) ; aucun travail sur les launchers (architecture « ONE
+  CLICK » explicitement différée).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant
@@ -391,8 +441,11 @@ réutilisable par toutes les pages, sans réécrire ce qui fonctionnait déjà.
   configuré (`tests/test_models_openai_compatible.py`) — structurel dans ce
   conteneur de développement (voir §7), pas un bug.
 - Frontend (`cd frontend && npx tsc -b && npx vitest run`) : compilation
-  TypeScript propre, **13 fichiers de test, 71 tests, 0 échec** (dernière
-  exécution complète, après la passe « UI Foundation V1 »).
+  TypeScript propre, **17 fichiers de test, 94 tests, 0 échec** (dernière
+  exécution complète, après la passe « Frontend API Integration »). Aucun
+  script `lint` n'est configuré dans `package.json` (`dev`/`build`/
+  `preview`/`test`/`test:watch` seulement) — état inchangé depuis « UI
+  Foundation V1 », constaté à nouveau plutôt que supposé.
 - Avant de relancer la suite : `rm -f .apex/environment.json` (régénéré par
   `apex gate`, contamine un test si laissé en place).
 - Aucun warning significatif au-delà d'un avertissement de dépréciation

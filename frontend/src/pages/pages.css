@@ -95,6 +95,13 @@
   color: var(--text-muted);
 }
 
+/* Ligne cliquable sélectionnée (Experiment Lab — sélection d'un EvalRun) —
+   même variable de surbrillance que le reste du design system, jamais une
+   couleur codée en dur ici. */
+.kv-table__row--selected td {
+  background: var(--surface-hover, rgba(127, 127, 127, 0.12));
+}
+
 .planned-page {
   display: flex;
   flex-direction: column;

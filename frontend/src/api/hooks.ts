@@ -13,6 +13,7 @@ import {
   createAgentTemplate,
   createConfiguredAgent,
   createConversation,
+  createExperimentCycle,
   createMission,
   createProject,
   deleteAgentTemplate,
@@ -23,11 +24,15 @@ import {
   getAuditLog,
   getConfiguredAgent,
   getConversation,
+  getEvalRun,
   getEvents,
   getGate,
   getHealth,
   getMission,
   getRegistry,
+  getSelfModel,
+  getTask,
+  getWeakness,
   launchMission,
   listAgentExecutions,
   listAgents,
@@ -36,11 +41,13 @@ import {
   listCatalogModels,
   listConfiguredAgents,
   listConversations,
+  listEvalRuns,
   listMessages,
   listMissionExecutions,
   listMissions,
   listProjects,
   listProviders,
+  listTasks,
   rejectMission,
   renameConversation,
   runMissionViaAgent,
@@ -54,6 +61,7 @@ import type {
   ConfiguredAgentCreateInput,
   ConfiguredAgentUpdateInput,
   ConversationCreateInput,
+  ExperimentCycleCreateInput,
   MissionCreateInput,
   ProjectCreateInput,
   RunAgentExecutionInput,
@@ -383,5 +391,78 @@ export function useCreateAgentTeam() {
   return useMutation({
     mutationFn: (input: AgentTeamCreateInput) => createAgentTeam(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agent-teams"] }),
+  });
+}
+
+// -- évaluation / apprentissage (passe « Frontend API Integration ») ---------
+// `getTask`/`getEvalRun`/`getWeakness`/`getSelfModel` peuvent lever
+// `ApiError` (404/422/401, voir client.ts) — jamais retenté (`retry: false`) :
+// réinterroger le même id/spécialité invalide ne peut jamais réussir. La
+// page lit `query.error instanceof ApiError` pour distinguer authentification/
+// validation/ressource-absente d'un échec réseau réel (voir client.ts).
+
+export function useTasks(params?: { specialty?: string; split?: string }) {
+  return useQuery({
+    queryKey: ["tasks", params?.specialty ?? null, params?.split ?? null],
+    queryFn: () => listTasks(params),
+    retry: false,
+  });
+}
+
+export function useTask(taskId: string | undefined) {
+  return useQuery({
+    queryKey: ["tasks", "detail", taskId],
+    queryFn: () => getTask(taskId as string),
+    enabled: Boolean(taskId),
+    retry: false,
+  });
+}
+
+export function useEvalRuns(params?: { taskId?: string; cloneId?: string }) {
+  return usePolling(["eval-runs", params?.taskId ?? null, params?.cloneId ?? null], () => listEvalRuns(params), REFRESH_MS);
+}
+
+export function useEvalRun(evalRunId: string | undefined) {
+  return useQuery({
+    queryKey: ["eval-runs", "detail", evalRunId],
+    queryFn: () => getEvalRun(evalRunId as string),
+    enabled: Boolean(evalRunId),
+    retry: false,
+  });
+}
+
+export function useWeakness(specialty: string | undefined) {
+  return useQuery({
+    queryKey: ["weakness", specialty],
+    queryFn: () => getWeakness(specialty as string),
+    enabled: Boolean(specialty),
+    retry: false,
+  });
+}
+
+export function useSelfModel(specialty: string | undefined) {
+  return useQuery({
+    queryKey: ["self-model", specialty],
+    queryFn: () => getSelfModel(specialty as string),
+    enabled: Boolean(specialty),
+    retry: false,
+  });
+}
+
+/** Le seul point d'écriture de ce bloc — déclenche réellement
+ * `apex.metalearner.cycle.run_experiment_cycle` (jamais simulé côté
+ * frontend). Invalide `eval-runs`/`tasks`/`weakness`/`self-model` de la
+ * spécialité concernée : le cycle réel a produit une nouvelle Task et un
+ * nouvel EvalRun, et a fait évoluer la faiblesse mesurée. */
+export function useCreateExperimentCycle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: ExperimentCycleCreateInput) => createExperimentCycle(input),
+    onSuccess: (_, input) => {
+      queryClient.invalidateQueries({ queryKey: ["eval-runs"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["weakness", input.specialty] });
+      queryClient.invalidateQueries({ queryKey: ["self-model", input.specialty] });
+    },
   });
 }

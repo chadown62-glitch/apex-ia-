@@ -14,6 +14,7 @@ import { CodeIntelligencePage } from "../pages/CodeIntelligencePage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DesignStudioPage } from "../pages/DesignStudioPage";
 import { EvolutionTimelinePage } from "../pages/EvolutionTimelinePage";
+import { ExperimentLabPage } from "../pages/ExperimentLabPage";
 import { FilesPage } from "../pages/FilesPage";
 import { HardwarePage } from "../pages/HardwarePage";
 import { MissionCenterPage } from "../pages/MissionCenterPage";
@@ -21,7 +22,9 @@ import { ModelsPage } from "../pages/ModelsPage";
 import { ProjectManagerPage } from "../pages/ProjectManagerPage";
 import { ResourcesPage } from "../pages/ResourcesPage";
 import { SecurityGatePage } from "../pages/SecurityGatePage";
+import { SkillsPage } from "../pages/SkillsPage";
 import { SystemPage } from "../pages/SystemPage";
+import { WeaknessesPage } from "../pages/WeaknessesPage";
 import { SPECIALTY_DEFINITIONS } from "./data";
 import type { Specialty } from "./types";
 
@@ -40,6 +43,9 @@ const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   "evolution-timeline": EvolutionTimelinePage,
   "mission-center": MissionCenterPage,
   system: SystemPage,
+  skills: SkillsPage,
+  weaknesses: WeaknessesPage,
+  "experiment-lab": ExperimentLabPage,
 };
 
 export const SPECIALTIES: Specialty[] = SPECIALTY_DEFINITIONS.map((def) => ({

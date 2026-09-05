@@ -21,6 +21,9 @@ import type {
   Conversation,
   ConversationCreateInput,
   DataEnvelope,
+  EvalRun,
+  ExperimentCycle,
+  ExperimentCycleCreateInput,
   Gate,
   Health,
   Message,
@@ -31,8 +34,11 @@ import type {
   ProviderInfo,
   Registry,
   RunAgentExecutionInput,
+  SelfModelSpecialty,
   SendMessageInput,
   SendMessageResult,
+  Task,
+  WeaknessReport,
 } from "./types";
 
 export function getHealth(): Promise<DataEnvelope<Health>> {
@@ -223,4 +229,49 @@ export function listAgentTeams(): Promise<DataEnvelope<AgentTeam[]>> {
 
 export function createAgentTeam(input: AgentTeamCreateInput): Promise<DataEnvelope<AgentTeam>> {
   return fetchEnvelope<AgentTeam>("/agent-teams", { method: "POST", body: JSON.stringify(input) });
+}
+
+// -- évaluation / apprentissage (apex/api/routes/evals.py) -------------------
+// `getTask`/`getEvalRun` peuvent lever `ApiError(404)` (ressource absente) ;
+// `getWeakness`/`getSelfModel`/`createExperimentCycle` peuvent lever
+// `ApiError(422)` (spécialité/entrée invalide) — voir client.ts. Ce ne sont
+// jamais des DataEnvelope "unknown" : l'appelant les distingue via
+// `error.status` (voir hooks.ts / les pages Skills/Weaknesses/Experiment Lab).
+
+export function listTasks(params?: { specialty?: string; split?: string }): Promise<DataEnvelope<Task[]>> {
+  const query = new URLSearchParams();
+  if (params?.specialty) query.set("specialty", params.specialty);
+  if (params?.split) query.set("split", params.split);
+  const qs = query.toString();
+  return fetchEnvelope<Task[]>(`/tasks${qs ? `?${qs}` : ""}`);
+}
+
+export function getTask(taskId: string): Promise<DataEnvelope<Task>> {
+  return fetchEnvelope<Task>(`/tasks/${encodeURIComponent(taskId)}`);
+}
+
+export function listEvalRuns(params?: { taskId?: string; cloneId?: string }): Promise<DataEnvelope<EvalRun[]>> {
+  const query = new URLSearchParams();
+  if (params?.taskId) query.set("task_id", params.taskId);
+  if (params?.cloneId) query.set("clone_id", params.cloneId);
+  const qs = query.toString();
+  return fetchEnvelope<EvalRun[]>(`/eval-runs${qs ? `?${qs}` : ""}`);
+}
+
+export function getEvalRun(evalRunId: string): Promise<DataEnvelope<EvalRun>> {
+  return fetchEnvelope<EvalRun>(`/eval-runs/${encodeURIComponent(evalRunId)}`);
+}
+
+export function getWeakness(specialty: string): Promise<DataEnvelope<WeaknessReport>> {
+  return fetchEnvelope<WeaknessReport>(`/weakness/${encodeURIComponent(specialty)}`);
+}
+
+export function getSelfModel(specialty: string): Promise<DataEnvelope<SelfModelSpecialty>> {
+  return fetchEnvelope<SelfModelSpecialty>(`/self-model/${encodeURIComponent(specialty)}`);
+}
+
+export function createExperimentCycle(
+  input: ExperimentCycleCreateInput,
+): Promise<DataEnvelope<ExperimentCycle>> {
+  return fetchEnvelope<ExperimentCycle>("/experiment-cycles", { method: "POST", body: JSON.stringify(input) });
 }

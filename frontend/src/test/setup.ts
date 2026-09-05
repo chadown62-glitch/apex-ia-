@@ -1,4 +1,15 @@
+import { vi } from "vitest";
+
 import "@testing-library/jest-dom/vitest";
+
+// Jeton API par défaut pour TOUTE la suite (passe « Frontend API
+// Integration ») : `fetchEnvelope` (src/api/client.ts) exige désormais un
+// jeton configuré avant même de tenter un appel réseau — sans cette valeur
+// par défaut, chaque test de page qui mocke `fetch` échouerait avant que
+// son mock ne soit jamais atteint. Un test qui veut spécifiquement le cas
+// "jeton absent" le redéfinit explicitement (`vi.unstubAllEnvs()`), comme
+// `client.test.ts` le fait déjà.
+vi.stubEnv("VITE_APEX_API_TOKEN", "test-suite-token");
 
 // jsdom n'implémente pas matchMedia — utilisé par useTheme (préférence
 // système) et par toute future media query testée en JS. Défaut réaliste :

@@ -1,13 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fetchEnvelope } from "./client";
+import { ApiError, fetchEnvelope, isApiTokenConfigured } from "./client";
 
 describe("fetchEnvelope", () => {
   const originalFetch = globalThis.fetch;
 
+  beforeEach(() => {
+    vi.stubEnv("VITE_APEX_API_TOKEN", "test-token-value");
+  });
+
   afterEach(() => {
     globalThis.fetch = originalFetch;
     vi.restoreAllMocks();
+    vi.unstubAllEnvs();
   });
 
   it("passes a real envelope through unchanged", async () => {
@@ -52,5 +57,96 @@ describe("fetchEnvelope", () => {
 
     const result = await fetchEnvelope("/gate");
     expect(result).toEqual(envelope);
+  });
+
+  it("attaches the configured token as an Authorization bearer header", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "real", data: null, detail: null }),
+    }) as unknown as typeof fetch;
+
+    await fetchEnvelope("/tasks");
+    const [, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer test-token-value");
+  });
+
+  it("never calls fetch and fails clearly when no token is configured", async () => {
+    vi.unstubAllEnvs();
+    globalThis.fetch = vi.fn();
+
+    const result = await fetchEnvelope("/tasks");
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+    expect(result.status).toBe("unknown");
+    expect(result.detail).toContain("VITE_APEX_API_TOKEN");
+  });
+
+  it("throws a typed ApiError(401) on a missing/invalid token, never a DataEnvelope", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: "jeton invalide" }),
+    }) as unknown as typeof fetch;
+
+    await expect(fetchEnvelope("/tasks")).rejects.toMatchObject({ status: 401 });
+    await expect(fetchEnvelope("/tasks")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("throws a typed ApiError(404) for a missing resource, never a DataEnvelope", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({ detail: "tâche « x » introuvable" }),
+    }) as unknown as typeof fetch;
+
+    let caught: unknown;
+    try {
+      await fetchEnvelope("/tasks/does-not-exist");
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(ApiError);
+    expect((caught as ApiError).status).toBe(404);
+    expect((caught as ApiError).message).toContain("introuvable");
+  });
+
+  it("throws a typed ApiError(422) for invalid input", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({ detail: "spécialité « x » inconnue" }),
+    }) as unknown as typeof fetch;
+
+    await expect(fetchEnvelope("/weakness/x")).rejects.toMatchObject({ status: 422 });
+  });
+
+  it("never exposes the token in a thrown error message", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: "jeton invalide" }),
+    }) as unknown as typeof fetch;
+
+    try {
+      await fetchEnvelope("/tasks");
+    } catch (error) {
+      expect(String(error)).not.toContain("test-token-value");
+    }
+  });
+});
+
+describe("isApiTokenConfigured", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is true once a non-empty token is configured", () => {
+    vi.stubEnv("VITE_APEX_API_TOKEN", "test-token-value");
+    expect(isApiTokenConfigured()).toBe(true);
+  });
+
+  it("is false when no token is configured", () => {
+    vi.unstubAllEnvs();
+    expect(isApiTokenConfigured()).toBe(false);
   });
 });
