@@ -17,9 +17,7 @@ from __future__ import annotations
 import os
 import unittest
 
-from fastapi.testclient import TestClient
-
-from apex.api.app import create_app
+from tests import api_test_support
 from tests import db_test_support as support
 
 _SKIP_REASON = (
@@ -34,7 +32,7 @@ class TestApiWithoutDatabase(unittest.TestCase):
             k: os.environ.pop(k, None)
             for k in ("POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB")
         }
-        self.client = TestClient(create_app())
+        self.client = api_test_support.authed_client()
 
     def tearDown(self) -> None:
         for k, v in self._saved.items():
@@ -101,7 +99,7 @@ class TestApiWithRealDatabase(unittest.TestCase):
 
     def setUp(self) -> None:
         os.environ["POSTGRES_DB"] = support.TEST_DB_NAME
-        self.client = TestClient(create_app())
+        self.client = api_test_support.authed_client()
 
     def test_conversation_lifecycle_end_to_end(self) -> None:
         created = self.client.post("/api/v1/conversations", json={"title": "Discussion"})

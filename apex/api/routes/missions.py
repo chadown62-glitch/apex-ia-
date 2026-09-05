@@ -1,10 +1,11 @@
 """GET/POST /missions — Mission Engine (étape 6).
 
-Même limite déjà documentée dans `apex/api/routes/agents.py` : cette API n'a
-aucune authentification de l'appelant HTTP, donc toute action ici est
-exercée comme si l'appelant était `Subject.HUMAN` — pas un contournement de
-PolicyEngine, la même hypothèse simplificatrice déjà en place pour
-`/agents`, pas une nouvelle.
+Même limite déjà documentée dans `apex/api/routes/agents.py` : un jeton est
+désormais exigé (passe « API Authentication Hardening », `apex.api.auth`),
+mais aucun mapping appelant -> `Subject` précis n'existe encore, donc toute
+action ici est exercée comme si l'appelant était `Subject.HUMAN` — pas un
+contournement de PolicyEngine, la même hypothèse simplificatrice déjà en
+place pour `/agents`, pas une nouvelle.
 
 `mark_running`/`mark_review`/`mark_failed` (`apex.missions.service`) ne sont
 toujours PAS exposées ici individuellement.

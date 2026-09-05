@@ -14,10 +14,18 @@ de route ici : leurs abstractions propriétaires restent `PLANNED`, et
 exposer une route qui ne peut renvoyer que des données inventées serait
 exactement l'erreur que ce projet entier s'interdit.
 
-Aucune authentification de l'appelant HTTP. C'est une limite réelle, pas un
-oubli : aucun système ne mappe encore une requête à un `Subject` de
-PolicyEngine — à traiter avant tout déploiement, hors périmètre de cette
-étape (voir apex/api/routes/agents.py).
+Authentification (passe « API Authentication Hardening ») : `apex.api.auth.
+require_api_token` est appliquée comme dépendance UNIFORME sur chaque routeur
+inclus ci-dessous, sans exception (y compris `/health` — aucune route jugée
+« assez anodine » pour être exemptée au cas par cas ; aucun healthcheck
+d'infrastructure de ce dépôt n'appelle `/health` de ce processus sans jeton,
+voir `docker-compose.yml`, qui ne sonde que postgres/redis/minio). Le jeton
+prouve seulement « ce processus connaît le secret local » — il ne mappe
+toujours pas l'appelant à un `Subject` de PolicyEngine (chaque route continue
+d'agir comme `Subject.HUMAN`/`Subject.CORE` implicite, voir les docstrings de
+`apex/api/routes/{agents,missions,conversations,audit}.py`, toujours exactes
+sur ce point) : l'autorisation fine par identité reste un chantier séparé,
+hors périmètre de cette étape — voir `apex/api/auth.py`.
 
 CORS : le frontend (`npm run dev`, Vite) tourne sur une origine distincte du
 backend (ports différents) — sans en-têtes CORS, AUCUNE requête du
@@ -28,16 +36,30 @@ autorisées lues depuis `APEX_CORS_ALLOW_ORIGINS` (liste séparée par des
 virgules) ; à défaut, seules les origines de développement local usuelles
 (`5173`/`4173`, Vite dev/preview, sur `localhost` et `127.0.0.1`) sont
 permises — jamais un `allow_origins=["*"]` qui masquerait un déploiement
-distant mal configuré.
+distant mal configuré. `Authorization` est désormais listé dans
+`allow_headers` : sans cela, un navigateur bloquerait lui-même l'en-tête
+côté préflight avant même d'atteindre `require_api_token` — un frontend
+qui n'attache pas encore ce jeton reste un chantier séparé (voir rapport de
+cette étape), mais ce n'est jamais la politique CORS qui doit l'en empêcher.
+
+Documentation interactive (`/docs`, `/redoc`, `/openapi.json`) : DÉSACTIVÉE
+par défaut — ce sont des routes FastAPI internes, ajoutées en dehors de
+`include_router`, qui ne portent JAMAIS les dépendances passées à
+`include_router` (limitation documentée de FastAPI/Starlette) ; les laisser
+actives par défaut exposerait toute la surface de l'API (chemins, schémas)
+sans jeton. Réactivables explicitement en développement local via
+`APEX_API_ENABLE_DOCS=1` — jamais par défaut.
 """
 
 from __future__ import annotations
 
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+
+from apex.api.auth import require_api_token
 
 _DEFAULT_DEV_ORIGINS = (
     "http://localhost:5173", "http://127.0.0.1:5173",
@@ -65,6 +87,7 @@ API_PREFIX = "/api/v1"
 
 
 def create_app() -> FastAPI:
+    enable_docs = os.environ.get("APEX_API_ENABLE_DOCS") == "1"
     app = FastAPI(
         title="APEX Control Center API",
         version=__version__,
@@ -72,6 +95,9 @@ def create_app() -> FastAPI:
             "Backend en lecture seule — chaque endpoint conserve son statut "
             "REAL/SIMULATED/UNKNOWN. Voir docs/COGNITIVE_ARCHITECTURE.md."
         ),
+        docs_url="/docs" if enable_docs else None,
+        redoc_url="/redoc" if enable_docs else None,
+        openapi_url="/openapi.json" if enable_docs else None,
     )
 
     configured = os.environ.get("APEX_CORS_ALLOW_ORIGINS")
@@ -84,16 +110,22 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=allow_origins,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
     )
 
+    # Dépendance UNIFORME (§ authentification, voir docstring du module) :
+    # un seul `Depends(...)` posé au niveau de chaque inclusion de routeur,
+    # jamais au cas par cas route par route — même discipline explicite que
+    # la boucle elle-même (aucun routeur ajouté ici ne peut oublier la
+    # dépendance sans le faire visiblement, à cet unique endroit).
+    auth_dependency = Depends(require_api_token)
     for router in (
         health.router, gate.router, registry.router, events.router, audit.router,
         agents.router, missions.router, scheduler.router,
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router,
     ):
-        app.include_router(router, prefix=API_PREFIX)
+        app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

@@ -1,11 +1,13 @@
 """GET /agents, GET /agents/{clone_id} — clones persistés (`agents`, phase 2).
 
 Vue construite via `apex.agents.view.to_view` — aucun champ recalculé ici.
-`viewer=Subject.HUMAN` par défaut : cette API n'authentifie pas encore
-l'appelant HTTP (aucun système ne mappe une requête à un `Subject` précis),
-donc `available_actions` reflète ce qu'un `HUMAN` peut faire, pas ce que
-l'appelant HTTP réel devrait pouvoir faire. Limite explicite, pas cachée —
-voir le registre, entrée ControlCenterAPI.
+`viewer=Subject.HUMAN` par défaut : l'API exige désormais un jeton
+(`apex.api.auth.require_api_token`, passe « API Authentication Hardening »)
+mais ne mappe toujours pas l'appelant HTTP à un `Subject` précis (aucune
+notion d'identité/rôle par requête), donc `available_actions` reflète ce
+qu'un `HUMAN` peut faire, pas ce que l'appelant HTTP réel devrait pouvoir
+faire. Limite explicite, pas cachée — voir le registre, entrée
+ControlCenterAPI.
 """
 
 from __future__ import annotations

@@ -2,9 +2,10 @@
 
 Aucune écriture exposée ici : `AuditLogRepository` n'a pas de méthode
 update/delete (voir apex/db/repositories.py) et cette API n'expose même pas
-d'endpoint d'écriture — écrire dans audit_log depuis l'API exigerait une
-authentification de l'appelant HTTP, qui n'existe pas encore (voir le
-registre, entrée ControlCenterAPI).
+d'endpoint d'écriture — l'écriture reste un effet de bord interne des
+services (`_record_audit`), jamais un endpoint HTTP direct, indépendamment
+de l'authentification (passe « API Authentication Hardening », voir
+apex.api.auth) désormais exigée sur cette route comme sur toutes les autres.
 """
 
 from __future__ import annotations

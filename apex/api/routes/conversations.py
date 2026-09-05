@@ -1,10 +1,11 @@
 """GET/POST/PATCH/DELETE /conversations — Chat réel (passe « Première
 interface utilisable »).
 
-Même limite déjà documentée dans `apex/api/routes/agents.py` : aucune
-authentification de l'appelant HTTP — toute action ici est exercée comme si
-l'appelant était `Subject.HUMAN`, la même hypothèse simplificatrice déjà en
-place pour `/agents`/`/missions`.
+Même limite déjà documentée dans `apex/api/routes/agents.py` : un jeton est
+désormais exigé (passe « API Authentication Hardening », `apex.api.auth`),
+mais aucun mapping appelant -> `Subject` précis n'existe encore — toute
+action ici est exercée comme si l'appelant était `Subject.HUMAN`, la même
+hypothèse simplificatrice déjà en place pour `/agents`/`/missions`.
 
 `POST /{id}/messages` est le SEUL point d'entrée réel du parcours :
 UI -> API -> `ConversationService.send_message` -> `apex.routing.

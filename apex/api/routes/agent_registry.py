@@ -4,10 +4,12 @@ Nommée `/configured-agents` (jamais `/agents`, déjà pris par `apex.api.
 routes.agents` — les instances de clone OS-level réelles, `AgentRuntime`) :
 cette route expose `apex.agent_registry.model.Agent`, une CONFIGURATION
 réutilisable, jamais un clone en cours d'exécution. Même limite déjà
-documentée pour `/agents`/`/missions` : aucune authentification de
-l'appelant HTTP, toute action ici est exercée comme si l'appelant était
-`Subject.HUMAN` (sauf `/executions`, où le service exige `Subject.CORE` en
-interne, même motif que `/missions/{id}/launch`).
+documentée pour `/agents`/`/missions` : un jeton est désormais exigé
+(passe « API Authentication Hardening », `apex.api.auth`), mais aucun
+mapping appelant -> `Subject` précis n'existe encore, donc toute action ici
+est exercée comme si l'appelant était `Subject.HUMAN` (sauf `/executions`,
+où le service exige `Subject.CORE` en interne, même motif que
+`/missions/{id}/launch`).
 """
 
 from __future__ import annotations

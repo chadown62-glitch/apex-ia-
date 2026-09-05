@@ -12,9 +12,7 @@ from __future__ import annotations
 import os
 import unittest
 
-from fastapi.testclient import TestClient
-
-from apex.api.app import create_app
+from tests import api_test_support
 from tests import db_test_support as support
 
 _SKIP_REASON = (
@@ -33,7 +31,7 @@ class TestApiWithoutDatabase(unittest.TestCase):
             k: os.environ.pop(k, None)
             for k in ("POSTGRES_USER", "POSTGRES_PASSWORD", "POSTGRES_DB")
         }
-        self.client = TestClient(create_app())
+        self.client = api_test_support.authed_client()
 
     def tearDown(self) -> None:
         for k, v in self._saved.items():
@@ -125,7 +123,7 @@ class TestApiWithRealDatabase(unittest.TestCase):
         support.recreate_test_database()
         support.run_upgrade()
         os.environ["POSTGRES_DB"] = support.TEST_DB_NAME
-        self.client = TestClient(create_app())
+        self.client = api_test_support.authed_client()
 
     def tearDown(self) -> None:
         support.drop_test_database()
@@ -207,7 +205,7 @@ class TestMissionApiWithRealDatabase(unittest.TestCase):
         support.run_upgrade()
         os.environ["POSTGRES_DB"] = support.TEST_DB_NAME
         reset_scheduler_service_for_tests()
-        self.client = TestClient(create_app())
+        self.client = api_test_support.authed_client()
 
     def tearDown(self) -> None:
         from apex.api.dependencies import reset_scheduler_service_for_tests
