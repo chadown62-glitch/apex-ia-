@@ -431,6 +431,12 @@ class TaskRow(Base):
     command: Mapped[list[str]] = mapped_column(JSON, nullable=False)
     dataset_ref: Mapped[str | None] = mapped_column(String(256), nullable=True)
     created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: Passe « Real Model Evaluation » — réponse attendue en texte libre,
+    #: consultée UNIQUEMENT par `apex.oracles.response_judge.
+    #: ExactMatchResponseJudge` (jamais par `ExitCodeOracle`, qui n'inspecte
+    #: pas `task`). `NULL` par défaut : une tâche déterministe existante n'a
+    #: jamais ce champ renseigné, jamais rétrofitté.
+    expected_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
@@ -445,6 +451,7 @@ class TaskRow(Base):
             "command": list(self.command),
             "dataset_ref": self.dataset_ref,
             "created_by": self.created_by,
+            "expected_answer": self.expected_answer,
             "created_at": self.created_at.isoformat(),
         }
 
@@ -470,13 +477,28 @@ class EvalRunRow(Base):
     `tasks.id`/`agents.clone_id` : même simplification documentée que
     `MissionRow.assigned_agent` ; l'existence est vérifiée au niveau
     service (`apex.evalrunner.service`).
+
+    Passe « Real Model Evaluation » : `clone_id`/`sandbox_status` sont
+    devenus NULLABLE — un `EvalRun` produit par
+    `EvalRunnerService.run_model_eval` (chemin `ModelProvider`, JAMAIS de
+    sandbox) n'a structurellement ni Clone exécutant ni statut de processus
+    à rapporter ; leur forcer une valeur aurait exigé soit un Clone/statut
+    fabriqué (deviné), soit détourner le vocabulaire `ExecutionStatus`
+    (dont chaque valeur exige une preuve noyau distincte, voir
+    `apex.sandbox.model`) pour désigner un appel HTTP — les deux rejetés.
+    Une ligne `eval_runs` du chemin déterministe existant (`run`) continue
+    de les renseigner exactement comme avant, aucun backfill nécessaire.
+    `model_id` (nouveau, nullable) est le nom RÉELLEMENT renvoyé par le
+    backend (`GenerationResult.model_used`), jamais le nom demandé —
+    même discipline que `AgentExecutionRow.model_id` : `NULL` tant
+    qu'aucune génération n'a réellement abouti.
     """
 
     __tablename__ = "eval_runs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     task_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    clone_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    clone_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     method: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     dataset_ref: Mapped[str | None] = mapped_column(String(256), nullable=True)
@@ -484,9 +506,11 @@ class EvalRunRow(Base):
     experiment_ref: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     oracle_verdict: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
     oracle_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
-    sandbox_status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    sandbox_status: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
     elapsed_s: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: Passe « Real Model Evaluation » — voir docstring de la classe.
+    model_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
     facts: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
     created_by: Mapped[str] = mapped_column(String(16), nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -509,6 +533,7 @@ class EvalRunRow(Base):
             "sandbox_status": self.sandbox_status,
             "exit_code": self.exit_code,
             "elapsed_s": self.elapsed_s,
+            "model_id": self.model_id,
             "facts": dict(self.facts),
             "created_by": self.created_by,
             "started_at": self.started_at.isoformat() if self.started_at else None,

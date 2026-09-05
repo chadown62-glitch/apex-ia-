@@ -43,23 +43,32 @@ class EvalMethod(str, Enum):
 
 @dataclass
 class EvalRun:
-    """Le résultat d'UNE tentative d'UN clone sur UNE tâche. INSERT seul,
-    positif ou négatif retenu de façon identique — voir `EvalRunRow` pour la
-    garantie SQL. `experiment_ref` est une étiquette libre de regroupement
-    (aucune logique associée ici), affordance pour une future phase 16
-    (ExperimentEngine) — voir `EvalRunRow` pour le raisonnement complet."""
+    """Le résultat d'UNE tentative sur UNE tâche. INSERT seul, positif ou
+    négatif retenu de façon identique — voir `EvalRunRow` pour la garantie
+    SQL. `experiment_ref` est une étiquette libre de regroupement (aucune
+    logique associée ici), affordance pour une future phase 16
+    (ExperimentEngine) — voir `EvalRunRow` pour le raisonnement complet.
+
+    Passe « Real Model Evaluation » : `clone_id`/`sandbox_status` sont
+    devenus optionnels et `model_id` a été ajouté — voir `EvalRunRow` pour
+    le raisonnement complet (un `EvalRun` du chemin `ModelProvider`,
+    `EvalRunnerService.run_model_eval`, n'a structurellement ni Clone ni
+    sandbox). Le chemin déterministe existant (`EvalRunnerService.run`)
+    continue de renseigner `clone_id`/`sandbox_status` exactement comme
+    avant ; `model_id` y reste toujours `None`."""
 
     id: str
     task_id: str
-    clone_id: str
     method: EvalMethod
     oracle_verdict: OracleVerdict
     oracle_detail: str | None
-    sandbox_status: ExecutionStatus
     exit_code: int | None
     elapsed_s: float | None
     facts: dict[str, Any]
     created_by: str
+    clone_id: str | None = None
+    sandbox_status: ExecutionStatus | None = None
+    model_id: str | None = None
     seed: int | None = None
     dataset_ref: str | None = None
     experiment_ref: str | None = None
@@ -72,15 +81,16 @@ class EvalRun:
         cls,
         *,
         task_id: str,
-        clone_id: str,
         method: EvalMethod,
         oracle_verdict: OracleVerdict,
         oracle_detail: str | None,
-        sandbox_status: ExecutionStatus,
         exit_code: int | None,
         elapsed_s: float | None,
         facts: dict[str, Any],
         created_by: str,
+        clone_id: str | None = None,
+        sandbox_status: ExecutionStatus | None = None,
+        model_id: str | None = None,
         seed: int | None = None,
         dataset_ref: str | None = None,
         experiment_ref: str | None = None,
@@ -97,6 +107,7 @@ class EvalRun:
             sandbox_status=sandbox_status,
             exit_code=exit_code,
             elapsed_s=elapsed_s,
+            model_id=model_id,
             facts=facts,
             created_by=created_by,
             seed=seed,
@@ -115,9 +126,10 @@ class EvalRun:
             method=EvalMethod(row.method),
             oracle_verdict=OracleVerdict(row.oracle_verdict),
             oracle_detail=row.oracle_detail,
-            sandbox_status=ExecutionStatus(row.sandbox_status),
+            sandbox_status=ExecutionStatus(row.sandbox_status) if row.sandbox_status else None,
             exit_code=row.exit_code,
             elapsed_s=row.elapsed_s,
+            model_id=row.model_id,
             facts=dict(row.facts or {}),
             created_by=row.created_by,
             seed=row.seed,

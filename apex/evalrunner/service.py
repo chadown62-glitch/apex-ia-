@@ -33,11 +33,17 @@ from datetime import datetime, timezone
 from typing import Any
 
 from apex.agents.runtime import AgentRuntime
-from apex.errors import IsolationUnavailable
+from apex.config.schema import ModelEndpoint
+from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
+from apex.models.model import GenerationRequest
+from apex.models.provider import ModelProvider
+from apex.models.provider import get_default_provider as get_default_model_provider
+from apex.obs.status import DataStatus
 from apex.oracles.model import OracleVerdict
 from apex.oracles.provider import OracleProvider, get_default_oracle
+from apex.oracles.response_judge import ResponseJudge, get_default_response_judge
 from apex.policy.engine import PolicyEngine
 from apex.policy.model import Action, Subject
 from apex.sandbox.model import CancellationToken, ExecutionStatus, ResourceLimits, SandboxSpec
@@ -45,6 +51,14 @@ from apex.sandbox.provider import SandboxProvider, get_default_provider
 from apex.sandbox.result import SandboxResult
 from apex.tasks.model import Task
 from apex.tasks.repository import TaskRepository
+
+#: Sécurité (§10, passe « Real Model Evaluation ») — une réponse modèle
+#: reste une DONNÉE persistée, jamais exécutée ; une limite de taille
+#: raisonnable évite qu'une réponse pathologiquement longue ne gonfle
+#: indéfiniment `facts` (colonne JSON). Jamais silencieuse : `truncated`
+#: est toujours présent dans `facts["model_response"]` pour dire si cette
+#: limite a été appliquée.
+_MAX_STORED_RESPONSE_CHARS = 50_000
 
 
 def _utcnow() -> datetime:
@@ -136,13 +150,142 @@ class EvalRunnerService:
         self._repo.create(run)
         self._record_event(
             run, "evalrun.completed",
-            {"oracle_verdict": run.oracle_verdict.value, "sandbox_status": run.sandbox_status.value},
+            {
+                "oracle_verdict": run.oracle_verdict.value,
+                "sandbox_status": run.sandbox_status.value if run.sandbox_status else None,
+            },
         )
         self._record_audit(
             run, actor=requested_by.value, action="evalrun.completed",
-            details={"task_id": task.id, "clone_id": clone.clone_id, "oracle_verdict": run.oracle_verdict.value},
+            details={
+                "task_id": task.id,
+                "clone_id": clone.clone_id,
+                "oracle_verdict": run.oracle_verdict.value,
+            },
         )
         return run
+
+    def run_model_eval(
+        self,
+        *,
+        task_id: str,
+        endpoint: ModelEndpoint,
+        method: EvalMethod,
+        provider: ModelProvider | None = None,
+        judge: ResponseJudge | None = None,
+        clone_id: str | None = None,
+        seed: int | None = None,
+        experiment_ref: str | None = None,
+        requested_by: Subject = Subject.CORE,
+        timeout_s: float = 30.0,
+    ) -> EvalRun:
+        """Deuxième chemin d'exécution d'`EvalRunner` (passe « Real Model
+        Evaluation »), DISTINCT de `run()` (chemin déterministe, inchangé) —
+        les deux coexistent, aucun EvalRun existant n'est affecté :
+
+            TASK -> MODEL PROVIDER -> MODEL RESPONSE -> EVAL_RUN (persisté)
+
+        Jamais de sandbox ici (`clone_id`/`sandbox_status` restent `None` sur
+        l'`EvalRun` produit, voir `EvalRunRow`) : le modèle est appelé au
+        niveau ORCHESTRATEUR, exactement comme
+        `apex.missions.execution.generate_mission_response` — jamais depuis
+        un clone sandboxé, donc aucun contournement de la sandbox. `clone_id`
+        reste un paramètre optionnel d'ATTRIBUTION (à qui/quoi rattacher cette
+        tentative), jamais une exécution.
+
+        Sécurité (§10) : `response.text` reste une DONNÉE — comparée par
+        `judge` (égalité de chaîne), jamais exécutée, jamais interpolée dans
+        une commande. Aucun secret n'est journalisé (`ModelProviderError` ne
+        porte jamais le prompt/la réponse, voir `apex.errors`).
+        """
+        task = self._task_repo.get(task_id)
+        if task is None:
+            raise LookupError(f"tâche « {task_id} » introuvable")
+
+        eval_run_id = str(uuid.uuid4())
+        resolved_provider = provider or get_default_model_provider(endpoint)
+        resolved_judge = judge or get_default_response_judge()
+        started_at = _utcnow()
+
+        request = GenerationRequest(endpoint=endpoint, prompt=task.description, timeout_s=timeout_s)
+        try:
+            generation = resolved_provider.generate(request)
+        except (ModelProviderError, TimeoutExceeded) as exc:
+            # Même discipline que `run()` sur `IsolationUnavailable` : un
+            # échec de génération est enregistré, jamais relevé comme une
+            # exception du point de vue de l'appelant — un `ModelProvider`
+            # indisponible/en erreur est un résultat d'évaluation (ERROR),
+            # pas une panne d'`EvalRunner` lui-même. `model_id` reste `None`
+            # — aucun candidat n'a réellement été servi (même discipline que
+            # `AgentExecutionRow.model_id`).
+            run = EvalRun(
+                id=eval_run_id, task_id=task.id, method=method,
+                oracle_verdict=OracleVerdict.ERROR, oracle_detail=f"génération impossible : {exc}",
+                exit_code=None, elapsed_s=None, facts={}, created_by=requested_by.value,
+                clone_id=clone_id, sandbox_status=None, model_id=None,
+                seed=seed, dataset_ref=task.dataset_ref, experiment_ref=experiment_ref,
+                started_at=started_at, completed_at=_utcnow(),
+            )
+            self._repo.create(run)
+            self._record_event(run, "evalrun.model_error", {"reason": str(exc)})
+            return run
+
+        completed_at = _utcnow()
+        oracle_result = resolved_judge.judge(response=generation, task=task)
+        run = EvalRun(
+            id=eval_run_id, task_id=task.id, method=method,
+            oracle_verdict=oracle_result.verdict, oracle_detail=oracle_result.detail,
+            exit_code=None, elapsed_s=generation.elapsed_s,
+            facts=self._model_response_facts(generation),
+            created_by=requested_by.value, clone_id=clone_id, sandbox_status=None,
+            model_id=generation.model_used, seed=seed, dataset_ref=task.dataset_ref,
+            experiment_ref=experiment_ref, started_at=started_at, completed_at=completed_at,
+        )
+        self._repo.create(run)
+        self._record_event(
+            run, "evalrun.model_completed",
+            {"oracle_verdict": run.oracle_verdict.value, "model_id": run.model_id},
+        )
+        self._record_audit(
+            run, actor=requested_by.value, action="evalrun.model_completed",
+            details={
+                "task_id": task.id,
+                "model_id": run.model_id,
+                "oracle_verdict": run.oracle_verdict.value,
+            },
+        )
+        return run
+
+    @staticmethod
+    def _model_response_facts(generation: Any) -> dict[str, Any]:
+        """Sac `facts["model_response"]` — jamais mélangé aux clés déjà
+        utilisées par le chemin sandbox (`memory_peak_mb`) ni par
+        `strategy_facts` (`_build_eval_run`), même discipline de
+        namespacing. `text` reste borné (`_MAX_STORED_RESPONSE_CHARS`,
+        §10) — jamais une troncature silencieuse, `truncated` le dit
+        toujours explicitement."""
+        text = generation.text
+        truncated = len(text) > _MAX_STORED_RESPONSE_CHARS
+        if truncated:
+            text = text[:_MAX_STORED_RESPONSE_CHARS]
+        return {
+            "model_response": {
+                "text": text,
+                "truncated": truncated,
+                "model_used": generation.model_used,
+                "finish_reason": generation.finish_reason,
+                "tokens_prompt": (
+                    generation.tokens_prompt.value
+                    if generation.tokens_prompt.status is DataStatus.REAL
+                    else None
+                ),
+                "tokens_completion": (
+                    generation.tokens_completion.value
+                    if generation.tokens_completion.status is DataStatus.REAL
+                    else None
+                ),
+            }
+        }
 
     # -- lecture -------------------------------------------------------------
 

@@ -443,11 +443,12 @@ class TaskRepository:
         dataset_ref: str | None,
         created_by: str,
         created_at: datetime,
+        expected_answer: str | None = None,
     ) -> TaskRow:
         row = TaskRow(
             id=id, split=split, specialty=specialty, title=title, description=description,
             command=list(command), dataset_ref=dataset_ref, created_by=created_by,
-            created_at=created_at,
+            expected_answer=expected_answer, created_at=created_at,
         )
         self._session.add(row)
         self._session.flush()
@@ -495,14 +496,14 @@ class EvalRunRepository:
         *,
         id: str,
         task_id: str,
-        clone_id: str,
+        clone_id: str | None,
         method: str,
         seed: int | None,
         dataset_ref: str | None,
         experiment_ref: str | None,
         oracle_verdict: str,
         oracle_detail: str | None,
-        sandbox_status: str,
+        sandbox_status: str | None,
         exit_code: int | None,
         elapsed_s: float | None,
         facts: dict[str, Any],
@@ -510,13 +511,14 @@ class EvalRunRepository:
         started_at: datetime | None,
         completed_at: datetime | None,
         created_at: datetime,
+        model_id: str | None = None,
     ) -> EvalRunRow:
         row = EvalRunRow(
             id=id, task_id=task_id, clone_id=clone_id, method=method, seed=seed,
             dataset_ref=dataset_ref, experiment_ref=experiment_ref, oracle_verdict=oracle_verdict,
             oracle_detail=oracle_detail, sandbox_status=sandbox_status, exit_code=exit_code,
-            elapsed_s=elapsed_s, facts=facts, created_by=created_by, started_at=started_at,
-            completed_at=completed_at, created_at=created_at,
+            elapsed_s=elapsed_s, model_id=model_id, facts=facts, created_by=created_by,
+            started_at=started_at, completed_at=completed_at, created_at=created_at,
         )
         self._session.add(row)
         self._session.flush()

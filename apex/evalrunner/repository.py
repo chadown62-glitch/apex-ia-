@@ -30,8 +30,9 @@ class EvalRunRepository:
                 id=run.id, task_id=run.task_id, clone_id=run.clone_id, method=run.method.value,
                 seed=run.seed, dataset_ref=run.dataset_ref, experiment_ref=run.experiment_ref,
                 oracle_verdict=run.oracle_verdict.value, oracle_detail=run.oracle_detail,
-                sandbox_status=run.sandbox_status.value, exit_code=run.exit_code,
-                elapsed_s=run.elapsed_s, facts=run.facts, created_by=run.created_by,
+                sandbox_status=run.sandbox_status.value if run.sandbox_status else None,
+                exit_code=run.exit_code, elapsed_s=run.elapsed_s, model_id=run.model_id,
+                facts=run.facts, created_by=run.created_by,
                 started_at=run.started_at, completed_at=run.completed_at, created_at=run.created_at,
             )
 

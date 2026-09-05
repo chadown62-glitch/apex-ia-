@@ -42,8 +42,16 @@ class Task:
     (tuple de chaînes), jamais une chaîne shell — même contrat que
     `apex.sandbox.model.SandboxSpec.command`, qui la reçoit directement telle
     quelle (`apex.evalrunner.service`) — jamais une tentative générée par un
-    `ModelProvider` (hors périmètre de cette phase, voir
-    `docs/PHASE_5_REPORT.md`).
+    `ModelProvider` pour CE chemin déterministe (`EvalRunnerService.run`,
+    inchangé).
+
+    `expected_answer` (passe « Real Model Evaluation ») : réponse attendue en
+    texte libre, optionnelle, utilisée UNIQUEMENT par
+    `apex.oracles.response_judge.ExactMatchResponseJudge` pour juger une
+    tentative générée par un `ModelProvider` (`EvalRunnerService.
+    run_model_eval`, chemin distinct de `run`) — jamais consultée par
+    `ExitCodeOracle`/`ExactMatchResponseJudge`. `None` par défaut : une tâche
+    déterministe existante n'a jamais besoin de ce champ, jamais rétrofitté.
     """
 
     id: str
@@ -54,6 +62,7 @@ class Task:
     command: tuple[str, ...]
     dataset_ref: str | None
     created_by: str
+    expected_answer: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
 
     @classmethod
@@ -67,6 +76,7 @@ class Task:
         command: tuple[str, ...],
         created_by: str,
         dataset_ref: str | None = None,
+        expected_answer: str | None = None,
     ) -> Task:
         return cls(
             id=str(uuid.uuid4()),
@@ -77,6 +87,7 @@ class Task:
             command=tuple(command),
             dataset_ref=dataset_ref,
             created_by=created_by,
+            expected_answer=expected_answer,
         )
 
     @classmethod
@@ -90,5 +101,6 @@ class Task:
             command=tuple(row.command),
             dataset_ref=row.dataset_ref,
             created_by=row.created_by,
+            expected_answer=row.expected_answer,
             created_at=row.created_at,
         )
