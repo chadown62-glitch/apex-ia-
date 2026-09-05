@@ -1,0 +1,38 @@
+<Project>
+  <!--
+    PHASE 6 : version PARTAGÉE par tous les projets de setup/ — un seul
+    endroit à modifier avant chaque release, jamais un numéro divergent
+    entre ApexSetup.Cli et ApexSetup.Gui (§7 exige "setup version"
+    cohérente dans le manifeste de release). N'affecte ni ApexSetup.Core
+    (déjà verrouillé) ni le Runtime Python (aucun fichier .csproj ne les
+    concerne).
+  -->
+  <PropertyGroup>
+    <!-- Première version packagée (Phase 6) — Setup n'a jamais été packagé avant cette phase. -->
+    <SetupProductVersion>0.1.0</SetupProductVersion>
+    <Version>$(SetupProductVersion)</Version>
+    <AssemblyVersion>$(SetupProductVersion).0</AssemblyVersion>
+    <FileVersion>$(SetupProductVersion).0</FileVersion>
+    <Product>APEX Setup</Product>
+    <Company>APEX</Company>
+    <!-- Phase 6 : aucune signature réelle à ce stade (aucun certificat
+         disponible) — voir docs/PACKAGING.md. Ne JAMAIS mettre ceci à
+         true sans un certificat de signature réel configuré. -->
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+
+  <!--
+    PHASE 6/8 : trouvé en vérifiant réellement le binaire publié (`strings
+    apex-setup.exe`) — sans ceci, un build Release embarque le CHEMIN
+    ABSOLU DE DÉVELOPPEMENT du PDB (ex. "/home/user/apex-ia-/setup/...")
+    dans l'exécutable distribué : une fuite d'information sur la machine
+    de build, exactement ce que Phase 8 interdit explicitement
+    ("aucun chemin absolu de développement", "aucune référence accidentelle
+    au workspace DEV"). Aucun symbole de debug n'a besoin d'être distribué
+    à l'utilisateur final d'un installeur.
+  -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+</Project>

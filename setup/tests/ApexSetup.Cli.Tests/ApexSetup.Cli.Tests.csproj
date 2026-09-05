@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.6.0" />
+    <PackageReference Include="xunit" Version="2.4.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Référence intentionnelle vers l'EXÉCUTABLE, jamais une bibliothèque —
+         ces tests invoquent le vrai binaire en sous-processus (voir §16 :
+         « tester également de vrais appels subprocess vers le CLI Setup »),
+         jamais la logique applicative en direct (déjà couverte par
+         ApexSetup.Application.Tests). La référence garantit seulement que
+         apex-setup.dll est construit et copié à côté de ce projet avant
+         l'exécution des tests. -->
+    <ProjectReference Include="..\..\src\ApexSetup.Cli\ApexSetup.Cli.csproj" />
+  </ItemGroup>
+
+</Project>
