@@ -209,6 +209,119 @@ class TestServiceChecks(unittest.TestCase):
         self.assertIs(outcome.severity, Severity.PASS, outcome.message)
 
 
+class TestOllamaHardwareAwareDoctor(unittest.TestCase):
+    """Un modèle de référence qui ne tient structurellement pas sur la VRAM du
+    pool local ACTIVE (ex. 8 Go déclarés sur une carte à 8 Go, une fois la
+    réserve `vram_headroom_fraction` retenue) ne doit jamais provoquer un FAIL
+    « modèle manquant » : c'est un dimensionnement matériel attendu, pas un
+    défaut d'installation. Voir
+    `apex.doctor.checks.services._reference_is_hardware_compatible`.
+
+    Cas réel diagnostiqué : machine à 8 Go de VRAM réelle (RTX 4060 Ti),
+    `judge:gemma4:12b:q4_k_m` déclaré à EXACTEMENT 8 Go, `apex doctor`
+    bloquant à tort en FAIL avant ce correctif."""
+
+    @staticmethod
+    def _ctx(document: dict, present: list[str]) -> CheckContext:
+        probe = healthy_probe()
+        probe.open_ports.add(("127.0.0.1", 11434))
+        models = ", ".join(f'{{"name": "{name}"}}' for name in present)
+        probe.http["http://127.0.0.1:11434/api/tags"] = HttpResult(200, f'{{"models": [{models}]}}')
+        document["services"]["ollama"] = {"host": "127.0.0.1", "port": 11434, "required": False}
+        return CheckContext(probe=probe, config=parse_config(document), timeout_s=1.0)
+
+    @staticmethod
+    def _with_gemma4_endpoint(document: dict, vram_gb: float) -> dict:
+        document["models"]["endpoints"].append(
+            {"pool_id": "local-gpu", "runtime": "ollama", "url": "http://127.0.0.1:11434",
+             "served_model": "gemma4:12b-q4_K_M", "max_context": 16384, "vram_gb": vram_gb}
+        )
+        return document
+
+    def test_8gb_hw_8gb_reference_is_incompatible_never_blocking(self) -> None:
+        """Cas réel diagnostiqué : 8 Go de VRAM totale + référence déclarée à
+        EXACTEMENT 8 Go ⇒ incompatible (WARN), jamais bloquant. Sans réserve
+        de VRAM, `8.0 <= 8.0` juge à tort ce modèle compatible — le contexte
+        CUDA/le runtime/l'OS ne laissent jamais la totalité de la VRAM
+        rapportée disponible pour les poids du modèle."""
+        document = self._with_gemma4_endpoint(base_config(), vram_gb=8.0)
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        ctx = self._ctx(document, ["qwen3-coder:30b"])  # coder_main présent, judge absent
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.WARN)
+        self.assertIn("judge:gemma4:12b:q4_k_m", outcome.facts["missing_reference_incompatible"])
+        self.assertEqual(outcome.facts["missing_reference"], [])
+
+    def test_headroom_is_the_real_mechanism_not_a_hardcoded_special_case(self) -> None:
+        """Avec une réserve explicitement mise à 0, 8 Go/8 Go redevient
+        « compatible » (donc bloquant) — preuve que la correction est une
+        réserve proportionnelle configurable, jamais un cas spécial câblé en
+        dur sur « 8 Go »/« gemma4 »."""
+        document = self._with_gemma4_endpoint(base_config(), vram_gb=8.0)
+        document["gate"] = {"hardware": {"vram_headroom_fraction": 0.0}}
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        ctx = self._ctx(document, ["qwen3-coder:30b"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.FAIL)
+        self.assertIn("judge:gemma4:12b:q4_k_m", outcome.facts["missing_reference"])
+
+    def test_measured_vram_takes_priority_over_declared_for_compatibility(self) -> None:
+        """`effective_vram_gb` (mesure prime sur déclaration) doit être ce que
+        la comparaison de compatibilité utilise réellement — jamais la valeur
+        documentaire une fois qu'une mesure existe."""
+        document = self._with_gemma4_endpoint(base_config(), vram_gb=5.0)  # déclaré : compatible
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 8
+        document["models"]["endpoints"][-1]["measured"] = {
+            "vram_gb": 9.0, "tokens_per_s": 10.0,  # mesuré : incompatible même sans réserve
+            "measured_at": "2026-01-01T00:00:00Z", "environment_fingerprint": "test-fp",
+        }
+        ctx = self._ctx(document, ["qwen3-coder:30b"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.WARN)
+        self.assertIn("judge:gemma4:12b:q4_k_m", outcome.facts["missing_reference_incompatible"])
+
+    def test_target_only_pool_is_never_treated_as_a_real_local_active_pool(self) -> None:
+        """Aucun pool local ACTIVE (seulement un pool `status=target`, machine
+        future) ⇒ information insuffisante ⇒ comportement conservateur
+        (absence toujours bloquante) — un pool visé ne doit jamais se faire
+        passer pour une disponibilité réelle aujourd'hui."""
+        document = self._with_gemma4_endpoint(base_config(), vram_gb=8.0)
+        document["compute"]["pools"]["local-gpu"]["status"] = "target"
+        document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 300
+        document["compute"]["pools"]["local-cpu"] = {
+            "location": "local", "trust_level": "trusted", "status": "active",
+            "capabilities": ["inference"], "cpu_cores": 4, "ram_gb": 8,
+        }
+        ctx = self._ctx(document, ["qwen3-coder:30b"])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.FAIL)
+        self.assertIn("judge:gemma4:12b:q4_k_m", outcome.facts["missing_reference"])
+
+    def test_headroom_scales_proportionally_not_as_a_fixed_amount(self) -> None:
+        """La réserve est un POURCENTAGE, pas un montant fixe : sur le pool par
+        défaut (24 Go), la référence coder_main (18 Go, voir BASE) reste
+        compatible avec une réserve de 20 % (24*0.8=19.2 ≥ 18) mais devient
+        incompatible avec une réserve de 30 % (24*0.7=16.8 < 18) — le
+        mécanisme doit rester raisonnable pour de futures machines disposant
+        de davantage de VRAM, jamais un seuil arbitraire câblé sur la machine
+        actuelle."""
+        document = base_config()
+        document["gate"] = {"hardware": {"vram_headroom_fraction": 0.2}}
+        ctx = self._ctx(document, [])
+        outcome = services.check_ollama_models(ctx)
+        self.assertIs(outcome.severity, Severity.FAIL)  # 18 Go compatible sur 24 Go, réserve 20 %
+
+        document2 = base_config()
+        document2["gate"] = {"hardware": {"vram_headroom_fraction": 0.3}}
+        ctx2 = self._ctx(document2, [])
+        outcome2 = services.check_ollama_models(ctx2)
+        self.assertIs(outcome2.severity, Severity.WARN)  # 18 Go incompatible sur 24 Go, réserve 30 %
+        self.assertIn(
+            "coder_main:qwen3-coder:30b-a3b-instruct:q4_k_m",
+            outcome2.facts["missing_reference_incompatible"],
+        )
+
+
 class TestRunner(unittest.TestCase):
     def test_runner_never_crashes_on_a_broken_check(self) -> None:
         def exploding(ctx: CheckContext):

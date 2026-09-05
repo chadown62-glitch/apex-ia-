@@ -335,15 +335,22 @@ class TestCapabilityAwareArchitecture(unittest.TestCase):
         self.assertEqual(thresholds.min_ram_gb, 24.0)
         self.assertEqual(thresholds.min_vram_gb, 20.0)
         self.assertEqual(thresholds.min_cpu_threads, 8)
+        self.assertEqual(thresholds.vram_headroom_fraction, 0.1)
 
     def test_hardware_thresholds_are_configurable(self) -> None:
         document = config()
         document["gate"] = {
-            "hardware": {"min_free_disk_gb": 5, "min_ram_gb": 1, "min_vram_gb": 0, "min_cpu_threads": 1}
+            "hardware": {"min_free_disk_gb": 5, "min_ram_gb": 1, "min_vram_gb": 0, "min_cpu_threads": 1,
+                         "vram_headroom_fraction": 0.2}
         }
         cfg = parse_config(document)
         self.assertEqual(cfg.gate.hardware.min_ram_gb, 1.0)
         self.assertEqual(cfg.gate.hardware.min_cpu_threads, 1)
+        self.assertEqual(cfg.gate.hardware.vram_headroom_fraction, 0.2)
+
+    def test_vram_headroom_fraction_out_of_range_is_rejected(self) -> None:
+        self.assertRaises(ConfigError, HardwareThresholds.parse, {"vram_headroom_fraction": 1.0})
+        self.assertRaises(ConfigError, HardwareThresholds.parse, {"vram_headroom_fraction": -0.1})
 
     def test_pool_status_defaults_to_active(self) -> None:
         cfg = parse_config(config())

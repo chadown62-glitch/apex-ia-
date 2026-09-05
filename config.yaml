@@ -250,6 +250,11 @@ gate:
     min_ram_gb: 24
     min_vram_gb: 20
     min_cpu_threads: 8
+    # Réserve proportionnelle retenue avant de juger un modèle de référence
+    # compatible avec la VRAM totale d'un pool (contexte CUDA/runtime/OS —
+    # jamais entièrement disponible pour les poids du modèle). Voir
+    # apex.doctor.checks.services._reference_is_hardware_compatible.
+    vram_headroom_fraction: 0.10
 
 # ----------------------------------------------------------------------------
 # Scheduler (étape 8) — max_concurrent_missions est un choix de déploiement,

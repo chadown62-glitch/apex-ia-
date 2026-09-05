@@ -536,20 +536,42 @@ class HardwareThresholds:
     Les valeurs par défaut sont IDENTIQUES à celles qui existaient avant ce
     correctif (150/24/20/8) : aucune limite existante n'est modifiée, elle
     devient seulement configurable.
+
+    `vram_headroom_fraction` : réserve appliquée à la VRAM TOTALE d'un pool
+    avant de comparer sa capacité à la VRAM déclarée/mesurée d'un modèle de
+    référence (voir `apex.doctor.checks.services._reference_is_hardware_
+    compatible`). La VRAM totale rapportée par le pilote n'est jamais
+    intégralement disponible pour les poids d'un modèle : le contexte CUDA,
+    le runtime d'inférence et le système d'exploitation en retiennent une
+    part fixe. Comparer une VRAM déclarée à la capacité BRUTE d'une carte
+    (`required <= available`, sans réserve) juge donc « compatible » un
+    modèle dont la consommation déclarée égale déjà la totalité de la carte
+    — ce qui ne tient pas en pratique. Même raisonnement que
+    `ComposeMemoryPolicy` ci-dessus (une réserve proportionnelle, jamais un
+    montant fixe arbitraire, pour rester raisonnable aussi bien sur une
+    carte de 8 Go que sur une future carte de 48 Go). Valeur par défaut
+    conservatrice (10 %) ; reconfigurable par déploiement.
     """
 
     min_free_disk_gb: float
     min_ram_gb: float
     min_vram_gb: float
     min_cpu_threads: int
+    vram_headroom_fraction: float = 0.1
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> HardwareThresholds:
+        headroom = float(raw.get("vram_headroom_fraction", 0.1))
+        if not 0.0 <= headroom < 1.0:
+            raise ConfigError(
+                "vram_headroom_fraction doit être dans [0, 1)", field="gate.hardware.vram_headroom_fraction"
+            )
         return cls(
             min_free_disk_gb=float(raw.get("min_free_disk_gb", 150.0)),
             min_ram_gb=float(raw.get("min_ram_gb", 24.0)),
             min_vram_gb=float(raw.get("min_vram_gb", 20.0)),
             min_cpu_threads=int(raw.get("min_cpu_threads", 8)),
+            vram_headroom_fraction=headroom,
         )
 
 
