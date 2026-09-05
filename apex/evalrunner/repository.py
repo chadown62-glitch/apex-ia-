@@ -67,3 +67,11 @@ class EvalRunRepository:
         with session_scope(self._session_factory) as session:
             rows = _DbEvalRunRepository(session).list_by_clone(clone_id, limit=limit)
             return [EvalRun.from_row(row) for row in rows]
+
+    def list_by_experiment_ref_prefix(self, prefix: str, limit: int = 200) -> list[EvalRun]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import EvalRunRepository as _DbEvalRunRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbEvalRunRepository(session).list_by_experiment_ref_prefix(prefix, limit=limit)
+            return [EvalRun.from_row(row) for row in rows]

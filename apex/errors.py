@@ -156,3 +156,16 @@ class IsolationUnavailable(ApexError):
             f"« {feature} » exige l'isolation « {required} » ; "
             f"seul « {available} » est disponible — fonctionnalité désactivée"
         )
+
+
+class CycleAlreadyRunning(ApexError):
+    """Un cycle d'apprentissage autonome (`apex.metalearner.autonomy.
+    AutonomousLearningService`) est déjà `RUNNING` dans ce processus —
+    un second démarrage n'écrase jamais silencieusement le suivi du
+    premier. Jamais rattrapée pour lancer un second cycle concurrent."""
+
+    exit_code = 11
+
+    def __init__(self, cycle_id: str) -> None:
+        self.cycle_id = cycle_id
+        super().__init__(f"un cycle d'apprentissage autonome est déjà en cours ({cycle_id})")

@@ -532,3 +532,52 @@ class ExperimentCycleOut(BaseModel):
     eval_run: EvalRunOut
     weakness_before: WeaknessReportOut
     weakness_after: WeaknessReportOut
+
+
+# -- Autonomous Learning Trigger ----------------------------------------------
+# Projections directes de `apex.metalearner.autonomy.{CycleStatus,
+# CycleHistoryEntry}` — aucun champ d'identité (`subject`/`requested_by`)
+# n'existe sur `LearningCycleStartIn` : le backend force toujours
+# `Subject.HUMAN`, voir `apex.api.routes.learning`.
+
+
+class LearningCycleStartIn(BaseModel):
+    specialty: str
+    current_level: int = Field(default=1, ge=1)
+    method: str = "practice"
+    split: str = "train"
+    clone_id: str | None = Field(default=None, min_length=1)
+
+
+class LearningCycleStatusOut(BaseModel):
+    state: str
+    cycle_id: str | None
+    specialty: str | None
+    started_at: str | None
+    completed_at: str | None
+    error: str | None
+    eval_run_id: str | None
+    task_id: str | None
+    oracle_verdict: str | None
+
+
+class LearningCycleHistoryEntryOut(BaseModel):
+    cycle_id: str
+    specialty: str
+    state: str
+    eval_run_id: str | None
+    task_id: str | None
+    oracle_verdict: str | None
+    error: str | None
+    completed_at: str
+
+
+class AutonomousLearningStatusOut(BaseModel):
+    """`enabled`/`scheduler_running` projettent `AutonomousLearningPolicy`/
+    `AutonomousLearningScheduler.is_running` — jamais un état inventé si le
+    Scheduler n'a jamais été démarré dans ce processus."""
+
+    enabled: bool
+    scheduler_running: bool
+    interval_s: float
+    cycle: LearningCycleStatusOut

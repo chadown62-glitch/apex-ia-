@@ -550,3 +550,55 @@ export interface ExperimentCycle {
   weakness_before: WeaknessReport;
   weakness_after: WeaknessReport;
 }
+
+/** Champs EXACTS de `apex.api.schemas.LearningCycleStartIn` — aucun champ
+ * d'identité/sujet ici, même discipline qu'`ExperimentCycleCreateInput` : le
+ * backend force `Subject.HUMAN` dans `AutonomousLearningService.start_cycle`,
+ * qui n'accepte d'ailleurs même pas ce paramètre (voir apex/metalearner/
+ * autonomy.py). `clone_id` reste optionnel ici (contrairement à
+ * `ExperimentCycleCreateInput`) : un clone est auto-provisionné si omis. */
+export interface LearningCycleStartInput {
+  specialty: string;
+  current_level?: number;
+  method?: string;
+  split?: string;
+  clone_id?: string | null;
+}
+
+export type LearningCycleState =
+  | "idle"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancel_requested"
+  | "cancelled";
+
+export interface LearningCycleStatus {
+  state: LearningCycleState;
+  cycle_id: string | null;
+  specialty: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+  eval_run_id: string | null;
+  task_id: string | null;
+  oracle_verdict: string | null;
+}
+
+export interface LearningCycleHistoryEntry {
+  cycle_id: string;
+  specialty: string;
+  state: LearningCycleState;
+  eval_run_id: string | null;
+  task_id: string | null;
+  oracle_verdict: string | null;
+  error: string | null;
+  completed_at: string;
+}
+
+export interface AutonomousLearningStatus {
+  enabled: boolean;
+  scheduler_running: boolean;
+  interval_s: number;
+  cycle: LearningCycleStatus;
+}

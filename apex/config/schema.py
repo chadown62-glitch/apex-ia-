@@ -617,6 +617,58 @@ class SchedulerPolicy:
 
 
 @dataclass(frozen=True)
+class AutonomousLearningPolicy:
+    """Politique de déclenchement automatique d'`apex.metalearner.cycle.
+    run_experiment_cycle` (passe « Autonomous Learning Trigger »). Même
+    discipline que `SchedulerPolicy` : un choix d'opérateur reconfigurable,
+    jamais une propriété architecturale figée dans le code.
+
+    **`enabled` par défaut à `False`** — exigence explicite de cette passe :
+    installer/mettre à jour APEX ne doit JAMAIS démarrer un apprentissage
+    autonome de façon inattendue. Un opérateur humain doit l'activer
+    explicitement (`config.yaml` ou `APEX_AUTONOMOUS_LEARNING_ENABLED=1`).
+
+    `max_concurrent_cycles` documente honnêtement la limite RÉELLE
+    (`apex.metalearner.autonomy.AutonomousLearningService` ne suit qu'UN
+    cycle actif à la fois dans ce processus, même limite qu'`ExecutionRegistry`
+    pour les missions) — accepter une valeur > 1 ici mentirait sur ce que le
+    code fait réellement, donc rejeté à la validation plutôt que toléré en
+    silence. `specialty`/`current_level`/`method`/`split` sont les paramètres
+    par défaut d'un cycle déclenché par le Scheduler (jamais utilisés par un
+    déclenchement CLI/API explicite, qui les fournit toujours lui-même)."""
+
+    enabled: bool
+    interval_s: float
+    max_concurrent_cycles: int
+    specialty: str
+    current_level: int
+    method: str
+    split: str
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> AutonomousLearningPolicy:
+        enabled = as_bool(raw.get("enabled", False), field="autonomous_learning.enabled")
+        interval_s = float(raw.get("interval_s", 3600.0))
+        if interval_s <= 0:
+            raise ConfigError("interval_s doit être > 0", field="autonomous_learning.interval_s")
+        max_concurrent_cycles = int(raw.get("max_concurrent_cycles", 1))
+        if max_concurrent_cycles != 1:
+            raise ConfigError(
+                "max_concurrent_cycles doit valoir 1 — aucune exécution concurrente "
+                "de cycles autonomes n'est implémentée dans ce processus",
+                field="autonomous_learning.max_concurrent_cycles",
+            )
+        current_level = int(raw.get("current_level", 1))
+        if current_level < 1:
+            raise ConfigError("current_level doit être >= 1", field="autonomous_learning.current_level")
+        return cls(
+            enabled=enabled, interval_s=interval_s, max_concurrent_cycles=max_concurrent_cycles,
+            specialty=str(raw.get("specialty", "research")), current_level=current_level,
+            method=str(raw.get("method", "practice")), split=str(raw.get("split", "train")),
+        )
+
+
+@dataclass(frozen=True)
 class RouterScoringPolicy:
     """Poids du score `apex.routing.router.select_model` — passe « Adaptive
     Model Router V1 ». Même discipline que `SchedulerPolicy` : un choix
@@ -703,6 +755,7 @@ class ApexConfig:
     gate: GatePolicy
     scheduler: SchedulerPolicy
     routing: RouterScoringPolicy
+    autonomous_learning: AutonomousLearningPolicy
 
     # -- invariants transverses -------------------------------------------
 

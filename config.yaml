@@ -267,6 +267,31 @@ scheduler:
   max_concurrent_missions: 2
 
 # ----------------------------------------------------------------------------
+# Autonomous Learning Trigger (passe « Autonomous Learning Trigger + Scheduler/
+# CLI Execution Path ») — déclenchement automatique d'un cycle
+# apex.metalearner.cycle.run_experiment_cycle par apex.metalearner.
+# autonomous_scheduler.AutonomousLearningScheduler.
+#
+# `enabled: false` par défaut — EXIGENCE DE SÉCURITÉ EXPLICITE : installer ou
+# mettre à jour APEX ne doit jamais démarrer un apprentissage autonome de
+# façon inattendue. Un opérateur humain doit l'activer explicitement, ici ou
+# via APEX_AUTONOMOUS_LEARNING_ENABLED=1.
+#
+# `max_concurrent_cycles` documente honnêtement la limite réelle du code (UN
+# seul cycle actif à la fois par processus, voir apex.config.schema.
+# AutonomousLearningPolicy) — toute autre valeur est rejetée à la validation
+# plutôt que silencieusement ignorée.
+# ----------------------------------------------------------------------------
+autonomous_learning:
+  enabled: ${APEX_AUTONOMOUS_LEARNING_ENABLED:-false}
+  interval_s: ${APEX_AUTONOMOUS_LEARNING_INTERVAL_S:-3600}
+  max_concurrent_cycles: 1
+  specialty: ${APEX_AUTONOMOUS_LEARNING_SPECIALTY:-research}
+  current_level: 1
+  method: practice
+  split: train
+
+# ----------------------------------------------------------------------------
 # Model Router (passe « Adaptive Model Router V1 ») — poids du score de
 # apex.routing.router.select_model. capability_match_weight/
 # local_preference_weight reproduisent exactement le score déjà en

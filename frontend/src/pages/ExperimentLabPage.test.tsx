@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Agent, EvalRun, ExperimentCycle } from "../api/types";
+import type { Agent, AutonomousLearningStatus, EvalRun, ExperimentCycle, LearningCycleStatus } from "../api/types";
 import { ExperimentLabPage } from "./ExperimentLabPage";
 
 function renderWithQueryClient(ui: React.ReactElement) {
@@ -163,5 +163,144 @@ describe("ExperimentLabPage", () => {
     await waitFor(() => expect(screen.getByText("practice")).toBeInTheDocument());
 
     expect(container.innerHTML).not.toContain("test-suite-token");
+  });
+});
+
+describe("ExperimentLabPage — autonomous learning panel", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  function idleCycle(): LearningCycleStatus {
+    return {
+      state: "idle", cycle_id: null, specialty: null, started_at: null, completed_at: null,
+      error: null, eval_run_id: null, task_id: null, oracle_verdict: null,
+    };
+  }
+
+  it("shows the scheduler disabled by default and the cycle as inactive", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/eval-runs")) return jsonResponse({ status: "real", data: [], detail: null });
+      if (url.includes("/agents")) return jsonResponse({ status: "real", data: [agent], detail: null });
+      if (url.includes("/learning/status")) {
+        const data: AutonomousLearningStatus = {
+          enabled: false, scheduler_running: false, interval_s: 3600, cycle: idleCycle(),
+        };
+        return jsonResponse({ status: "real", data, detail: null });
+      }
+      return jsonResponse({ status: "real", data: null, detail: null });
+    }) as unknown as typeof fetch;
+
+    renderWithQueryClient(<ExperimentLabPage />);
+
+    await waitFor(() => expect(screen.getByText("désactivé")).toBeInTheDocument());
+    expect(screen.getByText("inactif")).toBeInTheDocument();
+  });
+
+  it("starts an autonomous cycle through the authenticated client with no identity field, and reflects completion", async () => {
+    let cycleState: LearningCycleStatus = idleCycle();
+    let postBody: string | undefined;
+    let postHeaders: Record<string, string> | undefined;
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "POST" && url.includes("/learning/cycles")) {
+        postBody = init.body as string;
+        postHeaders = init.headers as Record<string, string>;
+        cycleState = {
+          state: "completed", cycle_id: "cyc-1", specialty: "research",
+          started_at: "2025-01-01T00:00:00Z", completed_at: "2025-01-01T00:00:01Z",
+          error: null, eval_run_id: "run-9", task_id: "task-9", oracle_verdict: "pass",
+        };
+        return jsonResponse({ status: "real", data: cycleState, detail: null });
+      }
+      if (url.includes("/learning/status")) {
+        const data: AutonomousLearningStatus = {
+          enabled: false, scheduler_running: false, interval_s: 3600, cycle: cycleState,
+        };
+        return jsonResponse({ status: "real", data, detail: null });
+      }
+      if (url.includes("/eval-runs")) return jsonResponse({ status: "real", data: [], detail: null });
+      if (url.includes("/agents")) return jsonResponse({ status: "real", data: [agent], detail: null });
+      return jsonResponse({ status: "real", data: null, detail: null });
+    }) as unknown as typeof fetch;
+
+    renderWithQueryClient(<ExperimentLabPage />);
+
+    await waitFor(() => expect(screen.getByText("inactif")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Démarrer un cycle autonome"));
+
+    await waitFor(() => expect(screen.getByText("terminé")).toBeInTheDocument());
+    expect(screen.getByText("pass")).toBeInTheDocument();
+
+    expect(postHeaders?.Authorization).toBe("Bearer test-suite-token");
+    const parsedBody = JSON.parse(postBody ?? "{}");
+    expect(parsedBody).not.toHaveProperty("subject");
+    expect(parsedBody).not.toHaveProperty("requested_by");
+    expect(parsedBody).toEqual({
+      specialty: "research", current_level: 1, method: "practice", split: "train", clone_id: null,
+    });
+  });
+
+  it("shows a cancel action while a cycle is running and calls the cancel endpoint", async () => {
+    let cycleState: LearningCycleStatus = {
+      state: "running", cycle_id: "cyc-2", specialty: "research", started_at: "2025-01-01T00:00:00Z",
+      completed_at: null, error: null, eval_run_id: null, task_id: null, oracle_verdict: null,
+    };
+    let cancelCalled = false;
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "POST" && url.includes("/learning/cycles/cancel")) {
+        cancelCalled = true;
+        cycleState = { ...cycleState, state: "cancel_requested" };
+        return jsonResponse({ status: "real", data: cycleState, detail: null });
+      }
+      if (url.includes("/learning/status")) {
+        const data: AutonomousLearningStatus = {
+          enabled: false, scheduler_running: false, interval_s: 3600, cycle: cycleState,
+        };
+        return jsonResponse({ status: "real", data, detail: null });
+      }
+      if (url.includes("/eval-runs")) return jsonResponse({ status: "real", data: [], detail: null });
+      if (url.includes("/agents")) return jsonResponse({ status: "real", data: [agent], detail: null });
+      return jsonResponse({ status: "real", data: null, detail: null });
+    }) as unknown as typeof fetch;
+
+    renderWithQueryClient(<ExperimentLabPage />);
+
+    const cancelButton = await screen.findByText("Annuler");
+    fireEvent.click(cancelButton);
+
+    await waitFor(() => expect(cancelCalled).toBe(true));
+  });
+
+  it("displays a clear error, never a stack trace, when starting a cycle is refused (duplicate)", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "POST" && url.includes("/learning/cycles")) {
+        return Promise.resolve({
+          ok: false, status: 409, json: async () => ({ detail: "un cycle est déjà en cours (cyc-3)" }),
+        });
+      }
+      if (url.includes("/learning/status")) {
+        const data: AutonomousLearningStatus = {
+          enabled: false, scheduler_running: false, interval_s: 3600, cycle: idleCycle(),
+        };
+        return jsonResponse({ status: "real", data, detail: null });
+      }
+      if (url.includes("/eval-runs")) return jsonResponse({ status: "real", data: [], detail: null });
+      if (url.includes("/agents")) return jsonResponse({ status: "real", data: [agent], detail: null });
+      return jsonResponse({ status: "real", data: null, detail: null });
+    }) as unknown as typeof fetch;
+
+    renderWithQueryClient(<ExperimentLabPage />);
+
+    await waitFor(() => expect(screen.getByText("inactif")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Démarrer un cycle autonome"));
+
+    await waitFor(() => expect(screen.getByText(/cycle est déjà en cours/)).toBeInTheDocument());
+    expect(screen.queryByText(/Traceback/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/at Object\./)).not.toBeInTheDocument();
   });
 });

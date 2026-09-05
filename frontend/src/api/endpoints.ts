@@ -14,6 +14,7 @@ import type {
   AgentTemplateCreateInput,
   ApexEvent,
   AuditLogEntry,
+  AutonomousLearningStatus,
   CatalogModel,
   ConfiguredAgent,
   ConfiguredAgentCreateInput,
@@ -26,6 +27,9 @@ import type {
   ExperimentCycleCreateInput,
   Gate,
   Health,
+  LearningCycleHistoryEntry,
+  LearningCycleStartInput,
+  LearningCycleStatus,
   Message,
   Mission,
   MissionCreateInput,
@@ -274,4 +278,27 @@ export function createExperimentCycle(
   input: ExperimentCycleCreateInput,
 ): Promise<DataEnvelope<ExperimentCycle>> {
   return fetchEnvelope<ExperimentCycle>("/experiment-cycles", { method: "POST", body: JSON.stringify(input) });
+}
+
+// -- Autonomous Learning Trigger ------------------------------------------
+// aucun champ d'identité dans `LearningCycleStartInput` : le backend force
+// Subject.HUMAN lui-même (voir apex/api/routes/learning.py).
+
+export function getLearningStatus(): Promise<DataEnvelope<AutonomousLearningStatus>> {
+  return fetchEnvelope<AutonomousLearningStatus>("/learning/status");
+}
+
+export function getLearningHistory(limit?: number): Promise<DataEnvelope<LearningCycleHistoryEntry[]>> {
+  const qs = limit ? `?limit=${encodeURIComponent(String(limit))}` : "";
+  return fetchEnvelope<LearningCycleHistoryEntry[]>(`/learning/history${qs}`);
+}
+
+export function startLearningCycle(
+  input: LearningCycleStartInput,
+): Promise<DataEnvelope<LearningCycleStatus>> {
+  return fetchEnvelope<LearningCycleStatus>("/learning/cycles", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function cancelLearningCycle(): Promise<DataEnvelope<LearningCycleStatus>> {
+  return fetchEnvelope<LearningCycleStatus>("/learning/cycles/cancel", { method: "POST" });
 }

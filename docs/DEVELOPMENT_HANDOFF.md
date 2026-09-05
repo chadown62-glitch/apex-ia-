@@ -404,6 +404,116 @@ backend (`apex/api/routes/evals.py` : `GET /tasks`, `GET /tasks/{id}`,
   uniquement) ; aucun travail sur les launchers (architecture « ONE
   CLICK » explicitement différée).
 
+### Autonomous Learning Trigger + Scheduler/CLI Execution Path
+
+Donne à `apex.metalearner.cycle.run_experiment_cycle` (déjà réel depuis la
+passe « Real Model Evaluation ») un point de déclenchement production —
+CLI, API, Scheduler optionnel — sans jamais réimplémenter le moteur
+d'apprentissage lui-même.
+
+- **`apex.metalearner.autonomy.AutonomousLearningService`** — service
+  autoritaire unique. `start_cycle(specialty, current_level, method, split,
+  clone_id=None)` démarre le cycle sur un thread démon (même patron qu'
+  `apex.scheduler.heartbeat.HeartbeatService`) et rend la main
+  IMMÉDIATEMENT (`RUNNING`) ; `status()` (snapshot en mémoire, par
+  processus — même limite honnête qu'`ExecutionRegistry`) ;
+  `history(limit)` (reconstruit depuis `EventRepository`, déjà réel et
+  utilisé par `apex.scheduler.service` pour le même usage — aucune
+  nouvelle table) ; `cancel()` (annulation réelle via `CancellationToken`,
+  même mécanisme que `SchedulerService.cancel_mission`). **`requested_by`
+  n'est PAS un paramètre** — toujours `Subject.HUMAN` en dur, exactement
+  comme `POST /experiment-cycles` : aucun appelant (CLI/API/Scheduler) ne
+  peut jamais fournir une autre identité. Si `clone_id` est omis, un clone
+  jetable `Subject.LEARNING` (nouveau, vocabulaire déjà défini dans
+  `apex.policy.model.Subject`) est auto-provisionné (premier `ComputePool`
+  ACTIVE capable de `sandbox`, `GenomeVersion` actuellement PROMOTED —
+  échoue proprement si aucun des deux n'existe, jamais une valeur
+  fabriquée). Protection anti-doublon : `CycleAlreadyRunning` (nouvelle
+  erreur, `apex/errors.py`) si un cycle est déjà `RUNNING` dans CE
+  processus.
+- **`apex.metalearner.cycle.run_experiment_cycle`** — étendu de façon
+  strictement additive (`experiment_ref`/`cancel_token`, défaut `None`,
+  aucun appelant existant affecté) : simple relais vers
+  `EvalRunnerService.run`, qui acceptait déjà les deux depuis la phase 5.
+- **`apex.metalearner.autonomous_scheduler.AutonomousLearningScheduler`** —
+  déclenche `start_cycle` à intervalle (`AutonomousLearningPolicy.
+  interval_s`), même patron `start()`/`stop()`/`tick_once()` qu'
+  `HeartbeatService`. **Désactivé par défaut** (`enabled: false`) —
+  installer/mettre à jour APEX ne démarre jamais l'apprentissage autonome
+  par surprise. Un tick ignoré (cycle déjà `RUNNING`) est journalisé,
+  jamais une erreur.
+- **Configuration** (`config.yaml` `autonomous_learning:`, `apex.config.
+  schema.AutonomousLearningPolicy`) : `enabled` (défaut `false`,
+  substituable via `APEX_AUTONOMOUS_LEARNING_ENABLED`), `interval_s`,
+  `max_concurrent_cycles` (doit valoir `1` — documente honnêtement la
+  limite réelle du code plutôt que d'en tolérer une autre en silence),
+  `specialty`/`current_level`/`method`/`split` (paramètres par défaut d'un
+  cycle SCHEDULED, jamais utilisés par un déclenchement CLI/API explicite).
+- **CLI** (`apex learn start|status|history|stop`, `apex/cli/main.py`) —
+  appelle directement `apex.api.dependencies.get_learning_service()` (même
+  service que l'API, jamais dupliqué). `apex learn start` ATTEND la fin
+  réelle du cycle avant de rendre la main (contrairement à `start_cycle`
+  lui-même, non bloquant) : un processus CLI qui rendrait la main
+  immédiatement tuerait le thread démon avant la fin du cycle. Ctrl+C
+  pendant `start` annule réellement le cycle (`CancellationToken`) — la
+  façon effective d'annuler depuis la CLI, puisque `apex learn stop` lancé
+  depuis un AUTRE processus ne voit jamais l'état d'un processus différent
+  (mémoire par processus, documenté, pas résolu silencieusement).
+- **API** (`apex/api/routes/learning.py`, `/learning/cycles` [POST],
+  `/learning/cycles/cancel` [POST], `/learning/status` [GET],
+  `/learning/history` [GET]) — même authentification uniforme
+  (`require_api_token`) que toutes les routes existantes. `POST
+  /learning/cycles` (`LearningCycleStartIn`) ne déclare AUCUN champ
+  d'identité — un champ additionnel envoyé par un client est silencieusement
+  ignoré par Pydantic, jamais transmis au service (qui ne l'accepte de
+  toute façon pas). Cycle déjà `RUNNING` -> 409, jamais un doublon.
+  L'import d'`apex.metalearner` reste différé dans le corps des fonctions
+  (jamais au niveau module) — même discipline que `apex.api.routes.evals`,
+  pour qu'`apex.api.app` reste importable sans que `apex.metalearner` fasse
+  partie de l'environnement packagé.
+- **`POST /experiment-cycles` délibérément NON refactoré** pour réutiliser
+  `AutonomousLearningService` : c'est un appel humain direct, SYNCHRONE,
+  qui peut légitimement s'exécuter en parallèle d'un autre (aucun verrou
+  partagé) — le forcer à travers le service à cycle-unique changerait son
+  comportement existant (régression silencieuse). Contrat public inchangé,
+  tests existants toujours verts.
+- **Lifespan FastAPI** (`apex/api/app.py`) — démarre/arrête
+  `AutonomousLearningScheduler` (no-op si désactivé), jamais bloquant même
+  si DB/config indisponible (`try/except` large autour de la construction —
+  aucun code de ce dépôt ne lance aujourd'hui réellement ce processus via
+  un serveur ASGI, voir `apex/api/auth.py` ; ce lifespan ne s'exécute donc
+  concrètement que sous `TestClient` utilisé comme gestionnaire de
+  contexte, ou un futur déploiement réel).
+- **Frontend** (`ExperimentLabPage.tsx`) — panneau « Apprentissage
+  autonome » minimal : état Scheduler (activé/désactivé, actif), état du
+  cycle courant, dernier verdict, action « Démarrer un cycle autonome »/
+  « Annuler ». Réutilise les champs déjà saisis dans le formulaire
+  « Nouveau cycle expérimental » (spécialité/niveau/méthode/split/clone) —
+  aucun second formulaire. La planification (intervalle, activation) reste
+  une opération d'administration, jamais exposée dans cette interface —
+  seulement via `config.yaml`/`apex learn`.
+- **Non fait dans cette passe** : aucune implémentation de launcher
+  (§21 de la mission, différée) ; aucune interface d'administration
+  séparée pour la configuration du Scheduler.
+
+**Démarrer un cycle manuellement** (l'apprentissage autonome reste
+`enabled: false` tant que `config.yaml`/`APEX_AUTONOMOUS_LEARNING_ENABLED`
+ne l'active pas explicitement — ce qui suit fonctionne indépendamment de
+cette configuration, à la demande) :
+
+```bash
+# CLI — bloque jusqu'à la fin réelle du cycle, imprime le résultat
+python -m apex.cli.main learn start --specialty research --current-level 1
+python -m apex.cli.main learn status --json
+python -m apex.cli.main learn history --json
+
+# API — rend la main immédiatement (RUNNING), interroger /learning/status ensuite
+curl -X POST http://127.0.0.1:8000/api/v1/learning/cycles \
+  -H "Authorization: Bearer $APEX_API_TOKEN" -H "Content-Type: application/json" \
+  -d '{"specialty": "research", "current_level": 1}'
+curl http://127.0.0.1:8000/api/v1/learning/status -H "Authorization: Bearer $APEX_API_TOKEN"
+```
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant
@@ -432,18 +542,23 @@ backend (`apex/api/routes/evals.py` : `GET /tasks`, `GET /tasks/{id}`,
 
 ## 3. Tests
 
-- **1125 tests** collectés, **1122 passed, 3 skipped, 0 failed, 0 errors**
-  (`python -m pytest -q -rA`, exit 0 — dernière exécution complète, après
-  la passe « Agents V1 »).
-- Les 3 `skipped` : aucun Ollama réel joignable
+- **1395 tests** collectés, **1383 passed, 8 failed, 4 skipped**
+  (`python -m pytest -q -rA`, dernière exécution complète, après la passe
+  « Autonomous Learning Trigger »). Les 8 `failed` sont EXCLUSIVEMENT dans
+  les fichiers orphelins hors périmètre du launcher/packaging
+  (`tests/test_launcher.py`, `tests/test_runtime_packaging.py`,
+  `tests/test_windows_launcher.py`) — pré-existants, jamais causés par
+  cette passe ni par aucune passe applicative ; ne jamais les « corriger »
+  en modifiant ces fichiers, réservés au chantier Launcher dédié.
+- Les 4 `skipped` : aucun Ollama réel joignable
   (`tests/test_missions_model_generation.py::TestRealOllamaMissionIntegration`,
   `tests/test_models_ollama.py`) et aucun endpoint OpenAI-compatible réel
   configuré (`tests/test_models_openai_compatible.py`) — structurel dans ce
   conteneur de développement (voir §7), pas un bug.
 - Frontend (`cd frontend && npx tsc -b && npx vitest run`) : compilation
-  TypeScript propre, **17 fichiers de test, 94 tests, 0 échec** (dernière
-  exécution complète, après la passe « Frontend API Integration »). Aucun
-  script `lint` n'est configuré dans `package.json` (`dev`/`build`/
+  TypeScript propre, **17 fichiers de test, 98 tests, 0 échec** (dernière
+  exécution complète, après la passe « Autonomous Learning Trigger »).
+  Aucun script `lint` n'est configuré dans `package.json` (`dev`/`build`/
   `preview`/`test`/`test:watch` seulement) — état inchangé depuis « UI
   Foundation V1 », constaté à nouveau plutôt que supposé.
 - Avant de relancer la suite : `rm -f .apex/environment.json` (régénéré par

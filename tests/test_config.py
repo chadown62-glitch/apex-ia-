@@ -187,6 +187,51 @@ class TestRouterScoringPolicy(unittest.TestCase):
         )
 
 
+class TestAutonomousLearningPolicy(unittest.TestCase):
+    """`AutonomousLearningPolicy` — passe « Autonomous Learning Trigger ».
+    Exigence de sécurité explicite : absence de section `autonomous_learning`
+    (ou `enabled` omis) doit TOUJOURS produire `enabled=False`, jamais un
+    défaut permissif — installer/mettre à jour APEX ne doit jamais démarrer
+    un apprentissage autonome par surprise."""
+
+    def test_absent_section_defaults_to_disabled(self) -> None:
+        cfg = parse_config(config())
+        self.assertFalse(cfg.autonomous_learning.enabled)
+        self.assertEqual(cfg.autonomous_learning.max_concurrent_cycles, 1)
+        self.assertEqual(cfg.autonomous_learning.specialty, "research")
+
+    def test_explicitly_enabling_is_honored(self) -> None:
+        cfg = parse_config(config(autonomous_learning={"enabled": True, "interval_s": 60}))
+        self.assertTrue(cfg.autonomous_learning.enabled)
+        self.assertEqual(cfg.autonomous_learning.interval_s, 60.0)
+
+    def test_string_enabled_from_env_substitution_is_coerced_correctly(self) -> None:
+        """`${APEX_AUTONOMOUS_LEARNING_ENABLED:-false}` produit la CHAÎNE
+        `"false"` après substitution — sans `as_bool`, sa valeur de vérité
+        Python (`True`) activerait l'apprentissage autonome par erreur."""
+        cfg = parse_config(config(autonomous_learning={"enabled": "false"}))
+        self.assertFalse(cfg.autonomous_learning.enabled)
+        cfg2 = parse_config(config(autonomous_learning={"enabled": "true"}))
+        self.assertTrue(cfg2.autonomous_learning.enabled)
+
+    def test_non_positive_interval_rejected(self) -> None:
+        with self.assertRaises(ConfigError):
+            parse_config(config(autonomous_learning={"interval_s": 0}))
+        with self.assertRaises(ConfigError):
+            parse_config(config(autonomous_learning={"interval_s": -5}))
+
+    def test_max_concurrent_cycles_other_than_one_rejected(self) -> None:
+        """Documente honnêtement la limite réelle du code (UN seul cycle
+        actif à la fois par processus) plutôt que de tolérer en silence une
+        valeur qui mentirait sur ce qui est réellement supporté."""
+        with self.assertRaises(ConfigError):
+            parse_config(config(autonomous_learning={"max_concurrent_cycles": 2}))
+
+    def test_current_level_below_one_rejected(self) -> None:
+        with self.assertRaises(ConfigError):
+            parse_config(config(autonomous_learning={"current_level": 0}))
+
+
 class TestModelRefEndpointSeparation(unittest.TestCase):
     """Principe 7 : identité logique et lieu d'exécution sont distincts."""
 

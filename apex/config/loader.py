@@ -18,6 +18,7 @@ from typing import Any
 from apex.config.schema import (
     ApexConfig,
     as_bool,
+    AutonomousLearningPolicy,
     ComputeBudget,
     ComputePool,
     ExternalPolicy,
@@ -124,6 +125,7 @@ def parse_config(raw: dict[str, Any]) -> ApexConfig:
         gate=GatePolicy.parse(raw.get("gate") or {}),
         scheduler=SchedulerPolicy.parse(raw.get("scheduler") or {}),
         routing=RouterScoringPolicy.parse(raw.get("routing") or {}),
+        autonomous_learning=AutonomousLearningPolicy.parse(raw.get("autonomous_learning") or {}),
     )
     config.validate()
     return config

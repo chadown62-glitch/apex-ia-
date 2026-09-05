@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { usePolling } from "../realtime/usePolling";
 import {
+  cancelLearningCycle,
   cancelMission,
   createAgentTeam,
   createAgentTemplate,
@@ -28,6 +29,8 @@ import {
   getEvents,
   getGate,
   getHealth,
+  getLearningHistory,
+  getLearningStatus,
   getMission,
   getRegistry,
   getSelfModel,
@@ -52,6 +55,7 @@ import {
   renameConversation,
   runMissionViaAgent,
   sendMessage,
+  startLearningCycle,
   updateConfiguredAgent,
   validateMission,
 } from "./endpoints";
@@ -62,6 +66,7 @@ import type {
   ConfiguredAgentUpdateInput,
   ConversationCreateInput,
   ExperimentCycleCreateInput,
+  LearningCycleStartInput,
   MissionCreateInput,
   ProjectCreateInput,
   RunAgentExecutionInput,
@@ -463,6 +468,41 @@ export function useCreateExperimentCycle() {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["weakness", input.specialty] });
       queryClient.invalidateQueries({ queryKey: ["self-model", input.specialty] });
+    },
+  });
+}
+
+// -- Autonomous Learning Trigger ------------------------------------------
+// Projection de apex.metalearner.autonomy.AutonomousLearningService (via
+// /learning/*) — jamais une seconde implémentation du cycle côté frontend.
+
+export function useLearningStatus() {
+  return usePolling(["learning", "status"], getLearningStatus, REFRESH_MS);
+}
+
+export function useLearningHistory(limit?: number) {
+  return usePolling(["learning", "history", limit ?? null], () => getLearningHistory(limit), REFRESH_MS);
+}
+
+/** Démarre réellement un cycle d'apprentissage autonome en tâche de fond
+ * (voir apex.metalearner.autonomy — non bloquant, l'état RUNNING->COMPLETED/
+ * FAILED se lit ensuite via useLearningStatus, déjà en polling). */
+export function useStartLearningCycle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: LearningCycleStartInput) => startLearningCycle(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["learning"] });
+    },
+  });
+}
+
+export function useCancelLearningCycle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => cancelLearningCycle(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["learning"] });
     },
   });
 }

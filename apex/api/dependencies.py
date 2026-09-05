@@ -1,6 +1,6 @@
 """Accès DB paresseux — importé UNIQUEMENT par les routes qui en dépendent
-(events, audit, agents, missions, scheduler), jamais par apex.api.app ni par
-les autres routes.
+(events, audit, agents, missions, scheduler, evals, learning), jamais par
+apex.api.app ni par les autres routes.
 
 Pas de mise en cache de la session factory : sa construction est bon marché
 (SQLAlchemy ne se connecte pas avant le premier usage) et un cache figerait
@@ -37,6 +37,8 @@ from typing import TYPE_CHECKING, Any
 from apex.errors import ApexError
 
 if TYPE_CHECKING:
+    from apex.metalearner.autonomous_scheduler import AutonomousLearningScheduler
+    from apex.metalearner.autonomy import AutonomousLearningService
     from apex.scheduler.service import SchedulerService
 
 
@@ -116,3 +118,69 @@ def reset_scheduler_service_for_tests() -> None:
         if _scheduler_service is not None:
             _scheduler_service.shutdown(wait=True)
         _scheduler_service = None
+
+
+#: Même discipline « singleton paresseux » que `get_scheduler_service` —
+#: `AutonomousLearningService` suit un cycle EN MÉMOIRE (`threading.Lock` +
+#: `CycleStatus`) qui doit rester LE MÊME objet entre deux requêtes HTTP pour
+#: que la protection anti-doublon tienne. Une reconstruction par requête
+#: perdrait le suivi du cycle `RUNNING` à chaque appel.
+_learning_service: "AutonomousLearningService | None" = None
+_learning_scheduler: "AutonomousLearningScheduler | None" = None
+_learning_lock = threading.Lock()
+
+
+def get_learning_service() -> "AutonomousLearningService":
+    global _learning_service
+    if _learning_service is not None:
+        return _learning_service
+    with _learning_lock:
+        if _learning_service is not None:
+            return _learning_service
+        from apex.agents.runtime import AgentRuntime
+        from apex.config.loader import load_config
+        from apex.metalearner.autonomy import AutonomousLearningService
+
+        session_factory = get_session_factory()
+        config = load_config()
+        _learning_service = AutonomousLearningService(
+            session_factory, agent_runtime=AgentRuntime(session_factory), config=config,
+        )
+        return _learning_service
+
+
+def get_learning_scheduler() -> "AutonomousLearningScheduler":
+    """Construit — sans le démarrer — le Scheduler d'apprentissage autonome.
+    Démarrer réellement le thread (`AutonomousLearningScheduler.start()`,
+    no-op si `enabled=False`) reste la responsabilité explicite du lifespan
+    d'`apex.api.app`, jamais de cette fonction elle-même — une simple
+    lecture de statut (`GET /learning/status`) ne doit jamais avoir pour
+    effet de bord de démarrer un thread de fond."""
+    global _learning_scheduler
+    if _learning_scheduler is not None:
+        return _learning_scheduler
+    # `get_learning_service()` gère déjà sa propre construction verrouillée
+    # (memoization interne) — appelée HORS de `_learning_lock` ci-dessous
+    # pour ne jamais tenter de ré-acquérir le même verrou non réentrant
+    # (`threading.Lock`) depuis le même thread, ce qui bloquerait
+    # indéfiniment (auto-interblocage).
+    service = get_learning_service()
+    with _learning_lock:
+        if _learning_scheduler is not None:
+            return _learning_scheduler
+        from apex.config.loader import load_config
+        from apex.metalearner.autonomous_scheduler import AutonomousLearningScheduler
+
+        _learning_scheduler = AutonomousLearningScheduler(service, config=load_config())
+        return _learning_scheduler
+
+
+def reset_learning_service_for_tests() -> None:
+    """Réservé aux tests — même raison que `reset_scheduler_service_for_tests`
+    (base PostgreSQL recréée sous le même nom entre deux tests)."""
+    global _learning_service, _learning_scheduler
+    with _learning_lock:
+        if _learning_scheduler is not None:
+            _learning_scheduler.stop()
+        _learning_scheduler = None
+        _learning_service = None

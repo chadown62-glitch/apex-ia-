@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Sequence
+from typing import Any, Sequence
 
 from apex.errors import ApexError
 from apex.interfaces.registry import ABSTRACTIONS, ImplStatus, summary
@@ -150,6 +150,177 @@ def _cmd_gate(args: argparse.Namespace) -> int:
     return 0 if report.phase_2_authorized else 1
 
 
+def _format_cycle_status(status: Any, *, as_json: bool) -> str:
+    if as_json:
+        return json.dumps(
+            {
+                "state": status.state.value, "cycle_id": status.cycle_id, "specialty": status.specialty,
+                "started_at": status.started_at.isoformat() if status.started_at else None,
+                "completed_at": status.completed_at.isoformat() if status.completed_at else None,
+                "error": status.error, "eval_run_id": status.eval_run_id, "task_id": status.task_id,
+                "oracle_verdict": status.oracle_verdict,
+            },
+            indent=2, ensure_ascii=False,
+        )
+    lines = [f"état : {status.state.value}"]
+    if status.cycle_id:
+        lines.append(f"cycle : {status.cycle_id}")
+    if status.specialty:
+        lines.append(f"spécialité : {status.specialty}")
+    if status.eval_run_id:
+        lines.append(f"eval_run : {status.eval_run_id} (verdict : {status.oracle_verdict})")
+    if status.task_id:
+        lines.append(f"tâche : {status.task_id}")
+    if status.error:
+        lines.append(f"erreur : {status.error}")
+    return "\n".join(lines)
+
+
+def _cmd_learn_start(args: argparse.Namespace) -> int:
+    """Démarre réellement un cycle d'apprentissage autonome
+    (`apex.metalearner.cycle.run_experiment_cycle`, via l'unique service
+    autoritaire `apex.metalearner.autonomy.AutonomousLearningService` —
+    aucune logique d'apprentissage dupliquée ici, même chemin que
+    `POST /learning/cycles`). `start_cycle` est non bloquant par nature
+    (le Scheduler/l'API restent des processus longue durée) ; cette
+    commande ATTEND explicitement la fin du cycle avant de rendre la main
+    — un processus CLI de courte durée qui se terminerait immédiatement
+    tuerait le thread démon avant que le cycle n'ait fini (§ « autonomy »),
+    ce que le mode API/Scheduler n'a jamais besoin de faire."""
+    import time
+
+    from apex.errors import CycleAlreadyRunning
+    from apex.evalrunner.model import EvalMethod
+    from apex.metalearner.autonomy import CycleState
+    from apex.specialties.registry import by_id
+    from apex.tasks.model import TaskSplit
+
+    if by_id(args.specialty) is None:
+        print(f"erreur : spécialité « {args.specialty} » inconnue", file=sys.stderr)
+        return 1
+    try:
+        method = EvalMethod(args.method)
+    except ValueError:
+        print(f"erreur : méthode « {args.method} » inconnue", file=sys.stderr)
+        return 1
+    try:
+        split = TaskSplit(args.split)
+    except ValueError:
+        print(f"erreur : split « {args.split} » inconnu", file=sys.stderr)
+        return 1
+
+    from apex.api.dependencies import get_learning_service
+
+    try:
+        service = get_learning_service()
+        status = service.start_cycle(
+            specialty=args.specialty, current_level=args.current_level,
+            method=method, split=split, clone_id=args.clone_id,
+        )
+    except CycleAlreadyRunning as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return exc.exit_code
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+
+    # Ctrl+C annule réellement le cycle en cours (`CancellationToken.
+    # request_cancel`) plutôt que de simplement tuer ce processus en laissant
+    # le thread démon disparaître sans trace — seul point d'entrée CLI où
+    # l'annulation est réellement utile : `apex learn stop` lancé depuis un
+    # AUTRE processus ne voit jamais ce cycle (état en mémoire, par
+    # processus — même limite honnête qu'`apex.scheduler.registry.
+    # ExecutionRegistry`).
+    deadline = time.monotonic() + args.timeout
+    try:
+        while status.state in (CycleState.RUNNING, CycleState.CANCEL_REQUESTED) and time.monotonic() < deadline:
+            time.sleep(0.2)
+            status = service.status()
+    except KeyboardInterrupt:
+        print("\nannulation demandée (Ctrl+C) — attente de la fin du cycle...", file=sys.stderr)
+        status = service.cancel()
+        while status.state in (CycleState.RUNNING, CycleState.CANCEL_REQUESTED) and time.monotonic() < deadline:
+            time.sleep(0.2)
+            status = service.status()
+
+    if status.state in (CycleState.RUNNING, CycleState.CANCEL_REQUESTED):
+        print(
+            f"attention : le cycle {status.cycle_id} n'a pas terminé sous {args.timeout:.0f}s — "
+            "il sera interrompu à la fermeture de ce processus (thread démon).", file=sys.stderr,
+        )
+        print(_format_cycle_status(status, as_json=args.json))
+        return 4
+
+    print(_format_cycle_status(status, as_json=args.json))
+    return 0 if status.state is CycleState.COMPLETED else 1
+
+
+def _cmd_learn_status(args: argparse.Namespace) -> int:
+    from apex.api.dependencies import get_learning_service
+
+    try:
+        status = get_learning_service().status()
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+    print(_format_cycle_status(status, as_json=args.json))
+    return 0
+
+
+def _cmd_learn_history(args: argparse.Namespace) -> int:
+    from apex.api.dependencies import get_learning_service
+
+    try:
+        entries = get_learning_service().history(limit=args.limit)
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(
+            json.dumps(
+                [
+                    {
+                        "cycle_id": e.cycle_id, "specialty": e.specialty, "state": e.state.value,
+                        "eval_run_id": e.eval_run_id, "task_id": e.task_id, "oracle_verdict": e.oracle_verdict,
+                        "error": e.error, "completed_at": e.completed_at.isoformat(),
+                    }
+                    for e in entries
+                ],
+                indent=2, ensure_ascii=False,
+            )
+        )
+        return 0
+    if not entries:
+        print("aucun cycle d'apprentissage autonome dans l'historique.")
+        return 0
+    for e in entries:
+        verdict = f" verdict={e.oracle_verdict}" if e.oracle_verdict else ""
+        error = f" erreur={e.error}" if e.error else ""
+        print(f"{e.completed_at.isoformat()}  {e.state.value:<10}  {e.cycle_id}  spécialité={e.specialty}{verdict}{error}")
+    return 0
+
+
+def _cmd_learn_stop(args: argparse.Namespace) -> int:
+    """N'a d'effet QUE sur un cycle suivi par CE processus — l'état est en
+    mémoire, jamais partagé entre deux invocations séparées de la CLI (même
+    limite honnête qu'`apex.scheduler.registry.ExecutionRegistry`). Puisque
+    `apex learn start` bloque déjà jusqu'à la fin du cycle dans SON propre
+    processus, la façon réellement utile d'annuler depuis la CLI est Ctrl+C
+    sur CE processus `start` (voir `_cmd_learn_start`) — cette commande
+    reste utile principalement contre le processus API long-vivant
+    (`POST /learning/cycles/cancel`, même service)."""
+    from apex.api.dependencies import get_learning_service
+
+    try:
+        status = get_learning_service().cancel()
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+    print(_format_cycle_status(status, as_json=args.json))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="apex",
@@ -195,6 +366,40 @@ def build_parser() -> argparse.ArgumentParser:
         help="autoriser une sonde de sortie réseau (GATE-15)",
     )
     gate_cmd.set_defaults(func=_cmd_gate)
+
+    learn_cmd = sub.add_parser(
+        "learn", help="cycle d'apprentissage autonome (apex.metalearner.autonomy)"
+    )
+    learn_sub = learn_cmd.add_subparsers(dest="learn_command", required=True)
+
+    learn_start_cmd = learn_sub.add_parser("start", help="démarrer un cycle et attendre sa fin")
+    learn_start_cmd.add_argument("--specialty", required=True, help="ex. « research »")
+    learn_start_cmd.add_argument("--current-level", type=int, default=1)
+    learn_start_cmd.add_argument("--method", default="practice")
+    learn_start_cmd.add_argument("--split", default="train")
+    learn_start_cmd.add_argument(
+        "--clone-id", default=None,
+        help="clone déjà spawné à réutiliser — sinon un clone Subject.LEARNING est provisionné",
+    )
+    learn_start_cmd.add_argument(
+        "--timeout", type=float, default=900.0,
+        help="attente maximale (s) de la fin du cycle avant que ce processus ne rende la main",
+    )
+    learn_start_cmd.add_argument("--json", action="store_true")
+    learn_start_cmd.set_defaults(func=_cmd_learn_start)
+
+    learn_status_cmd = learn_sub.add_parser("status", help="état du cycle suivi par ce processus")
+    learn_status_cmd.add_argument("--json", action="store_true")
+    learn_status_cmd.set_defaults(func=_cmd_learn_status)
+
+    learn_history_cmd = learn_sub.add_parser("history", help="cycles autonomes passés (durable)")
+    learn_history_cmd.add_argument("--limit", type=int, default=20)
+    learn_history_cmd.add_argument("--json", action="store_true")
+    learn_history_cmd.set_defaults(func=_cmd_learn_history)
+
+    learn_stop_cmd = learn_sub.add_parser("stop", help="demander l'annulation du cycle en cours")
+    learn_stop_cmd.add_argument("--json", action="store_true")
+    learn_stop_cmd.set_defaults(func=_cmd_learn_stop)
 
     return parser
 

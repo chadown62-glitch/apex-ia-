@@ -26,6 +26,16 @@ L'exécution elle-même (`EXECUTE_IN_SANDBOX`) reste CORE seul, appliquée par
 Genome/Skill : un cycle ne fait qu'observer, générer, exécuter, mesurer —
 la décision d'exploiter le résultat (proposer un Skill, une révision de
 Genome) reste un acte séparé, explicite, humain.
+
+**`experiment_ref`/`cancel_token`** (passe « Autonomous Learning Trigger »,
+purement additifs, défaut `None` — aucun appelant existant n'est affecté) :
+simple relais vers `EvalRunnerService.run`, qui les accepte déjà tous les
+deux depuis la phase 5 (corrélation de regroupement, annulation réelle de
+la sandbox) — jamais une seconde implémentation de l'un ou l'autre.
+Utilisés par `apex.metalearner.autonomy.AutonomousLearningService` pour
+étiqueter/annuler un cycle démarré via le CLI/l'API/le Scheduler, sans que
+`POST /experiment-cycles` (appel humain direct, synchrone) n'ait besoin de
+les fournir.
 """
 
 from __future__ import annotations
@@ -38,6 +48,7 @@ from apex.evalrunner.service import EvalRunnerService
 from apex.metalearner.model import ExperimentCycleResult
 from apex.metalearner.selector import MetaLearner
 from apex.policy.model import Subject
+from apex.sandbox.model import CancellationToken
 from apex.taskgen.deterministic import DeterministicTaskGenerator
 from apex.taskgen.model import GenerationMode
 from apex.taskgen.provider import TaskGenerator
@@ -61,6 +72,8 @@ def run_experiment_cycle(
     requested_by: Subject,
     method: EvalMethod = EvalMethod.PRACTICE,
     split: TaskSplit = TaskSplit.TRAIN,
+    experiment_ref: str | None = None,
+    cancel_token: CancellationToken | None = None,
     weakness_service: WeaknessDetectorService | None = None,
     task_service: TaskBankService | None = None,
     evalrunner: EvalRunnerService | None = None,
@@ -115,6 +128,7 @@ def run_experiment_cycle(
     # résultat), sans dupliquer `StrategyDecision` dans une nouvelle table.
     eval_run = evalrunner.run(
         task_id=task.id, clone_id=clone_id, method=method, requested_by=Subject.CORE,
+        experiment_ref=experiment_ref, cancel_token=cancel_token,
         strategy_facts={
             "generation_mode": mode.value,
             "curriculum_level": decision.level,

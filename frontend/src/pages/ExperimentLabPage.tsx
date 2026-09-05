@@ -1,8 +1,16 @@
 import { useState } from "react";
 
 import { ApiError } from "../api/client";
-import { useAgents, useCreateExperimentCycle, useEvalRun, useEvalRuns } from "../api/hooks";
-import type { ExperimentCycle } from "../api/types";
+import {
+  useAgents,
+  useCancelLearningCycle,
+  useCreateExperimentCycle,
+  useEvalRun,
+  useEvalRuns,
+  useLearningStatus,
+  useStartLearningCycle,
+} from "../api/hooks";
+import type { ExperimentCycle, LearningCycleState } from "../api/types";
 import { ErrorState, LoadingState } from "../components/common/EmptyState";
 import { Panel } from "../components/common/Panel";
 import { StatCard } from "../components/common/StatCard";
@@ -127,6 +135,127 @@ function CycleResultSummary({ cycle }: { cycle: ExperimentCycle }) {
       <StatCard label="Faiblesse avant" value={cycle.weakness_before.category} />
       <StatCard label="Faiblesse après" value={cycle.weakness_after.category} />
     </div>
+  );
+}
+
+const CYCLE_STATE_BADGE: Record<LearningCycleState, "real" | "unknown"> = {
+  idle: "unknown",
+  running: "unknown",
+  cancel_requested: "unknown",
+  completed: "real",
+  failed: "unknown",
+  cancelled: "unknown",
+};
+
+const CYCLE_STATE_LABEL: Record<LearningCycleState, string> = {
+  idle: "inactif",
+  running: "en cours",
+  cancel_requested: "annulation demandée",
+  completed: "terminé",
+  failed: "échoué",
+  cancelled: "annulé",
+};
+
+/**
+ * `GET /learning/status` (+ `POST /learning/cycles`, `POST /learning/cycles/
+ * cancel`) — projection de `apex.metalearner.autonomy.
+ * AutonomousLearningService`, jamais une seconde implémentation du cycle.
+ * Réutilise les paramètres (spécialité/niveau/méthode/split/clone) déjà
+ * saisis dans le formulaire « Nouveau cycle expérimental » ci-dessus —
+ * `clone_id` reste optionnel ici : un clone `Subject.LEARNING` est
+ * auto-provisionné si aucun n'est sélectionné. La planification (activer/
+ * désactiver le Scheduler, son intervalle) reste une opération
+ * d'administration, jamais exposée dans cette interface utilisateur — voir
+ * `config.yaml` / la CLI `apex learn`.
+ */
+function AutonomousLearningPanel({
+  specialty, currentLevel, method, split, cloneId,
+}: {
+  specialty: string; currentLevel: number; method: string; split: string; cloneId: string;
+}) {
+  const status = useLearningStatus();
+  const startCycle = useStartLearningCycle();
+  const cancelCycle = useCancelLearningCycle();
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const data = status.data?.status === "real" ? status.data.data : null;
+  const cycle = data?.cycle;
+  const isActive = cycle?.state === "running" || cycle?.state === "cancel_requested";
+
+  async function handleStart() {
+    setActionError(null);
+    try {
+      await startCycle.mutateAsync({
+        specialty, current_level: currentLevel, method, split,
+        clone_id: cloneId || null,
+      });
+    } catch (error) {
+      setActionError(error instanceof ApiError ? `HTTP ${error.status} : ${error.message}` : String(error));
+    }
+  }
+
+  async function handleCancel() {
+    setActionError(null);
+    try {
+      await cancelCycle.mutateAsync();
+    } catch (error) {
+      setActionError(error instanceof ApiError ? `HTTP ${error.status} : ${error.message}` : String(error));
+    }
+  }
+
+  return (
+    <Panel title="Apprentissage autonome" dense>
+      {status.isLoading ? (
+        <LoadingState />
+      ) : !data || !cycle ? (
+        <ErrorState detail={status.data?.detail ?? "Backend indisponible."} />
+      ) : (
+        <div className="mission-form">
+          <div className="stat-grid">
+            <StatCard
+              label="Scheduler"
+              value={data.enabled ? (data.scheduler_running ? "actif" : "activé, arrêté") : "désactivé"}
+              status={data.enabled && data.scheduler_running ? "real" : "unknown"}
+            />
+            <StatCard
+              label="Cycle"
+              value={CYCLE_STATE_LABEL[cycle.state]}
+              status={CYCLE_STATE_BADGE[cycle.state]}
+            />
+            {cycle.specialty && <StatCard label="Spécialité" value={cycle.specialty} />}
+            {cycle.oracle_verdict && (
+              <StatCard
+                label="Dernier verdict"
+                value={cycle.oracle_verdict}
+                status={VERDICT_BADGE[cycle.oracle_verdict] ?? "unknown"}
+              />
+            )}
+          </div>
+          {cycle.error && <ErrorState detail={cycle.error} />}
+          <p className="mission-form__hint">
+            Réutilise spécialité=&quot;{specialty}&quot;, niveau {currentLevel}, méthode={method}, split={split}
+            {cloneId ? `, clone ${cloneId.slice(0, 8)}` : " — clone auto-provisionné (Subject.LEARNING)"}.
+            La planification automatique (intervalle, activation) se configure côté opérateur (
+            <code>config.yaml</code> / <code>apex learn</code>), jamais ici.
+          </p>
+          <div className="mission-form__row">
+            <Button
+              variant="primary"
+              disabled={!specialty.trim() || isActive || startCycle.isPending}
+              onClick={handleStart}
+            >
+              {startCycle.isPending || cycle.state === "running" ? "Cycle en cours…" : "Démarrer un cycle autonome"}
+            </Button>
+            {isActive && (
+              <Button variant="secondary" disabled={cancelCycle.isPending} onClick={handleCancel}>
+                {cancelCycle.isPending ? "Annulation…" : "Annuler"}
+              </Button>
+            )}
+          </div>
+          {actionError && <ErrorState detail={actionError} />}
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -299,6 +428,10 @@ export function ExperimentLabPage() {
           )}
         </Panel>
       </div>
+
+      <AutonomousLearningPanel
+        specialty={specialty} currentLevel={currentLevel} method={method} split={split} cloneId={cloneId}
+      />
 
       {selectedRunId && (
         <Panel title={`EvalRun ${selectedRunId.slice(0, 8)}`}>

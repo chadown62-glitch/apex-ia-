@@ -12,8 +12,14 @@ exécutable via le Model Router, distincte d'`/agents`), `/tasks`,
 `POST /experiment-cycles` (passe « API Évaluation/Apprentissage » —
 `apex/api/routes/evals.py`, expose TaskBank/EvalRunner/WeaknessDetector/
 SelfModel/`run_experiment_cycle`, déjà réels depuis les phases 5/12/18/22,
-jamais réimplémentés ici) — les seules données/actions réellement
-disponibles aujourd'hui.
+jamais réimplémentés ici), `/learning/cycles`, `/learning/status`,
+`/learning/history` (passe « Autonomous Learning Trigger » —
+`apex/api/routes/learning.py`, expose `apex.metalearner.autonomy.
+AutonomousLearningService`/`apex.metalearner.autonomous_scheduler.
+AutonomousLearningScheduler`, orchestration seule au-dessus de
+`run_experiment_cycle`, toujours `Subject.HUMAN`, jamais un champ
+d'identité fourni par l'appelant HTTP) — les seules données/actions
+réellement disponibles aujourd'hui.
 Code/Design/Skills/Genome/Benchmarks/RAG/ToolRegistry N'ONT PAS de route
 ici : leurs abstractions propriétaires restent `PLANNED` ou hors périmètre
 de cette passe, et exposer une route qui ne peut renvoyer que des données
@@ -59,6 +65,8 @@ sans jeton. Réactivables explicitement en développement local via
 from __future__ import annotations
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -81,6 +89,7 @@ from apex.api.routes import (
     events,
     gate,
     health,
+    learning,
     missions,
     models,
     projects,
@@ -90,6 +99,45 @@ from apex.api.routes import (
 from apex.version import __version__
 
 API_PREFIX = "/api/v1"
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Démarre/arrête `apex.metalearner.autonomous_scheduler.
+    AutonomousLearningScheduler` — passe « Autonomous Learning Trigger ».
+    `start()` est un no-op tant que `AutonomousLearningPolicy.enabled` reste
+    `False` (défaut) : ce lifespan n'active JAMAIS l'apprentissage autonome
+    par lui-même, il ne fait qu'appliquer la configuration existante. Note :
+    aucun code de ce dépôt ne lance aujourd'hui réellement ce processus via
+    un serveur ASGI (voir `apex/api/auth.py`) — ce lifespan ne s'exécute
+    donc concrètement que sous un futur déploiement réel, ou sous un test
+    qui utilise `TestClient` comme gestionnaire de contexte (`with
+    TestClient(app) as client:`).
+
+    `stop()` est bornée (`timeout_s` par défaut de `AutonomousLearningScheduler.
+    stop`) — jamais un arrêt qui bloque indéfiniment ; un cycle déjà
+    `RUNNING` continue jusqu'à sa fin naturelle, indépendant de ce thread
+    (voir la docstring de `AutonomousLearningScheduler.stop`).
+
+    Ne lève JAMAIS : une DB/config indisponible au démarrage du processus
+    ne doit pas empêcher l'API de démarrer (même discipline que chaque
+    route existante, qui dégrade en `status="unknown"` plutôt que de
+    planter) — construire `get_learning_scheduler()` touche `load_config()`
+    et `get_session_factory()`, qui peuvent légitimement échouer avant
+    qu'aucune configuration DB ne soit fournie."""
+    from apex.api.dependencies import get_learning_scheduler
+
+    scheduler_service = None
+    try:
+        scheduler_service = get_learning_scheduler()
+        scheduler_service.start()
+    except Exception:
+        pass
+    try:
+        yield
+    finally:
+        if scheduler_service is not None:
+            scheduler_service.stop()
 
 
 def create_app() -> FastAPI:
@@ -104,6 +152,7 @@ def create_app() -> FastAPI:
         docs_url="/docs" if enable_docs else None,
         redoc_url="/redoc" if enable_docs else None,
         openapi_url="/openapi.json" if enable_docs else None,
+        lifespan=_lifespan,
     )
 
     configured = os.environ.get("APEX_CORS_ALLOW_ORIGINS")
@@ -129,7 +178,7 @@ def create_app() -> FastAPI:
         health.router, gate.router, registry.router, events.router, audit.router,
         agents.router, missions.router, scheduler.router,
         conversations.router, projects.router, agent_templates.router, models.router,
-        agent_registry.router, evals.router,
+        agent_registry.router, evals.router, learning.router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 

@@ -549,6 +549,21 @@ class EvalRunRepository:
         )
         return list(self._session.scalars(stmt))
 
+    def list_by_experiment_ref_prefix(self, prefix: str, limit: int = 200) -> list[EvalRunRow]:
+        """`experiment_ref` est déjà une colonne indexée (voir la migration
+        `e7f9a1c3b5d7`) — aucun nouvel index requis. Utilisé par
+        `apex.metalearner.autonomy.AutonomousLearningService.history` pour
+        retrouver les `EvalRun` produits par un cycle autonome, jamais pour
+        les runs déclenchés directement via `POST /experiment-cycles`
+        (`experiment_ref=None` dans ce cas)."""
+        stmt = (
+            select(EvalRunRow)
+            .where(EvalRunRow.experiment_ref.like(f"{prefix}%"))
+            .order_by(EvalRunRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
 
 class SkillRepository:
     """Persistance de `apex.skills` (`SkillRegistry`, phase 14). N'importe
