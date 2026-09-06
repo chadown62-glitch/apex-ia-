@@ -670,3 +670,61 @@ class LearningSessionOut(BaseModel):
     created_by: str
     created_at: str
     completed_at: str | None
+
+
+# -- judge system / gauntlet (passe « Strict Judge System + Gauntlet Learning Loop ») --
+
+
+class JudgeFindingOut(BaseModel):
+    dimension: str
+    severity: str
+    summary: str
+    detail: str
+
+
+class JudgeEvidenceOut(BaseModel):
+    kind: str
+    reference: str
+    detail: str
+
+
+class JudgeResultOut(BaseModel):
+    """Projette `apex.metalearner.judge_model.JudgeResult` — un jugement
+    INDIVIDUEL, une dimension, structuré (§10 de la mission : jamais
+    seulement un texte narratif)."""
+
+    judge_id: str
+    judge_version: str
+    dimension: str
+    decision: str
+    score: float | None
+    confidence: float | None
+    rationale: str
+    veto: bool
+    findings: list[JudgeFindingOut]
+    evidence: list[JudgeEvidenceOut]
+
+
+class GauntletResultOut(BaseModel):
+    """Projette `apex.metalearner.judge_model.GauntletResult` — la décision
+    AGRÉGÉE, déterministe (§11), sur UN membre de population, à UN stage
+    (`cheap`/`full`). `veto`/`veto_dimension` répondent explicitement à
+    « quel juge a bloqué la décision » (§25 : observabilité), jamais
+    seulement le score global."""
+
+    id: str
+    specialty: str
+    generation: int
+    member_id: str
+    stage: str
+    protocol_version: str
+    decision: str
+    overall_score: float | None
+    overall_confidence: float | None
+    veto: bool
+    veto_dimension: str | None
+    disagreement: bool
+    stopped_after_critical_failure: bool
+    judge_results: list[JudgeResultOut]
+    compared_champion_id: str | None
+    created_at: str

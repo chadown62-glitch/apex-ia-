@@ -59,13 +59,17 @@ from typing import Any
 
 from apex.agents.runtime import AgentRuntime
 from apex.errors import PopulationCapExceeded
-from apex.evalrunner.model import EvalMethod
+from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.genome.model import GenomeVersionOrigin
 from apex.genome.mutation import crossover, mutate
 from apex.genome.selection import successive_halving
 from apex.genome.service import GenomeStoreService
 from apex.metalearner.cycle import run_experiment_cycle
-from apex.metalearner.population_fitness import compute_fitness
+from apex.metalearner.gauntlet import GauntletRunner
+from apex.metalearner.gauntlet_repository import GauntletRepository
+from apex.metalearner.judge_model import GauntletResult, JudgeDecision
+from apex.metalearner.judges import JudgeInput
+from apex.metalearner.population_fitness import compute_fitness, FitnessResult
 from apex.metalearner.population_model import MemberStatus, PopulationMember
 from apex.metalearner.population_service import PopulationService
 from apex.policy.model import Subject
@@ -87,6 +91,19 @@ def _deterministic_seed(experiment_ref: str) -> int:
     croisement, jamais un résultat différent à chaque relecture."""
     digest = hashlib.sha256(experiment_ref.encode("utf-8")).hexdigest()
     return int(digest[:16], 16)
+
+
+def _extract_eval_run_id(cheap_result: GauntletResult) -> str | None:
+    """Récupère l'`EvalRun.id` référencé par les preuves CITABLES du
+    gauntlet CHEAP déjà persisté (`JudgeEvidence(kind="eval_run", ...)`,
+    `CorrectnessJudge`/`EfficiencyJudge`/`SecurityJudge`) — jamais une
+    nouvelle colonne dédiée sur `PopulationMemberRow`/`GauntletResultRow` :
+    la preuve existe déjà, ce module la relit plutôt que de la dupliquer."""
+    for judge_result in cheap_result.judge_results:
+        for evidence in judge_result.evidence:
+            if evidence.kind == "eval_run":
+                return evidence.reference
+    return None
 
 
 @dataclass(frozen=True)
@@ -118,6 +135,7 @@ class PopulationEvolutionService:
         self._config = config
         self._population = PopulationService(session_factory)
         self._genome = GenomeStoreService(session_factory)
+        self._gauntlet_repo = GauntletRepository(session_factory)
 
     # -- orchestrateur principal ----------------------------------------------
 
@@ -245,9 +263,22 @@ class PopulationEvolutionService:
 
         limits = self._resolved_limits(genome_content)
         fitness = compute_fitness(result.eval_run, limits=limits)
-        return self._population.record_fitness(
+        member = self._population.record_fitness(
             member.id, fitness, skill_candidate_id=skill_candidate_id, genome_candidate_id=genome_candidate_id,
         )
+        # Gauntlet CHEAP (§14/§28 de la mission N+8) : AUCUNE exécution
+        # supplémentaire — réutilise l'unique expérience déjà réelle de ce
+        # membre (`result.eval_run`) pour produire un jugement structuré,
+        # multi-dimensions, persisté (`gauntlet_results`). Calculé pour
+        # CHAQUE membre, jamais seulement le candidat champion — c'est le
+        # stage FULL (`_promote_champion_if_earned`) qui réserve les juges
+        # coûteux (répétition réelle, HELDOUT) au seul candidat qui en a
+        # besoin.
+        self._run_cheap_gauntlet(
+            specialty=specialty, generation=generation, member=member,
+            eval_run=result.eval_run, limits=limits, fitness=fitness, config=config,
+        )
+        return member
 
     def _propose_offspring_genome(
         self,
@@ -357,43 +388,191 @@ class PopulationEvolutionService:
         if current_champion is not None and (candidate.fitness or float("-inf")) <= (current_champion.fitness or float("-inf")):
             return current_champion  # §10 : jamais remplacé par un individu moins performant.
 
-        if not self._holdout_check_passes(specialty, candidate, generation):
+        # Gauntlet FULL (passe N+8) : remplace l'ancien contrôle HELDOUT
+        # booléen SEUL par une décision agrégée, multi-juges (correction,
+        # efficacité, sécurité, régression vs champion, robustesse par
+        # ré-exécution, généralisation HELDOUT) — un `REJECT`/`INCONCLUSIVE`
+        # bloque la promotion exactement comme le faisait un échec HELDOUT
+        # auparavant, jamais une moyenne qui masquerait un véto (§8/§12).
+        gauntlet = self._run_full_gauntlet(specialty, generation, candidate, current_champion)
+        if gauntlet is None or gauntlet.decision is not JudgeDecision.PASS:
             self._record_event(
-                "evolution.holdout_gate_failed",
-                {"specialty": specialty, "generation": generation, "candidate_id": candidate.id},
+                "evolution.gauntlet_rejected_champion_candidacy",
+                {
+                    "specialty": specialty, "generation": generation, "candidate_id": candidate.id,
+                    "decision": gauntlet.decision.value if gauntlet is not None else "no_evidence",
+                    "veto": gauntlet.veto if gauntlet is not None else False,
+                    "veto_dimension": (
+                        gauntlet.veto_dimension.value if gauntlet is not None and gauntlet.veto_dimension else None
+                    ),
+                },
             )
             return current_champion  # reste ELITE, jamais promu — aucune perte de données.
 
         return self._population.set_status(candidate.id, MemberStatus.CHAMPION)
 
-    def _holdout_check_passes(self, specialty: str, candidate: PopulationMember, generation: int) -> bool:
-        """§13 : un contrôle HELDOUT réel avant toute promotion CHAMPION —
-        empêche un candidat de gagner par simple surapprentissage sur les
-        tâches TRAIN utilisées pendant l'évolution. Un clone étant à usage
-        unique (`AgentRuntime.execute_in_sandbox` le termine après un seul
-        appel), ce contrôle spawn un clone FRAIS avec le MÊME Genome —
-        jamais une réutilisation d'un clone déjà terminé."""
-        from apex.agents.pool_selection import pick_sandbox_capable_pool
+    def _run_cheap_gauntlet(
+        self,
+        *,
+        specialty: str,
+        generation: int,
+        member: PopulationMember,
+        eval_run: EvalRun,
+        limits: Any,
+        fitness: FitnessResult,
+        config: Any,
+    ) -> GauntletResult:
+        """Aucune exécution supplémentaire — voir la docstring du module et
+        `apex.metalearner.judge_model.GauntletStage.CHEAP`. Le champion
+        courant (s'il existe) fournit la base de comparaison de
+        `RegressionJudge` — jamais un second calcul de fitness (§28)."""
+        champion = self._population.get_champion(specialty)
+        judge_input = JudgeInput(
+            eval_run=eval_run, limits=limits, candidate_fitness_components=fitness.components,
+            champion_member_id=champion.id if champion is not None else None,
+            champion_fitness_components=champion.fitness_components if champion is not None else None,
+            efficiency_reject_threshold=config.gauntlet.efficiency_reject_threshold,
+            major_regression_factor=config.gauntlet.major_regression_factor,
+        )
+        runner = GauntletRunner(min_confidence_threshold=config.gauntlet.min_confidence_threshold)
+        result = runner.run_cheap(judge_input, specialty=specialty, generation=generation, member_id=member.id)
+        self._gauntlet_repo.create(result)
+        return result
+
+    def _run_full_gauntlet(
+        self,
+        specialty: str,
+        generation: int,
+        candidate: PopulationMember,
+        current_champion: PopulationMember | None,
+    ) -> GauntletResult | None:
+        """`None` si le gauntlet CHEAP de ce candidat est introuvable —
+        jamais une promotion silencieuse faute de preuve (chaque membre en
+        reçoit pourtant TOUJOURS un à sa création, voir `_create_member`) :
+        une preuve manquante est traitée comme un blocage, pas une
+        autorisation par défaut (§23)."""
         from apex.config.loader import load_config
-        from apex.oracles.model import OracleVerdict
+        from apex.evalrunner.repository import EvalRunRepository
 
         config = self._config or load_config()
-        pool = pick_sandbox_capable_pool(config)
-        genome_version = self._genome.get(candidate.genome_version_id)
-        if genome_version is None:
-            return False
+        cheap_results = self._gauntlet_repo.list_by_member(candidate.id, limit=1)
+        if not cheap_results:
+            return None
+        cheap_result = cheap_results[0]
+
+        eval_run_id = _extract_eval_run_id(cheap_result)
+        if eval_run_id is None:
+            return None
+        original_eval_run = EvalRunRepository(self._session_factory).get(eval_run_id)
+        if original_eval_run is None:
+            return None
+
         genome_content = self._genome.get_content(candidate.genome_version_id)
-        clone = self._agent_runtime.spawn(
-            Subject.LEARNING, pool=pool, genome_ref=genome_version.content_hash, spawned_by=Subject.CORE,
+        limits = self._resolved_limits(genome_content)
+
+        repeated_eval_run: EvalRun | None = None
+        holdout_eval_run: EvalRun | None = None
+        if config.gauntlet.enable_expensive_judges and not cheap_result.veto:
+            # §13/§24 : jamais dépensées pour un candidat déjà rejeté par le
+            # stage CHEAP — `GauntletRunner.run_full` s'arrêterait de toute
+            # façon avant de les utiliser, mais les épargner ICI évite de
+            # payer leur coût RÉEL (spawn + sandbox) pour rien.
+            repeated_eval_run = self._repeat_execution(
+                specialty=specialty, candidate=candidate, task_id=original_eval_run.task_id,
+                genome_content=genome_content,
+            )
+            holdout_eval_run = self._run_holdout(specialty, candidate, generation, genome_content)
+
+        judge_input = JudgeInput(
+            eval_run=original_eval_run, limits=limits,
+            candidate_fitness_components=candidate.fitness_components or {},
+            repeated_eval_run=repeated_eval_run, holdout_eval_run=holdout_eval_run,
+            champion_member_id=current_champion.id if current_champion is not None else None,
+            champion_fitness_components=current_champion.fitness_components if current_champion is not None else None,
+            efficiency_reject_threshold=config.gauntlet.efficiency_reject_threshold,
+            major_regression_factor=config.gauntlet.major_regression_factor,
         )
-        experiment_ref = f"{_EXPERIMENT_REF_PREFIX}:{specialty}:gen{generation}:member-holdout:{candidate.id}"
-        result = run_experiment_cycle(
-            session_factory=self._session_factory, agent_runtime=self._agent_runtime,
-            clone_id=clone.clone_id, specialty=specialty, current_level=1,
-            requested_by=Subject.HUMAN, method=EvalMethod.PRACTICE, split=TaskSplit.HELDOUT,
-            experiment_ref=experiment_ref, genome_content=genome_content,
+        runner = GauntletRunner(min_confidence_threshold=config.gauntlet.min_confidence_threshold)
+        full_result = runner.run_full(
+            judge_input, specialty=specialty, generation=generation, member_id=candidate.id,
+            cheap_result=cheap_result, compared_champion_id=current_champion.id if current_champion else None,
+            run_expensive=config.gauntlet.enable_expensive_judges,
         )
-        return result.eval_run.oracle_verdict is OracleVerdict.PASS
+        self._gauntlet_repo.create(full_result)
+        return full_result
+
+    def _repeat_execution(
+        self, *, specialty: str, candidate: PopulationMember, task_id: str, genome_content: dict[str, Any] | None,
+    ) -> EvalRun | None:
+        """`RobustnessJudge` (§7/§16 de la mission N+8) : ré-exécution
+        RÉELLE de LA MÊME tâche avec LE MÊME Genome — appelle directement
+        `EvalRunnerService.run` (Phase 5, inchangé), jamais `run_experiment_
+        cycle` (qui générerait une NOUVELLE tâche à chaque appel via
+        `TaskBankService.create` — jamais un vrai « repeat »). Un clone
+        étant à usage unique, un clone FRAIS est spawné avec le MÊME
+        `genome_ref`. `None` en cas de panne d'infrastructure — jamais
+        susceptible de faire échouer la décision de promotion elle-même
+        (`RobustnessJudge` traite `None` comme `INCONCLUSIVE`, jamais un
+        `PASS` déduit)."""
+        from apex.agents.pool_selection import pick_sandbox_capable_pool
+        from apex.config.loader import load_config
+        from apex.evalrunner.service import EvalRunnerService
+
+        try:
+            config = self._config or load_config()
+            pool = pick_sandbox_capable_pool(config)
+            genome_version = self._genome.get(candidate.genome_version_id)
+            if genome_version is None:
+                return None
+            clone = self._agent_runtime.spawn(
+                Subject.LEARNING, pool=pool, genome_ref=genome_version.content_hash, spawned_by=Subject.CORE,
+            )
+            return EvalRunnerService(self._session_factory, agent_runtime=self._agent_runtime).run(
+                task_id=task_id, clone_id=clone.clone_id, method=EvalMethod.PRACTICE, requested_by=Subject.CORE,
+                experiment_ref=f"{candidate.experiment_ref}:repeat", genome_content=genome_content,
+            )
+        except Exception as exc:
+            self._record_event(
+                "evolution.repeated_execution_failed",
+                {"specialty": specialty, "candidate_id": candidate.id, "error": f"{exc.__class__.__name__}: {exc}"},
+            )
+            return None
+
+    def _run_holdout(
+        self, specialty: str, candidate: PopulationMember, generation: int, genome_content: dict[str, Any] | None,
+    ) -> EvalRun | None:
+        """§13 : le contrôle HELDOUT réel avant toute promotion CHAMPION —
+        INCHANGÉ depuis N+6, désormais exposé comme `EvalRun` (consommé par
+        `GeneralizationJudge`) plutôt que réduit en interne à un booléen.
+        Un clone étant à usage unique, ce contrôle spawn un clone FRAIS
+        avec le MÊME Genome — jamais une réutilisation d'un clone déjà
+        terminé."""
+        from apex.agents.pool_selection import pick_sandbox_capable_pool
+        from apex.config.loader import load_config
+
+        try:
+            config = self._config or load_config()
+            pool = pick_sandbox_capable_pool(config)
+            genome_version = self._genome.get(candidate.genome_version_id)
+            if genome_version is None:
+                return None
+            clone = self._agent_runtime.spawn(
+                Subject.LEARNING, pool=pool, genome_ref=genome_version.content_hash, spawned_by=Subject.CORE,
+            )
+            experiment_ref = f"{_EXPERIMENT_REF_PREFIX}:{specialty}:gen{generation}:member-holdout:{candidate.id}"
+            result = run_experiment_cycle(
+                session_factory=self._session_factory, agent_runtime=self._agent_runtime,
+                clone_id=clone.clone_id, specialty=specialty, current_level=1,
+                requested_by=Subject.HUMAN, method=EvalMethod.PRACTICE, split=TaskSplit.HELDOUT,
+                experiment_ref=experiment_ref, genome_content=genome_content,
+            )
+            return result.eval_run
+        except Exception as exc:
+            self._record_event(
+                "evolution.holdout_check_failed",
+                {"specialty": specialty, "candidate_id": candidate.id, "error": f"{exc.__class__.__name__}: {exc}"},
+            )
+            return None
 
     # -- helpers internes -------------------------------------------------------
 

@@ -735,6 +735,70 @@ class PopulationPolicy:
 
 
 @dataclass(frozen=True)
+class GauntletPolicy:
+    """Seuils du Judge System / Gauntlet (passe « Strict Judge System +
+    Gauntlet Learning Loop ») — des choix d'opérateur reconfigurables,
+    jamais des constantes figées dans le code (même discipline que
+    `PopulationPolicy`). N'inclut JAMAIS `protocol_version` : celui-ci
+    reflète le comportement RÉEL de `apex.metalearner.gauntlet._aggregate`,
+    une constante de CODE (`apex.metalearner.judge_model.
+    GAUNTLET_PROTOCOL_VERSION`) — un réglage de config ne pourrait jamais
+    refléter honnêtement un changement de règle d'agrégation.
+
+    `min_confidence_threshold` : en dessous, l'agrégateur force
+    `INCONCLUSIVE` même si tous les juges disent `PASS` (§10 : un score
+    élevé à faible confiance n'est jamais une preuve forte).
+    `efficiency_reject_threshold` : `cost_penalty` (part du budget
+    `timeout_s` réellement consommée) au-delà de laquelle `EfficiencyJudge`
+    rejette — jamais un temps absolu arbitraire, la même base que
+    `population_fitness.compute_fitness`.
+    `major_regression_factor` : `RegressionJudge` rejette si le
+    `cost_penalty` du candidat dépasse celui du champion par CE facteur
+    (§12 : une régression majeure isolée n'est jamais masquée par une
+    moyenne meilleure).
+    `enable_expensive_judges` : autorise (`True`, défaut) les juges qui
+    exigent une exécution RÉELLE supplémentaire (`ROBUSTNESS`/
+    `GENERALIZATION`, stage `FULL`) — désactivable par un administrateur
+    pour un environnement à ressources contraintes ; `CHEAP` (par membre,
+    sans coût supplémentaire) reste toujours actif."""
+
+    min_confidence_threshold: float
+    efficiency_reject_threshold: float
+    major_regression_factor: float
+    enable_expensive_judges: bool
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> GauntletPolicy:
+        min_confidence_threshold = float(raw.get("min_confidence_threshold", 0.6))
+        if not (0.0 <= min_confidence_threshold <= 1.0):
+            raise ConfigError(
+                "min_confidence_threshold doit être compris entre 0.0 et 1.0",
+                field="gauntlet.min_confidence_threshold",
+            )
+        efficiency_reject_threshold = float(raw.get("efficiency_reject_threshold", 0.9))
+        if not (0.0 < efficiency_reject_threshold <= 1.0):
+            raise ConfigError(
+                "efficiency_reject_threshold doit être compris entre 0.0 (exclu) et 1.0",
+                field="gauntlet.efficiency_reject_threshold",
+            )
+        major_regression_factor = float(raw.get("major_regression_factor", 2.0))
+        if major_regression_factor <= 1.0:
+            raise ConfigError(
+                "major_regression_factor doit être > 1.0 (sinon toute variation serait une régression)",
+                field="gauntlet.major_regression_factor",
+            )
+        enable_expensive_judges = as_bool(
+            raw.get("enable_expensive_judges", True), field="gauntlet.enable_expensive_judges",
+        )
+        return cls(
+            min_confidence_threshold=min_confidence_threshold,
+            efficiency_reject_threshold=efficiency_reject_threshold,
+            major_regression_factor=major_regression_factor,
+            enable_expensive_judges=enable_expensive_judges,
+        )
+
+
+@dataclass(frozen=True)
 class RouterScoringPolicy:
     """Poids du score `apex.routing.router.select_model` — passe « Adaptive
     Model Router V1 ». Même discipline que `SchedulerPolicy` : un choix
@@ -823,6 +887,7 @@ class ApexConfig:
     routing: RouterScoringPolicy
     autonomous_learning: AutonomousLearningPolicy
     population: PopulationPolicy
+    gauntlet: GauntletPolicy
 
     # -- invariants transverses -------------------------------------------
 

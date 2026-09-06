@@ -52,6 +52,13 @@ ce qui ne l'est pas encore, composant par composant) :
   où s'arrêter, comment reprendre après une panne — jamais une seconde
   implémentation de l'évolution elle-même. Voir la sous-section dédiée
   ci-dessous.
+- **`GauntletEvaluation`** (passe « Strict Judge System + Gauntlet
+  Learning Loop ») — évaluation adversariale stricte, multi-juges
+  (`apex.metalearner.judges`/`gauntlet`, table `gauntlet_results`, API
+  `/gauntlets`), intégrée à `PopulationEvolutionService` : un véto
+  (finding CRITICAL, ex. tentative de contournement sandbox, échec
+  HELDOUT, non-déterminisme) bloque la promotion CHAMPION quel que soit
+  le score moyen. Voir la sous-section dédiée ci-dessous.
 
 Rien n'est prétendu `IMPLEMENTED` sans preuve empirique. Tout ce qui reste
 `PLANNED`/déféré est documenté avec sa raison exacte dans le registre
@@ -850,6 +857,130 @@ fitness restent exactement ceux de N+6).
   inventée est un chantier distinct, volontairement différé plutôt que
   bâclé) ; aucun nouvel `Action` `PolicyEngine` (aucune opération
   privilégiée nouvelle ne le justifiait).
+
+### Strict Judge System + Gauntlet Learning Loop
+
+Construit le premier système de juges MULTI-DIMENSIONS, résistant au
+reward hacking (§ mission N+8) :
+
+```
+candidate -> juges CHEAP (correctness/efficiency/security/regression)
+          -> [si aucun véto] juges EXPENSIVE (robustness/generalization)
+          -> agrégation déterministe -> PASS / REJECT / INCONCLUSIVE
+          -> promotion CHAMPION uniquement si PASS
+```
+
+Principe central : « A solution does not pass because it looks good. A
+solution passes because it survives hostile evaluation. » — AUCUNE moyenne
+ne masque jamais un véto ; AUCUNE preuve manquante ne devient jamais un
+`PASS` silencieux.
+
+- **`apex.metalearner.judge_model`** (nouveau, pur, aucune DB) —
+  `JudgeDimension` (9 valeurs nommées, 6 réellement instanciées :
+  `CORRECTNESS`/`ROBUSTNESS`/`EFFICIENCY`/`SECURITY`/`GENERALIZATION`/
+  `REGRESSION` ; `EDGE_CASES`/`QUALITY`/`ADVERSARIAL` restent PLANNED,
+  aucun juge n'y est jamais associé — même discipline que `JudgeTierLevel.
+  TIER_1`/`TIER_2`, Phase 9), `JudgeSeverity` (`LOW`/`MEDIUM`/`HIGH`/
+  `CRITICAL` — `CRITICAL` = véto), `JudgeDecision` (`PASS`/`REJECT`/
+  `INCONCLUSIVE`, vocabulaire PARTAGÉ entre un juge individuel et la
+  décision agrégée), `JudgeEvidence`/`JudgeFinding`/`JudgeResult`
+  (`score`/`confidence`/`rationale` toujours SÉPARÉS — un score élevé à
+  faible confiance n'est jamais une preuve forte), `GauntletResult`
+  (décision agrégée) et `GAUNTLET_PROTOCOL_VERSION` (constante de CODE,
+  jamais un réglage admin — un protocole d'agrégation qui change EST un
+  changement de comportement).
+- **`apex.metalearner.judges`** — 6 juges réels, UNE responsabilité
+  chacun (§5 : jamais un « God Judge »), TOUS objectifs/déterministes
+  (§6 : aucun LLM consulté) :
+  - `CorrectnessJudge` — enveloppe `OracleVerdict` (`apex.oracles`), zéro
+    logique dupliquée.
+  - `EfficiencyJudge` — `cost_penalty` = `elapsed_s`/`timeout_s`, MÊME
+    formule qu'`apex.metalearner.population_fitness.compute_fitness` ;
+    rejette aussi un dépassement `RESOURCE_LIMIT_EXCEEDED`/`OOM_KILLED`.
+  - `SecurityJudge` — `ExecutionStatus.NETWORK_DENIED`/`PERMISSION_DENIED`
+    (signal RÉEL déjà produit par le sandbox, Phase 7) = véto CRITICAL.
+  - `RegressionJudge` — compare le candidat au CHAMPION courant sur les
+    composantes de fitness DÉJÀ PERSISTÉES (aucune exécution
+    supplémentaire) : une régression de `quality` est un véto ; une
+    régression majeure de coût (`major_regression_factor`, défaut `2.0`)
+    est un `REJECT` non-véto.
+  - `RobustnessJudge` — cohérence entre DEUX exécutions RÉELLES du MÊME
+    (tâche, Genome) : un verdict qui change entre les deux est un véto
+    (candidat non-déterministe). `None` (pas de ré-exécution effectuée)
+    -> `INCONCLUSIVE`, jamais un `PASS` déduit.
+  - `GeneralizationJudge` — enveloppe le contrôle HELDOUT déjà réel de
+    N+6 (aucune seconde implémentation) : un échec HELDOUT est un véto
+    (surapprentissage du TRAIN).
+- **`apex.metalearner.gauntlet.GauntletRunner`** — `run_cheap` (les 4
+  juges CHEAP, calculé pour CHAQUE membre, zéro coût supplémentaire) et
+  `run_full` (ajoute les 2 juges EXPENSIVE, réservé au candidat à la
+  promotion CHAMPION — s'arrête tôt, sans même les exécuter, si le stage
+  CHEAP a déjà produit un véto, §13/§24). `_aggregate` est une fonction
+  PURE : véto -> `REJECT` (peu importe le reste) ; sinon un `REJECT` non-
+  véto bloque déjà ; sinon un `INCONCLUSIVE` bloque déjà (jamais
+  silencieusement un `PASS`) ; sinon `PASS` SEULEMENT si la confiance
+  globale (le MINIMUM des confidences, jamais une moyenne optimiste)
+  dépasse `GauntletPolicy.min_confidence_threshold` (défaut `0.6`),
+  sinon `INCONCLUSIVE`. Un juge qui LÈVE devient un `JudgeResult`
+  `INCONCLUSIVE` synthétique (jamais un `PASS` par défaut, §21 Case I).
+  Déterministe et indépendant de l'ORDRE des juges (§21 Case G/H).
+- **Intégration dans `PopulationEvolutionService` (N+6), AUCUN second
+  pipeline** — `_create_member` calcule le gauntlet CHEAP juste après
+  `compute_fitness` (même `EvalRun`, aucune exécution supplémentaire) ;
+  `_promote_champion_if_earned` REMPLACE l'ancien contrôle HELDOUT
+  booléen SEUL par le gauntlet FULL : ré-exécute RÉELLEMENT la même tâche
+  avec le même Genome (`EvalRunnerService.run` directement — JAMAIS
+  `run_experiment_cycle`, qui générerait une tâche DIFFÉRENTE à chaque
+  appel) pour `RobustnessJudge`, ET relance le contrôle HELDOUT existant
+  pour `GeneralizationJudge` — SEULEMENT si le stage CHEAP n'a pas déjà
+  vétoé (même profil de coût que le contrôle HELDOUT seul existant en
+  N+6 : un candidat déjà rejeté par les juges CHEAP ne paie jamais le
+  coût réel d'une ré-exécution/HELDOUT). L'`EvalRun` original du candidat
+  est retrouvé via la preuve CITABLE déjà persistée dans le gauntlet CHEAP
+  (`JudgeEvidence(kind="eval_run", reference=...)`) — AUCUNE nouvelle
+  colonne sur `population_members`.
+- **`GauntletPolicy`** (`apex.config.schema`, `config.yaml` `gauntlet:`) —
+  `min_confidence_threshold` (0.6), `efficiency_reject_threshold` (0.9),
+  `major_regression_factor` (2.0), `enable_expensive_judges` (`true` —
+  désactivable par un administrateur ; dans ce cas les dimensions
+  EXPENSIVE sont honnêtement ABSENTES du résultat, jamais un `PASS`/
+  `INCONCLUSIVE` fabriqué pour combler leur absence).
+- **Persistence** — `gauntlet_results` (migration `9cafd4f90c50`, INSERT
+  seul, même garantie qu'`eval_runs`) : `member_id`/`stage`
+  (`cheap`/`full`)/`protocol_version`/`decision`/`overall_score`/
+  `overall_confidence`/`veto`/`veto_dimension`/`disagreement`/
+  `stopped_after_critical_failure`/`judge_results` (JSON, la liste
+  STRUCTURÉE de chaque `JudgeResult`, jamais seulement un texte
+  narratif)/`compared_champion_id`. `apex.metalearner.gauntlet_repository.
+  GauntletRepository` traduit vers/depuis `GauntletResult`.
+- **API** (`apex/api/routes/gauntlets.py`, lecture seule) — `GET
+  /gauntlets/{id}`, `GET /population/{specialty}/gauntlets` (filtrable par
+  `member_id`) — observabilité seule (§19/§25) : « pourquoi cette
+  candidate a-t-elle été acceptée/rejetée, quel juge a trouvé le problème,
+  quelle preuve, quelle différence avec le champion ». Aucune route
+  mutative : le Judge System s'exécute exclusivement à l'intérieur de
+  `PopulationEvolutionService`, jamais déclenché depuis l'API/CLI.
+- **Sécurité** — aucun nouvel `Action` `PolicyEngine` (aucune opération
+  privilégiée nouvelle : le gauntlet ne fait que LIRE des preuves déjà
+  produites par des primitives déjà gouvernées). Un candidat ne peut
+  jamais choisir ses propres juges/seuils : `GauntletPolicy` vient
+  exclusivement de la configuration administrateur (`config.yaml`),
+  jamais du contenu d'un Genome.
+- **Non fait dans cette passe (différé explicitement)** : `EDGE_CASES`/
+  `QUALITY`/`ADVERSARIAL` restent des dimensions PLANNED (aucun juge
+  réel) ; aucun juge LLM (§26, architecture évolutive — s'ajouterait dans
+  `apex.metalearner.judges` sans toucher l'agrégateur) ; aucune
+  calibration de juge réelle (faux positifs/négatifs, réputation) — seul
+  le modèle de données (`judge_results` structuré, `protocol_version`) le
+  permet pour une phase future ; **aucun raccordement automatique au
+  Weakness/Curriculum Engine** au-delà de l'événement `evolution.
+  gauntlet_rejected_champion_candidacy` (`EventRepository`, observabilité
+  humaine réelle) — le rejet d'une candidature est visible/traçable, mais
+  aucun composant ne le relit encore comme signal d'apprentissage
+  automatique (ne pas prétendre un wiring qui n'existe pas, §15/§23 de la
+  mission) ; frontend NON câblé (observabilité API suffisante pour cette
+  passe ; une visualisation minimale reste un chantier distinct) ; aucun
+  ordonnancement GPU/parallélisme spéculatif (séquentiel, déterministe).
 
 ### Décisions d'architecture importantes
 

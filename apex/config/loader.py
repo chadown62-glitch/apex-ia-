@@ -23,6 +23,7 @@ from apex.config.schema import (
     ComputePool,
     ExternalPolicy,
     GatePolicy,
+    GauntletPolicy,
     LanguageToolchain,
     ModelEndpoint,
     ModelRole,
@@ -128,6 +129,7 @@ def parse_config(raw: dict[str, Any]) -> ApexConfig:
         routing=RouterScoringPolicy.parse(raw.get("routing") or {}),
         autonomous_learning=AutonomousLearningPolicy.parse(raw.get("autonomous_learning") or {}),
         population=PopulationPolicy.parse(raw.get("population") or {}),
+        gauntlet=GauntletPolicy.parse(raw.get("gauntlet") or {}),
     )
     config.validate()
     return config

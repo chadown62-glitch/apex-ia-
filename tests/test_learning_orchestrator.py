@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
 from apex.agents.runtime import AgentRuntime
-from apex.config.schema import Capability, ComputePool, PoolLocation, PopulationPolicy, TrustLevel
+from apex.config.schema import Capability, ComputePool, GauntletPolicy, PoolLocation, PopulationPolicy, TrustLevel
 from apex.db.engine import build_session_factory
 from apex.db.models import Base
 from apex.errors import LearningSessionAlreadyRunning
@@ -45,9 +45,12 @@ def a_pool(**overrides) -> ComputePool:
 
 
 class FakeConfig:
-    def __init__(self, pools: dict[str, ComputePool], population: PopulationPolicy) -> None:
+    def __init__(
+        self, pools: dict[str, ComputePool], population: PopulationPolicy, gauntlet: GauntletPolicy | None = None,
+    ) -> None:
         self.pools = pools
         self.population = population
+        self.gauntlet = gauntlet or a_gauntlet_policy()
 
 
 def a_policy(**overrides) -> PopulationPolicy:
@@ -57,6 +60,15 @@ def a_policy(**overrides) -> PopulationPolicy:
     )
     defaults.update(overrides)
     return PopulationPolicy(**defaults)
+
+
+def a_gauntlet_policy(**overrides) -> GauntletPolicy:
+    defaults = dict(
+        min_confidence_threshold=0.6, efficiency_reject_threshold=0.9,
+        major_regression_factor=2.0, enable_expensive_judges=True,
+    )
+    defaults.update(overrides)
+    return GauntletPolicy(**defaults)
 
 
 def promote_a_genome(factory, content=None) -> str:
@@ -244,7 +256,7 @@ class TestIdempotencyAndConcurrency(OrchestratorTestBase):
         real_evolve = self.orch._evolution.evolve_generation
 
         def blocked(*args, **kwargs):
-            release.wait(timeout=5.0)
+            release.wait(timeout=30.0)
             return real_evolve(*args, **kwargs)
 
         with patch.object(self.orch._evolution, "evolve_generation", side_effect=blocked):

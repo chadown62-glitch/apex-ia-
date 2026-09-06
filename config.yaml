@@ -311,6 +311,21 @@ population:
   max_session_generations: 20
 
 # ----------------------------------------------------------------------------
+# Gauntlet / Judge System (passe « Strict Judge System + Gauntlet Learning
+# Loop ») — seuils de l'agrégation stricte multi-juges
+# (apex.metalearner.gauntlet). `protocol_version` n'apparaît PAS ici : c'est
+# une constante de code (apex.metalearner.judge_model.
+# GAUNTLET_PROTOCOL_VERSION), jamais un réglage admin. Valeurs prudentes par
+# défaut — un score élevé à faible confiance ne doit jamais suffire (§10 de
+# la mission).
+# ----------------------------------------------------------------------------
+gauntlet:
+  min_confidence_threshold: 0.6
+  efficiency_reject_threshold: 0.9
+  major_regression_factor: 2.0
+  enable_expensive_judges: true
+
+# ----------------------------------------------------------------------------
 # Model Router (passe « Adaptive Model Router V1 ») — poids du score de
 # apex.routing.router.select_model. capability_match_weight/
 # local_preference_weight reproduisent exactement le score déjà en

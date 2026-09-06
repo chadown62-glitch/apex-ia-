@@ -849,6 +849,73 @@ class LearningSessionRow(Base):
         }
 
 
+class GauntletResultRow(Base):
+    """Persiste `apex.metalearner.judge_model.GauntletResult` (passe
+    « Strict Judge System + Gauntlet Learning Loop ») — la décision AGRÉGÉE,
+    déterministe, d'un ou plusieurs juges spécialisés sur UN membre de
+    population, à UN stage donné (`cheap` : par membre, sans exécution
+    supplémentaire ; `full` : au moment de la candidature CHAMPION,
+    inclut les juges qui exigent une exécution réelle supplémentaire —
+    voir `apex.metalearner.gauntlet.GauntletRunner`).
+
+    `member_id` référence `population_members.id` PAR VALEUR (même choix
+    documenté qu'`PopulationMemberRow.clone_id`/`genome_version_id` : ces
+    tables ne sont pas synchronisées transactionnellement entre elles) —
+    UN membre peut porter PLUSIEURS lignes (`cheap` puis, seulement s'il
+    devient candidat champion, `full`), jamais une mise à jour en place :
+    chaque évaluation reste un fait immuable, exactement la discipline déjà
+    appliquée à `population_members.fitness`/`eval_runs`.
+
+    `judge_results` (JSON) porte la liste STRUCTURÉE des jugements
+    individuels (`JudgeResult.to_dict()`, un par juge exécuté) — jamais
+    seulement un texte narratif (§10 de la mission : une décision doit être
+    traçable jusqu'à ses preuves). `protocol_version` (§17) rend un
+    jugement déjà persisté interprétable même après une future évolution
+    de `apex.metalearner.gauntlet._aggregate` — jamais invalidé
+    rétroactivement par un changement de règle."""
+
+    __tablename__ = "gauntlet_results"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    member_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    stage: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    protocol_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    decision: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    overall_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    overall_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    veto: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    veto_dimension: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    disagreement: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    stopped_after_critical_failure: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    judge_results: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False)
+    compared_champion_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "specialty": self.specialty,
+            "generation": self.generation,
+            "member_id": self.member_id,
+            "stage": self.stage,
+            "protocol_version": self.protocol_version,
+            "decision": self.decision,
+            "overall_score": self.overall_score,
+            "overall_confidence": self.overall_confidence,
+            "veto": self.veto,
+            "veto_dimension": self.veto_dimension,
+            "disagreement": self.disagreement,
+            "stopped_after_critical_failure": self.stopped_after_critical_failure,
+            "judge_results": self.judge_results,
+            "compared_champion_id": self.compared_champion_id,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
 class ProjectRow(Base):
     """Persiste `apex.projects.model.Project` (passe « Première interface
     utilisable ») — structure MINIMALE : un projet n'est qu'un regroupement

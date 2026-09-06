@@ -16,7 +16,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
 from apex.agents.runtime import AgentRuntime
-from apex.config.schema import Capability, ComputePool, PoolLocation, PopulationPolicy, TrustLevel
+from apex.config.schema import Capability, ComputePool, GauntletPolicy, PoolLocation, PopulationPolicy, TrustLevel
 from apex.db.engine import build_session_factory
 from apex.db.models import Base
 from apex.errors import PopulationCapExceeded
@@ -45,9 +45,12 @@ def a_pool(**overrides) -> ComputePool:
 
 
 class FakeConfig:
-    def __init__(self, pools: dict[str, ComputePool], population: PopulationPolicy) -> None:
+    def __init__(
+        self, pools: dict[str, ComputePool], population: PopulationPolicy, gauntlet: GauntletPolicy | None = None,
+    ) -> None:
         self.pools = pools
         self.population = population
+        self.gauntlet = gauntlet or a_gauntlet_policy()
 
 
 def a_policy(**overrides) -> PopulationPolicy:
@@ -57,6 +60,15 @@ def a_policy(**overrides) -> PopulationPolicy:
     )
     defaults.update(overrides)
     return PopulationPolicy(**defaults)
+
+
+def a_gauntlet_policy(**overrides) -> GauntletPolicy:
+    defaults = dict(
+        min_confidence_threshold=0.6, efficiency_reject_threshold=0.9,
+        major_regression_factor=2.0, enable_expensive_judges=True,
+    )
+    defaults.update(overrides)
+    return GauntletPolicy(**defaults)
 
 
 def promote_a_genome(factory, content=None) -> str:
@@ -299,6 +311,66 @@ class TestSecurity(unittest.TestCase):
             self.service.evolve_generation("research")
         for call in spy.call_args_list:
             self.assertEqual(call.kwargs["created_by"], Subject.CORE)
+
+
+class TestGauntletIntegration(unittest.TestCase):
+    """Intégration RÉELLE du Judge System (passe N+8) dans la boucle
+    d'évolution — jamais un second pipeline concurrent (§28 de la mission
+    N+8) : le Gauntlet enrichit `PopulationEvolutionService`, il ne le
+    remplace pas."""
+
+    def setUp(self) -> None:
+        self.factory = sqlite_session_factory()
+        self.runtime = AgentRuntime(self.factory)
+        promote_a_genome(self.factory)
+        self.config = FakeConfig({"local": a_pool()}, a_policy())
+        self.service = PopulationEvolutionService(self.factory, agent_runtime=self.runtime, config=self.config)
+
+    def test_every_member_receives_a_persisted_cheap_gauntlet_result(self) -> None:
+        from apex.metalearner.judge_model import GauntletStage
+
+        result = self.service.evolve_generation("research")
+        for member in result.members:
+            gauntlets = self.service._gauntlet_repo.list_by_member(member.id)
+            # Le candidat CHAMPION reçoit un second gauntlet (`full`, §14) —
+            # tous les autres membres n'en reçoivent qu'un seul (`cheap`,
+            # sans exécution supplémentaire, voir `_create_member`).
+            stages = {g.stage for g in gauntlets}
+            self.assertIn(GauntletStage.CHEAP, stages)
+            self.assertGreaterEqual(len(gauntlets), 1)
+
+    def test_a_security_veto_blocks_champion_promotion_even_with_the_best_fitness(self) -> None:
+        """Preuve directe qu'un véto (§8) empêche la promotion CHAMPION,
+        même pour le candidat objectivement le plus performant — la
+        philosophie centrale de la mission N+8 : « APEX does not reward
+        solutions for looking intelligent. »"""
+        from apex.metalearner.judges import SecurityJudge
+        from apex.metalearner.judge_model import JudgeDecision, JudgeDimension, JudgeFinding, JudgeResult, JudgeSeverity
+
+        def always_veto(self_judge, judge_input):
+            return JudgeResult(
+                judge_id=self_judge.judge_id, judge_version=self_judge.judge_version,
+                dimension=self_judge.dimension, decision=JudgeDecision.REJECT, score=0.0, confidence=1.0,
+                rationale="véto forcé par le test", findings=(
+                    JudgeFinding(dimension=JudgeDimension.SECURITY, severity=JudgeSeverity.CRITICAL, summary="véto forcé"),
+                ),
+            )
+
+        with patch.object(SecurityJudge, "evaluate", always_veto):
+            result = self.service.evolve_generation("research")
+
+        self.assertIsNone(result.champion)  # aucun candidat n'a pu être promu, malgré une fitness réelle mesurée.
+        for member in result.members:
+            self.assertNotEqual(member.status.value, "champion")
+
+    def test_a_genuinely_superior_candidate_is_promoted_when_the_gauntlet_passes(self) -> None:
+        result = self.service.evolve_generation("research")
+        self.assertIsNotNone(result.champion)
+        gauntlets = self.service._gauntlet_repo.list_by_member(result.champion.id)
+        full_results = [g for g in gauntlets if g.stage.value == "full"]
+        self.assertEqual(len(full_results), 1)
+        self.assertEqual(full_results[0].decision.value, "pass")
+        self.assertFalse(full_results[0].veto)
 
 
 if __name__ == "__main__":

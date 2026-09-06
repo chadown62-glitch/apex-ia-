@@ -29,6 +29,7 @@ from apex.db.models import (
     ConversationRow,
     EvalRunRow,
     EventRow,
+    GauntletResultRow,
     GenomeVersionRow,
     LearningSessionRow,
     MemoryRecordRow,
@@ -980,6 +981,71 @@ class LearningSessionRepository:
         if result.rowcount != 1:
             return None
         return self._session.get(LearningSessionRow, session_id)
+
+
+class GauntletResultRepository:
+    """Persistance de `apex.metalearner.gauntlet`/`judge_model` (passe
+    « Strict Judge System + Gauntlet Learning Loop »). N'importe jamais
+    `apex.metalearner` : même règle de couche que `LearningSessionRepository`.
+
+    INSERT seul — un jugement, une fois produit, n'est jamais modifié ni
+    supprimé (même garantie qu'`EvalRunRepository` : positif ou négatif,
+    retenu de façon identique)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        specialty: str,
+        generation: int,
+        member_id: str,
+        stage: str,
+        protocol_version: str,
+        decision: str,
+        overall_score: float | None,
+        overall_confidence: float | None,
+        veto: bool,
+        veto_dimension: str | None,
+        disagreement: bool,
+        stopped_after_critical_failure: bool,
+        judge_results: list[dict[str, Any]],
+        compared_champion_id: str | None,
+        created_at: datetime,
+    ) -> GauntletResultRow:
+        row = GauntletResultRow(
+            id=id, specialty=specialty, generation=generation, member_id=member_id, stage=stage,
+            protocol_version=protocol_version, decision=decision, overall_score=overall_score,
+            overall_confidence=overall_confidence, veto=veto, veto_dimension=veto_dimension,
+            disagreement=disagreement, stopped_after_critical_failure=stopped_after_critical_failure,
+            judge_results=judge_results, compared_champion_id=compared_champion_id, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, gauntlet_result_id: str) -> GauntletResultRow | None:
+        return self._session.get(GauntletResultRow, gauntlet_result_id)
+
+    def list_by_member(self, member_id: str, *, limit: int = 50) -> list[GauntletResultRow]:
+        stmt = (
+            select(GauntletResultRow)
+            .where(GauntletResultRow.member_id == member_id)
+            .order_by(GauntletResultRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_specialty(self, specialty: str, *, limit: int = 50) -> list[GauntletResultRow]:
+        stmt = (
+            select(GauntletResultRow)
+            .where(GauntletResultRow.specialty == specialty)
+            .order_by(GauntletResultRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
 
 
 class ProjectRepository:

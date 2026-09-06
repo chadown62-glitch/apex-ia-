@@ -1276,6 +1276,46 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "front de Pareto multi-objectif (réutilisable — `apex.genome."
               "selection.pareto_front` existe déjà — mais non branché ici).",
     ),
+    Abstraction(
+        "GauntletEvaluation", "évaluation adversariale stricte, multi-juges, avant "
+        "promotion CHAMPION (Gauntlet -> Juges spécialisés -> Agrégation déterministe "
+        "-> PASS/REJECT/INCONCLUSIVE)", 26, 26,
+        ImplStatus.STUB, "6 dimensions réelles (CORRECTNESS/ROBUSTNESS/EFFICIENCY/"
+        "SECURITY/GENERALIZATION/REGRESSION) ; EDGE_CASES/QUALITY/ADVERSARIAL PLANNED",
+        module="apex.metalearner.gauntlet",
+        notes="STUB et non IMPLEMENTED délibérément : `apex.metalearner.judges` "
+              "n'instancie que 6 des 9 dimensions nommées par `JudgeDimension` — "
+              "chacune ENVELOPPE une preuve déjà réelle (`OracleVerdict`, "
+              "`ExecutionStatus`, `elapsed_s`, `fitness_components` persistés du "
+              "champion), aucune n'invente de mesure. `EDGE_CASES`/`QUALITY`/"
+              "`ADVERSARIAL` restent PLANNED — aucun juge n'y est jamais associé, "
+              "même discipline que `JudgeTier.TIER_1`/`TIER_2` (Phase 9). Composé "
+              "au-dessus de `PopulationEvolutionService` (N+6), JAMAIS un second "
+              "pipeline concurrent : le gauntlet `cheap` (CORRECTNESS/EFFICIENCY/"
+              "SECURITY/REGRESSION) est calculé pour CHAQUE membre sans aucune "
+              "exécution supplémentaire ; le gauntlet `full` (ajoute ROBUSTNESS — "
+              "ré-exécution réelle du même couple tâche/Genome — et GENERALIZATION "
+              "— enveloppe le contrôle HELDOUT déjà réel de N+6) ne s'exécute QUE "
+              "pour le candidat à la promotion CHAMPION, remplaçant l'ancien "
+              "contrôle HELDOUT booléen seul par une décision agrégée. Véto "
+              "déterministe : un `JudgeFinding` `CRITICAL` bloque la promotion quel "
+              "que soit le score des autres dimensions, jamais moyenné — persisté "
+              "(`gauntlet_results`, INSERT seul) avec `judge_id`/`judge_version`/ "
+              "`protocol_version` (`GAUNTLET_PROTOCOL_VERSION`) pour rester "
+              "interprétable après une future évolution du protocole. Un juge qui "
+              "lève devient `INCONCLUSIVE`, jamais un `PASS` silencieux — "
+              "l'agrégation est une fonction PURE, déterministe, indépendante de "
+              "l'ordre des juges. Ce qui reste PLANNED : `EDGE_CASES` (aucun mode "
+              "de génération de tâches dégénérées dédié), `QUALITY` (chevaucherait "
+              "`CORRECTNESS` sans preuve supplémentaire distincte), `ADVERSARIAL` "
+              "(perturbation/mutation-based tests, distinct du contrôle HELDOUT déjà "
+              "réel sous `GENERALIZATION`) ; aucun juge LLM ; aucune calibration de "
+              "juge (faux positifs/négatifs, réputation) — seul le modèle de "
+              "données le permet déjà ; aucun raccordement au Weakness/Curriculum "
+              "Engine au-delà de l'événement `evolution.gauntlet_rejected_"
+              "champion_candidacy` (`EventRepository`, observabilité humaine — "
+              "pas encore un signal d'apprentissage consommé automatiquement).",
+    ),
 )
 
 
