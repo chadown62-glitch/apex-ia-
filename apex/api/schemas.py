@@ -821,6 +821,8 @@ class CurriculumChallengeOut(BaseModel):
     heldout: bool
     adversarial: bool
     protocol_version: str
+    parent_task_id: str | None = None
+    seed: int | None = None
     created_at: str
 
 
@@ -902,3 +904,68 @@ class CapabilityStatusOut(BaseModel):
     champion_member_id: str | None
     champion_run: CapabilityBenchmarkRunOut | None
     delta_vs_historical_best: CapabilityDeltaOut | None
+
+
+class SpecialtyCapabilityMatrixOut(BaseModel):
+    """Projette `apex.taskgen.specialty_provider.SpecialtyTaskProvider.
+    capability_matrix()` (passe « Universal Task + Curriculum Engine »,
+    N+11, § Phase 5 de la mission) — SUPPORTED/UNSUPPORTED déclaratif,
+    jamais une prétention de générer une tâche non réellement supportée.
+    `supported=False` (aucun `SpecialtyTaskProvider` enregistré pour cette
+    spécialité, `apex.taskgen.registry`) laisse `capabilities` vide —
+    jamais une matrice inventée."""
+
+    specialty: str
+    supported: bool
+    capabilities: dict[str, bool]
+
+
+class CurriculumPlanItemOut(BaseModel):
+    kind: str
+    dimension: str | None
+    count: int
+    priority: int
+    difficulty: int
+
+
+class CurriculumPlanOut(BaseModel):
+    """Projette `apex.metalearner.curriculum_plan.CurriculumPlan` (§ Phase
+    13/14 de la mission N+11) — `truncated=True` signale qu'un plafond de
+    `apex.config.schema.CurriculumBudgetPolicy` a réellement réduit le
+    plan, jamais un dépassement silencieux."""
+
+    specialty: str
+    generation: int
+    items: list[CurriculumPlanItemOut]
+    total_task_count: int
+    truncated: bool
+    protocol_version: str
+
+
+class TaskProvenanceOut(BaseModel):
+    """Projette `apex.taskgen.model.TaskProvenance` (§ Phase 16 de la
+    mission N+11) — tous les champs restent `None` pour une tâche écrite à
+    la main (`Subject.HUMAN`, hors curriculum), jamais une provenance
+    fabriquée."""
+
+    task_id: str
+    weakness_id: str | None
+    parent_task_id: str | None
+    challenge_id: str | None
+    bug_record_id: str | None
+    benchmark_id: str | None
+    generator_version: str | None
+    seed: int | None
+
+
+class SpecialtyOut(BaseModel):
+    """Projette `apex.specialties.model.Specialty` — miroir READ-ONLY du
+    registre backend, même patron que `GET /curriculum/*` (aucune écriture)."""
+
+    id: str
+    name: str
+    description: str
+    dev_stage: str
+    is_supported: bool
+    capabilities: list[str]
+    tools: list[str]

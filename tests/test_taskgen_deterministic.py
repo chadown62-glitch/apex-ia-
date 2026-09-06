@@ -160,13 +160,11 @@ class TestUnsupportedModesAreHonest(unittest.TestCase):
 
     def test_all_unsupported_modes_raise_not_implemented_yet(self) -> None:
         """`EDGE_CASE`/`ADVERSARIAL` sont RÉELS depuis N+10 (voir
-        `tests/test_taskgen_edge_case_adversarial.py`) — retirés d'ici,
-        jamais testés deux fois pour le même comportement."""
+        `tests/test_taskgen_edge_case_adversarial.py`) et `BUG_FARM` est
+        RÉEL depuis N+11 (voir `tests/test_taskgen_universal_engine.py`) —
+        retirés d'ici, jamais testés deux fois pour le même comportement."""
         generator = DeterministicTaskGenerator()
-        for mode in (
-            GenerationMode.BUG_FARM, GenerationMode.TRANSFER,
-            GenerationMode.SELF_PLAY, GenerationMode.FROM_HYPOTHESIS,
-        ):
+        for mode in (GenerationMode.TRANSFER, GenerationMode.SELF_PLAY, GenerationMode.FROM_HYPOTHESIS):
             with self.subTest(mode=mode), self.assertRaises(NotImplementedYet):
                 generator.generate(mode=mode, specialty="research")
 

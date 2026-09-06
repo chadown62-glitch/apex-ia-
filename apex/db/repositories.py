@@ -1148,11 +1148,14 @@ class CurriculumChallengeRepository:
         adversarial: bool,
         protocol_version: str,
         created_at: datetime,
+        parent_task_id: str | None = None,
+        seed: int | None = None,
     ) -> CurriculumChallengeRow:
         row = CurriculumChallengeRow(
             id=id, specialty=specialty, weakness_id=weakness_id, dimension=dimension, difficulty=difficulty,
             generation=generation, task_id=task_id, evaluation_criteria=evaluation_criteria, source=source,
             heldout=heldout, adversarial=adversarial, protocol_version=protocol_version, created_at=created_at,
+            parent_task_id=parent_task_id, seed=seed,
         )
         self._session.add(row)
         self._session.flush()
@@ -1160,6 +1163,25 @@ class CurriculumChallengeRepository:
 
     def get(self, challenge_id: str) -> CurriculumChallengeRow | None:
         return self._session.get(CurriculumChallengeRow, challenge_id)
+
+    def get_by_task_id(self, task_id: str) -> CurriculumChallengeRow | None:
+        stmt = (
+            select(CurriculumChallengeRow)
+            .where(CurriculumChallengeRow.task_id == task_id)
+            .order_by(CurriculumChallengeRow.created_at.desc())
+        )
+        return self._session.scalars(stmt).first()
+
+    def list_by_parent_task_id(
+        self, parent_task_id: str, *, limit: int = 200,
+    ) -> list[CurriculumChallengeRow]:
+        stmt = (
+            select(CurriculumChallengeRow)
+            .where(CurriculumChallengeRow.parent_task_id == parent_task_id)
+            .order_by(CurriculumChallengeRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
 
     def list_by_specialty(self, specialty: str, *, limit: int = 200) -> list[CurriculumChallengeRow]:
         stmt = (
@@ -1247,6 +1269,20 @@ class BugRecordRepository:
             row.fixed_at_generation = fixed_at_generation
         if regressed_at_generation is not None:
             row.regressed_at_generation = regressed_at_generation
+        self._session.flush()
+        return row
+
+    def set_evidence_reference(self, bug_id: str, *, evidence_reference: str) -> BugRecordRow | None:
+        """N+11 (« Universal Task + Curriculum Engine », § Phase 12) — écrit
+        la preuve d'une reproduction BUG_FARM RÉELLEMENT générée
+        (`apex.metalearner.bug_farm_service.BugFarmService.
+        build_bug_farm_challenges`) sur un `BugRecord` dont
+        `evidence_reference` était encore `None` (jamais écrasé une fois
+        posé — une preuve n'est jamais remplacée par une autre)."""
+        row = self._session.get(BugRecordRow, bug_id)
+        if row is None or row.evidence_reference is not None:
+            return row
+        row.evidence_reference = evidence_reference
         self._session.flush()
         return row
 

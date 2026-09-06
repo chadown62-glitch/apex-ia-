@@ -1,13 +1,25 @@
 """`DeterministicTaskGenerator` — le seul `TaskGenerator` réel de cette étape.
 
-Sept modes réels, tous pour la spécialité `research` (la seule
+Huit modes réels, tous pour la spécialité `research` (la seule
 `is_supported` — `apex.specialties.registry`) : `NORMAL`,
 `INCREASING_DIFFICULTY`/`CURRICULUM_INTERMEDIATE` (même mécanisme,
 paramétré par `level`), `TARGETED_WEAKNESS` (niveau dérivé de la sévérité
 d'un `WeaknessReport`), `REGRESSION` (reproduit la commande d'une tâche
 existante à l'identique), `EDGE_CASE`/`ADVERSARIAL` (RÉELS depuis N+10 —
-voir `apex.taskgen.model.EdgeCaseKind`/`AdversarialKind`). Tout le reste
-lève `NotImplementedYet` — jamais un contenu inventé.
+voir `apex.taskgen.model.EdgeCaseKind`/`AdversarialKind`), `BUG_FARM` (RÉEL
+depuis N+11 — voir plus bas). Tout le reste lève `NotImplementedYet` —
+jamais un contenu inventé.
+
+**`BUG_FARM` (passe « Universal Task + Curriculum Engine », N+11, § Phase
+12 de la mission)** : N+10 déclarait ce mode `PLANNED` (« nécessite
+CodeIntelligence »). Correction : la reproduction d'un bug RÉEL
+(`apex.metalearner.bug_farm_model.BugRecord`) n'a JAMAIS eu besoin d'un
+domaine de code — exactement comme `REGRESSION`, elle reproduit la
+commande EXACTE de la tâche RÉELLE qui a servi de preuve à ce bug
+(`base_task`, jamais un contenu réinventé). Seul le `dataset_ref` diffère
+de `REGRESSION` (`bug_farm:<base_task.id>` au lieu de l'id nu) pour rester
+traçable jusqu'au `BugRecord` d'origine (`apex.metalearner.bug_farm_
+service.BugFarmService.build_bug_farm_challenges`).
 
 Aucun `ModelProvider` : chaque script est un script Python autonome,
 déterministe, sans dépendance — même style que
@@ -61,7 +73,6 @@ _SEVERITY_TO_LEVEL = {
 }
 
 _UNSUPPORTED_MODE_DEPENDENCY = {
-    GenerationMode.BUG_FARM: (12, "CodeIntelligence, PLANNED — aucun domaine de code réel"),
     GenerationMode.TRANSFER: (15, "une seule spécialité (« research ») est is_supported"),
     GenerationMode.SELF_PLAY: (17, "aucune orchestration multi-clones réelle"),
     GenerationMode.FROM_HYPOTHESIS: (16, "HypothesisGenerator, PLANNED"),
@@ -268,6 +279,8 @@ class DeterministicTaskGenerator(TaskGenerator):
             return self._targeted_weakness(split, weakness_report)
         if mode is GenerationMode.REGRESSION:
             return self._regression(base_task)
+        if mode is GenerationMode.BUG_FARM:
+            return self._bug_farm(base_task)
         if mode is GenerationMode.EDGE_CASE:
             return self._edge_case(split, edge_case_kind, limits)
         if mode is GenerationMode.ADVERSARIAL:
@@ -342,6 +355,26 @@ class DeterministicTaskGenerator(TaskGenerator):
             ),
             command=base_task.command, specialty=base_task.specialty, split=base_task.split,
             mode=GenerationMode.REGRESSION, dataset_ref=base_task.id,
+        )
+
+    def _bug_farm(self, base_task: Task | None) -> GeneratedTaskSpec:
+        """§ Phase 12 de la mission N+11 : reproduit la commande EXACTE de la
+        tâche RÉELLE liée au bug (`base_task`, fournie par
+        `apex.metalearner.bug_farm_service.BugFarmService.
+        build_bug_farm_challenges` depuis un `BugRecord` réel) — même
+        discipline que `_regression`, jamais un contenu réinventé. Seul le
+        `dataset_ref` diffère (`bug_farm:<task_id>`) pour rester traçable
+        jusqu'au bug d'origine."""
+        if base_task is None:
+            raise ValueError("base_task est obligatoire pour BUG_FARM")
+        return GeneratedTaskSpec(
+            title=f"Bug farm — {base_task.title}",
+            description=(
+                f"Reproduction exacte de la tâche « {base_task.id} » associée à un bug réel "
+                "(vérifie que la correction reste durable — apex.metalearner.bug_farm_service)."
+            ),
+            command=base_task.command, specialty=base_task.specialty, split=base_task.split,
+            mode=GenerationMode.BUG_FARM, dataset_ref=f"bug_farm:{base_task.id}",
         )
 
     def _edge_case(

@@ -36,14 +36,31 @@ reste `apex.tasks.service.TaskBankService.create()` (HUMAN seul,
 dupliquée ici. Aucun raccordement automatique TaskGenerator -> TaskBank
 n'existe : un générateur qui écrirait lui-même sa production contournerait
 le contrôle HUMAIN déjà établi en Phase 5.
-"""
+
+**`TaskKind`/`TaskProvenance`/`TaskConstraints` (passe « Universal Task +
+Curriculum Engine », N+11)** : `TaskKind` UNIFIE le vocabulaire déjà réel
+`apex.metalearner.challenge_model.ChallengeSource` (qui devient un simple
+alias de CETTE énumération, § Phase 3 de la mission N+11 : « réutiliser les
+enums existants, ne pas créer de doublons ») — défini ICI (couche la plus
+basse) plutôt que dans `apex.metalearner` pour que `apex.taskgen` (qui doit
+rester importable sans `apex.metalearner`, voir `apex.taskgen.
+specialty_provider`) n'ait jamais à importer une couche supérieure.
+`TaskProvenance` structure la réponse à « pourquoi cette tâche existe-t-elle »
+(§16 de la mission) — jamais une provenance inconnue pour une tâche générée
+automatiquement. `TaskConstraints` borne une génération de tâche à la
+politique RÉELLEMENT résolue (`ResourceLimits`) et à un plafond de
+difficulté — jamais une valeur devinée ou dépassant cette politique."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from apex.tasks.model import TaskSplit
+
+if TYPE_CHECKING:
+    from apex.sandbox.model import ResourceLimits
 
 
 class GenerationMode(str, Enum):
@@ -151,11 +168,64 @@ class GeneralizationVariant(str, Enum):
     ALTERNATE_PROBE = "alternate_probe"
 
 
+class TaskKind(str, Enum):
+    """Vocabulaire UNIFIÉ (§ Phase 3 de la mission N+11) identifiant « quel
+    genre de test cette tâche représente » — distinct de `GenerationMode`
+    (« quel générateur/backend interne la produit »). `apex.metalearner.
+    challenge_model.ChallengeSource = TaskKind` (alias direct, pas une
+    sous-classe) : TOUT code existant qui importe `ChallengeSource` continue
+    de fonctionner à l'identique, aucun doublon conceptuel introduit."""
+
+    NORMAL = "normal"
+    TARGETED_WEAKNESS = "targeted_weakness"
+    REGRESSION = "regression"
+    EDGE_CASE = "edge_case"
+    ADVERSARIAL = "adversarial"
+    SECURITY = "security"
+    GENERALIZATION = "generalization"
+    BUG_FARM = "bug_farm"
+
+
+@dataclass(frozen=True)
+class TaskProvenance:
+    """« Pourquoi cette tâche existe-t-elle » (§16 de la mission N+11) —
+    tous les champs sont optionnels car une tâche écrite À LA MAIN
+    (`Subject.HUMAN`, hors curriculum) n'a légitimement aucune provenance
+    automatique ; mais une tâche produite PAR ce module doit toujours
+    renseigner `generator_version` (jamais une provenance partiellement
+    inconnue pour une tâche auto-générée)."""
+
+    weakness_id: str | None = None
+    parent_task_id: str | None = None
+    challenge_id: str | None = None
+    bug_record_id: str | None = None
+    benchmark_id: str | None = None
+    generator_version: str | None = None
+    seed: int | None = None
+
+
+@dataclass(frozen=True)
+class TaskConstraints:
+    """Bornes RÉELLES appliquées à une génération — jamais une valeur
+    devinée ou dépassant la politique administrateur déjà résolue (même
+    discipline que `apex.taskgen.deterministic`'s fractions `< 1.0`,
+    N+10)."""
+
+    limits: ResourceLimits | None = None
+    max_difficulty: int | None = None
+
+
 @dataclass(frozen=True)
 class GeneratedTaskSpec:
     """Proposition de tâche en mémoire — jamais persistée par ce module.
     Mêmes champs que `apex.tasks.service.TaskBankService.create()` accepte,
-    pour que l'appelant puisse la persister sans traduction."""
+    pour que l'appelant puisse la persister sans traduction.
+
+    `provenance` (N+11, additif, `None` par défaut) : renseigné par les
+    générateurs passant par `apex.taskgen.specialty_provider.
+    SpecialtyTaskProvider`/`apex.taskgen.task_factory.UniversalTaskFactory`
+    — `None` pour tout appelant préexistant (`DeterministicTaskGenerator`
+    appelé directement, inchangé)."""
 
     title: str
     description: str
@@ -164,3 +234,4 @@ class GeneratedTaskSpec:
     split: TaskSplit
     mode: GenerationMode
     dataset_ref: str | None = None
+    provenance: TaskProvenance | None = None

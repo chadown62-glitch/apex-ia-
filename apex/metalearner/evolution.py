@@ -219,10 +219,20 @@ class PopulationEvolutionService:
         )
 
     def _sync_challenges_and_bugs(self, specialty: str, generation: int) -> None:
+        # § Phase 14 de la mission N+11 — limites/budget RÉELS (jamais une
+        # valeur devinée) : les limites du champion courant si un champion
+        # existe (les plus représentatives d'un candidat réellement promu),
+        # sinon la politique administrateur de base (`resolve_resource_
+        # limits(None, base) == base`, jamais une exception) ; le budget
+        # vient de la config chargée, jamais d'une constante de code.
+        limits = self._curriculum_sync_limits(specialty)
+        budget = self._curriculum_budget()
         try:
             from apex.metalearner.challenge_service import CurriculumChallengeService
 
-            CurriculumChallengeService(self._session_factory).build_challenges(specialty, generation)
+            CurriculumChallengeService(self._session_factory).build_challenges(
+                specialty, generation, limits=limits, budget=budget,
+            )
         except Exception as exc:
             self._record_event(
                 "evolution.curriculum_challenge_sync_failed",
@@ -234,7 +244,9 @@ class PopulationEvolutionService:
         try:
             from apex.metalearner.bug_farm_service import BugFarmService
 
-            BugFarmService(self._session_factory).sync_from_weakness_history(specialty, generation)
+            bug_farm = BugFarmService(self._session_factory)
+            bug_farm.sync_from_weakness_history(specialty, generation)
+            bug_farm.build_bug_farm_challenges(specialty, generation, limits=limits, budget=budget)
         except Exception as exc:
             self._record_event(
                 "evolution.bug_farm_sync_failed",
@@ -243,6 +255,24 @@ class PopulationEvolutionService:
                     "error": f"{exc.__class__.__name__}: {exc}",
                 },
             )
+
+    def _curriculum_sync_limits(self, specialty: str) -> Any:
+        champion = self._population.get_champion(specialty)
+        genome_content = None
+        if champion is not None:
+            try:
+                genome_content = self._genome.get_content(champion.genome_version_id)
+            except Exception:
+                genome_content = None
+        return self._resolved_limits(genome_content)
+
+    def _curriculum_budget(self) -> Any:
+        try:
+            from apex.config.loader import load_config
+
+            return (self._config or load_config()).curriculum_budget
+        except Exception:
+            return None
 
     # -- création d'UN membre --------------------------------------------------
 

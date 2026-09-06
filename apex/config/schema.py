@@ -799,6 +799,78 @@ class GauntletPolicy:
 
 
 @dataclass(frozen=True)
+class CurriculumBudgetPolicy:
+    """Plafonds du Curriculum Engine (passe « Universal Task + Curriculum
+    Engine », N+11, § Phase 14 de la mission) — même discipline que
+    `PopulationPolicy`/`GauntletPolicy` : des choix d'opérateur
+    reconfigurables, jamais des constantes figées dans le code. Le
+    `CurriculumEngineService.build_plan` ne dépasse JAMAIS ces plafonds —
+    un excédent est TRONQUÉ déterministiquement (priorité la plus faible
+    éliminée en premier), jamais silencieusement ignoré ni contourné.
+
+    `max_tasks_per_generation` : nombre TOTAL de challenges (tous
+    `TaskKind` confondus) qu'UN appel à `build_plan`/`build_challenges`
+    peut produire pour une génération donnée.
+    `max_adversarial_per_generation` : sous-plafond pour les challenges
+    `adversarial=True` (`ADVERSARIAL`/`SECURITY`) — jamais au-delà du
+    plafond total.
+    `max_heldout_per_generation` : sous-plafond pour les challenges
+    `heldout=True` (`GENERALIZATION`) — le benchmark de capacité
+    indépendant (N+10) n'est JAMAIS compté ici (sa propre batterie fixe
+    est hors curriculum, § Phase 15 : « CURRICULUM ∩ CAPABILITY_BENCHMARK
+    = ∅ »).
+    `max_bug_farm_per_generation` : sous-plafond pour les challenges
+    `source=BUG_FARM` (§ Phase 12).
+    `max_generation_cost_s` : borne la somme des `timeout_s` RÉELLEMENT
+    résolus des tâches planifiées — jamais un temps mesuré après coup
+    (aucune exécution n'a lieu pendant la planification), une ESTIMATION
+    prudente du coût maximal si chaque tâche consommait tout son budget."""
+
+    max_tasks_per_generation: int
+    max_adversarial_per_generation: int
+    max_heldout_per_generation: int
+    max_bug_farm_per_generation: int
+    max_generation_cost_s: float
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> CurriculumBudgetPolicy:
+        max_tasks = int(raw.get("max_tasks_per_generation", 20))
+        if max_tasks < 1:
+            raise ConfigError(
+                "max_tasks_per_generation doit être >= 1",
+                field="curriculum_budget.max_tasks_per_generation",
+            )
+        max_adversarial = int(raw.get("max_adversarial_per_generation", 8))
+        if max_adversarial < 0:
+            raise ConfigError(
+                "max_adversarial_per_generation doit être >= 0",
+                field="curriculum_budget.max_adversarial_per_generation",
+            )
+        max_heldout = int(raw.get("max_heldout_per_generation", 4))
+        if max_heldout < 0:
+            raise ConfigError(
+                "max_heldout_per_generation doit être >= 0",
+                field="curriculum_budget.max_heldout_per_generation",
+            )
+        max_bug_farm = int(raw.get("max_bug_farm_per_generation", 5))
+        if max_bug_farm < 0:
+            raise ConfigError(
+                "max_bug_farm_per_generation doit être >= 0",
+                field="curriculum_budget.max_bug_farm_per_generation",
+            )
+        max_cost_s = float(raw.get("max_generation_cost_s", 3600.0))
+        if max_cost_s <= 0:
+            raise ConfigError(
+                "max_generation_cost_s doit être > 0", field="curriculum_budget.max_generation_cost_s",
+            )
+        return cls(
+            max_tasks_per_generation=max_tasks, max_adversarial_per_generation=max_adversarial,
+            max_heldout_per_generation=max_heldout, max_bug_farm_per_generation=max_bug_farm,
+            max_generation_cost_s=max_cost_s,
+        )
+
+
+@dataclass(frozen=True)
 class RouterScoringPolicy:
     """Poids du score `apex.routing.router.select_model` — passe « Adaptive
     Model Router V1 ». Même discipline que `SchedulerPolicy` : un choix
@@ -888,6 +960,7 @@ class ApexConfig:
     autonomous_learning: AutonomousLearningPolicy
     population: PopulationPolicy
     gauntlet: GauntletPolicy
+    curriculum_budget: CurriculumBudgetPolicy
 
     # -- invariants transverses -------------------------------------------
 

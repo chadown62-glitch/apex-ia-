@@ -1286,6 +1286,168 @@ WEAKNESS (N+9, inchangée)
   juge réelle au-delà du modèle de données qui le permettrait ; frontend
   NON câblé ; aucun ordonnancement GPU/parallélisme spéculatif.
 
+  **Correction N+11** : les deux premières limitations ci-dessus sont
+  levées — voir la section suivante.
+
+### Universal Task + Curriculum Engine (N+11)
+
+**Objectif** : supprimer les deux limitations que N+10 avait explicitement
+laissées ouvertes (« `EDGE_CASE`/`ADVERSARIAL` bornés au seul domaine
+diagnostic » et « `GenerationMode.BUG_FARM` reste `PLANNED` ») en
+construisant une infrastructure GÉNÉRIQUE de génération/composition de
+tâches — sans jamais fabriquer une deuxième spécialité, un deuxième moteur
+d'évolution, ou une capacité non réellement supportée.
+
+- **Architecture** —
+  `SPECIALTY -> TaskProvider -> TaskFactory -> Task -> CurriculumGenerator
+  (NORMAL/EDGE_CASE/ADVERSARIAL/SECURITY/GENERALIZATION/REGRESSION/
+  BUG_FARM) -> Candidate -> EvalRunner -> Gauntlet -> Capability Benchmark
+  -> Weakness/Capability History`. Aucun nouveau moteur d'évolution
+  (`PopulationEvolutionService` reste l'UNIQUE point d'exécution) ni de
+  nouvel orchestrateur (`LearningOrchestrator` inchangé).
+- **`TaskKind` (`apex.taskgen.model`)** — vocabulaire UNIFIÉ
+  (`NORMAL`/`TARGETED_WEAKNESS`/`REGRESSION`/`EDGE_CASE`/`ADVERSARIAL`/
+  `SECURITY`/`GENERALIZATION`/`BUG_FARM`), défini dans `apex.taskgen`
+  (couche la plus basse) — `apex.metalearner.challenge_model.
+  ChallengeSource = TaskKind` (ALIAS DIRECT, pas un doublon) : tout code
+  préexistant qui importait `ChallengeSource` continue de fonctionner à
+  l'identique.
+- **`TaskProvenance`/`TaskConstraints` (`apex.taskgen.model`)** — champs
+  additifs sur `GeneratedTaskSpec` (`provenance`, `None` par défaut) :
+  `weakness_id`/`parent_task_id`/`challenge_id`/`bug_record_id`/
+  `benchmark_id`/`generator_version`/`seed` — jamais une provenance
+  inconnue pour une tâche auto-générée. `TaskConstraints` borne une
+  génération à la politique RÉELLEMENT résolue (`ResourceLimits`) et à un
+  plafond de difficulté.
+- **`SpecialtyTaskProvider` (`apex.taskgen.specialty_provider`)** — contrat
+  par lequel une spécialité déclare `capability_matrix()` (SUPPORTED/
+  UNSUPPORTED par `TaskKind`, § Phase 5), `create(kind, ...)` et
+  `create_variant(parent_task, transformation, seed, ...)`. `apex.taskgen.
+  registry.get_provider(specialty_id)` est le SEUL point d'enregistrement
+  — miroir volontairement PARTIEL d'`apex.specialties.registry` : seule
+  `research` a un provider RÉEL (`ResearchTaskProvider`, délègue
+  entièrement à `DeterministicTaskGenerator`, inchangé — zéro
+  réimplémentation).
+- **`TaskSpec`/`UniversalTaskFactory` (`apex.taskgen.task_factory`)** — le
+  point d'entrée UNIQUE « créer une tâche » (§ Phase 2), `create(spec)`
+  plutôt que sept méthodes obligatoires : route vers le
+  `SpecialtyTaskProvider` réel de `spec.specialty`, lève
+  `NotImplementedYet` si aucun n'existe ou si `kind` est `UNSUPPORTED` —
+  jamais un contenu inventé.
+- **`VariantEngine` (`apex.taskgen.variant_engine`, § Phase 6)** — « à
+  partir d'une tâche A, produire A-edge/A-adversarial/A-generalized/
+  A-regression sans copier l'originale » : `VariantRequest(parent_task,
+  transformation, seed, ...)`, déterministe PAR CONSTRUCTION
+  (`ResearchTaskProvider.create_variant` sélectionne sa variante par
+  `seed % len(kinds_ordonnés)`, une fonction pure) — même
+  `(tâche, transformation, seed, generator_version)` => même résultat ;
+  un `seed` différent => variante VALIDE différente dès que plusieurs
+  existent. `REGRESSION`/`BUG_FARM` reproduisent TOUJOURS la même
+  commande quel que soit le seed (leur définition même).
+- **`SECURITY` (§ Phase 10)** — route vers `AdversarialKind.
+  NETWORK_BOUNDARY_PROBE`/`FILESYSTEM_BOUNDARY_PROBE` (les deux SEULES
+  frontières de sécurité réellement sondables ici) — jamais d'escalade de
+  privilège/réseau, tout reste dans le sandbox existant.
+- **`GENERALIZATION` (§ Phase 8)** — route vers `GenerationMode.NORMAL` +
+  `GeneralizationVariant` (toujours HELDOUT) — variation STRUCTURELLE
+  d'un paramètre réel de la sonde existante, jamais un domaine sémantique
+  riche fabriqué.
+- **`REGRESSION`** — inchangé (reproduction exacte d'une tâche existante).
+- **`BUG_FARM` réel (§ Phase 12, LA correction principale de cette
+  passe)** — N+10 le déclarait `PLANNED` (« nécessite `CodeIntelligence` »).
+  Correction : la reproduction d'un bug réel n'a JAMAIS eu besoin d'un
+  domaine de code — exactement comme `REGRESSION`, elle reproduit la
+  commande EXACTE de la tâche qui a servi de preuve à ce bug
+  (`DeterministicTaskGenerator._bug_farm`, requiert `base_task`, jamais un
+  contenu réinventé). `BugFarmService.build_bug_farm_challenges` (1)
+  sélectionne les bugs `OPEN`/`REGRESSED` pertinents (triés par sévérité),
+  (2) résout leur tâche de base (`evidence_reference` déjà posé, sinon la
+  preuve la plus récente de la même faiblesse — jamais fabriquée, `None`
+  si aucune preuve résolvable), (3) génère + persiste la reproduction via
+  `UniversalTaskFactory`, (4) enregistre la preuve
+  (`BugRecord.evidence_reference`, écrite UNE SEULE fois), (5) alimente le
+  curriculum (`CurriculumChallenge.source=BUG_FARM`).
+- **Difficulté structurée (`apex.taskgen.difficulty`, § Phase 7)** —
+  `Difficulty` (EASY..EXPERT) est une façade lisible sur l'entier 1-4 déjà
+  réel (`difficulty_from_severity`, N+10, inchangé) — `harder_than`/
+  `easier_than`/`same_difficulty_as` (comparaisons pures) et
+  `clamp_to_ceiling` (jamais un dépassement de policy).
+- **`CurriculumPlan` (`apex.metalearner.curriculum_plan`, § Phase 13)** —
+  `CurriculumEngineService.build_plan` groupe les `CurriculumTarget` déjà
+  réels (N+9) par `TaskKind` (`resolve_task_kind`, factorisé — MÊME
+  mapping que `challenge_service`, aucun doublon), priorité DÉTERMINISTE
+  (sévérité maximale du groupe décroissante), plus un item `BUG_FARM`
+  dérivé des `BugRecord` éligibles.
+- **`CurriculumBudgetPolicy` (`apex.config.schema`, § Phase 14)** —
+  `max_tasks_per_generation`/`max_adversarial_per_generation`/
+  `max_heldout_per_generation`/`max_bug_farm_per_generation`/
+  `max_generation_cost_s`, section `curriculum_budget` de `config.yaml`.
+  `CurriculumPlanBuilder._apply_budget` tronque déterministiquement
+  (priorité la plus faible éliminée en premier, jamais un dépassement
+  silencieux) ; `CurriculumChallengeService.build_challenges` applique le
+  MÊME plafond par `TaskKind` avant toute génération (un `TaskKind`
+  totalement tronqué reste explicitement à `0`, jamais réinterprété comme
+  « illimité » — un bug réel de cette nature a été trouvé et corrigé
+  pendant le développement de cette passe, voir §26 du rapport final).
+  `BugFarmService.build_bug_farm_challenges` applique indépendamment
+  `max_bug_farm_per_generation`.
+- **Séparation de dataset (§ Phase 15)** — `apex.taskgen.invariants`
+  (`assert_disjoint`/`disjoint`/`assert_unique_ids`), fonctions PURES
+  utilisées par les tests pour vérifier des ensembles de `task_id`
+  RÉELLEMENT persistés — aucun contrôle runtime supplémentaire qui
+  dupliquerait la séparation déjà structurelle (`TaskSplit` +
+  GRANT/REVOKE PostgreSQL, ADR-0010, inchangée).
+- **Provenance (`apex.metalearner.provenance_service.
+  TaskProvenanceService`, § Phase 16)** — reconstruit « pourquoi cette
+  tâche existe » depuis le `CurriculumChallenge` qui la référence
+  (`task_id`, déjà indexé) — jamais une seconde table de provenance ;
+  `None` pour une tâche écrite à la main (hors curriculum).
+- **`curriculum_challenges` étendue (migration `f4d8b1e6a903`, § Phase
+  23)** — deux colonnes NULLABLES additives (`parent_task_id`, `seed`),
+  jamais une nouvelle table : réutilise la table N+10 existante.
+- **`research` via le moteur générique (§ Phase 17)** —
+  `CurriculumChallengeService` ne connaît plus AUCUN détail interne de
+  `research` : il construit un `TaskSpec` et délègue à
+  `UniversalTaskFactory`, qui route vers `ResearchTaskProvider`
+  (`apex.taskgen.registry`) — la preuve que l'abstraction fonctionne,
+  vérifiée par un test qui grep littéralement l'absence de
+  `DeterministicTaskGenerator` dans `challenge_service.py`.
+- **Deuxième spécialité (§ Phase 18) — HONNÊTEMENT non fabriquée** :
+  `apex.specialties.registry` interdit explicitement (docstring
+  préexistante) d'ajouter une entrée `STUB`/`IMPLEMENTED` sans qu'un
+  moteur réel existe derrière — `AgentRuntime` n'a jamais été exercé de
+  bout en bout que pour `Subject.RESEARCH`. Construire une deuxième
+  spécialité aurait nécessité soit fabriquer un faux moteur, soit
+  contourner ce garde-fou anti-fabrication déjà en place — les deux sont
+  exactement ce que la mission interdit (« NE FABRIQUE AUCUNE DEUXIÈME
+  SPECIALTY FICTIVE »). `apex.taskgen.registry.supported_specialty_ids()`
+  documente cette frontière de façon vérifiable (un test l'exerce
+  explicitement).
+- **API** (`apex/api/routes/capability.py`, § Phase 20, lecture seule) —
+  7 endpoints supplémentaires : `GET /curriculum/{specialty}/capabilities`
+  (matrice), `GET /curriculum/{specialty}/plan`, `GET /curriculum/
+  {specialty}/tasks`, `GET /curriculum/{specialty}/history` (alias de
+  `/challenges`), `GET /tasks/{task_id}/provenance`, `GET /tasks/{task_id}
+  /variants`, `GET /bug-farm/{specialty}` (alias de `/bugs/{specialty}`),
+  `GET /specialties`.
+- **Tests** — `tests/test_taskgen_universal_engine.py` (28, TaskFactory/
+  TaskKind/SpecialtyTaskProvider/capability matrix/unsupported/
+  déterminisme/seed/policy limits/difficulté — aucune DB requise),
+  `tests/test_universal_curriculum_n11.py` (12, provenance/budget/
+  séparation de dataset/research via le moteur générique/absence honnête
+  d'une deuxième spécialité/intégration LearningOrchestrator/cycle complet
+  bout en bout). `tests/test_taskgen_deterministic.py` mis à jour (retrait
+  de `BUG_FARM` de la liste des modes non supportés).
+- **Non fait dans cette passe** : `EDGE_CASE`/`ADVERSARIAL` restent
+  bornés au domaine diagnostic (toujours aucun domaine de code réel,
+  `CodeIntelligence` PLANNED) ; aucune calibration de juge au-delà du
+  modèle de données ; frontend NON câblé sur les nouveaux endpoints ;
+  aucun ordonnancement GPU/parallélisme ; le budget `max_bug_farm_per_
+  generation` est appliqué indépendamment de `max_tasks_per_generation`
+  partagé avec `CurriculumChallengeService` (deux services distincts,
+  chacun respecte honnêtement son propre sous-plafond, jamais un optimum
+  global unique prétendu).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

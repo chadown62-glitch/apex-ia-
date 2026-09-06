@@ -21,6 +21,7 @@ from apex.config.schema import (
     AutonomousLearningPolicy,
     ComputeBudget,
     ComputePool,
+    CurriculumBudgetPolicy,
     ExternalPolicy,
     GatePolicy,
     GauntletPolicy,
@@ -130,6 +131,7 @@ def parse_config(raw: dict[str, Any]) -> ApexConfig:
         autonomous_learning=AutonomousLearningPolicy.parse(raw.get("autonomous_learning") or {}),
         population=PopulationPolicy.parse(raw.get("population") or {}),
         gauntlet=GauntletPolicy.parse(raw.get("gauntlet") or {}),
+        curriculum_budget=CurriculumBudgetPolicy.parse(raw.get("curriculum_budget") or {}),
     )
     config.validate()
     return config

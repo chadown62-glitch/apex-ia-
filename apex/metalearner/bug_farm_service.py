@@ -106,3 +106,121 @@ class BugFarmService:
         exploitable directement comme signal « improvement was not
         durable » (Phase 15 de la mission)."""
         return tuple(bug for bug in self.list_bugs(specialty) if bug.status is BugStatus.REGRESSED)
+
+    # -- BUG_FARM réel (passe « Universal Task + Curriculum Engine », N+11,
+    # § Phase 12 de la mission) ------------------------------------------
+
+    def build_bug_farm_challenges(
+        self, specialty: str, generation: int, *, limits: Any = None, budget: Any = None,
+    ) -> tuple[Any, ...]:
+        """Sélectionne les bugs PERTINENTS (`OPEN`/`REGRESSED` — un bug
+        `FIXED` n'a rien à reproduire), produit une VRAIE tâche de
+        reproduction (`apex.taskgen.deterministic.DeterministicTaskGenerator.
+        _bug_farm`, jamais un contenu inventé), l'exécute via le chemin
+        EXISTANT (Gauntlet/EvalRunner, inchangé — ce module ne fait QUE
+        générer la tâche et le `CurriculumChallenge`, jamais une seconde
+        exécution), enregistre la preuve (`BugRecord.evidence_reference`,
+        écrite UNE SEULE fois — jamais écrasée) et alimente le curriculum.
+
+        N'invente JAMAIS une tâche « parce qu'un bug existe » : sans tâche
+        de base RÉELLEMENT résolvable (`evidence_reference` déjà posé, ou
+        la preuve la plus récente de la même faiblesse), AUCUN challenge
+        n'est produit pour ce bug (§12 : « la tâche doit être réellement
+        exécutable et liée à une preuve »)."""
+        from apex.metalearner.challenge_model import (
+            ChallengeSource,
+            CurriculumChallenge,
+            difficulty_from_severity,
+        )
+        from apex.metalearner.challenge_repository import CurriculumChallengeRepository
+
+        eligible_statuses = (BugStatus.OPEN, BugStatus.REGRESSED)
+        eligible = [b for b in self.list_bugs(specialty) if b.status in eligible_statuses]
+        eligible.sort(key=lambda b: (-difficulty_from_severity(b.severity), b.weakness_id))
+        if budget is not None:
+            eligible = eligible[: budget.max_bug_farm_per_generation]
+
+        repo = CurriculumChallengeRepository(self._session_factory)
+        created = []
+        for bug in eligible:
+            existing = repo.list_by_weakness(bug.weakness_id, limit=200)
+            if any(c.generation == generation and c.source is ChallengeSource.BUG_FARM for c in existing):
+                continue  # idempotent par génération — même discipline que CurriculumChallengeService.
+            base_task = self._resolve_base_task(bug)
+            if base_task is None:
+                continue
+            task = self._generate_and_persist_bug_farm_task(bug, base_task, limits)
+            if task is None:
+                continue
+            challenge = CurriculumChallenge.new(
+                specialty=specialty, weakness_id=bug.weakness_id, dimension=bug.dimension,
+                difficulty=difficulty_from_severity(bug.severity), generation=generation, task_id=task.id,
+                evaluation_criteria=(
+                    f"reproduction du bug « {bug.id} » ({bug.failure_category}) — vérifie que la "
+                    "correction reste durable (apex.metalearner.bug_farm_service)."
+                ),
+                source=ChallengeSource.BUG_FARM, heldout=False, adversarial=False,
+                parent_task_id=base_task.id,
+            )
+            created.append(repo.create(challenge))
+            if bug.evidence_reference is None:
+                from apex.metalearner.bug_farm_repository import BugRecordRepository
+
+                BugRecordRepository(self._session_factory).set_evidence_reference(
+                    bug.id, evidence_reference=task.id,
+                )
+        return tuple(created)
+
+    def _resolve_base_task(self, bug: BugRecord) -> Any:
+        from apex.tasks.repository import TaskRepository
+
+        if bug.evidence_reference is not None:
+            task = TaskRepository(self._session_factory).get(bug.evidence_reference)
+            if task is not None:
+                return task
+        # Repli : la preuve la plus récente pour la MÊME faiblesse — même
+        # mécanisme que `apex.metalearner.curriculum_engine.
+        # CurriculumEngineService._most_recent_task_id` (N+9), réutilisé
+        # ici sans duplication, jamais une tâche fabriquée.
+        from apex.evalrunner.repository import EvalRunRepository
+        from apex.metalearner.weakness_engine import WeaknessEngineService
+
+        weakness_service = WeaknessEngineService(self._session_factory)
+        history = weakness_service.history(bug.specialty, dimension=bug.dimension)
+        relevant = [
+            s for s in history
+            if s.failure_category is not None and s.failure_category.value == bug.failure_category
+            and s.evidence_reference is not None
+        ]
+        if not relevant:
+            return None
+        most_recent = max(relevant, key=lambda s: s.created_at)
+        evidence_reference = most_recent.evidence_reference
+        if evidence_reference is None:
+            return None
+        eval_run = EvalRunRepository(self._session_factory).get(evidence_reference)
+        if eval_run is None:
+            return None
+        return TaskRepository(self._session_factory).get(eval_run.task_id)
+
+    def _generate_and_persist_bug_farm_task(self, bug: BugRecord, base_task: Any, limits: Any) -> Any:
+        from apex.policy.model import Subject
+        from apex.taskgen.model import TaskKind
+        from apex.taskgen.task_factory import TaskSpec, UniversalTaskFactory
+        from apex.tasks.service import TaskBankService
+
+        spec = TaskSpec(
+            kind=TaskKind.BUG_FARM, specialty=base_task.specialty, split=base_task.split,
+            base_task=base_task, limits=limits, weakness_id=bug.weakness_id, bug_record_id=bug.id,
+        )
+        try:
+            generated = UniversalTaskFactory().create(spec)
+        except Exception:
+            # § Phase 17 de la mission N+9 (reconduit) : jamais laisser une
+            # panne de génération casser la synchronisation bug farm.
+            return None
+        return TaskBankService(self._session_factory).create(
+            split=generated.split, specialty=generated.specialty, title=generated.title,
+            description=generated.description, command=generated.command, created_by=Subject.HUMAN,
+            dataset_ref=generated.dataset_ref,
+        )

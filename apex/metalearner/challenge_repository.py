@@ -33,6 +33,7 @@ class CurriculumChallengeRepository:
                 evaluation_criteria=challenge.evaluation_criteria, source=challenge.source.value,
                 heldout=challenge.heldout, adversarial=challenge.adversarial,
                 protocol_version=challenge.protocol_version, created_at=challenge.created_at,
+                parent_task_id=challenge.parent_task_id, seed=challenge.seed,
             )
         return challenge
 
@@ -43,6 +44,22 @@ class CurriculumChallengeRepository:
         with session_scope(self._session_factory) as db_session:
             row = _DbRepo(db_session).get(challenge_id)
             return CurriculumChallenge.from_row(row) if row is not None else None
+
+    def get_by_task_id(self, task_id: str) -> CurriculumChallenge | None:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import CurriculumChallengeRepository as _DbRepo
+
+        with session_scope(self._session_factory) as db_session:
+            row = _DbRepo(db_session).get_by_task_id(task_id)
+            return CurriculumChallenge.from_row(row) if row is not None else None
+
+    def list_by_parent_task_id(self, parent_task_id: str, *, limit: int = 200) -> list[CurriculumChallenge]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import CurriculumChallengeRepository as _DbRepo
+
+        with session_scope(self._session_factory) as db_session:
+            rows = _DbRepo(db_session).list_by_parent_task_id(parent_task_id, limit=limit)
+            return [CurriculumChallenge.from_row(row) for row in rows]
 
     def list_by_specialty(self, specialty: str, *, limit: int = 200) -> list[CurriculumChallenge]:
         from apex.db.engine import session_scope

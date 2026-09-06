@@ -79,6 +79,17 @@ class CurriculumEngineService:
         weaknesses = WeaknessEngineService(self._session_factory).aggregate(specialty)
         return tuple(self._build_target(specialty, weakness) for weakness in weaknesses)
 
+    def build_plan(self, specialty: str, generation: int, *, budget: Any = None) -> Any:
+        """§ Phase 13 de la mission N+11 — enveloppe `build_targets` (N+9,
+        inchangé) dans un `apex.metalearner.curriculum_plan.CurriculumPlan`
+        déterministe, borné par `budget` (§14, `apex.config.schema.
+        CurriculumBudgetPolicy`) si fourni."""
+        from apex.metalearner.curriculum_plan import CurriculumPlanBuilder
+
+        targets = self.build_targets(specialty)
+        builder = CurriculumPlanBuilder(self._session_factory)
+        return builder.build(specialty, generation, targets, budget=budget)
+
     def _build_target(self, specialty: str, weakness: GauntletWeakness) -> CurriculumTarget:
         if weakness.dimension is JudgeDimension.REGRESSION:
             base_task_id = self._most_recent_task_id(specialty, weakness)

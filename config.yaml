@@ -326,6 +326,20 @@ gauntlet:
   enable_expensive_judges: true
 
 # ----------------------------------------------------------------------------
+# Curriculum Budget (passe « Universal Task + Curriculum Engine », N+11) —
+# plafonds explicites du CurriculumEngine (apex.metalearner.curriculum_plan)
+# — jamais dépassés, un excédent est tronqué déterministiquement (priorité
+# la plus faible éliminée en premier). Valeurs prudentes par défaut, même
+# discipline que population/gauntlet ci-dessus.
+# ----------------------------------------------------------------------------
+curriculum_budget:
+  max_tasks_per_generation: 20
+  max_adversarial_per_generation: 8
+  max_heldout_per_generation: 4
+  max_bug_farm_per_generation: 5
+  max_generation_cost_s: 3600.0
+
+# ----------------------------------------------------------------------------
 # Model Router (passe « Adaptive Model Router V1 ») — poids du score de
 # apex.routing.router.select_model. capability_match_weight/
 # local_preference_weight reproduisent exactement le score déjà en

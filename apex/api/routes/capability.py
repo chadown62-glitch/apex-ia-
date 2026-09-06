@@ -4,16 +4,27 @@ challenges`, `GET /bugs/{specialty}`, `GET /learning-sessions/{id}/
 capability`, `GET /population/{specialty}/capability` — passe
 « Adversarial Curriculum + Capability Benchmarking » (N+10, §18).
 
+**N+11 (« Universal Task + Curriculum Engine », § Phase 20)** — sept routes
+supplémentaires, TOUJOURS lecture seule : `GET /curriculum/{specialty}/
+capabilities` (matrice `SpecialtyTaskProvider`), `GET /curriculum/
+{specialty}/plan` (`CurriculumPlan`), `GET /curriculum/{specialty}/tasks`
+(tâches RÉELLEMENT référencées par le curriculum de cette spécialité),
+`GET /curriculum/{specialty}/history` (alias de `/challenges` — l'historique
+DU curriculum EST son propre journal de challenges persistés, aucune
+seconde source), `GET /tasks/{task_id}/provenance`, `GET /tasks/{task_id}/
+variants`, `GET /bug-farm/{specialty}` (alias de `/bugs/{specialty}`),
+`GET /specialties`.
+
 Ce routeur ne réimplémente aucun moteur métier : il ne fait que projeter
 `apex.metalearner.capability_benchmark_service.CapabilityBenchmarkService`/
 `apex.metalearner.challenge_repository.CurriculumChallengeRepository`/
-`apex.metalearner.bug_farm_service.BugFarmService` (lecture seule — le
-benchmark de capacité s'exécute exclusivement à l'intérieur
-d'`apex.metalearner.evolution.PopulationEvolutionService`, jamais
-déclenché depuis l'API) — même patron que `apex.api.routes.
-learning_feedback`.
-
-Surface volontairement MINIMALE (§18 : lecture seule) — sept routes."""
+`apex.metalearner.bug_farm_service.BugFarmService`/`apex.metalearner.
+curriculum_engine.CurriculumEngineService`/`apex.metalearner.
+provenance_service.TaskProvenanceService`/`apex.taskgen.registry` (lecture
+seule — le benchmark de capacité et le curriculum s'exécutent
+exclusivement à l'intérieur d'`apex.metalearner.evolution.
+PopulationEvolutionService`, jamais déclenchés depuis l'API) — même patron
+que `apex.api.routes.learning_feedback`."""
 
 from __future__ import annotations
 
@@ -28,13 +39,23 @@ from apex.api.schemas import (
     CapabilityMeasurementOut,
     CapabilityStatusOut,
     CurriculumChallengeOut,
+    CurriculumPlanItemOut,
+    CurriculumPlanOut,
     DataEnvelope,
+    SpecialtyCapabilityMatrixOut,
+    SpecialtyOut,
+    TaskOut,
+    TaskProvenanceOut,
 )
 
 if TYPE_CHECKING:
     from apex.metalearner.bug_farm_model import BugRecord
     from apex.metalearner.capability_model import CapabilityBenchmarkRun, CapabilityDelta
     from apex.metalearner.challenge_model import CurriculumChallenge
+    from apex.metalearner.curriculum_plan import CurriculumPlan
+    from apex.specialties.model import Specialty
+    from apex.taskgen.model import TaskProvenance
+    from apex.tasks.model import Task
 
 router = APIRouter(tags=["capability"])
 
@@ -77,7 +98,49 @@ def _to_challenge_out(challenge: CurriculumChallenge) -> CurriculumChallengeOut:
         generation=challenge.generation,
         task_id=challenge.task_id, evaluation_criteria=challenge.evaluation_criteria,
         source=challenge.source.value, heldout=challenge.heldout, adversarial=challenge.adversarial,
-        protocol_version=challenge.protocol_version, created_at=challenge.created_at.isoformat(),
+        protocol_version=challenge.protocol_version, parent_task_id=challenge.parent_task_id,
+        seed=challenge.seed, created_at=challenge.created_at.isoformat(),
+    )
+
+
+def _to_plan_out(plan: CurriculumPlan) -> CurriculumPlanOut:
+    return CurriculumPlanOut(
+        specialty=plan.specialty, generation=plan.generation,
+        items=[
+            CurriculumPlanItemOut(
+                kind=item.kind.value, dimension=item.dimension.value if item.dimension else None,
+                count=item.count, priority=item.priority, difficulty=int(item.difficulty),
+            )
+            for item in plan.items
+        ],
+        total_task_count=plan.total_task_count, truncated=plan.truncated,
+        protocol_version=plan.protocol_version,
+    )
+
+
+def _to_task_out(task: Task) -> TaskOut:
+    return TaskOut(
+        id=task.id, split=task.split.value, specialty=task.specialty, title=task.title,
+        description=task.description, command=list(task.command), dataset_ref=task.dataset_ref,
+        created_by=task.created_by, expected_answer=task.expected_answer,
+        created_at=task.created_at.isoformat(),
+    )
+
+
+def _to_provenance_out(task_id: str, provenance: TaskProvenance) -> TaskProvenanceOut:
+    return TaskProvenanceOut(
+        task_id=task_id, weakness_id=provenance.weakness_id, parent_task_id=provenance.parent_task_id,
+        challenge_id=provenance.challenge_id, bug_record_id=provenance.bug_record_id,
+        benchmark_id=provenance.benchmark_id, generator_version=provenance.generator_version,
+        seed=provenance.seed,
+    )
+
+
+def _to_specialty_out(specialty: Specialty) -> SpecialtyOut:
+    return SpecialtyOut(
+        id=specialty.id, name=specialty.name, description=specialty.description,
+        dev_stage=specialty.dev_stage.value, is_supported=specialty.is_supported,
+        capabilities=list(specialty.capabilities), tools=list(specialty.tools),
     )
 
 
@@ -187,9 +250,7 @@ def get_curriculum_challenges(
     return DataEnvelope(status="real", data=[_to_challenge_out(c) for c in challenges])
 
 
-@router.get("/bugs/{specialty}", response_model=DataEnvelope[list[BugRecordOut]])
-def get_bugs(specialty: str, limit: int = 200) -> DataEnvelope[list[BugRecordOut]]:
-    _validate_specialty(specialty)
+def _bugs_for(specialty: str, limit: int) -> DataEnvelope[list[BugRecordOut]]:
     from apex.api.dependencies import get_session_factory
     from apex.metalearner.bug_farm_service import BugFarmService
 
@@ -198,6 +259,21 @@ def get_bugs(specialty: str, limit: int = 200) -> DataEnvelope[list[BugRecordOut
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=[_to_bug_out(b) for b in bugs])
+
+
+@router.get("/bugs/{specialty}", response_model=DataEnvelope[list[BugRecordOut]])
+def get_bugs(specialty: str, limit: int = 200) -> DataEnvelope[list[BugRecordOut]]:
+    _validate_specialty(specialty)
+    return _bugs_for(specialty, limit)
+
+
+@router.get("/bug-farm/{specialty}", response_model=DataEnvelope[list[BugRecordOut]])
+def get_bug_farm(specialty: str, limit: int = 200) -> DataEnvelope[list[BugRecordOut]]:
+    """Alias de `GET /bugs/{specialty}` sous l'espace de nommage
+    `/bug-farm` (§20 de la mission N+11 liste les deux séparément) — même
+    lecture, jamais un second calcul."""
+    _validate_specialty(specialty)
+    return _bugs_for(specialty, limit)
 
 
 @router.get("/learning-sessions/{session_id}/capability", response_model=DataEnvelope[CapabilityStatusOut])
@@ -233,3 +309,135 @@ def get_population_capability(specialty: str) -> DataEnvelope[CapabilityStatusOu
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=status)
+
+
+# ---------------------------------------------------------------------------
+# N+11 — « Universal Task + Curriculum Engine » (§ Phase 20 de la mission).
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/curriculum/{specialty}/capabilities", response_model=DataEnvelope[SpecialtyCapabilityMatrixOut],
+)
+def get_curriculum_capabilities(specialty: str) -> DataEnvelope[SpecialtyCapabilityMatrixOut]:
+    """§ Phase 5 : matrice SUPPORTED/UNSUPPORTED du `SpecialtyTaskProvider`
+    RÉEL de `specialty` (`apex.taskgen.registry`) — `supported=False` +
+    matrice vide quand aucun provider n'est enregistré, jamais une capacité
+    prétendue."""
+    _validate_specialty(specialty)
+    from apex.taskgen.registry import get_provider
+
+    try:
+        provider = get_provider(specialty)
+        if provider is None:
+            return DataEnvelope(
+                status="real",
+                data=SpecialtyCapabilityMatrixOut(specialty=specialty, supported=False, capabilities={}),
+            )
+        matrix = {kind.value: supported for kind, supported in provider.capability_matrix().items()}
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    data = SpecialtyCapabilityMatrixOut(specialty=specialty, supported=True, capabilities=matrix)
+    return DataEnvelope(status="real", data=data)
+
+
+@router.get("/curriculum/{specialty}/plan", response_model=DataEnvelope[CurriculumPlanOut])
+def get_curriculum_plan(specialty: str, generation: int = 0) -> DataEnvelope[CurriculumPlanOut]:
+    """§ Phase 13/14 — `CurriculumEngineService.build_plan`, borné par la
+    `CurriculumBudgetPolicy` RÉELLEMENT chargée (`apex.config.loader.
+    load_config`), jamais une constante de code."""
+    _validate_specialty(specialty)
+    from apex.api.dependencies import get_session_factory
+    from apex.config.loader import load_config
+    from apex.metalearner.curriculum_engine import CurriculumEngineService
+
+    try:
+        budget = load_config().curriculum_budget
+        service = CurriculumEngineService(get_session_factory())
+        plan = service.build_plan(specialty, generation, budget=budget)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_plan_out(plan))
+
+
+@router.get("/curriculum/{specialty}/tasks", response_model=DataEnvelope[list[TaskOut]])
+def get_curriculum_tasks(specialty: str, limit: int = 200) -> DataEnvelope[list[TaskOut]]:
+    """Tâches RÉELLEMENT référencées par le curriculum de `specialty`
+    (`CurriculumChallenge.task_id`, jamais toutes les `Task` de la
+    spécialité — celles écrites à la main en sont exclues)."""
+    _validate_specialty(specialty)
+    from apex.api.dependencies import get_session_factory
+    from apex.metalearner.challenge_repository import CurriculumChallengeRepository
+    from apex.tasks.repository import TaskRepository
+
+    try:
+        session_factory = get_session_factory()
+        challenge_repo = CurriculumChallengeRepository(session_factory)
+        challenges = challenge_repo.list_by_specialty(specialty, limit=limit)
+        task_repo = TaskRepository(session_factory)
+        seen: set[str] = set()
+        tasks: list[Task] = []
+        for challenge in challenges:
+            if challenge.task_id in seen:
+                continue
+            seen.add(challenge.task_id)
+            task = task_repo.get(challenge.task_id)
+            if task is not None:
+                tasks.append(task)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=[_to_task_out(t) for t in tasks])
+
+
+@router.get(
+    "/curriculum/{specialty}/history", response_model=DataEnvelope[list[CurriculumChallengeOut]],
+)
+def get_curriculum_history(specialty: str, limit: int = 200) -> DataEnvelope[list[CurriculumChallengeOut]]:
+    """Alias de `GET /curriculum/{specialty}/challenges` — l'historique DU
+    curriculum EST son propre journal de challenges INSERT-seul persistés
+    (`curriculum_challenges`), jamais une seconde source."""
+    return get_curriculum_challenges(specialty, limit)
+
+
+@router.get("/tasks/{task_id}/provenance", response_model=DataEnvelope[TaskProvenanceOut])
+def get_task_provenance(task_id: str) -> DataEnvelope[TaskProvenanceOut]:
+    """§ Phase 16 — reconstruit la provenance depuis le `CurriculumChallenge`
+    référençant `task_id` (`apex.metalearner.provenance_service.
+    TaskProvenanceService`) — `404` si `task_id` n'a jamais été référencé
+    par le curriculum (tâche écrite à la main, provenance non applicable)."""
+    from apex.api.dependencies import get_session_factory
+    from apex.metalearner.provenance_service import TaskProvenanceService
+
+    try:
+        provenance = TaskProvenanceService(get_session_factory()).get_provenance(task_id)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    if provenance is None:
+        detail = f"aucune provenance curriculum pour la tâche « {task_id} »"
+        raise HTTPException(status_code=404, detail=detail)
+    return DataEnvelope(status="real", data=_to_provenance_out(task_id, provenance))
+
+
+@router.get("/tasks/{task_id}/variants", response_model=DataEnvelope[list[CurriculumChallengeOut]])
+def get_task_variants(task_id: str, limit: int = 200) -> DataEnvelope[list[CurriculumChallengeOut]]:
+    """§ Phase 6/20 — tous les `CurriculumChallenge` dont `task_id` est la
+    tâche PARENTE (`apex.taskgen.variant_engine.VariantEngine`), jamais une
+    liste devinée."""
+    from apex.api.dependencies import get_session_factory
+    from apex.metalearner.provenance_service import TaskProvenanceService
+
+    try:
+        variants = TaskProvenanceService(get_session_factory()).get_variants(task_id, limit=limit)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=[_to_challenge_out(c) for c in variants])
+
+
+@router.get("/specialties", response_model=DataEnvelope[list[SpecialtyOut]])
+def get_specialties() -> DataEnvelope[list[SpecialtyOut]]:
+    """Miroir READ-ONLY d'`apex.specialties.registry.SPECIALTIES` — jamais
+    une écriture, cette route n'existait pas avant N+11 (§20 de la
+    mission)."""
+    from apex.specialties.registry import SPECIALTIES
+
+    return DataEnvelope(status="real", data=[_to_specialty_out(s) for s in SPECIALTIES])

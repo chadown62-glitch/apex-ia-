@@ -1010,6 +1010,15 @@ class CurriculumChallengeRow(Base):
     heldout: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     adversarial: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     protocol_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: N+11 (« Universal Task + Curriculum Engine », § Phase 16/23) —
+    #: colonnes ADDITIVES nullables, extension de cette même table plutôt
+    #: qu'une nouvelle (§23 : « réutiliser les tables existantes quand elles
+    #: suffisent »). `parent_task_id` référence la tâche transformée par
+    #: `apex.taskgen.variant_engine.VariantEngine` (`None` pour un challenge
+    #: N+10 sans parent). `seed` : la graine déterministe utilisée par la
+    #: sélection de variante (`None` si aucune, comportement N+10 inchangé).
+    parent_task_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
@@ -1028,6 +1037,8 @@ class CurriculumChallengeRow(Base):
             "heldout": self.heldout,
             "adversarial": self.adversarial,
             "protocol_version": self.protocol_version,
+            "parent_task_id": self.parent_task_id,
+            "seed": self.seed,
             "created_at": self.created_at.isoformat(),
         }
 

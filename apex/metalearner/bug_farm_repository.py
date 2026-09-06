@@ -72,3 +72,11 @@ class BugRecordRepository:
                 regressed_at_generation=regressed_at_generation,
             )
             return BugRecord.from_row(row) if row is not None else None
+
+    def set_evidence_reference(self, bug_id: str, *, evidence_reference: str) -> BugRecord | None:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import BugRecordRepository as _DbRepo
+
+        with session_scope(self._session_factory) as db_session:
+            row = _DbRepo(db_session).set_evidence_reference(bug_id, evidence_reference=evidence_reference)
+            return BugRecord.from_row(row) if row is not None else None
