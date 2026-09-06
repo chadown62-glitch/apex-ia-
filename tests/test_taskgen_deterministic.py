@@ -159,14 +159,16 @@ class TestUnsupportedModesAreHonest(unittest.TestCase):
     lève NotImplementedYet, jamais un script inventé."""
 
     def test_all_unsupported_modes_raise_not_implemented_yet(self) -> None:
+        """`EDGE_CASE`/`ADVERSARIAL` sont RÉELS depuis N+10 (voir
+        `tests/test_taskgen_edge_case_adversarial.py`) — retirés d'ici,
+        jamais testés deux fois pour le même comportement."""
         generator = DeterministicTaskGenerator()
         for mode in (
-            GenerationMode.EDGE_CASE, GenerationMode.BUG_FARM, GenerationMode.ADVERSARIAL,
-            GenerationMode.TRANSFER, GenerationMode.SELF_PLAY, GenerationMode.FROM_HYPOTHESIS,
+            GenerationMode.BUG_FARM, GenerationMode.TRANSFER,
+            GenerationMode.SELF_PLAY, GenerationMode.FROM_HYPOTHESIS,
         ):
-            with self.subTest(mode=mode):
-                with self.assertRaises(NotImplementedYet):
-                    generator.generate(mode=mode, specialty="research")
+            with self.subTest(mode=mode), self.assertRaises(NotImplementedYet):
+                generator.generate(mode=mode, specialty="research")
 
     def test_unsupported_specialty_raises_not_implemented_yet(self) -> None:
         generator = DeterministicTaskGenerator()

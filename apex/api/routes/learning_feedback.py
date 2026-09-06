@@ -77,6 +77,9 @@ def _to_target_out(target: CurriculumTarget) -> CurriculumTargetOut:
         recommended_mode=target.recommended_mode.value if target.recommended_mode else None,
         base_task_id=target.base_task_id, focus_genome_paths=list(target.focus_genome_paths),
         rationale=target.rationale,
+        edge_case_kind=target.edge_case_kind.value if target.edge_case_kind else None,
+        adversarial_kind=target.adversarial_kind.value if target.adversarial_kind else None,
+        generalization_variant=target.generalization_variant.value if target.generalization_variant else None,
     )
 
 

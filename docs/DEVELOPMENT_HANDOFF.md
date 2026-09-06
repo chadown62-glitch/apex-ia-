@@ -1127,6 +1127,165 @@ Gauntlet (CHEAP puis FULL, N+8, INCHANGÉ)
   phase future ; frontend NON câblé (API d'observabilité suffisante pour
   cette passe) ; aucun ordonnancement GPU/parallélisme spéculatif.
 
+### Adversarial Curriculum + Capability Benchmarking
+
+Referme les limitations laissées ouvertes par N+9 (pas d'`EDGE_CASE`/
+`ADVERSARIAL` réels, curriculum `SECURITY`/`GENERALIZATION` incomplet,
+`BUG_FARM` absent, aucun benchmark indépendant de capacité) — § mission
+N+10 :
+
+```
+WEAKNESS (N+9, inchangée)
+  -> CURRICULUM (CurriculumChallenge, tâche RÉELLE persistée)
+  -> CHALLENGE (candidat expérimente la tâche ciblée)
+  -> CANDIDATE (mutation biaisée, N+9, inchangée)
+  -> GAUNTLET (N+8, inchangé)
+  -> HELDOUT (N+6/N+8, inchangé)
+  -> CAPABILITY BENCHMARK (batterie HELDOUT FIXE, distincte du curriculum)
+  -> CAPABILITY DELTA (vs champion, vs meilleur historique)
+  -> LEARNING HISTORY (judge_learning_signals + gauntlet_results, réutilisés)
+  -> NEXT GENERATION (PopulationEvolutionService, SEUL moteur, inchangé)
+```
+
+- **`apex.taskgen.model.EdgeCaseKind`/`AdversarialKind`/
+  `GeneralizationVariant`** (nouveau vocabulaire, additif) — `EDGE_CASE`/
+  `ADVERSARIAL` sont désormais RÉELS (`apex.taskgen.deterministic.
+  DeterministicTaskGenerator`), mais bornés au SEUL domaine de tâche
+  existant (le script diagnostic déterministe de `research`) : chaque
+  variante dérive d'une propriété RÉELLE de ce domaine — `EMPTY`/
+  `MINIMAL`/`MAXIMAL`/`REPEATED_CALLS`/`BOUNDARY_TIMEOUT` (edge cases) et
+  `TIMEOUT_PRESSURE`/`REPEATED_EXECUTION_STRESS`/`RESOURCE_PRESSURE`/
+  `NETWORK_BOUNDARY_PROBE`/`FILESYSTEM_BOUNDARY_PROBE` (adversarial) —
+  jamais un cas arbitraire (§3/§4 de la mission). Un adversarial ne
+  demande JAMAIS plus que la politique déjà résolue (`limits`, fournie par
+  l'appelant, fractions STRICTEMENT < 1.0 documentées :
+  `_ADVERSARIAL_TIMEOUT_FRACTION=0.85`/`_ADVERSARIAL_MEMORY_FRACTION=0.8`)
+  — `NETWORK`/`FILESYSTEM_BOUNDARY_PROBE` tentent une action que le
+  sandbox est CENSÉ refuser, l'échec de la tentative EST le comportement
+  correct attendu, jamais un contournement demandé. `GeneralizationVariant.
+  ALTERNATE_PROBE` fournit une variation STRUCTURELLEMENT distincte (cible
+  de sonde réseau différente) réservée aux challenges HELDOUT — frontière
+  honnête documentée : ceci varie un paramètre réel d'une sonde existante,
+  pas un domaine de généralisation sémantique riche (absent de ce dépôt).
+- **`CurriculumEngineService` étendu (N+9, additif)** — `SECURITY`
+  recommande désormais `GenerationMode.ADVERSARIAL`
+  (`NETWORK_BOUNDARY_PROBE`) au lieu d'observabilité seule ;
+  `GENERALIZATION` recommande `GenerationMode.NORMAL` avec
+  `GeneralizationVariant.ALTERNATE_PROBE` ; `EFFICIENCY`/`ROBUSTNESS`
+  gagnent EN PLUS un challenge `EDGE_CASE` ciblé (`BOUNDARY_TIMEOUT`/
+  `REPEATED_CALLS`), en plus du biais de mutation déjà existant (jamais
+  l'un au lieu de l'autre). `CurriculumTarget` (N+9) porte désormais
+  `edge_case_kind`/`adversarial_kind`/`generalization_variant` (champs
+  additifs, `None` par défaut).
+- **`apex.metalearner.challenge_model`/`challenge_repository`/
+  `challenge_service`** (nouveau) — `CurriculumChallenge` référence
+  TOUJOURS une `Task` RÉELLEMENT persistée (`task_id`), jamais un résultat
+  attendu fabriqué (§2). `weakness_id` est une clé DÉRIVÉE déterministe
+  (`weakness_key`), pas une clé étrangère vers une table de faiblesses
+  (`GauntletWeakness` reste calculée à la demande, N+9). `build_challenges`
+  est IDEMPOTENT par `(weakness_id, generation)` — jamais un doublon de
+  tâche/challenge pour la même faiblesse à la même génération (§20 :
+  « bounded challenge count »). Table `curriculum_challenges` (migration
+  `a3f7c9d21b44`), INSERT seul.
+- **`apex.metalearner.bug_farm_model`/`bug_farm_repository`/
+  `bug_farm_service`** (nouveau, §7) — `BugRecord` dérivé EXCLUSIVEMENT de
+  `WeaknessEngineService.aggregate` (N+9, inchangé) : transitions
+  DÉTERMINISTES `OPEN -> FIXED` (`ImprovementStatus.RESOLVED`) `-> 
+  REGRESSED` (la même faiblesse réapparaît après avoir été `FIXED` — « le
+  bug corrigé est revenu », §7/§15) `-> FIXED` de nouveau possible (jamais
+  bloqué dans un état terminal). Table `bug_records` (même migration),
+  SEULE table N+10 dont le statut est mutable après création
+  (`BugRecordRepository.update_status`, colonnes ciblées).
+- **`GauntletRunner.run_stage`** (nouveau, additif) — point d'entrée
+  PUBLIC générique exposant `_aggregate` (N+8, INCHANGÉE) à un ensemble de
+  `JudgeResult` fourni par l'appelant, avec un nouveau
+  `GauntletStage.BENCHMARK` (additif) — zéro duplication de la logique
+  d'agrégation stricte (véto décide seul, `INCONCLUSIVE` jamais un `PASS`
+  silencieux, ordre des juges sans effet).
+- **`apex.metalearner.capability_model`/`capability_benchmark_service`**
+  (nouveau, §8/§9/§10/§12/§13) — `CapabilityBenchmarkRun` ENVELOPPE un
+  `GauntletResult` de stage `BENCHMARK` (`id` = `result.id`, STABLE d'une
+  lecture à l'autre, jamais régénéré) ; `CapabilityMeasurement` (un par
+  dimension, dérivé d'un `JudgeResult` RÉEL) ; `CapabilityDelta` (vecteur
+  PAR DIMENSION, jamais moyenné) ; `PromotionRuleResult` (réutilise
+  `JudgeDecision`). Batterie de tâches FIXE, `TaskSplit.HELDOUT`
+  (`dataset_ref="capability_benchmark_v1:{specialty}:{correctness,
+  robustness,security,generalization}"`), créée une seule fois,
+  STRUCTURELLEMENT DISTINCTE du curriculum d'entraînement (§12,
+  vérifié par test : aucun `dataset_ref` en commun). Juges RÉUTILISÉS SANS
+  DUPLICATION : `CorrectnessJudge`/`EfficiencyJudge`/`SecurityJudge`/
+  `RobustnessJudge`/`GeneralizationJudge` (N+8, inchangés) évalués sur
+  cette batterie ; `REGRESSION` est DÉRIVÉE par comparaison directe au
+  dernier `CapabilityBenchmarkRun` du champion (jamais une exécution de
+  juge supplémentaire) — `PASS` TRIVIAL (confiance 1.0) quand aucune
+  référence n'existe encore (même principe qu'`apex.metalearner.judges.
+  RegressionJudge`, § sa docstring : « aucun champion existant — rien à
+  régresser » — JAMAIS `INCONCLUSIVE` pour cette absence spécifique, qui
+  bloquerait à tort TOUTE première promotion).
+- **`compute_delta`/`compute_delta_vs_historical_best`** — un delta PAR
+  DIMENSION, `None` honnête si preuve manquante (jamais un delta inventé) ;
+  `critical_regression` vrai si UNE SEULE dimension régresse au-delà de
+  `_CRITICAL_REGRESSION_THRESHOLD` (`-0.10`, documenté, conservateur) —
+  bloque la promotion INDÉPENDAMMENT de la moyenne des autres dimensions
+  (§9 : « +15% correctness -40% security -> PAS une amélioration
+  acceptable »). `get_historical_best` : le MEILLEUR score RÉELLEMENT
+  observé par dimension sur TOUT l'historique (`gauntlet_results` stage
+  `BENCHMARK`), jamais une estimation — `reference_run_id=None` pour cette
+  comparaison (le meilleur par dimension peut provenir de générations
+  différentes, honnêtement pas un run unique).
+- **`decide_promotion`** — règle STRICTE (§13), jamais un `PROMOTE` forcé :
+  `PASS` SEULEMENT SI le Gauntlet du benchmark lui-même est `PASS` ET
+  aucune régression critique vs le champion ET confiance suffisante
+  (`GauntletPolicy.min_confidence_threshold`, réutilisé — pas un nouveau
+  réglage) ; sinon `REJECT`/`INCONCLUSIVE`.
+- **Intégration dans `PopulationEvolutionService._promote_champion_if_
+  earned` (N+6/N+8/N+9, AUCUN second moteur)** — le benchmark de capacité
+  s'exécute SEULEMENT après un Gauntlet FULL déjà `PASS` (§20 : jamais
+  avant, pour ne pas payer son coût réel pour un candidat déjà rejeté) ;
+  une régression critique de capacité bloque la promotion même après un
+  Gauntlet `PASS` (`evolution.capability_benchmark_blocked_champion_
+  candidacy`). Isolation des pannes : une panne du benchmark devient une
+  décision `INCONCLUSIVE` explicite (`_run_capability_benchmark_gate`),
+  jamais une exception qui casserait la génération. `evolve_generation`
+  synchronise EN PLUS `CurriculumChallengeService`/`BugFarmService` en fin
+  de génération (isolé, jamais fatal).
+- **Persistence** — AUCUNE nouvelle table pour les résultats de jugement du
+  benchmark (réutilise `gauntlet_results`, stage `BENCHMARK` — §1 : « ne
+  réimplémente rien qui existe déjà ») ; `curriculum_challenges`/
+  `bug_records` (migration `a3f7c9d21b44`) pour le reste.
+- **API** (`apex/api/routes/capability.py`, lecture seule) — `GET
+  /capabilities/{specialty}` (statut consolidé : dernier run du champion +
+  delta vs meilleur historique), `GET /capabilities/{specialty}/history`,
+  `GET /capabilities/{specialty}/latest`, `GET /curriculum/{specialty}/
+  challenges`, `GET /bugs/{specialty}`, `GET /learning-sessions/{id}/
+  capability` (délègue à la spécialité de la session), `GET /population/
+  {specialty}/capability` (alias intentionnel de `/capabilities/
+  {specialty}`, même calcul, jamais un second).
+- **Judge Calibration Foundation (§16)** — AUCUNE calibration implémentée
+  (délibérément hors scope) : `disagreement`/`veto`/`confidence` restent
+  persistés PAR JUGE dans `gauntlet_results.judge_results` (JSON structuré,
+  N+8, inchangé) — suffisant pour une future phase de calibration
+  (accord/désaccord entre juges, faux positifs/négatifs historiques),
+  jamais un score de juge modifié arbitrairement ici.
+- **Tests** — `tests/test_taskgen_edge_case_adversarial.py` (13, edge
+  case/adversarial/generalization variant — provenance et bornes de
+  politique vérifiées par EXÉCUTION RÉELLE des scripts générés),
+  `tests/test_curriculum_challenge_bug_farm.py` (5, challenge
+  SECURITY/GENERALIZATION + cycle de vie complet du bug farm),
+  `tests/test_capability_benchmark.py` (15, indépendance de la batterie,
+  vecteur multi-dimensionnel, delta/promotion/régression critique/
+  déterminisme/désaccord des juges/absence de dominance d'un seul juge),
+  `tests/test_api_capability.py` (11, dont une preuve de bout en bout
+  RÉELLE couvrant les 14 étapes de la Phase 17 — seul le verdict d'UN juge
+  est forcé, tout le reste de la chaîne s'exécute sans simulation).
+- **Non fait dans cette passe (différé explicitement)** : `EDGE_CASE`/
+  `ADVERSARIAL` restent bornés au seul domaine diagnostic existant (aucun
+  domaine de code/fonction réel à muter, `CodeIntelligence` PLANNED) ;
+  `GenerationMode.BUG_FARM` reste `PLANNED` comme MODE de génération (le
+  suivi de bug réutilise `REGRESSION`, déjà réel) ; aucune calibration de
+  juge réelle au-delà du modèle de données qui le permettrait ; frontend
+  NON câblé ; aucun ordonnancement GPU/parallélisme spéculatif.
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

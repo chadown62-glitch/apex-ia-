@@ -796,3 +796,109 @@ class CurriculumTargetOut(BaseModel):
     base_task_id: str | None
     focus_genome_paths: list[str]
     rationale: str
+    edge_case_kind: str | None = None
+    adversarial_kind: str | None = None
+    generalization_variant: str | None = None
+
+
+# -- capability benchmark / curriculum challenge / bug farm (passe « Adversarial Curriculum ») --
+
+
+class CurriculumChallengeOut(BaseModel):
+    """Projette `apex.metalearner.challenge_model.CurriculumChallenge` —
+    référence TOUJOURS une `Task` réellement persistée (`task_id`), jamais
+    un résultat attendu fabriqué (§2 de la mission)."""
+
+    id: str
+    specialty: str
+    weakness_id: str
+    dimension: str
+    difficulty: int
+    generation: int
+    task_id: str
+    evaluation_criteria: str
+    source: str
+    heldout: bool
+    adversarial: bool
+    protocol_version: str
+    created_at: str
+
+
+class BugRecordOut(BaseModel):
+    """Projette `apex.metalearner.bug_farm_model.BugRecord` — dérivé
+    exclusivement de l'historique de faiblesses déjà réel (§7 de la
+    mission)."""
+
+    id: str
+    specialty: str
+    weakness_id: str
+    dimension: str
+    failure_category: str
+    severity: str
+    first_seen_generation: int
+    first_seen_at: str
+    member_id: str
+    genome_version_id: str
+    evidence_reference: str | None
+    status: str
+    fixed_at_generation: int | None
+    regressed_at_generation: int | None
+    created_at: str
+    updated_at: str
+
+
+class CapabilityMeasurementOut(BaseModel):
+    dimension: str
+    decision: str
+    score: float | None
+    confidence: float | None
+    evidence_reference: str | None
+
+
+class CapabilityBenchmarkRunOut(BaseModel):
+    """Projette `apex.metalearner.capability_model.CapabilityBenchmarkRun`
+    — ENVELOPPE un `GauntletResult` de stage `BENCHMARK` (§8 de la
+    mission) : l'indépendance vient de la batterie de tâches HELDOUT
+    fixe, jamais d'un second système de jugement dupliqué."""
+
+    id: str
+    specialty: str
+    member_id: str
+    generation: int
+    genome_version_id: str
+    benchmark_version: str
+    gauntlet_result_id: str
+    overall_decision: str
+    overall_score: float | None
+    overall_confidence: float | None
+    measurements: list[CapabilityMeasurementOut]
+    compared_champion_id: str | None
+    created_at: str
+
+
+class CapabilityDeltaOut(BaseModel):
+    """Projette `apex.metalearner.capability_model.CapabilityDelta` — un
+    VECTEUR par dimension, jamais moyenné (§9/§10 de la mission)."""
+
+    specialty: str
+    candidate_run_id: str
+    reference_kind: str
+    reference_run_id: str | None
+    dimension_deltas: dict[str, float | None]
+    critical_regression: bool
+    regressed_dimensions: list[str]
+    missing_reference_dimensions: list[str]
+
+
+class CapabilityStatusOut(BaseModel):
+    """Vue consolidée « où en est APEX maintenant » — le dernier
+    `CapabilityBenchmarkRun` du CHAMPION courant + son delta vs le
+    meilleur historique jamais observé (§9 : « candidate vs champion vs
+    historical best »). `champion_run`/`delta_vs_historical_best` restent
+    `None` quand aucun champion/aucun historique n'existe encore — jamais
+    une valeur fabriquée."""
+
+    specialty: str
+    champion_member_id: str | None
+    champion_run: CapabilityBenchmarkRunOut | None
+    delta_vs_historical_best: CapabilityDeltaOut | None

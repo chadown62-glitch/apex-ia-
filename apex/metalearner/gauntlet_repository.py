@@ -45,18 +45,22 @@ class GauntletRepository:
             row = _DbRepo(db_session).get(gauntlet_result_id)
             return GauntletResult.from_row(row) if row is not None else None
 
-    def list_by_member(self, member_id: str, *, limit: int = 50) -> list[GauntletResult]:
+    def list_by_member(
+        self, member_id: str, *, limit: int = 50, stage: str | None = None,
+    ) -> list[GauntletResult]:
         from apex.db.engine import session_scope
         from apex.db.repositories import GauntletResultRepository as _DbRepo
 
         with session_scope(self._session_factory) as db_session:
-            rows = _DbRepo(db_session).list_by_member(member_id, limit=limit)
+            rows = _DbRepo(db_session).list_by_member(member_id, limit=limit, stage=stage)
             return [GauntletResult.from_row(row) for row in rows]
 
-    def list_by_specialty(self, specialty: str, *, limit: int = 50) -> list[GauntletResult]:
+    def list_by_specialty(
+        self, specialty: str, *, limit: int = 50, stage: str | None = None,
+    ) -> list[GauntletResult]:
         from apex.db.engine import session_scope
         from apex.db.repositories import GauntletResultRepository as _DbRepo
 
         with session_scope(self._session_factory) as db_session:
-            rows = _DbRepo(db_session).list_by_specialty(specialty, limit=limit)
+            rows = _DbRepo(db_session).list_by_specialty(specialty, limit=limit, stage=stage)
             return [GauntletResult.from_row(row) for row in rows]

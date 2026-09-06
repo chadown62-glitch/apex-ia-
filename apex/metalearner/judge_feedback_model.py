@@ -53,6 +53,7 @@ from apex.taskgen.model import GenerationMode
 
 if TYPE_CHECKING:
     from apex.db.models import JudgeLearningSignalRow
+    from apex.taskgen.model import AdversarialKind, EdgeCaseKind, GeneralizationVariant
 
 
 def _utcnow() -> datetime:
@@ -210,8 +211,15 @@ class CurriculumTarget:
     JAMAIS un score directement (§6 : « il produit des expériences/tâches
     d'évaluation »). `recommended_mode`/`base_task_id` restent `None`
     quand aucun `GenerationMode` réel ne couvre la dimension observée
-    (`EDGE_CASE`/`ADVERSARIAL`/`BUG_FARM` restent `PLANNED`, jamais
-    fabriqués ici — voir la docstring d'`apex.metalearner.curriculum_engine`)."""
+    (`BUG_FARM` reste `PLANNED` comme mode de génération — jamais fabriqué
+    ici — voir la docstring d'`apex.metalearner.curriculum_engine`).
+
+    `edge_case_kind`/`adversarial_kind`/`generalization_variant` (passe
+    « Adversarial Curriculum + Capability Benchmarking », N+10, additifs) —
+    paramètres SUPPLÉMENTAIRES requis par `apex.taskgen.deterministic.
+    DeterministicTaskGenerator.generate()` quand `recommended_mode` est
+    `EDGE_CASE`/`ADVERSARIAL`, ou quand `NORMAL` porte une variante de
+    généralisation (§6 de la mission N+10) — `None` sinon."""
 
     specialty: str
     dimension: JudgeDimension
@@ -220,6 +228,9 @@ class CurriculumTarget:
     base_task_id: str | None
     focus_genome_paths: tuple[str, ...]
     rationale: str
+    edge_case_kind: EdgeCaseKind | None = None
+    adversarial_kind: AdversarialKind | None = None
+    generalization_variant: GeneralizationVariant | None = None
 
 
 @dataclass(frozen=True)

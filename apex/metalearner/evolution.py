@@ -205,10 +205,44 @@ class PopulationEvolutionService:
         # moment de `record_fitness`, avant toute décision) — le rapport
         # final doit refléter l'état RÉEL et définitif de chaque membre.
         final_members = [self._population.get(m.id) or m for m in created]
+
+        # Curriculum Challenge + Bug Farm (passe N+10, §2/§7) — dérivés
+        # UNIQUEMENT de l'état déjà réel (`CurriculumTarget`/
+        # `GauntletWeakness`, N+9, inchangés) ; isolés comme le reste de la
+        # boucle (§17/§18) : une panne ici ne doit JAMAIS invalider une
+        # génération dont les membres ont déjà réellement expérimenté.
+        self._sync_challenges_and_bugs(specialty, generation)
+
         return EvolutionGenerationResult(
             specialty=specialty, generation=generation, members=tuple(final_members),
             champion=champion, elite=tuple(elite), failures=tuple(failures),
         )
+
+    def _sync_challenges_and_bugs(self, specialty: str, generation: int) -> None:
+        try:
+            from apex.metalearner.challenge_service import CurriculumChallengeService
+
+            CurriculumChallengeService(self._session_factory).build_challenges(specialty, generation)
+        except Exception as exc:
+            self._record_event(
+                "evolution.curriculum_challenge_sync_failed",
+                {
+                    "specialty": specialty, "generation": generation,
+                    "error": f"{exc.__class__.__name__}: {exc}",
+                },
+            )
+        try:
+            from apex.metalearner.bug_farm_service import BugFarmService
+
+            BugFarmService(self._session_factory).sync_from_weakness_history(specialty, generation)
+        except Exception as exc:
+            self._record_event(
+                "evolution.bug_farm_sync_failed",
+                {
+                    "specialty": specialty, "generation": generation,
+                    "error": f"{exc.__class__.__name__}: {exc}",
+                },
+            )
 
     # -- création d'UN membre --------------------------------------------------
 
@@ -447,7 +481,77 @@ class PopulationEvolutionService:
             )
             return current_champion  # reste ELITE, jamais promu — aucune perte de données.
 
+        # Benchmark de capacité INDÉPENDANT (passe N+10, §8/§12/§13) —
+        # SEULEMENT après un Gauntlet FULL déjà PASS (§20 : jamais avant,
+        # pour ne pas payer son coût réel pour un candidat déjà rejeté) ;
+        # une régression critique de capacité vs le champion bloque la
+        # promotion INDÉPENDAMMENT du Gauntlet PASS (§9 : « +15% correctness
+        # -40% security -> PAS une amélioration acceptable »).
+        capability = self._run_capability_benchmark_gate(specialty, generation, candidate, current_champion)
+        if capability.decision is not JudgeDecision.PASS:
+            self._record_event(
+                "evolution.capability_benchmark_blocked_champion_candidacy",
+                {
+                    "specialty": specialty, "generation": generation, "candidate_id": candidate.id,
+                    "decision": capability.decision.value, "reason": capability.reason,
+                    "blocking_dimension": (
+                        capability.blocking_dimension.value if capability.blocking_dimension else None
+                    ),
+                },
+            )
+            return current_champion  # reste ELITE, jamais promu — aucune perte de données.
+
         return self._population.set_status(candidate.id, MemberStatus.CHAMPION)
+
+    def _run_capability_benchmark_gate(
+        self, specialty: str, generation: int, candidate: PopulationMember,
+        current_champion: PopulationMember | None,
+    ) -> Any:
+        """Isolation des pannes — même discipline que `_record_judge_signals` :
+        une panne du benchmark de capacité ne doit JAMAIS lever hors de
+        cette méthode ; elle devient une décision `INCONCLUSIVE` explicite
+        (jamais un `PASS` par défaut, §3/§13 de la mission N+10)."""
+        from apex.metalearner.capability_benchmark_service import CapabilityBenchmarkService
+        from apex.metalearner.capability_model import PromotionRuleResult
+
+        try:
+            from apex.config.loader import load_config
+
+            config = self._config or load_config()
+            genome_content = self._genome.get_content(candidate.genome_version_id)
+            limits = self._resolved_limits(genome_content)
+            service = CapabilityBenchmarkService(self._session_factory, agent_runtime=self._agent_runtime)
+            run = service.run_benchmark(
+                specialty=specialty, member_id=candidate.id, generation=generation,
+                genome_version_id=candidate.genome_version_id, genome_content=genome_content, limits=limits,
+                compared_champion_id=current_champion.id if current_champion is not None else None,
+            )
+            if run is None:
+                return PromotionRuleResult(
+                    decision=JudgeDecision.INCONCLUSIVE,
+                    reason="benchmark de capacité non exécuté (infrastructure).",
+                )
+            champion_delta = None
+            if current_champion is not None:
+                champion_run = service.get_latest(specialty, member_id=current_champion.id)
+                champion_delta = service.compute_delta(
+                    run, reference_run=champion_run, reference_kind="champion",
+                )
+            return service.decide_promotion(
+                run, champion_delta, min_confidence=config.gauntlet.min_confidence_threshold,
+            )
+        except Exception as exc:
+            self._record_event(
+                "evolution.capability_benchmark_failed",
+                {
+                    "specialty": specialty, "candidate_id": candidate.id,
+                    "error": f"{exc.__class__.__name__}: {exc}",
+                },
+            )
+            return PromotionRuleResult(
+                decision=JudgeDecision.INCONCLUSIVE,
+                reason=f"panne du benchmark de capacité : {exc.__class__.__name__}",
+            )
 
     def _run_cheap_gauntlet(
         self,

@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class JudgeDimension(str, Enum):
@@ -225,6 +225,15 @@ class GauntletStage(str, Enum):
     #: coût que le contrôle HELDOUT déjà existant en N+6, désormais enrichi
     #: plutôt que dupliqué).
     FULL = "full"
+    #: Passe « Adversarial Curriculum + Capability Benchmarking » (N+10,
+    #: §8) — MÊMES juges/agrégation que `CHEAP`/`FULL`, appliqués à une
+    #: batterie de tâches HELDOUT FIXE, DISTINCTE du curriculum
+    #: d'entraînement (`apex.metalearner.capability_benchmark_service`) —
+    #: jamais un second mécanisme de jugement, seulement un troisième
+    #: ensemble de preuves. Calculé SEULEMENT pour le candidat qui a déjà
+    #: passé le stage `FULL` (§20 : jamais avant, pour ne pas payer son
+    #: coût réel pour un candidat déjà rejeté).
+    BENCHMARK = "benchmark"
 
 
 @dataclass(frozen=True)
@@ -277,7 +286,7 @@ class GauntletResult:
         )
 
     @classmethod
-    def from_row(cls, row: "GauntletResultRow") -> GauntletResult:
+    def from_row(cls, row: GauntletResultRow) -> GauntletResult:
         return cls(
             id=row.id, specialty=row.specialty, generation=row.generation, member_id=row.member_id,
             stage=GauntletStage(row.stage), protocol_version=row.protocol_version,

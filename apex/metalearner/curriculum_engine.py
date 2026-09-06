@@ -12,12 +12,20 @@ des expériences/tâches d'évaluation. »** (§6 de la mission) — chaque
       Genome (`apex.genome.clone_config._OVERRIDABLE_FIELDS`), jamais
       inventés (§7 : « NE PAS inventer de nouveaux Genome fields »).
 
-**Frontière honnête (§6/§7)** : `EDGE_CASE`/`ADVERSARIAL`/`BUG_FARM`
-(`apex.taskgen.model.GenerationMode`) restent `PLANNED` — aucune tâche
-n'est jamais fabriquée pour `SECURITY`/`GENERALIZATION` (aucun générateur
-réel, aucun champ Genome réel ne les gouverne) ; `recommended_mode`/
-`base_task_id` restent `None`, `focus_genome_paths` reste vide, et
-`rationale` le documente explicitement plutôt que de le masquer.
+**`SECURITY`/`GENERALIZATION` (passe « Adversarial Curriculum + Capability
+Benchmarking », N+10)** : désormais RÉELS — `SECURITY` recommande
+`GenerationMode.ADVERSARIAL` (`AdversarialKind.NETWORK_BOUNDARY_PROBE`,
+§5 de la mission : « isolation, unsafe behavior, boundary violations » —
+la frontière réseau du sandbox, seule frontière RÉELLEMENT observable ici)
+; `GENERALIZATION` recommande `GenerationMode.NORMAL` avec
+`GeneralizationVariant.ALTERNATE_PROBE` (§6 : une variante STRUCTURELLEMENT
+distincte, jamais un doublon TRAIN/HELDOUT). `EFFICIENCY`/`ROBUSTNESS`
+gagnent EN PLUS un vrai challenge ciblé (`EdgeCaseKind.BOUNDARY_TIMEOUT`/
+`REPEATED_CALLS`) au-dessus du biais de mutation déjà existant (N+9) —
+les deux coexistent, jamais l'un au lieu de l'autre. `BUG_FARM` reste
+`PLANNED` comme MODE de génération (nécessite `CodeIntelligence`) — voir
+`apex.metalearner.bug_farm_service` pour le suivi RÉEL des bugs, qui
+réutilise `REGRESSION` (déjà réel), jamais ce mode.
 
 **`REGRESSION`** utilise le générateur RÉEL `GenerationMode.REGRESSION`
 (« reproduit exactement la commande d'une tâche existante ») avec la
@@ -38,7 +46,16 @@ from typing import Any
 
 from apex.metalearner.judge_feedback_model import CurriculumTarget, GauntletWeakness
 from apex.metalearner.judge_model import JudgeDimension
-from apex.taskgen.model import GenerationMode
+from apex.taskgen.model import AdversarialKind, EdgeCaseKind, GeneralizationVariant, GenerationMode
+
+#: Dimension -> `EdgeCaseKind` d'un challenge RÉEL SUPPLÉMENTAIRE, en plus
+#: du biais de mutation (`_DIMENSION_FOCUS_PATHS`) — jamais l'un au lieu de
+#: l'autre (§ Phase 14 de la mission N+10 : le curriculum produit toujours
+#: une TÂCHE, la mutation reste un biais séparé).
+_DIMENSION_EDGE_CASE_KIND: dict[JudgeDimension, EdgeCaseKind] = {
+    JudgeDimension.EFFICIENCY: EdgeCaseKind.BOUNDARY_TIMEOUT,
+    JudgeDimension.ROBUSTNESS: EdgeCaseKind.REPEATED_CALLS,
+}
 
 #: Chemins RÉELLEMENT exposés par le Genome (`apex.genome.clone_config.
 #: _OVERRIDABLE_FIELDS`, préfixés de leur clé de premier niveau
@@ -94,7 +111,44 @@ class CurriculumEngineService:
                 ),
             )
 
+        if weakness.dimension is JudgeDimension.SECURITY:
+            return CurriculumTarget(
+                specialty=specialty, dimension=weakness.dimension, weakness=weakness,
+                recommended_mode=GenerationMode.ADVERSARIAL, base_task_id=None, focus_genome_paths=(),
+                adversarial_kind=AdversarialKind.NETWORK_BOUNDARY_PROBE,
+                rationale=(
+                    "faiblesse de sécurité — GenerationMode.ADVERSARIAL "
+                    "(AdversarialKind.NETWORK_BOUNDARY_PROBE) recommandé : sonde la frontière réseau "
+                    "du sandbox, la seule frontière de sécurité réellement observable ici (N+10 §5)."
+                ),
+            )
+
+        if weakness.dimension is JudgeDimension.GENERALIZATION:
+            return CurriculumTarget(
+                specialty=specialty, dimension=weakness.dimension, weakness=weakness,
+                recommended_mode=GenerationMode.NORMAL, base_task_id=None, focus_genome_paths=(),
+                generalization_variant=GeneralizationVariant.ALTERNATE_PROBE,
+                rationale=(
+                    "faiblesse de généralisation — GenerationMode.NORMAL "
+                    "(GeneralizationVariant.ALTERNATE_PROBE) recommandé : variation structurellement "
+                    "distincte du TRAIN, jamais un doublon byte-à-byte (N+10 §6)."
+                ),
+            )
+
         focus_paths = _DIMENSION_FOCUS_PATHS.get(weakness.dimension, ())
+        edge_case_kind = _DIMENSION_EDGE_CASE_KIND.get(weakness.dimension)
+        if edge_case_kind is not None:
+            return CurriculumTarget(
+                specialty=specialty, dimension=weakness.dimension, weakness=weakness,
+                recommended_mode=GenerationMode.EDGE_CASE, base_task_id=None,
+                focus_genome_paths=focus_paths, edge_case_kind=edge_case_kind,
+                rationale=(
+                    f"faiblesse de {weakness.dimension.value} — GenerationMode.EDGE_CASE "
+                    f"({edge_case_kind.value}) recommandé, en plus de la mutation orientée vers "
+                    f"{focus_paths} (seul champ Genome réellement branché lié à cette dimension, "
+                    "apex.genome.clone_config)."
+                ),
+            )
         if focus_paths:
             return CurriculumTarget(
                 specialty=specialty, dimension=weakness.dimension, weakness=weakness,
@@ -111,8 +165,7 @@ class CurriculumEngineService:
             recommended_mode=None, base_task_id=None, focus_genome_paths=(),
             rationale=(
                 f"aucun générateur de tâche réel ni champ Genome réellement exposé pour "
-                f"{weakness.dimension.value} — observabilité seule dans cette passe "
-                "(EDGE_CASE/ADVERSARIAL restent PLANNED, network reste administrateur seul)."
+                f"{weakness.dimension.value} — observabilité seule dans cette passe."
             ),
         )
 

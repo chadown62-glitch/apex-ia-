@@ -984,6 +984,107 @@ class JudgeLearningSignalRow(Base):
         }
 
 
+class CurriculumChallengeRow(Base):
+    """Persiste `apex.metalearner.challenge_model.CurriculumChallenge`
+    (passe « Adversarial Curriculum + Capability Benchmarking », N+10) —
+    référence une `apex.tasks.model.Task` RÉELLEMENT créée (`task_id`),
+    jamais un résultat attendu fabriqué (§2 de la mission).
+
+    INSERT seul — même garantie que `judge_learning_signals` : un challenge
+    produit n'est jamais modifié ni supprimé. `weakness_id` est une clé
+    DÉRIVÉE (`apex.metalearner.challenge_model.weakness_key`), pas une clé
+    étrangère vers une table de faiblesses (`GauntletWeakness` reste
+    calculée à la demande, N+9)."""
+
+    __tablename__ = "curriculum_challenges"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    weakness_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    dimension: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    difficulty: Mapped[int] = mapped_column(Integer, nullable=False)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    task_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    evaluation_criteria: Mapped[str] = mapped_column(Text, nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    heldout: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    adversarial: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    protocol_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "specialty": self.specialty,
+            "weakness_id": self.weakness_id,
+            "dimension": self.dimension,
+            "difficulty": self.difficulty,
+            "generation": self.generation,
+            "task_id": self.task_id,
+            "evaluation_criteria": self.evaluation_criteria,
+            "source": self.source,
+            "heldout": self.heldout,
+            "adversarial": self.adversarial,
+            "protocol_version": self.protocol_version,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class BugRecordRow(Base):
+    """Persiste `apex.metalearner.bug_farm_model.BugRecord` (passe
+    « Adversarial Curriculum + Capability Benchmarking », N+10, §7) — un
+    bug RÉELLEMENT observé (dérivé de `judge_learning_signals`, N+9), avec
+    un statut MUTABLE (`open`/`fixed`/`regressed`) : la SEULE table N+10
+    dont une ligne change après sa création (même discipline que
+    `population_members.status` — des colonnes ciblées, jamais une ligne
+    entière réécrite, voir `apex.db.repositories.BugRecordRepository`)."""
+
+    __tablename__ = "bug_records"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    weakness_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True, unique=True)
+    dimension: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    failure_category: Mapped[str] = mapped_column(String(32), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    first_seen_generation: Mapped[int] = mapped_column(Integer, nullable=False)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    member_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    genome_version_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    fixed_at_generation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    regressed_at_generation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "specialty": self.specialty,
+            "weakness_id": self.weakness_id,
+            "dimension": self.dimension,
+            "failure_category": self.failure_category,
+            "severity": self.severity,
+            "first_seen_generation": self.first_seen_generation,
+            "first_seen_at": self.first_seen_at.isoformat(),
+            "member_id": self.member_id,
+            "genome_version_id": self.genome_version_id,
+            "evidence_reference": self.evidence_reference,
+            "status": self.status,
+            "fixed_at_generation": self.fixed_at_generation,
+            "regressed_at_generation": self.regressed_at_generation,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+        }
+
+
 class ProjectRow(Base):
     """Persiste `apex.projects.model.Project` (passe « Première interface
     utilisable ») — structure MINIMALE : un projet n'est qu'un regroupement

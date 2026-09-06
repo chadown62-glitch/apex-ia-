@@ -379,8 +379,13 @@ class TestCurriculumEngineHonesty(unittest.TestCase):
     def setUp(self) -> None:
         self.factory = sqlite_session_factory()
 
-    def test_case_m_security_dimension_never_fabricates_a_task_generator(self) -> None:
+    def test_case_m_security_dimension_recommends_a_real_adversarial_probe(self) -> None:
+        """Depuis N+10 (`AdversarialKind.NETWORK_BOUNDARY_PROBE`), SECURITY
+        recommande un VRAI challenge — jamais un champ Genome inventé pour
+        autant (`focus_genome_paths` reste vide, aucun mode de mutation
+        associé à cette dimension)."""
         from apex.metalearner.curriculum_engine import CurriculumEngineService
+        from apex.taskgen.model import AdversarialKind, GenerationMode
 
         repo = JudgeLearningSignalRepository(self.factory)
         signal = JudgeLearningSignal.new(
@@ -394,10 +399,10 @@ class TestCurriculumEngineHonesty(unittest.TestCase):
         repo.create(signal)
         targets = CurriculumEngineService(self.factory).build_targets("research")
         self.assertEqual(len(targets), 1)
-        self.assertIsNone(targets[0].recommended_mode)
+        self.assertEqual(targets[0].recommended_mode, GenerationMode.ADVERSARIAL)
+        self.assertEqual(targets[0].adversarial_kind, AdversarialKind.NETWORK_BOUNDARY_PROBE)
         self.assertEqual(targets[0].base_task_id, None)
         self.assertEqual(targets[0].focus_genome_paths, ())
-        self.assertIn("aucun", targets[0].rationale.lower())
 
     def test_case_m_generalization_dimension_never_fabricates_a_genome_field(self) -> None:
         from apex.metalearner.curriculum_engine import CurriculumEngineService

@@ -175,7 +175,11 @@ class TestLearningFeedbackRoutesWithRealDatabase(unittest.TestCase):
         self.assertEqual(curriculum.status_code, 200)
         self.assertEqual(len(curriculum.json()["data"]), 1)
         self.assertEqual(curriculum.json()["data"][0]["dimension"], "security")
-        self.assertIsNone(curriculum.json()["data"][0]["recommended_mode"])
+        # Depuis N+10 : SECURITY recommande un vrai challenge adversarial
+        # (AdversarialKind.NETWORK_BOUNDARY_PROBE), jamais un champ Genome
+        # inventé pour autant.
+        self.assertEqual(curriculum.json()["data"][0]["recommended_mode"], "adversarial")
+        self.assertEqual(curriculum.json()["data"][0]["adversarial_kind"], "network_boundary_probe")
 
     def test_weakness_history_filters_by_dimension(self) -> None:
         self.client.post("/api/v1/population/research/evolve")

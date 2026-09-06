@@ -24,9 +24,11 @@ from apex.db.models import (
     AgentTeamRow,
     AgentTemplateRow,
     AuditLogRow,
+    BugRecordRow,
     ComputePoolRow,
     ConfiguredAgentRow,
     ConversationRow,
+    CurriculumChallengeRow,
     EvalRunRow,
     EventRow,
     GauntletResultRow,
@@ -1030,22 +1032,22 @@ class GauntletResultRepository:
     def get(self, gauntlet_result_id: str) -> GauntletResultRow | None:
         return self._session.get(GauntletResultRow, gauntlet_result_id)
 
-    def list_by_member(self, member_id: str, *, limit: int = 50) -> list[GauntletResultRow]:
-        stmt = (
-            select(GauntletResultRow)
-            .where(GauntletResultRow.member_id == member_id)
-            .order_by(GauntletResultRow.created_at.desc())
-            .limit(limit)
-        )
+    def list_by_member(
+        self, member_id: str, *, limit: int = 50, stage: str | None = None,
+    ) -> list[GauntletResultRow]:
+        stmt = select(GauntletResultRow).where(GauntletResultRow.member_id == member_id)
+        if stage is not None:
+            stmt = stmt.where(GauntletResultRow.stage == stage)
+        stmt = stmt.order_by(GauntletResultRow.created_at.desc()).limit(limit)
         return list(self._session.scalars(stmt))
 
-    def list_by_specialty(self, specialty: str, *, limit: int = 50) -> list[GauntletResultRow]:
-        stmt = (
-            select(GauntletResultRow)
-            .where(GauntletResultRow.specialty == specialty)
-            .order_by(GauntletResultRow.created_at.desc())
-            .limit(limit)
-        )
+    def list_by_specialty(
+        self, specialty: str, *, limit: int = 50, stage: str | None = None,
+    ) -> list[GauntletResultRow]:
+        stmt = select(GauntletResultRow).where(GauntletResultRow.specialty == specialty)
+        if stage is not None:
+            stmt = stmt.where(GauntletResultRow.stage == stage)
+        stmt = stmt.order_by(GauntletResultRow.created_at.desc()).limit(limit)
         return list(self._session.scalars(stmt))
 
 
@@ -1117,6 +1119,136 @@ class JudgeLearningSignalRepository:
             .limit(limit)
         )
         return list(self._session.scalars(stmt))
+
+
+class CurriculumChallengeRepository:
+    """Persistance de `apex.metalearner.challenge_service` (passe
+    « Adversarial Curriculum + Capability Benchmarking », N+10). N'importe
+    jamais `apex.metalearner` : même règle de couche que
+    `JudgeLearningSignalRepository`.
+
+    INSERT seul — un challenge produit n'est jamais modifié ni supprimé."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        specialty: str,
+        weakness_id: str,
+        dimension: str,
+        difficulty: int,
+        generation: int,
+        task_id: str,
+        evaluation_criteria: str,
+        source: str,
+        heldout: bool,
+        adversarial: bool,
+        protocol_version: str,
+        created_at: datetime,
+    ) -> CurriculumChallengeRow:
+        row = CurriculumChallengeRow(
+            id=id, specialty=specialty, weakness_id=weakness_id, dimension=dimension, difficulty=difficulty,
+            generation=generation, task_id=task_id, evaluation_criteria=evaluation_criteria, source=source,
+            heldout=heldout, adversarial=adversarial, protocol_version=protocol_version, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, challenge_id: str) -> CurriculumChallengeRow | None:
+        return self._session.get(CurriculumChallengeRow, challenge_id)
+
+    def list_by_specialty(self, specialty: str, *, limit: int = 200) -> list[CurriculumChallengeRow]:
+        stmt = (
+            select(CurriculumChallengeRow)
+            .where(CurriculumChallengeRow.specialty == specialty)
+            .order_by(CurriculumChallengeRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_weakness(self, weakness_id: str, *, limit: int = 200) -> list[CurriculumChallengeRow]:
+        stmt = (
+            select(CurriculumChallengeRow)
+            .where(CurriculumChallengeRow.weakness_id == weakness_id)
+            .order_by(CurriculumChallengeRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+
+class BugRecordRepository:
+    """Persistance de `apex.metalearner.bug_farm_service` (passe
+    « Adversarial Curriculum + Capability Benchmarking », N+10, §7).
+    N'importe jamais `apex.metalearner` : même règle de couche que
+    `PopulationMemberRepository`.
+
+    `update_status` est la SEULE méthode de mutation — des colonnes
+    ciblées, jamais une ligne entière réécrite (même discipline que
+    `PopulationMemberRepository.set_status`)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        specialty: str,
+        weakness_id: str,
+        dimension: str,
+        failure_category: str,
+        severity: str,
+        first_seen_generation: int,
+        first_seen_at: datetime,
+        member_id: str,
+        genome_version_id: str,
+        evidence_reference: str | None,
+        status: str,
+    ) -> BugRecordRow:
+        row = BugRecordRow(
+            id=id, specialty=specialty, weakness_id=weakness_id, dimension=dimension,
+            failure_category=failure_category, severity=severity, first_seen_generation=first_seen_generation,
+            first_seen_at=first_seen_at, member_id=member_id, genome_version_id=genome_version_id,
+            evidence_reference=evidence_reference, status=status,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, bug_id: str) -> BugRecordRow | None:
+        return self._session.get(BugRecordRow, bug_id)
+
+    def get_by_weakness(self, weakness_id: str) -> BugRecordRow | None:
+        stmt = select(BugRecordRow).where(BugRecordRow.weakness_id == weakness_id)
+        return self._session.scalars(stmt).first()
+
+    def list_by_specialty(self, specialty: str, *, limit: int = 200) -> list[BugRecordRow]:
+        stmt = (
+            select(BugRecordRow)
+            .where(BugRecordRow.specialty == specialty)
+            .order_by(BugRecordRow.first_seen_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def update_status(
+        self, bug_id: str, *, status: str, fixed_at_generation: int | None = None,
+        regressed_at_generation: int | None = None,
+    ) -> BugRecordRow | None:
+        row = self._session.get(BugRecordRow, bug_id)
+        if row is None:
+            return None
+        row.status = status
+        if fixed_at_generation is not None:
+            row.fixed_at_generation = fixed_at_generation
+        if regressed_at_generation is not None:
+            row.regressed_at_generation = regressed_at_generation
+        self._session.flush()
+        return row
 
 
 class ProjectRepository:

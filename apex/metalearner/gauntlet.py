@@ -187,3 +187,32 @@ class GauntletRunner:
             veto_dimension=veto_dim, disagreement=disagreement, stopped_after_critical_failure=False,
             judge_results=combined, compared_champion_id=compared_champion_id,
         )
+
+    def run_stage(
+        self,
+        judge_results: tuple[JudgeResult, ...],
+        *,
+        stage: GauntletStage,
+        specialty: str,
+        generation: int,
+        member_id: str,
+        compared_champion_id: str | None = None,
+    ) -> GauntletResult:
+        """Point d'entrée PUBLIC générique (N+10, §8) — même agrégation
+        stricte que `run_cheap`/`run_full` (`_aggregate`, INCHANGÉE),
+        appliquée à un ensemble de `JudgeResult` déjà produit par
+        l'appelant (ex. `apex.metalearner.capability_benchmark_service`,
+        sur une batterie de tâches HELDOUT distincte du curriculum) — ne
+        réimplémente RIEN, ne fait qu'exposer `_aggregate` sans dupliquer sa
+        logique. `stopped_after_critical_failure` toujours `False` ici :
+        cette méthode ne modélise pas un arrêt anticipé entre stages CHEAP/
+        FULL, chaque appel est déjà un ensemble complet de juges."""
+        decision, score, confidence, veto, veto_dim, disagreement = _aggregate(
+            judge_results, min_confidence_threshold=self._min_confidence_threshold,
+        )
+        return GauntletResult.new(
+            specialty=specialty, generation=generation, member_id=member_id, stage=stage,
+            decision=decision, overall_score=score, overall_confidence=confidence, veto=veto,
+            veto_dimension=veto_dim, disagreement=disagreement, stopped_after_critical_failure=False,
+            judge_results=judge_results, compared_champion_id=compared_champion_id,
+        )
