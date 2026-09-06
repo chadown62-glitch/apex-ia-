@@ -34,6 +34,7 @@ from apex.db.models import (
     MemoryRelationRow,
     MessageRow,
     MissionRow,
+    PopulationMemberRow,
     ProjectRow,
     SkillRow,
     TaskRow,
@@ -735,6 +736,111 @@ class GenomeVersionRepository:
             .limit(1)
         )
         return self._session.scalars(stmt).first()
+
+
+class PopulationMemberRepository:
+    """Persistance de `apex.metalearner.population_service` (passe « Real
+    Clone Population + Evolution Loop »). N'importe jamais
+    `apex.metalearner` : même règle de couche que `GenomeVersionRepository`
+    — méthodes en mots-clés, jamais un objet `PopulationMember`.
+
+    `get_by_experiment_ref` est LE mécanisme d'idempotence (mandat §17 de la
+    mission) — vérifié par l'appelant AVANT toute création, jamais une
+    contrainte d'unicité silencieusement avalée : la colonne porte bien
+    `unique=True` (défense en profondeur), mais le domaine consulte toujours
+    d'abord cette méthode pour renvoyer le membre existant plutôt que de
+    heurter une erreur d'intégrité.
+
+    `set_status`/`record_fitness` sont les SEULES méthodes de mutation —
+    même discipline que `GenomeVersionRepository.decide()` : des colonnes
+    ciblées, jamais une ligne entière réécrite."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        specialty: str,
+        generation: int,
+        clone_id: str,
+        genome_version_id: str,
+        parent_member_id: str | None,
+        status: str,
+        created_by: str,
+        experiment_ref: str,
+        created_at: datetime,
+    ) -> PopulationMemberRow:
+        row = PopulationMemberRow(
+            id=id, specialty=specialty, generation=generation, clone_id=clone_id,
+            genome_version_id=genome_version_id, parent_member_id=parent_member_id,
+            status=status, created_by=created_by, experiment_ref=experiment_ref, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, member_id: str) -> PopulationMemberRow | None:
+        return self._session.get(PopulationMemberRow, member_id)
+
+    def get_by_experiment_ref(self, experiment_ref: str) -> PopulationMemberRow | None:
+        stmt = select(PopulationMemberRow).where(PopulationMemberRow.experiment_ref == experiment_ref)
+        return self._session.scalars(stmt).first()
+
+    def list_by_specialty(self, specialty: str, *, limit: int = 500) -> list[PopulationMemberRow]:
+        stmt = (
+            select(PopulationMemberRow)
+            .where(PopulationMemberRow.specialty == specialty)
+            .order_by(PopulationMemberRow.generation.desc(), PopulationMemberRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def count_active(self, specialty: str) -> int:
+        """Nombre de membres NON `retired` — le compteur utilisé par le
+        plafond de population (§15 de la mission) : un membre retiré libère
+        sa place, jamais supprimé (historique préservé)."""
+        stmt = (
+            select(func.count())
+            .select_from(PopulationMemberRow)
+            .where(PopulationMemberRow.specialty == specialty, PopulationMemberRow.status != "retired")
+        )
+        return int(self._session.scalar(stmt) or 0)
+
+    def record_fitness(
+        self, member_id: str, *, fitness: float, fitness_components: dict[str, Any],
+        skill_candidate_id: str | None, genome_candidate_id: str | None,
+    ) -> PopulationMemberRow | None:
+        stmt = (
+            update(PopulationMemberRow)
+            .where(PopulationMemberRow.id == member_id)
+            .values(
+                fitness=fitness, fitness_components=fitness_components,
+                skill_candidate_id=skill_candidate_id, genome_candidate_id=genome_candidate_id,
+            )
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(PopulationMemberRow, member_id)
+
+    def set_status(self, member_id: str, *, status: str, decided_at: datetime) -> PopulationMemberRow | None:
+        row = self._session.get(PopulationMemberRow, member_id)
+        if row is None or row.status == "retired":
+            # `retired` est terminal — même garde qu'`AgentRuntime` sur les
+            # transitions de `CloneState` : jamais de sortie hors machine
+            # à états, même si l'appelant se trompe.
+            return None
+        stmt = (
+            update(PopulationMemberRow)
+            .where(PopulationMemberRow.id == member_id)
+            .values(status=status, decided_at=decided_at)
+        )
+        self._session.execute(stmt)
+        self._session.flush()
+        return self._session.get(PopulationMemberRow, member_id)
 
 
 class ProjectRepository:

@@ -603,6 +603,123 @@ sans devenir une seconde implémentation de leur logique métier.
   quels, idempotence/provenance entièrement portée par
   `EventRepository`).
 
+### Real Clone Population + Evolution Loop
+
+Construit la première boucle évolutive RÉELLE (§ mission N+6) :
+
+```
+Population -> Selection -> Clone/Fork -> Genome application
+  -> Experiment assignment -> Execution -> Evaluation -> Fitness
+  -> Selection -> Skill/Genome feedback -> Mutation -> nouvelle génération
+```
+
+Composée EXCLUSIVEMENT d'abstractions déjà réelles — aucune n'est
+réimplémentée : `AgentRuntime.spawn` (Phase 8), `GenomeStoreService.
+propose`/`apex.genome.mutation.mutate`/`crossover` (Phase 17),
+`apex.genome.selection.successive_halving` (Phase 17),
+`apex.metalearner.cycle.run_experiment_cycle` (Phase 5+),
+`apex.metalearner.feedback.LearningFeedbackService` (N+5).
+
+- **`apex.metalearner.population_model`/`population_repository`/
+  `population_service`/`population_fitness`** (nouveau, petit — vit dans
+  `apex.metalearner`, déjà classé Research par `runtime_build/selection.py`
+  [fichier RÉSERVÉ, jamais modifié], plutôt qu'un nouveau paquet
+  `apex.population` séparé : ajouter un sous-paquet de premier niveau
+  casserait la partition Runtime/Research que ce fichier réservé impose,
+  sans pouvoir la corriger) — bookkeeping PUR, aucun spawn, aucune
+  proposition de Genome, aucune exécution. `PopulationMember`
+  (`population_members`, nouvelle table — métadonnées seules : `clone_id`
+  RÉFÉRENCE un `Clone` réel, `genome_version_id` une `GenomeVersion`
+  réelle, jamais une troisième représentation dupliquée). Pas de classe
+  `Population` séparée : une population EST l'ensemble des membres qui
+  partagent `specialty` — ADR-0007 (aucune abstraction sans ≥2
+  consommateurs/aucun composant existant ne peut porter la responsabilité)
+  appliqué explicitement pour refuser cette classe. `MemberStatus`
+  (`experimental`/`elite`/`champion`/`hibernating`/`retired`) reste une
+  ÉTIQUETTE DE BOOKKEEPING INTERNE, jamais une décision `PolicyEngine` —
+  ne change aucun droit, ne promeut aucun Genome/Skill (voir §8/§19 de la
+  mission, anti-auto-illusion). `retired` est terminal (même discipline
+  que `CloneState.is_terminal`).
+- **`apex.genome.clone_config.resolve_resource_limits`** — la PREMIÈRE
+  influence réelle du contenu d'un Genome sur l'exécution d'un clone
+  (limite exacte documentée par N+5 : « `GenomeVersion` content still has
+  zero effect on real clone/AgentRuntime behavior »). Frontière minimale
+  et sûre : seul `ResourceLimits` (`apex.sandbox.model`, dont la docstring
+  invitait déjà explicitement un futur appelant à le faire) peut être
+  surchargé par la clé optionnelle `execution` du contenu JSON d'un
+  Genome (`timeout_s`/`memory_mb`/`cpu_cores`) — jamais `network` (choix
+  administrateur seul). Chaque champ n'est appliqué que borné par la
+  config administrateur (jamais une élévation, même si le Genome vient
+  d'une mutation `Subject.CORE` jamais promue par un humain). Câblé dans
+  `EvalRunnerService.run(genome_content=...)` (additif, défaut `None`,
+  aucun appelant existant affecté) et relayé par `run_experiment_cycle`.
+- **`apex.metalearner.evolution.PopulationEvolutionService.evolve_generation`**
+  — l'orchestrateur, déclenché HUMAIN (même modèle N+4 :
+  `evolve_generation` ne prend AUCUN paramètre d'identité, `Subject.HUMAN`
+  fourni en dur à `run_experiment_cycle`). Génération 0 : mute le Genome
+  PROMOTED courant. Générations suivantes : parents = élite + champion de
+  la génération précédente ; mutation sur un seul parent, ou `crossover`
+  entre deux élites (une génération sur deux, uniquement si
+  `PopulationPolicy.enable_crossover` et ≥2 élites existent — jamais à la
+  génération 0). Sélection par `successive_halving` (réutilisé tel quel,
+  jamais une seconde logique de sélection) : `elite_size` survivants
+  gardés, jamais un seul (§9 : préserver la diversité). **Contrôle
+  HELDOUT réel avant promotion `CHAMPION`** (§13) : un candidat meilleur
+  que le champion actuel doit d'abord réussir un `run_experiment_cycle`
+  supplémentaire sur `TaskSplit.HELDOUT` — échec -> reste `ELITE`, le
+  champion existant n'est jamais remplacé par un individu qui n'a pas
+  prouvé sa généralisation.
+- **Idempotence (§17, obligatoire)** — `population_members.
+  experiment_ref` est `UNIQUE`, vérifiée AVANT toute création
+  (`PopulationService.add_member`) : rejouer le même `experiment_ref`
+  renvoie le membre déjà créé, jamais un doublon, jamais un second spawn.
+- **Isolation des pannes (§18)** — chaque membre d'une génération est créé
+  dans son propre `try/except` (`PopulationEvolutionService.
+  evolve_generation`) : l'échec d'UN membre (spawn, exécution, Genome) est
+  journalisé (`evolution.member_failed`) et n'empêche jamais les autres
+  membres de la même génération d'être créés et évalués.
+- **Plafonds (§15, `apex.config.schema.PopulationPolicy`,
+  `config.yaml` `population:`)** — `max_population_size` (membres NON
+  `retired` simultanés, par spécialité), `generation_size` (membres créés
+  par appel), `elite_size`, `enable_crossover`. Valeurs prudentes par
+  défaut (8/3/2/true). Un plafond atteint arrête la génération proprement
+  (`PopulationCapExceeded`, nouvel `ApexError`), jamais une erreur pour
+  l'appelant — les membres déjà créés restent valides.
+- **Skills + Genome (§12)** — chaque membre appelle
+  `LearningFeedbackService.process_cycle_result` (N+5, INCHANGÉ) après
+  son expérience ; `skill_candidate_id`/`genome_candidate_id` sont
+  enregistrés SUR le membre (observabilité), jamais une seconde logique
+  de proposition. Toujours `PROPOSED`, jamais promu par ce chemin — les
+  garde-fous N+5 (accumulation contrôlée, provenance) s'appliquent
+  identiquement, réutilisés tels quels.
+- **API** (`apex/api/routes/population.py`) — seulement `GET /population/
+  {specialty}` (lecture agrégée : membres, élite, champion, génération) et
+  `POST /population/{specialty}/evolve` (mutatif, synchrone/bloquant,
+  aucun corps de requête — donc structurellement aucun champ d'identité
+  possible, contrairement à `POST /learning/cycles` qui doit explicitement
+  ignorer un corps). `GET /population/{id}/lineage`, `GET /clones/{id}/
+  genome`, `GET /clones/{id}/fitness` volontairement PAS ajoutés — le
+  lignage simple (`parent_member_id`) est déjà porté par chaque membre,
+  aucune route dédiée n'est nécessaire (§20 : pas de surface d'API
+  spéculative).
+- **Frontend** (`ExperimentLabPage.tsx`, panneau « Population / Évolution »)
+  — génération courante, nombre de membres/élites, champion (clone +
+  fitness), table des membres avec statut/fitness, bouton « Lancer une
+  génération ». Aucun contrôle de promotion Genome/Skill exposé.
+- **Non fait dans cette passe (différé explicitement)** : le contenu d'un
+  Genome n'influence toujours PAS le choix de modèle/stratégie/skills
+  activés (uniquement `ResourceLimits`) ; aucun orchestrateur
+  multi-génération automatique (l'appelant décide de déclencher chaque
+  génération, pas de boucle infinie cachée) ; `crossover` seulement entre
+  deux élites déjà existantes, jamais à la génération 0 ; aucune évolution
+  distribuée/concurrente (séquentiel, §16) ; aucun ordonnancement GPU
+  avancé ; `apex.genome.selection.pareto_front` existe déjà mais n'est pas
+  branché ici (sélection mono-objectif `successive_halving` suffisante
+  pour cette passe) ; pas d'héritage de Skills déjà validés par un
+  descendant (mentionné §12 de la mission, non implémenté — aucun
+  mécanisme réel ne relie encore un `Skill` ACQUIRED à la configuration
+  d'un nouveau clone).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

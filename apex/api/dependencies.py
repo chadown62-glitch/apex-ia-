@@ -39,6 +39,7 @@ from apex.errors import ApexError
 if TYPE_CHECKING:
     from apex.metalearner.autonomous_scheduler import AutonomousLearningScheduler
     from apex.metalearner.autonomy import AutonomousLearningService
+    from apex.metalearner.evolution import PopulationEvolutionService
     from apex.scheduler.service import SchedulerService
 
 
@@ -58,6 +59,24 @@ def get_session_factory() -> Any:
         raise DatabaseUnavailable(str(exc)) from exc
     engine = build_engine(url)
     return build_session_factory(engine)
+
+
+def get_evolution_service() -> "PopulationEvolutionService":
+    """PAS de singleton mis en cache — même choix qu'`get_session_factory` :
+    `PopulationEvolutionService` (passe « Real Clone Population + Evolution
+    Loop ») est un service SANS état en mémoire entre deux appels (contraste
+    volontaire avec `AutonomousLearningService`/`SchedulerService`, qui
+    suivent un cycle/`ExecutionRegistry` EN MÉMOIRE devant survivre entre
+    requêtes) — chaque `evolve_generation()` lit/écrit uniquement via la DB
+    (`population_members`, `genome_versions`, `agents`), donc reconstruire
+    l'objet à chaque requête est correct et bon marché."""
+    from apex.agents.runtime import AgentRuntime
+    from apex.config.loader import load_config
+    from apex.metalearner.evolution import PopulationEvolutionService
+
+    session_factory = get_session_factory()
+    config = load_config()
+    return PopulationEvolutionService(session_factory, agent_runtime=AgentRuntime(session_factory), config=config)
 
 
 _scheduler_service: "SchedulerService | None" = None

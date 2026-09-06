@@ -676,6 +676,87 @@ class GenomeVersionRow(Base):
         }
 
 
+class PopulationMemberRow(Base):
+    """Persistance d'un `apex.metalearner.population_model.PopulationMember` (passe
+    « Real Clone Population + Evolution Loop »).
+
+    Une « population » N'EST PAS une table séparée : c'est simplement
+    l'ensemble des lignes qui partagent `specialty` — exactement comme une
+    `Population` de la mission N+6 est identifiée par une spécialité, pas
+    par un identifiant arbitraire supplémentaire (aucun sur-engineering :
+    zéro nouvelle table pour un concept qui se déduit entièrement d'une
+    colonne déjà nécessaire).
+
+    Réutilise `agents.clone_id` et `genome_versions.id` PAR VALEUR (pas de
+    `ForeignKey` déclarée — même choix documenté qu'`AgentRow.pool_id` : ces
+    tables ne sont pas encore synchronisées transactionnellement entre
+    elles) : un membre de population EST un `Clone` réel exécuté avec UNE
+    `GenomeVersion` réelle, jamais une troisième représentation dupliquée de
+    l'un ou l'autre.
+
+    `parent_member_id` porte la généalogie AU NIVEAU POPULATION (quel membre
+    a produit celui-ci par mutation/fork) — distincte de
+    `genome_versions.parent_version_id` (généalogie du CONTENU du Genome) :
+    les deux coexistent car un même Genome pourrait en théorie être
+    réutilisé par plusieurs membres, même si cette passe n'exploite pas
+    encore ce cas.
+
+    `experiment_ref` est la clé d'IDEMPOTENCE (mandat §17 de la mission) :
+    `PopulationMemberRepository.get_by_experiment_ref` est vérifié AVANT
+    toute création — rejouer la même expérimentation ne crée jamais un
+    second membre, exactement le patron déjà établi par
+    `apex.metalearner.feedback.LearningFeedbackService` (`EventRepository`
+    y jouait ce rôle faute de table dédiée ; ici une table dédiée existe
+    déjà, donc l'idempotence est vérifiée directement dessus, pas
+    réinventée via un second mécanisme).
+
+    `status` est la SEULE colonne mutable en place (`experimental` ->
+    `elite`/`champion`/`hibernating`/`retired`, `retired` terminal) — même
+    discipline que `SkillRow`/`GenomeVersionRow` : jamais réutilisée pour
+    autre chose que ce changement de statut, l'historique (fitness,
+    provenance) reste immuable une fois écrit.
+    """
+
+    __tablename__ = "population_members"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    clone_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    genome_version_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    parent_member_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    fitness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    fitness_components: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    skill_candidate_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    genome_candidate_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    experiment_ref: Mapped[str] = mapped_column(String(160), nullable=False, index=True, unique=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "specialty": self.specialty,
+            "generation": self.generation,
+            "clone_id": self.clone_id,
+            "genome_version_id": self.genome_version_id,
+            "parent_member_id": self.parent_member_id,
+            "status": self.status,
+            "fitness": self.fitness,
+            "fitness_components": dict(self.fitness_components) if self.fitness_components else None,
+            "skill_candidate_id": self.skill_candidate_id,
+            "genome_candidate_id": self.genome_candidate_id,
+            "experiment_ref": self.experiment_ref,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+            "decided_at": self.decided_at.isoformat() if self.decided_at else None,
+        }
+
+
 class ProjectRow(Base):
     """Persiste `apex.projects.model.Project` (passe « Première interface
     utilisable ») — structure MINIMALE : un projet n'est qu'un regroupement

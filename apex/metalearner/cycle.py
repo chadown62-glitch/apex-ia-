@@ -36,6 +36,14 @@ Utilisés par `apex.metalearner.autonomy.AutonomousLearningService` pour
 étiqueter/annuler un cycle démarré via le CLI/l'API/le Scheduler, sans que
 `POST /experiment-cycles` (appel humain direct, synchrone) n'ait besoin de
 les fournir.
+
+**`genome_content`** (passe « Real Clone Population + Evolution Loop »,
+additif, défaut `None`) : simple relais vers `EvalRunnerService.run`, qui
+l'accepte déjà (`apex.genome.clone_config.resolve_resource_limits`) — la
+première influence réelle d'un Genome sur l'exécution d'un clone. Utilisé
+par `apex.metalearner.evolution.PopulationEvolutionService` pour faire
+correspondre chaque membre de population au contenu réel de SON Genome,
+jamais celui d'un autre membre.
 """
 
 from __future__ import annotations
@@ -74,6 +82,7 @@ def run_experiment_cycle(
     split: TaskSplit = TaskSplit.TRAIN,
     experiment_ref: str | None = None,
     cancel_token: CancellationToken | None = None,
+    genome_content: dict[str, Any] | None = None,
     weakness_service: WeaknessDetectorService | None = None,
     task_service: TaskBankService | None = None,
     evalrunner: EvalRunnerService | None = None,
@@ -128,7 +137,7 @@ def run_experiment_cycle(
     # résultat), sans dupliquer `StrategyDecision` dans une nouvelle table.
     eval_run = evalrunner.run(
         task_id=task.id, clone_id=clone_id, method=method, requested_by=Subject.CORE,
-        experiment_ref=experiment_ref, cancel_token=cancel_token,
+        experiment_ref=experiment_ref, cancel_token=cancel_token, genome_content=genome_content,
         strategy_facts={
             "generation_mode": mode.value,
             "curriculum_level": decision.level,

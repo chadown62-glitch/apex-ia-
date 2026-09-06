@@ -23,6 +23,7 @@ import type {
   ConversationCreateInput,
   DataEnvelope,
   EvalRun,
+  EvolutionGeneration,
   ExperimentCycle,
   ExperimentCycleCreateInput,
   Gate,
@@ -33,6 +34,7 @@ import type {
   Message,
   Mission,
   MissionCreateInput,
+  Population,
   Project,
   ProjectCreateInput,
   ProviderInfo,
@@ -301,4 +303,18 @@ export function startLearningCycle(
 
 export function cancelLearningCycle(): Promise<DataEnvelope<LearningCycleStatus>> {
   return fetchEnvelope<LearningCycleStatus>("/learning/cycles/cancel", { method: "POST" });
+}
+
+// -- Real Clone Population + Evolution Loop -------------------------------
+// aucun champ d'identité dans `evolvePopulation` : le backend force
+// Subject.HUMAN/Subject.CORE lui-même (voir apex/api/routes/population.py).
+
+export function getPopulation(specialty: string): Promise<DataEnvelope<Population>> {
+  return fetchEnvelope<Population>(`/population/${encodeURIComponent(specialty)}`);
+}
+
+export function evolvePopulation(specialty: string): Promise<DataEnvelope<EvolutionGeneration>> {
+  return fetchEnvelope<EvolutionGeneration>(`/population/${encodeURIComponent(specialty)}/evolve`, {
+    method: "POST",
+  });
 }

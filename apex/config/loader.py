@@ -27,6 +27,7 @@ from apex.config.schema import (
     ModelEndpoint,
     ModelRole,
     Paths,
+    PopulationPolicy,
     RouterScoringPolicy,
     SandboxDefaults,
     SchedulerPolicy,
@@ -126,6 +127,7 @@ def parse_config(raw: dict[str, Any]) -> ApexConfig:
         scheduler=SchedulerPolicy.parse(raw.get("scheduler") or {}),
         routing=RouterScoringPolicy.parse(raw.get("routing") or {}),
         autonomous_learning=AutonomousLearningPolicy.parse(raw.get("autonomous_learning") or {}),
+        population=PopulationPolicy.parse(raw.get("population") or {}),
     )
     config.validate()
     return config

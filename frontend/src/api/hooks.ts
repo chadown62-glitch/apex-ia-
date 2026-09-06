@@ -21,6 +21,7 @@ import {
   deleteConfiguredAgent,
   deleteConversation,
   discoverModels,
+  evolvePopulation,
   getAgent,
   getAuditLog,
   getConfiguredAgent,
@@ -32,6 +33,7 @@ import {
   getLearningHistory,
   getLearningStatus,
   getMission,
+  getPopulation,
   getRegistry,
   getSelfModel,
   getTask,
@@ -503,6 +505,28 @@ export function useCancelLearningCycle() {
     mutationFn: () => cancelLearningCycle(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["learning"] });
+    },
+  });
+}
+
+// -- Real Clone Population + Evolution Loop -------------------------------
+// Projection de apex.evolution.service.PopulationEvolutionService (via
+// /population/*) — jamais une seconde implémentation de la boucle évolutive.
+
+export function usePopulation(specialty: string) {
+  return usePolling(["population", specialty], () => getPopulation(specialty), REFRESH_MS);
+}
+
+/** Bloquant côté serveur (une génération complète, séquentielle) — la
+ * mutation ne résout qu'une fois la génération terminée, jamais un
+ * démarrage en tâche de fond (contraste volontaire avec
+ * useStartLearningCycle, voir apex/api/routes/population.py). */
+export function useEvolvePopulation(specialty: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => evolvePopulation(specialty),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["population", specialty] });
     },
   });
 }

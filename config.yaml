@@ -292,6 +292,20 @@ autonomous_learning:
   split: train
 
 # ----------------------------------------------------------------------------
+# Population / Evolution (passe « Real Clone Population + Evolution Loop »)
+# — plafonds de la boucle Population -> Selection -> Clone/Genome ->
+# Experiment -> Fitness -> Selection -> Mutation -> nouvelle génération
+# (apex.evolution.service.PopulationEvolutionService). Valeurs prudentes par
+# défaut (§15/§16 de la mission) — aucune concurrence, aucune explosion de
+# population par défaut.
+# ----------------------------------------------------------------------------
+population:
+  max_population_size: 8
+  generation_size: 3
+  elite_size: 2
+  enable_crossover: true
+
+# ----------------------------------------------------------------------------
 # Model Router (passe « Adaptive Model Router V1 ») — poids du score de
 # apex.routing.router.select_model. capability_match_weight/
 # local_preference_weight reproduisent exactement le score déjà en

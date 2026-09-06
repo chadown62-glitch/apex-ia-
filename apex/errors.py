@@ -169,3 +169,21 @@ class CycleAlreadyRunning(ApexError):
     def __init__(self, cycle_id: str) -> None:
         self.cycle_id = cycle_id
         super().__init__(f"un cycle d'apprentissage autonome est déjà en cours ({cycle_id})")
+
+
+class PopulationCapExceeded(ApexError):
+    """Le plafond de population (`apex.config.schema.PopulationPolicy`,
+    passe « Real Clone Population + Evolution Loop ») est déjà atteint pour
+    cette spécialité — un nouveau membre n'est jamais créé au-delà de cette
+    limite, jamais un dépassement silencieusement toléré (§15 de la
+    mission : « empêcher l'explosion de population »)."""
+
+    exit_code = 12
+
+    def __init__(self, specialty: str, *, active: int, limit: int) -> None:
+        self.specialty = specialty
+        self.active = active
+        self.limit = limit
+        super().__init__(
+            f"plafond de population atteint pour « {specialty} » ({active}/{limit} membres actifs)"
+        )

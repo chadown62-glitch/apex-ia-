@@ -322,24 +322,16 @@ class AutonomousLearningService:
         (vocabulaire déjà défini dans `apex.policy.model.Subject`, jamais
         utilisé avant cette passe), jamais `Subject.RESEARCH` (réservé aux
         appels humains directs via `POST /experiment-cycles`/le Panel
-        Experiment Lab). Choisit le premier `ComputePool` ACTIVE déclarant
-        `Capability.SANDBOX` (tri par `pool_id`, déterministe) et le
-        `GenomeVersion` actuellement PROMOTED — jamais une valeur fabriquée
-        si aucun des deux n'existe."""
+        Experiment Lab). Choisit un `ComputePool` capable de sandbox (`apex.
+        agents.pool_selection`, factorisé avec `apex.metalearner.evolution`) et
+        le `GenomeVersion` actuellement PROMOTED — jamais une valeur
+        fabriquée si aucun des deux n'existe."""
+        from apex.agents.pool_selection import pick_sandbox_capable_pool
         from apex.config.loader import load_config
-        from apex.config.schema import Capability, PoolStatus
         from apex.genome.service import GenomeStoreService
 
         config = self._config or load_config()
-        candidates = sorted(
-            (p for p in config.pools.values() if p.status is PoolStatus.ACTIVE and Capability.SANDBOX in p.capabilities),
-            key=lambda p: p.pool_id,
-        )
-        if not candidates:
-            raise ValueError(
-                "aucun ComputePool ACTIVE ne déclare la capability « sandbox » — "
-                "impossible de provisionner un clone pour un cycle autonome"
-            )
+        pool = pick_sandbox_capable_pool(config)
         genome = GenomeStoreService(self._session_factory).get_current()
         if genome is None:
             raise ValueError(
@@ -347,7 +339,7 @@ class AutonomousLearningService:
                 "pour un cycle autonome (voir apex.genome.service.GenomeStoreService.promote)"
             )
         clone = self._agent_runtime.spawn(
-            Subject.LEARNING, pool=candidates[0], genome_ref=genome.content_hash, spawned_by=Subject.CORE,
+            Subject.LEARNING, pool=pool, genome_ref=genome.content_hash, spawned_by=Subject.CORE,
         )
         return clone.clone_id
 

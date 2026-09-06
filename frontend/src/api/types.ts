@@ -608,3 +608,46 @@ export interface AutonomousLearningStatus {
   interval_s: number;
   cycle: LearningCycleStatus;
 }
+
+/** Étiquette de bookkeeping interne à la population — jamais une décision
+ * de promotion Genome/Skill (voir apex/population/service.py). */
+export type PopulationMemberStatus =
+  | "experimental"
+  | "elite"
+  | "champion"
+  | "hibernating"
+  | "retired";
+
+export interface PopulationMember {
+  id: string;
+  specialty: string;
+  generation: number;
+  clone_id: string;
+  genome_version_id: string;
+  parent_member_id: string | null;
+  status: PopulationMemberStatus;
+  fitness: number | null;
+  fitness_components: Record<string, unknown> | null;
+  skill_candidate_id: string | null;
+  genome_candidate_id: string | null;
+  created_at: string;
+}
+
+export interface Population {
+  specialty: string;
+  latest_generation: number;
+  champion: PopulationMember | null;
+  elite: PopulationMember[];
+  members: PopulationMember[];
+}
+
+export interface EvolutionGeneration {
+  specialty: string;
+  generation: number;
+  members: PopulationMember[];
+  champion: PopulationMember | null;
+  elite: PopulationMember[];
+  /** Un membre en échec n'empêche jamais les autres (§18) — mais la raison
+   * reste observable ici, jamais silencieuse. */
+  failures: string[];
+}

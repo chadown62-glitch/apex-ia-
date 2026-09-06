@@ -589,3 +589,48 @@ class AutonomousLearningStatusOut(BaseModel):
     scheduler_running: bool
     interval_s: float
     cycle: LearningCycleStatusOut
+
+
+# -- population / evolution ---------------------------------------------------
+
+
+class PopulationMemberOut(BaseModel):
+    """Projette `apex.metalearner.population_model.PopulationMember` — `status` reste
+    une étiquette de bookkeeping interne (`experimental`/`elite`/`champion`/
+    `hibernating`/`retired`), JAMAIS une décision de promotion Genome/Skill
+    (voir la docstring d'`apex.metalearner.population_service`)."""
+
+    id: str
+    specialty: str
+    generation: int
+    clone_id: str
+    genome_version_id: str
+    parent_member_id: str | None
+    status: str
+    fitness: float | None
+    fitness_components: dict[str, Any] | None
+    skill_candidate_id: str | None
+    genome_candidate_id: str | None
+    created_at: str
+
+
+class PopulationOut(BaseModel):
+    specialty: str
+    latest_generation: int
+    champion: PopulationMemberOut | None
+    elite: list[PopulationMemberOut]
+    members: list[PopulationMemberOut]
+
+
+class EvolutionGenerationOut(BaseModel):
+    """Résultat d'UN appel à `POST /population/{specialty}/evolve` — voir
+    `apex.metalearner.evolution.EvolutionGenerationResult`. `failures` reste
+    NON VIDE quand un membre échoue individuellement (§18 : jamais silencieux,
+    jamais fatal pour les autres membres de la génération)."""
+
+    specialty: str
+    generation: int
+    members: list[PopulationMemberOut]
+    champion: PopulationMemberOut | None
+    elite: list[PopulationMemberOut]
+    failures: list[str]

@@ -7,10 +7,12 @@ import {
   useCreateExperimentCycle,
   useEvalRun,
   useEvalRuns,
+  useEvolvePopulation,
   useLearningStatus,
+  usePopulation,
   useStartLearningCycle,
 } from "../api/hooks";
-import type { ExperimentCycle, LearningCycleState } from "../api/types";
+import type { ExperimentCycle, LearningCycleState, PopulationMemberStatus } from "../api/types";
 import { ErrorState, LoadingState } from "../components/common/EmptyState";
 import { Panel } from "../components/common/Panel";
 import { StatCard } from "../components/common/StatCard";
@@ -271,6 +273,107 @@ function AutonomousLearningPanel({
   );
 }
 
+/** Étiquette de bookkeeping population — vocabulaire distinct de
+ * `DataStatus` (real/unknown/simulated) : ne réutilise donc jamais
+ * `StatusBadge`, qui encode « la donnée est-elle réelle », pas « où en est
+ * ce membre dans le cycle de vie de la population ». */
+const MEMBER_STATUS_LABEL: Record<PopulationMemberStatus, string> = {
+  champion: "champion",
+  elite: "élite",
+  experimental: "expérimental",
+  hibernating: "en veille",
+  retired: "retiré",
+};
+
+/**
+ * `GET /population/{specialty}` (+ `POST /population/{specialty}/evolve`) —
+ * projection de `apex.evolution.service.PopulationEvolutionService`, jamais
+ * une seconde implémentation de la boucle évolutive. `elite`/`champion`
+ * restent des étiquettes de bookkeeping interne — cette interface n'expose
+ * AUCUN moyen de promouvoir un Genome/Skill (qui reste HUMAIN seul via ses
+ * propres pages/routes, inchangé).
+ */
+function PopulationPanel({ specialty }: { specialty: string }) {
+  const population = usePopulation(specialty);
+  const evolve = useEvolvePopulation(specialty);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const data = population.data?.status === "real" ? population.data.data : null;
+
+  async function handleEvolve() {
+    setActionError(null);
+    try {
+      await evolve.mutateAsync();
+    } catch (error) {
+      setActionError(error instanceof ApiError ? `HTTP ${error.status} : ${error.message}` : String(error));
+    }
+  }
+
+  return (
+    <Panel title="Population / Évolution" dense>
+      {population.isLoading ? (
+        <LoadingState />
+      ) : !data ? (
+        <ErrorState detail={population.data?.detail ?? "Backend indisponible."} />
+      ) : (
+        <div className="mission-form">
+          <div className="stat-grid">
+            <StatCard label="Génération" value={data.latest_generation >= 0 ? data.latest_generation : "—"} />
+            <StatCard label="Membres" value={data.members.length} />
+            <StatCard label="Élite" value={data.elite.length} />
+            {data.champion && (
+              <StatCard
+                label="Champion"
+                value={`${data.champion.clone_id.slice(0, 8)} (fitness ${data.champion.fitness?.toFixed(3) ?? "—"})`}
+                status="real"
+              />
+            )}
+          </div>
+          {data.members.length === 0 && (
+            <p className="page__subtitle">
+              Aucun membre pour « {specialty} » — lancer une génération amorce depuis le Genome PROMOTED
+              courant (voir <code>apex.genome.service.GenomeStoreService.promote</code>).
+            </p>
+          )}
+          {data.members.length > 0 && (
+            <div className="kv-table-wrap">
+              <table className="kv-table">
+                <thead>
+                  <tr>
+                    <th>Clone</th>
+                    <th>Génération</th>
+                    <th>Statut</th>
+                    <th>Fitness</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.members.map((member) => (
+                    <tr key={member.id}>
+                      <td>{member.clone_id.slice(0, 8)}</td>
+                      <td>{member.generation}</td>
+                      <td>{MEMBER_STATUS_LABEL[member.status]}</td>
+                      <td>{member.fitness !== null ? member.fitness.toFixed(3) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="mission-form__row">
+            <Button variant="primary" disabled={evolve.isPending} onClick={handleEvolve}>
+              {evolve.isPending ? "Génération en cours…" : "Lancer une génération"}
+            </Button>
+          </div>
+          {evolve.data?.status === "real" && evolve.data.data && evolve.data.data.failures.length > 0 && (
+            <ErrorState detail={`${evolve.data.data.failures.length} membre(s) en échec (isolés) : ${evolve.data.data.failures[0]}`} />
+          )}
+          {actionError && <ErrorState detail={actionError} />}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 /**
  * `GET /eval-runs` (+ détail) et `POST /experiment-cycles` — le seul point
  * d'écriture de cette page. `requested_by=Subject.HUMAN` est forcé côté
@@ -444,6 +547,8 @@ export function ExperimentLabPage() {
       <AutonomousLearningPanel
         specialty={specialty} currentLevel={currentLevel} method={method} split={split} cloneId={cloneId}
       />
+
+      <PopulationPanel specialty={specialty} />
 
       {selectedRunId && (
         <Panel title={`EvalRun ${selectedRunId.slice(0, 8)}`}>

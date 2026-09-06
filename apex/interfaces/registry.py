@@ -1229,6 +1229,53 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "Agent B -> Agent C -> Evaluator) reste explicitement "
               "`PLANNED`, aucun code ne le prétend implémenté.",
     ),
+    Abstraction(
+        "Population", "boucle évolutive de clones (Population -> Selection -> "
+        "Genome -> Experiment -> Fitness -> nouvelle génération)", 25, 25,
+        ImplStatus.STUB, "un seul clone, un seul Genome global, aucune évolution",
+        module="apex.metalearner.evolution",
+        notes="STUB et non IMPLEMENTED délibérément : `PopulationEvolutionService."
+              "evolve_generation` compose RÉELLEMENT `AgentRuntime.spawn`, "
+              "`GenomeStoreService.propose` (`mutate`/`crossover`, Phase 17, "
+              "jamais réimplémentés), `apex.genome.selection.successive_"
+              "halving` (Phase 17) et `apex.metalearner.cycle."
+              "run_experiment_cycle` (Phase 5+) — aucune seconde "
+              "implémentation d'aucun de ces éléments. `apex.metalearner."
+              "population_model.PopulationMember` n'ajoute qu'une table de bookkeeping "
+              "(`population_members`) reliant un `Clone` réel (`agents."
+              "clone_id`) à une `GenomeVersion` réelle (`genome_versions."
+              "id`) — pas de classe `Population` séparée (une population "
+              "EST l'ensemble des membres qui partagent `specialty`). "
+              "`apex.genome.clone_config.resolve_resource_limits` est la "
+              "PREMIÈRE influence réelle du contenu d'un Genome sur "
+              "l'exécution d'un clone (`ResourceLimits`, bornée pour ne "
+              "jamais dépasser la config administrateur) — tout le reste du "
+              "contenu d'un Genome (stratégie/modèle/skills activés) reste "
+              "inerte, non câblé. `apex.metalearner.population_fitness.compute_fitness` "
+              "est déterministe, sur des métriques RÉELLEMENT mesurées "
+              "(`OracleVerdict`, `elapsed_s`) — jamais inventées. Sélection "
+              "par `successive_halving` (élite/champion/hibernating/"
+              "retired) : des ÉTIQUETTES de bookkeeping interne, JAMAIS une "
+              "promotion `PolicyEngine` — `PROMOTE_GENOME_VERSION`/"
+              "`PROMOTE_SKILL` restent HUMAIN seul, inchangés, jamais "
+              "contournés. Un contrôle HELDOUT réel (`TaskSplit.HELDOUT`) "
+              "protège la promotion `CHAMPION` contre le surapprentissage. "
+              "Idempotent (`experiment_ref`, colonne `UNIQUE`) et isolé aux "
+              "pannes (un membre en échec ne bloque jamais la génération). "
+              "Séquentiel, jamais concurrent (§16, une future "
+              "parallélisation resterait un pas séparé). Plafonné "
+              "(`PopulationPolicy.max_population_size`/`generation_size`), "
+              "valeurs prudentes par défaut. Ce qui reste PLANNED : "
+              "`crossover` n'est utilisé qu'entre deux élites déjà "
+              "existantes (jamais à la génération 0) ; aucun orchestrateur "
+              "multi-génération automatique (l'appelant décide de "
+              "déclencher chaque génération) ; le contenu d'un Genome "
+              "n'influence toujours PAS le choix de modèle/stratégie/skills "
+              "activés (uniquement les limites de ressources) ; aucune "
+              "évolution distribuée, aucun ordonnancement GPU avancé, aucun "
+              "front de Pareto multi-objectif (réutilisable — `apex.genome."
+              "selection.pareto_front` existe déjà — mais non branché ici).",
+    ),
 )
 
 

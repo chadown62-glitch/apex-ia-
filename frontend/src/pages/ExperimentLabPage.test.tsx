@@ -2,7 +2,16 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { Agent, AutonomousLearningStatus, EvalRun, ExperimentCycle, LearningCycleStatus } from "../api/types";
+import type {
+  Agent,
+  AutonomousLearningStatus,
+  EvalRun,
+  EvolutionGeneration,
+  ExperimentCycle,
+  LearningCycleStatus,
+  Population,
+  PopulationMember,
+} from "../api/types";
 import { ExperimentLabPage } from "./ExperimentLabPage";
 
 function renderWithQueryClient(ui: React.ReactElement) {
@@ -307,5 +316,75 @@ describe("ExperimentLabPage — autonomous learning panel", () => {
     await waitFor(() => expect(screen.getByText(/cycle est déjà en cours/)).toBeInTheDocument());
     expect(screen.queryByText(/Traceback/)).not.toBeInTheDocument();
     expect(screen.queryByText(/at Object\./)).not.toBeInTheDocument();
+  });
+});
+
+describe("ExperimentLabPage — population panel", () => {
+  const originalFetch = globalThis.fetch;
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    vi.restoreAllMocks();
+  });
+
+  function member(overrides: Partial<PopulationMember> = {}): PopulationMember {
+    return {
+      id: "member-1", specialty: "research", generation: 0, clone_id: "clone-1",
+      genome_version_id: "genome-1", parent_member_id: null, status: "champion",
+      fitness: 1.2, fitness_components: { quality: 1.0 }, skill_candidate_id: null,
+      genome_candidate_id: null, created_at: "2025-01-01T00:00:00Z",
+      ...overrides,
+    };
+  }
+
+  it("shows an empty population before any generation has been evolved", async () => {
+    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url.includes("/eval-runs")) return jsonResponse({ status: "real", data: [], detail: null });
+      if (url.includes("/agents")) return jsonResponse({ status: "real", data: [agent], detail: null });
+      if (url.includes("/population/")) {
+        const data: Population = { specialty: "research", latest_generation: -1, champion: null, elite: [], members: [] };
+        return jsonResponse({ status: "real", data, detail: null });
+      }
+      return jsonResponse({ status: "real", data: null, detail: null });
+    }) as unknown as typeof fetch;
+
+    renderWithQueryClient(<ExperimentLabPage />);
+
+    await waitFor(() => expect(screen.getByText("Lancer une génération")).toBeInTheDocument());
+    expect(screen.getByText(/Aucun membre pour/)).toBeInTheDocument();
+  });
+
+  it("triggers a generation through the authenticated client with no identity field, and shows the resulting champion", async () => {
+    let postHeaders: Record<string, string> | undefined;
+    let populationState: Population = {
+      specialty: "research", latest_generation: -1, champion: null, elite: [], members: [],
+    };
+
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init?: RequestInit) => {
+      if (init?.method === "POST" && url.includes("/population/research/evolve")) {
+        postHeaders = init.headers as Record<string, string>;
+        const champion = member();
+        populationState = {
+          specialty: "research", latest_generation: 0, champion, elite: [], members: [champion],
+        };
+        const data: EvolutionGeneration = {
+          specialty: "research", generation: 0, members: [champion], champion, elite: [], failures: [],
+        };
+        return jsonResponse({ status: "real", data, detail: null });
+      }
+      if (url.includes("/eval-runs")) return jsonResponse({ status: "real", data: [], detail: null });
+      if (url.includes("/agents")) return jsonResponse({ status: "real", data: [agent], detail: null });
+      if (url.includes("/population/")) return jsonResponse({ status: "real", data: populationState, detail: null });
+      return jsonResponse({ status: "real", data: null, detail: null });
+    }) as unknown as typeof fetch;
+
+    renderWithQueryClient(<ExperimentLabPage />);
+
+    await waitFor(() => expect(screen.getByText("Lancer une génération")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Lancer une génération"));
+
+    await waitFor(() => expect(screen.getByText(/clone-1.*fitness 1\.200/)).toBeInTheDocument());
+    expect(postHeaders?.Authorization).toBe("Bearer test-suite-token");
+    expect(JSON.stringify(postHeaders)).not.toMatch(/subject|role|requested_by/i);
   });
 });

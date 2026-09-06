@@ -37,6 +37,7 @@ from apex.config.schema import ModelEndpoint
 from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
+from apex.genome import clone_config
 from apex.models.model import GenerationRequest
 from apex.models.provider import ModelProvider
 from apex.models.provider import get_default_provider as get_default_model_provider
@@ -95,6 +96,7 @@ class EvalRunnerService:
         requested_by: Subject = Subject.CORE,
         cancel_token: CancellationToken | None = None,
         strategy_facts: dict[str, Any] | None = None,
+        genome_content: dict[str, Any] | None = None,
     ) -> EvalRun:
         task = self._task_repo.get(task_id)
         if task is None:
@@ -111,7 +113,15 @@ class EvalRunnerService:
         # d'orchestration de mission).
         eval_run_id = str(uuid.uuid4())
         resolved_sandbox = self._sandbox or get_default_provider()
-        resolved_limits = limits or self._default_limits()
+        # `genome_content` (passe « Real Clone Population + Evolution Loop »)
+        # est la SEULE influence réelle, à ce jour, du contenu d'un Genome
+        # sur une exécution — voir `apex.genome.clone_config`. Optionnel,
+        # défaut `None` : tout appelant existant (`limits` explicite ou
+        # aucun des deux) se comporte exactement comme avant.
+        if limits is not None:
+            resolved_limits = limits
+        else:
+            resolved_limits = clone_config.resolve_resource_limits(genome_content, self._default_limits())
         started_at = _utcnow()
 
         spec = SandboxSpec(

@@ -669,6 +669,57 @@ class AutonomousLearningPolicy:
 
 
 @dataclass(frozen=True)
+class PopulationPolicy:
+    """Plafonds de la boucle évolutive (`apex.metalearner.evolution.
+    PopulationEvolutionService`, passe « Real Clone Population + Evolution
+    Loop »). Même discipline que `SchedulerPolicy`/`AutonomousLearningPolicy`
+    : des choix d'opérateur reconfigurables, jamais des constantes figées
+    dans le code — mais des VALEURS PRUDENTES par défaut (§15/§16 de la
+    mission : « valeurs prudentes pour le développement », « ne jamais
+    lancer des clones sans limite »).
+
+    `max_population_size` : membres NON `retired` simultanés, PAR
+    spécialité (`PopulationMemberRepository.count_active`) — le plafond
+    anti-explosion (§15).
+    `generation_size` : nombre de NOUVEAUX membres créés par appel à
+    `evolve_generation` — borne directement le coût d'UN appel (chaque
+    membre exécute un `run_experiment_cycle` réel, jamais gratuit).
+    `elite_size` : membres conservés `ELITE` après sélection
+    (`apex.genome.selection.successive_halving`) — toujours >= 1 (§9 :
+    « ne pas faire disparaître toute la diversité »).
+    `enable_crossover` : autorise `apex.genome.mutation.crossover` entre
+    deux élites existantes (jamais entre autre chose) quand au moins deux
+    existent — sinon, uniquement `mutate` sur un seul parent (§6 : mutation
+    robuste avant crossover artificiel)."""
+
+    max_population_size: int
+    generation_size: int
+    elite_size: int
+    enable_crossover: bool
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> PopulationPolicy:
+        max_population_size = int(raw.get("max_population_size", 8))
+        if max_population_size < 1:
+            raise ConfigError("max_population_size doit être >= 1", field="population.max_population_size")
+        generation_size = int(raw.get("generation_size", 3))
+        if generation_size < 1:
+            raise ConfigError("generation_size doit être >= 1", field="population.generation_size")
+        elite_size = int(raw.get("elite_size", 2))
+        if elite_size < 1:
+            raise ConfigError("elite_size doit être >= 1", field="population.elite_size")
+        if elite_size > generation_size:
+            raise ConfigError(
+                "elite_size ne peut pas dépasser generation_size", field="population.elite_size"
+            )
+        enable_crossover = as_bool(raw.get("enable_crossover", True), field="population.enable_crossover")
+        return cls(
+            max_population_size=max_population_size, generation_size=generation_size,
+            elite_size=elite_size, enable_crossover=enable_crossover,
+        )
+
+
+@dataclass(frozen=True)
 class RouterScoringPolicy:
     """Poids du score `apex.routing.router.select_model` — passe « Adaptive
     Model Router V1 ». Même discipline que `SchedulerPolicy` : un choix
@@ -756,6 +807,7 @@ class ApexConfig:
     scheduler: SchedulerPolicy
     routing: RouterScoringPolicy
     autonomous_learning: AutonomousLearningPolicy
+    population: PopulationPolicy
 
     # -- invariants transverses -------------------------------------------
 

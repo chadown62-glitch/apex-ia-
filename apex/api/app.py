@@ -92,6 +92,7 @@ from apex.api.routes import (
     learning,
     missions,
     models,
+    population,
     projects,
     registry,
     scheduler,
@@ -178,7 +179,7 @@ def create_app() -> FastAPI:
         health.router, gate.router, registry.router, events.router, audit.router,
         agents.router, missions.router, scheduler.router,
         conversations.router, projects.router, agent_templates.router, models.router,
-        agent_registry.router, evals.router, learning.router,
+        agent_registry.router, evals.router, learning.router, population.router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 
