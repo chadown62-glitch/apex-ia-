@@ -31,6 +31,7 @@ from apex.db.models import (
     EventRow,
     GauntletResultRow,
     GenomeVersionRow,
+    JudgeLearningSignalRow,
     LearningSessionRow,
     MemoryRecordRow,
     MemoryRelationRow,
@@ -1043,6 +1044,76 @@ class GauntletResultRepository:
             select(GauntletResultRow)
             .where(GauntletResultRow.specialty == specialty)
             .order_by(GauntletResultRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+
+class JudgeLearningSignalRepository:
+    """Persistance de `apex.metalearner.judge_feedback_service` (passe
+    « Judge Feedback -> Weakness -> Curriculum -> Adaptive Evolution »).
+    N'importe jamais `apex.metalearner` : même règle de couche que
+    `GauntletResultRepository`.
+
+    INSERT seul — un signal, une fois produit, n'est jamais modifié ni
+    supprimé (§10 de la mission : l'historique complet est la source de
+    vérité pour l'apprentissage futur)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        gauntlet_result_id: str,
+        member_id: str,
+        specialty: str,
+        generation: int,
+        genome_version_id: str,
+        judge_id: str,
+        judge_version: str,
+        dimension: str,
+        decision: str,
+        category: str,
+        failure_category: str | None,
+        severity: str | None,
+        score: float | None,
+        confidence: float | None,
+        finding_summary: str,
+        evidence_reference: str | None,
+        protocol_version: str,
+        created_at: datetime,
+    ) -> JudgeLearningSignalRow:
+        row = JudgeLearningSignalRow(
+            id=id, gauntlet_result_id=gauntlet_result_id, member_id=member_id, specialty=specialty,
+            generation=generation, genome_version_id=genome_version_id, judge_id=judge_id,
+            judge_version=judge_version, dimension=dimension, decision=decision, category=category,
+            failure_category=failure_category, severity=severity, score=score, confidence=confidence,
+            finding_summary=finding_summary, evidence_reference=evidence_reference,
+            protocol_version=protocol_version, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, signal_id: str) -> JudgeLearningSignalRow | None:
+        return self._session.get(JudgeLearningSignalRow, signal_id)
+
+    def list_by_specialty(
+        self, specialty: str, *, dimension: str | None = None, limit: int = 500,
+    ) -> list[JudgeLearningSignalRow]:
+        stmt = select(JudgeLearningSignalRow).where(JudgeLearningSignalRow.specialty == specialty)
+        if dimension is not None:
+            stmt = stmt.where(JudgeLearningSignalRow.dimension == dimension)
+        stmt = stmt.order_by(JudgeLearningSignalRow.created_at.asc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def list_by_member(self, member_id: str, *, limit: int = 200) -> list[JudgeLearningSignalRow]:
+        stmt = (
+            select(JudgeLearningSignalRow)
+            .where(JudgeLearningSignalRow.member_id == member_id)
+            .order_by(JudgeLearningSignalRow.created_at.asc())
             .limit(limit)
         )
         return list(self._session.scalars(stmt))

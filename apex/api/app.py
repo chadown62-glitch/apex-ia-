@@ -91,6 +91,7 @@ from apex.api.routes import (
     gauntlets,
     health,
     learning,
+    learning_feedback,
     learning_sessions,
     missions,
     models,
@@ -182,7 +183,7 @@ def create_app() -> FastAPI:
         agents.router, missions.router, scheduler.router,
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, learning.router, population.router,
-        learning_sessions.router, gauntlets.router,
+        learning_sessions.router, gauntlets.router, learning_feedback.router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 

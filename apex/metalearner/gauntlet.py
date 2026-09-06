@@ -24,8 +24,6 @@ commutatifs, jamais un `if premier juge alors ...`)."""
 
 from __future__ import annotations
 
-from typing import Any
-
 from apex.metalearner.judge_model import (
     GauntletResult,
     GauntletStage,
@@ -40,8 +38,12 @@ _DEFAULT_MIN_CONFIDENCE = 0.6
 
 
 def _judge_error_result(judge: Judge, exc: Exception) -> JudgeResult:
-    """Case I (§21/§23) : un juge qui plante ne devient JAMAIS un PASS."""
-    from apex.metalearner.judge_model import JudgeFinding
+    """Case I (§21/§23) : un juge qui plante ne devient JAMAIS un PASS.
+    L'évidence `kind="judge_error"` (passe N+9, additif) rend ce chemin
+    STRUCTURELLEMENT détectable par `apex.metalearner.judge_feedback_
+    service.classify` — jamais confondu avec une preuve du candidat lui-
+    même (§11 de la mission N+9 : « Judge crash ≠ candidate mauvais »)."""
+    from apex.metalearner.judge_model import JudgeEvidence, JudgeFinding
 
     return JudgeResult(
         judge_id=judge.judge_id, judge_version=judge.judge_version, dimension=judge.dimension,
@@ -52,6 +54,11 @@ def _judge_error_result(judge: Judge, exc: Exception) -> JudgeResult:
                 dimension=judge.dimension, severity=JudgeSeverity.HIGH,
                 summary="le juge a levé une exception pendant l'évaluation",
                 detail=f"{exc.__class__.__name__}: {exc}",
+            ),
+        ),
+        evidence=(
+            JudgeEvidence(
+                kind="judge_error", reference=judge.judge_id, detail=f"{exc.__class__.__name__}: {exc}",
             ),
         ),
     )

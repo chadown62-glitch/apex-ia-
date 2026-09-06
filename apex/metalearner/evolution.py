@@ -54,8 +54,8 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from apex.agents.runtime import AgentRuntime
 from apex.errors import PopulationCapExceeded
@@ -69,11 +69,14 @@ from apex.metalearner.gauntlet import GauntletRunner
 from apex.metalearner.gauntlet_repository import GauntletRepository
 from apex.metalearner.judge_model import GauntletResult, JudgeDecision
 from apex.metalearner.judges import JudgeInput
-from apex.metalearner.population_fitness import compute_fitness, FitnessResult
+from apex.metalearner.population_fitness import FitnessResult, compute_fitness
 from apex.metalearner.population_model import MemberStatus, PopulationMember
 from apex.metalearner.population_service import PopulationService
 from apex.policy.model import Subject
 from apex.tasks.model import TaskSplit
+
+if TYPE_CHECKING:
+    from apex.metalearner.judge_feedback_model import EvolutionContext
 
 _EVENT_LOGGER = "apex.metalearner.evolution"
 _EXPERIMENT_REF_PREFIX = "evolution"
@@ -82,7 +85,7 @@ _DEFAULT_MUTATION_MAGNITUDE = 0.15
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _deterministic_seed(experiment_ref: str) -> int:
@@ -160,6 +163,12 @@ class PopulationEvolutionService:
 
         generation = self._population.latest_generation(specialty) + 1
         parents = self._select_parents(specialty, generation)
+        # Contexte d'évolution (§8 de la mission N+9) : preuve RÉELLE déjà
+        # persistée (`judge_learning_signals`/`gauntlet_results`, N+8/N+9),
+        # jamais un second moteur d'évolution — n'influence QUE le biais de
+        # mutation (`focus_genome_paths`), jamais la sélection/HELDOUT/véto,
+        # inchangés.
+        evolution_context = self._build_evolution_context(specialty)
 
         created: list[PopulationMember] = []
         failures: list[MemberFailure] = []
@@ -169,7 +178,7 @@ class PopulationEvolutionService:
                 member = self._create_member(
                     specialty=specialty, generation=generation, index=index, parents=parents,
                     experiment_ref=experiment_ref, current_level=current_level, method=method,
-                    policy=policy,
+                    policy=policy, focus_genome_paths=frozenset(evolution_context.focus_genome_paths),
                 )
             except PopulationCapExceeded as exc:
                 self._record_event(
@@ -214,6 +223,7 @@ class PopulationEvolutionService:
         current_level: int,
         method: EvalMethod,
         policy: Any,
+        focus_genome_paths: frozenset[str] = frozenset(),
     ) -> PopulationMember | None:
         existing = self._population.get_by_experiment_ref(experiment_ref)
         if existing is not None:
@@ -223,6 +233,7 @@ class PopulationEvolutionService:
         genome_version, genome_content, parent_member_id = self._propose_offspring_genome(
             specialty=specialty, parent_a=parent_a, parent_b=parent_b,
             experiment_ref=experiment_ref, use_crossover=policy.enable_crossover and index % 2 == 1,
+            focus_genome_paths=focus_genome_paths,
         )
 
         from apex.agents.pool_selection import pick_sandbox_capable_pool
@@ -288,6 +299,7 @@ class PopulationEvolutionService:
         parent_b: PopulationMember | None,
         experiment_ref: str,
         use_crossover: bool,
+        focus_genome_paths: frozenset[str] = frozenset(),
     ) -> tuple[Any, dict[str, Any], str | None]:
         seed = _deterministic_seed(experiment_ref)
         if parent_a is None:
@@ -300,7 +312,10 @@ class PopulationEvolutionService:
                     "(voir apex.genome.service.GenomeStoreService.promote)"
                 )
             content = self._genome.get_content(current.id)
-            mutated = mutate(content, rate=_DEFAULT_MUTATION_RATE, magnitude=_DEFAULT_MUTATION_MAGNITUDE, seed=seed)
+            mutated = mutate(
+                content, rate=_DEFAULT_MUTATION_RATE, magnitude=_DEFAULT_MUTATION_MAGNITUDE, seed=seed,
+                focus_paths=focus_genome_paths,
+            )
             version = self._genome.propose(
                 content=mutated, created_by=Subject.CORE, origin=GenomeVersionOrigin.MUTATION,
                 parent_version_id=current.id,
@@ -317,12 +332,35 @@ class PopulationEvolutionService:
             )
             return version, child_content, parent_a.id
 
-        child_content = mutate(content_a, rate=_DEFAULT_MUTATION_RATE, magnitude=_DEFAULT_MUTATION_MAGNITUDE, seed=seed)
+        child_content = mutate(
+            content_a, rate=_DEFAULT_MUTATION_RATE, magnitude=_DEFAULT_MUTATION_MAGNITUDE, seed=seed,
+            focus_paths=focus_genome_paths,
+        )
         version = self._genome.propose(
             content=child_content, created_by=Subject.CORE, origin=GenomeVersionOrigin.MUTATION,
             parent_version_id=parent_a.genome_version_id,
         )
         return version, child_content, parent_a.id
+
+    def _build_evolution_context(self, specialty: str) -> EvolutionContext:
+        """§8 de la mission N+9 — construit le contexte à partir de preuve
+        RÉELLEMENT déjà persistée (`judge_learning_signals`), jamais une
+        estimation. Ne fait QUE lire ; aucune écriture, aucun effet de
+        bord — appelé une fois par `evolve_generation`, jamais mis en
+        cache (les faiblesses évoluent à chaque génération)."""
+        from apex.metalearner.curriculum_engine import CurriculumEngineService
+        from apex.metalearner.judge_feedback_model import EvolutionContext
+        from apex.metalearner.weakness_engine import WeaknessEngineService
+
+        weaknesses = WeaknessEngineService(self._session_factory).aggregate(specialty)
+        targets = CurriculumEngineService(self._session_factory).build_targets(specialty)
+        focus_paths: set[str] = set()
+        for target in targets:
+            focus_paths.update(target.focus_genome_paths)
+        return EvolutionContext(
+            specialty=specialty, active_weaknesses=weaknesses, curriculum_targets=targets,
+            focus_genome_paths=tuple(sorted(focus_paths)),
+        )
 
     # -- sélection de parents / de survivants ----------------------------------
 
@@ -437,6 +475,9 @@ class PopulationEvolutionService:
         runner = GauntletRunner(min_confidence_threshold=config.gauntlet.min_confidence_threshold)
         result = runner.run_cheap(judge_input, specialty=specialty, generation=generation, member_id=member.id)
         self._gauntlet_repo.create(result)
+        # Judge Feedback (passe N+9) : un signal structuré par juge, jamais
+        # un texte narratif seul — voir apex.metalearner.judge_feedback_service.
+        self._record_judge_signals(result, genome_version_id=member.genome_version_id)
         return result
 
     def _run_full_gauntlet(
@@ -499,6 +540,15 @@ class PopulationEvolutionService:
             run_expensive=config.gauntlet.enable_expensive_judges,
         )
         self._gauntlet_repo.create(full_result)
+        # Seuls les jugements NOUVELLEMENT ajoutés par le stage FULL (les
+        # juges EXPENSIVE) reçoivent un signal ici — les jugements CHEAP
+        # réutilisés tels quels ont déjà été enregistrés par
+        # `_run_cheap_gauntlet` ; les ré-enregistrer doublonnerait leur
+        # poids dans l'agrégation de faiblesse (§4 de la mission N+9).
+        new_judge_results = full_result.judge_results[len(cheap_result.judge_results):]
+        self._record_judge_signals(
+            full_result, genome_version_id=candidate.genome_version_id, judge_results=new_judge_results,
+        )
         return full_result
 
     def _repeat_execution(
@@ -593,6 +643,29 @@ class PopulationEvolutionService:
             )
             return None, None
         return outcome.skill_candidate_id, outcome.genome_candidate_id
+
+    def _record_judge_signals(
+        self, gauntlet_result: GauntletResult, *, genome_version_id: str, judge_results: Any = None,
+    ) -> None:
+        """Isolation des pannes — même discipline que `_process_feedback` :
+        une panne d'enregistrement du feedback ne doit JAMAIS faire
+        échouer la création d'un membre dont l'expérience/le jugement a
+        déjà réellement eu lieu (§28 : le Judge System enrichit le
+        pipeline, il ne doit jamais pouvoir le casser)."""
+        from apex.metalearner.judge_feedback_service import JudgeFeedbackService
+
+        try:
+            JudgeFeedbackService(self._session_factory).record_signals(
+                gauntlet_result, genome_version_id=genome_version_id, judge_results=judge_results,
+            )
+        except Exception as exc:
+            self._record_event(
+                "evolution.judge_feedback_failed",
+                {
+                    "specialty": gauntlet_result.specialty, "gauntlet_result_id": gauntlet_result.id,
+                    "error": f"{exc.__class__.__name__}: {exc}",
+                },
+            )
 
     def _resolved_limits(self, genome_content: dict[str, Any] | None) -> Any:
         """Reproduit EXACTEMENT ce que `EvalRunnerService._default_limits()`

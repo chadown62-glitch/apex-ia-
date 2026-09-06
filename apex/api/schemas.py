@@ -728,3 +728,71 @@ class GauntletResultOut(BaseModel):
     judge_results: list[JudgeResultOut]
     compared_champion_id: str | None
     created_at: str
+
+
+# -- judge feedback / weakness / curriculum (passe « Judge Feedback -> Weakness -> Curriculum »)
+
+
+class JudgeLearningSignalOut(BaseModel):
+    """Projette `apex.metalearner.judge_feedback_model.JudgeLearningSignal`
+    — le feedback structuré d'UN `JudgeResult`. `category`/
+    `failure_category` distinguent explicitement une faiblesse RÉELLE du
+    candidat d'une panne d'évaluation/infrastructure (§11 de la mission)."""
+
+    id: str
+    gauntlet_result_id: str
+    member_id: str
+    specialty: str
+    generation: int
+    genome_version_id: str
+    judge_id: str
+    judge_version: str
+    dimension: str
+    decision: str
+    category: str
+    failure_category: str | None
+    severity: str | None
+    score: float | None
+    confidence: float | None
+    finding_summary: str
+    evidence_reference: str | None
+    protocol_version: str
+    created_at: str
+
+
+class GauntletWeaknessOut(BaseModel):
+    """Projette `apex.metalearner.judge_feedback_model.GauntletWeakness` —
+    un agrégat DÉRIVÉ des signaux réels (recalculé à la demande, jamais
+    persisté séparément — voir `apex.metalearner.weakness_engine`)."""
+
+    specialty: str
+    dimension: str
+    failure_category: str
+    severity: str
+    frequency: int
+    confidence: float
+    first_seen: str
+    last_seen: str
+    first_seen_generation: int
+    last_seen_generation: int
+    affected_candidates: list[str]
+    affected_generations: list[int]
+    affected_genomes: list[str]
+    evidence_count: int
+    recurrence_count: int
+    improvement_status: str
+    suspected_inherited_from: str | None
+
+
+class CurriculumTargetOut(BaseModel):
+    """Projette `apex.metalearner.judge_feedback_model.CurriculumTarget` —
+    ne modifie JAMAIS un score directement (§6 de la mission) : une
+    recommandation, jamais une décision automatique."""
+
+    specialty: str
+    dimension: str
+    weakness: GauntletWeaknessOut
+    recommended_mode: str | None
+    base_task_id: str | None
+    focus_genome_paths: list[str]
+    rationale: str

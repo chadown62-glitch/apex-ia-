@@ -982,6 +982,151 @@ ne masque jamais un véto ; AUCUNE preuve manquante ne devient jamais un
   passe ; une visualisation minimale reste un chantier distinct) ; aucun
   ordonnancement GPU/parallélisme spéculatif (séquentiel, déterministe).
 
+### Judge Feedback -> Weakness -> Curriculum -> Adaptive Evolution
+
+Referme la limitation explicitement laissée ouverte par N+8 (« le rejet est
+visible via `EventRepository`, pas encore un signal d'apprentissage
+automatique ») — § mission N+9 :
+
+```
+Gauntlet (CHEAP puis FULL, N+8, INCHANGÉ)
+  -> JudgeLearningSignal (1 par JudgeResult, classification pure)
+  -> judge_learning_signals (INSERT seul)
+  -> WeaknessEngineService.aggregate (calculé à la demande, jamais persisté
+     comme état mutable — même discipline qu'apex.weakness.model)
+  -> CurriculumEngineService.build_targets (tâches ciblées PAR dimension,
+     jamais un score modifié directement)
+  -> EvolutionContext (chemins Genome à biaiser)
+  -> PopulationEvolutionService.evolve_generation (SEUL moteur, N+6/N+7/N+8
+     inchangé) -> mutation biaisée -> nouvelle expérience -> nouveau Gauntlet
+```
+
+- **`apex.metalearner.judge_feedback_model`** (nouveau, pur) —
+  `SignalCategory` (`SUCCESS`/`WEAKNESS`/`FAILURE`/`CRITICAL_FAILURE`/
+  `INCONCLUSIVE`, répond à « que faire de ce signal ») et `FailureCategory`
+  (`CANDIDATE_FAILURE`/`JUDGE_FAILURE`/`INSUFFICIENT_EVIDENCE`/
+  `INFRASTRUCTURE_FAILURE`/`POLICY_REJECTION`/`GENUINE_CAPABILITY_WEAKNESS`,
+  répond à « pourquoi ») sont deux axes ORTHOGONAUX — jamais confondus
+  (§11 de la mission : un juge qui plante ou une preuve absente ne devient
+  JAMAIS « le modèle est mauvais »). `JudgeLearningSignal` (1 par
+  `JudgeResult`, jamais agrégé à l'écriture), `GauntletWeakness` (calculée,
+  même patron qu'`apex.weakness.model.WeaknessReport`), `CurriculumTarget`,
+  `EvolutionContext` (chemins Genome + génération recommandée, jamais un
+  second moteur).
+- **`apex.metalearner.judge_feedback_service.classify`** — fonction PURE
+  `(JudgeResult, EvalRun | None) -> (SignalCategory, FailureCategory |
+  None)` : un `PASS` -> `SUCCESS` ; un `REJECT` non-véto -> `WEAKNESS` ; un
+  véto (`JudgeSeverity.CRITICAL`) -> `CRITICAL_FAILURE`, JAMAIS rétrogradé ;
+  un `INCONCLUSIVE` re-vérifie le VRAI `EvalRun` référencé (preuve
+  `JudgeEvidence`, jamais le texte de la justification) : `oracle_verdict
+  is ERROR` -> `INFRASTRUCTURE_FAILURE`, sinon `INSUFFICIENT_EVIDENCE` ; un
+  marqueur structurel `JudgeEvidence(kind="judge_error")` (ajout additif à
+  `GauntletRunner._judge_error_result`, N+8) -> `JUDGE_FAILURE`, jamais
+  confondu avec une faiblesse réelle du candidat.
+- **`JudgeFeedbackService.record_signals`** — appelée par
+  `PopulationEvolutionService` juste après CHAQUE stage de Gauntlet (CHEAP
+  et FULL), isolée par `try/except` (même discipline que
+  `_process_feedback`, N+5) : un échec d'enregistrement du signal ne casse
+  JAMAIS la création du membre ni le résultat déjà obtenu du Gauntlet.
+  Anti-double-comptage : le stage FULL ne réutilise que la TRANCHE de
+  `judge_results` réellement NOUVELLE (`full_result.judge_results[len(
+  cheap_result.judge_results):]`) — un jugement déjà persisté au stage
+  CHEAP (court-circuit véto/`enable_expensive_judges=False`, N+8) n'est
+  jamais recompté, jamais gonflé dans la fréquence d'une faiblesse.
+- **`apex.metalearner.weakness_engine.WeaknessEngineService`** — `aggregate`
+  regroupe les signaux `WEAKNESS`/`CRITICAL_FAILURE` par `(specialty,
+  dimension, failure_category)`, calculé à la demande (jamais une ligne
+  « faiblesse courante » mutable en base — une seule table INSERT seul,
+  `judge_learning_signals`, reste la source de vérité). Formules
+  déterministes documentées, aucun score magique : `confidence = min(1.0,
+  len(group) / 5)` (`_CONFIDENCE_SATURATION_COUNT`) ; `improvement_status`
+  = fonction pure de l'écart entre `last_seen_generation` et la génération
+  la plus récente (`gap <= 0` -> `PERSISTENT`, `gap == 1` -> `RECOVERING`,
+  `gap >= 2` -> `RESOLVED`, fenêtre `_RECENCY_WINDOW_GENERATIONS = 2`).
+  `history` renvoie les signaux bruts, filtrables par dimension.
+- **Corrélation de faiblesse suspectée héritée (§5, jamais une causalité
+  confirmée)** — `_suspected_common_ancestor` parcourt le VRAI lignage
+  (`PopulationService.get_lineage`, N+6, inchangé) de chaque membre affecté
+  et n'affirme un ancêtre commun QUE s'il est réellement partagé par TOUS
+  les membres affectés (`None` sinon, ou si moins de 2 membres affectés) —
+  exposé comme `suspected_inherited_from`, jamais un vocabulaire de
+  certitude.
+- **`apex.metalearner.curriculum_engine.CurriculumEngineService`** —
+  génère des TÂCHES ciblées par dimension, ne modifie JAMAIS un score
+  directement. Honnête sur ses limites réelles : `REGRESSION` utilise le
+  VRAI `GenerationMode.REGRESSION` (`apex.taskgen.deterministic`) avec un
+  `base_task_id` récupéré depuis la preuve déjà persistée ; `CORRECTNESS`
+  OBSERVE seulement le chemin automatique déjà existant
+  (`MetaLearner.select_strategy` -> `GenerationMode.TARGETED_WEAKNESS`,
+  N+ antérieur) — ne le redéclenche jamais, pour éviter un second pipeline
+  parallèle ; `EFFICIENCY`/`ROBUSTNESS` recommandent le seul champ Genome
+  réellement exposé pertinent (`execution.timeout_s`,
+  `apex.genome.clone_config._OVERRIDABLE_FIELDS`) ; `SECURITY`/
+  `GENERALIZATION` renvoient honnêtement `recommended_mode=None`,
+  `focus_genome_paths=()` — aucun générateur/champ réel ne les gouverne
+  encore (jamais une recommandation fabriquée pour combler l'absence).
+- **Mutation adaptative biaisée, jamais un nouveau mécanisme de sécurité**
+  — `apex.genome.mutation.mutate` étendu avec `focus_paths`/
+  `focus_rate_multiplier` (défauts = no-op total, les 18 tests N+6
+  préexistants passent inchangés, RNG byte-identique à vide) : un chemin
+  Genome dans `focus_paths` obtient `effective_rate = min(1.0, rate *
+  focus_rate_multiplier)` (défaut `3.0`) au lieu du taux uniforme. Le
+  PLAFOND de sécurité reste EXCLUSIVEMENT `apex.genome.clone_config._clamp`
+  (N+6, INCHANGÉ, jamais dupliqué ici) — vérifié par un test de résistance
+  à 200 essais : aucune valeur mutée biaisée ne dépasse jamais la limite
+  administrateur, `network` ne devient jamais mutable même s'il apparaissait
+  par erreur dans `focus_paths`.
+- **`EvolutionContext` construit à chaque `evolve_generation`, UN SEUL
+  moteur d'évolution** — `_build_evolution_context` appelle `aggregate` +
+  `build_targets`, union des `focus_genome_paths` de toutes les cibles, et
+  passe le résultat à `_create_member`/`_propose_offspring_genome` (les
+  DEUX points de mutation hors croisement — le croisement reste inchangé).
+  Jamais un second moteur : uniquement un biais d'entrée supplémentaire
+  pour `PopulationEvolutionService`, seul point d'évolution du dépôt.
+- **Anti-reward-hacking (§9, CRITIQUE) — rien de nouveau n'est affaibli** :
+  HELDOUT (`GeneralizationJudge`, N+8), comparaison au CHAMPION
+  (`RegressionJudge`, N+8), diversité des juges, agrégation déterministe
+  (`GauntletRunner._aggregate`, N+8) restent EXACTEMENT ceux de N+8 — cette
+  passe n'ajoute qu'une couche de LECTURE/biais en amont de la mutation ;
+  aucun chemin ne permet à un score de juge UNIQUE de promouvoir un
+  candidat, aucun chemin ne permet de régresser sur HELDOUT et d'être quand
+  même promu (vérifié explicitement par les tests de résistance §9).
+- **Persistence** — `judge_learning_signals` (migration `be2826e5de10`,
+  INSERT seul, même garantie qu'`eval_runs`/`gauntlet_results`) : un
+  enregistrement par `JudgeResult`, colonnes structurées (`dimension`/
+  `decision`/`category`/`failure_category`/`severity`/`score`/
+  `confidence`/`finding_summary`/`evidence_reference`/`generation`/
+  `genome_version_id`/`member_id`) — répond aux questions de récurrence/
+  correction/génome/génération SANS dépendre d'un texte narratif seul.
+- **API** (`apex/api/routes/learning_feedback.py`, lecture seule) — `GET
+  /learning-feedback/{id}`, `GET /weaknesses/{specialty}`, `GET
+  /weaknesses/{specialty}/history` (filtrable par dimension), `GET
+  /curriculum/{specialty}`, `GET /population/{specialty}/learning-signals`
+  (filtrable par membre), `GET /learning-sessions/{id}/weaknesses`
+  (délègue à la spécialité de LA session, jamais un second calcul).
+  Surface volontairement minimale (§12), aucune route mutative : le Judge
+  Feedback ne s'exécute que depuis `PopulationEvolutionService`.
+- **Tests** — `tests/test_judge_feedback.py` (24, classification/
+  persistence/agrégation/corrélation de lignage/honnêteté du curriculum),
+  `tests/test_adaptive_evolution.py` (10, mutation biaisée/plafond
+  administrateur/garanties champion+HELDOUT/résistance au reward hacking/
+  une preuve de bout en bout RÉELLE — seul le verdict d'UN juge est forcé
+  via `unittest.mock.patch.object`, même patron déjà accepté en N+8 ; le
+  reste de la chaîne — sandbox, fitness, persistance, agrégation,
+  curriculum, mutation, ré-évaluation — s'exécute intégralement sans
+  simulation), `tests/test_api_learning_feedback.py` (16, authentification/
+  dégradation sans DB/validation d'entrée/PostgreSQL réel).
+- **Non fait dans cette passe (différé explicitement)** : `EDGE_CASE`/
+  `ADVERSARIAL`/`BUG_FARM` restent des modes de génération PLANNED — aucune
+  tâche ciblée réelle pour ces dimensions ; aucun mécanisme réel ne
+  gouverne encore `SECURITY`/`GENERALIZATION` côté génération de tâche ou
+  champ Genome (honnêtement `None`, jamais fabriqué) ; `CORRECTNESS` ne
+  fait qu'OBSERVER le chemin automatique déjà existant, jamais un second
+  déclenchement ; aucune calibration de juge (faux positifs/négatifs,
+  réputation) au-delà du modèle de données qui le permettrait pour une
+  phase future ; frontend NON câblé (API d'observabilité suffisante pour
+  cette passe) ; aucun ordonnancement GPU/parallélisme spéculatif.
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

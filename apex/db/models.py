@@ -63,7 +63,7 @@ Ce que ce module ne fait PAS :
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String, Text, text
@@ -71,7 +71,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 class Base(DeclarativeBase):
@@ -912,6 +912,74 @@ class GauntletResultRow(Base):
             "stopped_after_critical_failure": self.stopped_after_critical_failure,
             "judge_results": self.judge_results,
             "compared_champion_id": self.compared_champion_id,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
+class JudgeLearningSignalRow(Base):
+    """Persiste `apex.metalearner.judge_feedback_model.JudgeLearningSignal`
+    (passe « Judge Feedback -> Weakness -> Curriculum -> Adaptive
+    Evolution », N+9) — le feedback structuré d'UN `JudgeResult`, dans le
+    contexte d'UN `GauntletResult` (`gauntlet_results`, N+8).
+
+    INSERT seul (même garantie que `gauntlet_results`/`eval_runs`) : un
+    signal, une fois produit, n'est jamais modifié — l'historique complet
+    (§10 de la mission : « Learning Memory ») reste la SEULE source de
+    vérité, jamais un agrégat mutable séparé (`apex.metalearner.
+    weakness_engine.GauntletWeakness` est TOUJOURS recalculé à la demande
+    depuis ces lignes, même discipline qu'`apex.weakness.model.
+    WeaknessReport` vis-à-vis d'`eval_runs`).
+
+    `genome_version_id` référencé PAR VALEUR (même choix qu'ailleurs dans ce
+    module) — permet la corrélation par lignage (§5) sans jointure
+    déclarée. `category`/`failure_category` distinguent explicitement une
+    faiblesse RÉELLE du candidat d'une panne d'évaluation/infrastructure
+    (§11 — jamais confondues)."""
+
+    __tablename__ = "judge_learning_signals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    gauntlet_result_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    member_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    generation: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    genome_version_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    judge_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    judge_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    dimension: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    decision: Mapped[str] = mapped_column(String(16), nullable=False)
+    category: Mapped[str] = mapped_column(String(24), nullable=False, index=True)
+    failure_category: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    severity: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    finding_summary: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence_reference: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    protocol_version: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "gauntlet_result_id": self.gauntlet_result_id,
+            "member_id": self.member_id,
+            "specialty": self.specialty,
+            "generation": self.generation,
+            "genome_version_id": self.genome_version_id,
+            "judge_id": self.judge_id,
+            "judge_version": self.judge_version,
+            "dimension": self.dimension,
+            "decision": self.decision,
+            "category": self.category,
+            "failure_category": self.failure_category,
+            "severity": self.severity,
+            "score": self.score,
+            "confidence": self.confidence,
+            "finding_summary": self.finding_summary,
+            "evidence_reference": self.evidence_reference,
+            "protocol_version": self.protocol_version,
             "created_at": self.created_at.isoformat(),
         }
 

@@ -14,7 +14,20 @@ faire ENTRER dans l'historique versionné reste
 jamais automatique — aucune promotion, aucun raccordement à `AgentRuntime`.
 
 Déterministe pour une graine donnée — reproductible, jamais un résultat qui
-varie d'une exécution à l'autre pour les mêmes données."""
+varie d'une exécution à l'autre pour les mêmes données.
+
+**`focus_paths`/`focus_rate_multiplier`** (passe « Judge Feedback ->
+Weakness -> Curriculum -> Adaptive Evolution », N+9, additif — défaut
+`frozenset()`/`3.0`, AUCUN appelant existant n'est affecté) : oriente la
+mutation vers des feuilles RÉELLEMENT déjà présentes dans `genome` (§7 de
+la mission : « NE PAS inventer de nouveaux Genome fields ») — un chemin
+absent du contenu n'est jamais ajouté, seul un chemin qui existe DÉJÀ voit
+son `rate` effectif multiplié (plafonné à `1.0`). N'élève JAMAIS une
+limite de ressource au-delà de la politique administrateur : ce module ne
+fait QUE proposer une valeur candidate, `apex.genome.clone_config.
+resolve_resource_limits`/`_clamp` restent l'UNIQUE barrière (inchangée)
+qui rejette silencieusement toute valeur au-delà du plafond réel, quelle
+que soit la mutation produite ici."""
 
 from __future__ import annotations
 
@@ -24,7 +37,15 @@ from typing import Any
 JsonLeaf = bool | int | float | str | None
 
 
-def mutate(genome: dict[str, Any], *, rate: float, seed: int, magnitude: float = 0.1) -> dict[str, Any]:
+def mutate(
+    genome: dict[str, Any],
+    *,
+    rate: float,
+    seed: int,
+    magnitude: float = 0.1,
+    focus_paths: frozenset[str] = frozenset(),
+    focus_rate_multiplier: float = 3.0,
+) -> dict[str, Any]:
     """Mutation ponctuelle : chaque feuille numérique (int/float, jamais un
     bool traité comme un entier) a une probabilité `rate` d'être perturbée
     de `± magnitude` (relatif) ; chaque feuille booléenne a la même
@@ -38,25 +59,44 @@ def mutate(genome: dict[str, Any], *, rate: float, seed: int, magnitude: float =
     if magnitude < 0.0:
         raise ValueError("magnitude doit être >= 0.0")
     rng = random.Random(seed)
-    return _mutate_value(genome, rate=rate, magnitude=magnitude, rng=rng)
+    return _mutate_value(
+        genome, rate=rate, magnitude=magnitude, rng=rng, path="",
+        focus_paths=focus_paths, focus_rate_multiplier=focus_rate_multiplier,
+    )
 
 
-def _mutate_value(value: Any, *, rate: float, magnitude: float, rng: random.Random) -> Any:
+def _mutate_value(
+    value: Any, *, rate: float, magnitude: float, rng: random.Random, path: str,
+    focus_paths: frozenset[str], focus_rate_multiplier: float,
+) -> Any:
     if isinstance(value, dict):
-        return {k: _mutate_value(v, rate=rate, magnitude=magnitude, rng=rng) for k, v in value.items()}
+        return {
+            k: _mutate_value(
+                v, rate=rate, magnitude=magnitude, rng=rng, path=f"{path}.{k}" if path else k,
+                focus_paths=focus_paths, focus_rate_multiplier=focus_rate_multiplier,
+            )
+            for k, v in value.items()
+        }
     if isinstance(value, list):
-        return [_mutate_value(v, rate=rate, magnitude=magnitude, rng=rng) for v in value]
+        return [
+            _mutate_value(
+                v, rate=rate, magnitude=magnitude, rng=rng, path=path,
+                focus_paths=focus_paths, focus_rate_multiplier=focus_rate_multiplier,
+            )
+            for v in value
+        ]
+    effective_rate = min(1.0, rate * focus_rate_multiplier) if path in focus_paths else rate
     if isinstance(value, bool):
-        return (not value) if rng.random() < rate else value
+        return (not value) if rng.random() < effective_rate else value
     if isinstance(value, int):
-        if rng.random() >= rate:
+        if rng.random() >= effective_rate:
             return value
         delta = value * rng.uniform(-magnitude, magnitude)
         if delta == 0:
             delta = rng.choice((-1, 1))
         return int(round(value + delta))
     if isinstance(value, float):
-        if rng.random() >= rate:
+        if rng.random() >= effective_rate:
             return value
         return value * (1.0 + rng.uniform(-magnitude, magnitude))
     return value
