@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ApexSetup.Gui.ViewModels"
+             x:Class="ApexSetup.Gui.Views.WelcomeView"
+             x:DataType="vm:WelcomeViewModel">
+    <StackPanel Spacing="12" MaxWidth="520" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="Bienvenue dans Apex Setup" FontSize="22" FontWeight="Bold" />
+        <TextBlock Text="Renseignez les informations nécessaires pour préparer l'installation." TextWrapping="Wrap" Opacity="0.8" />
+
+        <TextBlock Text="Version APEX cible" />
+        <TextBox Text="{Binding ApexVersion}" Watermark="0.1.2" />
+
+        <TextBlock Text="Destination d'installation" />
+        <TextBox Text="{Binding Destination}" Watermark="C:\Apex" />
+
+        <TextBlock Text="Fichier manifeste modèle" />
+        <TextBox Text="{Binding ManifestPath}" Watermark="C:\Apex\manifest.json" />
+
+        <Button Content="Démarrer" Command="{Binding StartCommand}" HorizontalAlignment="Right" Margin="0,12,0,0" />
+    </StackPanel>
+</UserControl>

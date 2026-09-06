@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ApexSetup.Gui.ViewModels"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             x:Class="ApexSetup.Gui.Views.InstallProgressView"
+             x:DataType="vm:InstallProgressViewModel">
+    <StackPanel Spacing="10" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="Installation" FontSize="20" FontWeight="Bold" />
+
+        <!-- Indicateur d'activité INDÉTERMINÉ, jamais un pourcentage fabriqué (ISetupApplicationService n'expose pas de progression par étape à ce jour). -->
+        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="6" />
+        <TextBlock Text="Installation en cours — ne fermez pas cette fenêtre." IsVisible="{Binding IsBusy}" />
+
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" IsVisible="{Binding ErrorMessage, Converter={x:Static conv:ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+
+        <StackPanel IsVisible="{Binding Result, Converter={x:Static conv:ObjectConverters.IsNotNull}}" Spacing="4">
+            <TextBlock Text="{Binding Result.ExecutedSteps, StringFormat='Étapes exécutées : {0}'}" TextWrapping="Wrap" />
+            <TextBlock Text="Installation commitée avec succès." IsVisible="{Binding Committed}" FontWeight="Bold" Foreground="Green" />
+            <TextBlock Text="{Binding Result.FailedStep, StringFormat='Étape en échec : {0}'}" IsVisible="{Binding !Committed}" Foreground="Red" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Annuler" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+            <Button Content="Installer" Command="{Binding InstallCommand}" IsVisible="{Binding !IsBusy}" />
+            <Button Content="Récupérer une installation interrompue" Command="{Binding RecoverInsteadCommand}" IsVisible="{Binding !IsBusy}" />
+            <Button Content="Continuer" Command="{Binding ContinueCommand}" IsVisible="{Binding !IsBusy}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

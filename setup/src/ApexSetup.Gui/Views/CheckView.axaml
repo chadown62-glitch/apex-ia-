@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ApexSetup.Gui.ViewModels"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             x:Class="ApexSetup.Gui.Views.CheckView"
+             x:DataType="vm:CheckViewModel">
+    <DockPanel MaxWidth="640" HorizontalAlignment="Center">
+        <TextBlock DockPanel.Dock="Top" Text="Vérifications préalables (Preflight)" FontSize="20" FontWeight="Bold" Margin="0,0,0,8" />
+        <TextBlock DockPanel.Dock="Top" Text="Vérification en cours..." IsVisible="{Binding IsBusy}" />
+        <TextBlock DockPanel.Dock="Top" Text="{Binding ErrorMessage}" Foreground="Red" IsVisible="{Binding ErrorMessage, Converter={x:Static conv:ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+            <Button Content="Revérifier" Command="{Binding RecheckCommand}" />
+            <Button Content="Continuer" Command="{Binding ContinueCommand}" />
+        </StackPanel>
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Checks}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CheckItemDisplay">
+                        <Border BorderBrush="Gray" BorderThickness="0,0,0,1" Padding="4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock Text="{Binding StatusGlyph}" FontWeight="Bold" />
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding Detail}" TextWrapping="Wrap" Opacity="0.8" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

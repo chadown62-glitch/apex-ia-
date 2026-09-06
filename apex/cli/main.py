@@ -150,6 +150,50 @@ def _cmd_gate(args: argparse.Namespace) -> int:
     return 0 if report.phase_2_authorized else 1
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    """Démarre l'API HTTP (`apex/api/app.py`) — N+15, la commande derrière
+    « démarrage d'APEX » exigée par le launcher de production.
+
+    Vérifie Gate elle-même, inconditionnellement, AVANT de démarrer :
+    Gate reste seul juge de l'autorisation (principe déjà établi par
+    `_cmd_gate`) et ce serait le contourner que de ne s'y fier que lorsque
+    l'appel transite par `scripts/apex-launch.sh` — un `apex serve` invoqué
+    directement (sans passer par le launcher) doit refuser exactement de la
+    même façon. Aucune option n'existe pour sauter cette vérification.
+    """
+    from apex.gate.report import DEFAULT_REPORT_PATH
+    from apex.gate.runner import run_gate
+
+    report = run_gate(
+        config_path=args.config,
+        exceptions_path="gate.exceptions.yaml",
+        allow_container_exec=False,
+        allow_network_probe=False,
+        timeout_s=20.0,
+    )
+    report.write(DEFAULT_REPORT_PATH)
+    if not report.phase_2_authorized:
+        print("erreur : apex gate refuse l'autorisation — APEX ne démarre pas.", file=sys.stderr)
+        print(f"  rapport machine-lisible : {DEFAULT_REPORT_PATH}", file=sys.stderr)
+        return 1
+
+    try:
+        import uvicorn
+    except ImportError:
+        print(
+            "erreur : uvicorn n'est pas installé — installez l'extra optionnel "
+            "`api` (pip install -e '.[api]') avant d'utiliser `apex serve`.",
+            file=sys.stderr,
+        )
+        return 1
+
+    from apex.api.app import create_app
+
+    log.info("démarrage d'APEX (apex serve) sur %s:%d", args.host, args.port)
+    uvicorn.run(create_app(), host=args.host, port=args.port, log_level=(args.log_level or "info").lower())
+    return 0
+
+
 def _format_cycle_status(status: Any, *, as_json: bool) -> str:
     if as_json:
         return json.dumps(
@@ -514,6 +558,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="autoriser une sonde de sortie réseau (GATE-15)",
     )
     gate_cmd.set_defaults(func=_cmd_gate)
+
+    serve_cmd = sub.add_parser(
+        "serve", help="démarrer l'API HTTP (vérifie Gate elle-même avant de démarrer)"
+    )
+    serve_cmd.add_argument("--host", default="127.0.0.1")
+    serve_cmd.add_argument("--port", type=int, default=8000)
+    serve_cmd.set_defaults(func=_cmd_serve)
 
     learn_cmd = sub.add_parser(
         "learn", help="cycle d'apprentissage autonome (apex.metalearner.autonomy)"

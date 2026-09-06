@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ApexSetup.Gui.ViewModels"
+             x:Class="ApexSetup.Gui.Views.ProfileView"
+             x:DataType="vm:ProfileViewModel">
+    <StackPanel Spacing="10" MaxWidth="520" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="Profil matériel" FontSize="20" FontWeight="Bold" />
+        <TextBlock Text="{Binding RecommendedProfile, StringFormat='Profil recommandé : {0}'}" />
+        <TextBlock Text="{Binding ProfileNote}" TextWrapping="Wrap" Opacity="0.7" FontSize="11" />
+
+        <TextBlock Text="Profil à utiliser pour le plan (optionnel — laisser vide pour suivre la recommandation) :" Margin="0,12,0,0" TextWrapping="Wrap" />
+        <ComboBox ItemsSource="{Binding AvailableProfiles}" SelectedItem="{Binding SelectedProfile}" HorizontalAlignment="Stretch" />
+
+        <Button Content="Continuer" Command="{Binding ContinueCommand}" HorizontalAlignment="Right" Margin="0,12,0,0" />
+    </StackPanel>
+</UserControl>

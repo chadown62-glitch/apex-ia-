@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ApexSetup.Gui.ViewModels"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             x:Class="ApexSetup.Gui.Views.PlanView"
+             x:DataType="vm:PlanViewModel">
+    <StackPanel Spacing="10" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="Plan d'installation" FontSize="20" FontWeight="Bold" />
+        <TextBlock Text="Construction du plan..." IsVisible="{Binding IsBusy}" />
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" IsVisible="{Binding ErrorMessage, Converter={x:Static conv:ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+
+        <StackPanel IsVisible="{Binding Result.Success}" Spacing="4">
+            <TextBlock Text="{Binding Result.Plan.SelectedProfile, StringFormat='Profil : {0}'}" />
+            <TextBlock Text="{Binding Result.Plan.Destination, StringFormat='Destination : {0}'}" />
+            <TextBlock Text="{Binding Result.Plan.RequiredArtifacts.Count, StringFormat='Artefacts requis : {0}'}" />
+            <TextBlock Text="{Binding Result.PlanFingerprint, StringFormat='Empreinte : {0}'}" FontFamily="monospace" FontSize="11" />
+        </StackPanel>
+
+        <Button Content="Installer" Command="{Binding ContinueCommand}" HorizontalAlignment="Right" Margin="0,12,0,0" />
+    </StackPanel>
+</UserControl>

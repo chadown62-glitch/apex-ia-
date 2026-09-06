@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>ApexSetup.Release</RootNamespace>
+  </PropertyGroup>
+
+  <!-- PHASE 7 : bibliothèque de manifeste de release — AUCUNE dépendance à
+       ApexSetup.Core/Application/Cli/Gui. Le manifeste décrit un artefact
+       déjà construit ; il n'a besoin de rien connaître du moteur
+       d'installation lui-même. -->
+
+</Project>

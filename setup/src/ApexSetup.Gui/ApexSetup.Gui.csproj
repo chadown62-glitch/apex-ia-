@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>apex-setup-gui</AssemblyName>
+    <RootNamespace>ApexSetup.Gui</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- PHASE 4 : Avalonia — SEUL framework .NET GUI qui compile ET
+         s'exécute (y compris en tests automatisés, via Avalonia.Headless)
+         sur CET environnement de développement Linux, tout en produisant
+         un exécutable Windows natif réel une fois publié pour le RID
+         win-x64 (voir docs/GUI_ARCHITECTURE.md pour la justification
+         complète). WPF/WinUI3 ne peuvent être ni compilés ni exécutés ici
+         (SDK Windows Desktop absent de cet environnement) — les choisir
+         aurait rendu tout le travail de cette phase invérifiable dans cet
+         environnement. Pas une pile web (jamais Electron/CEF) : rendu
+         natif Skia, aucun navigateur embarqué. -->
+    <PackageReference Include="Avalonia" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- JAMAIS de référence à ApexSetup.Core — voir §« Frontière GUI/Core » :
+         le GUI ne connaît que ISetupApplicationService. -->
+    <ProjectReference Include="..\ApexSetup.Application\ApexSetup.Application.csproj" />
+  </ItemGroup>
+
+</Project>

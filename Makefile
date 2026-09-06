@@ -4,7 +4,7 @@
 # sur un environnement où les dépendances de développement ne sont pas
 # installées. C'est la même contrainte que pour le doctor.
 
-.PHONY: help up down test test-pytest lint types doctor gate clean
+.PHONY: help up down launch launch-stop test test-pytest lint types doctor gate clean
 
 help:
 	@grep -E '^[a-z-]+:.*?# ' $(MAKEFILE_LIST) | sed 's/:.*# /\t/'
@@ -15,6 +15,12 @@ up:              # démarrer l'infrastructure locale
 
 down:            # arrêter l'infrastructure (volumes conservés)
 	docker compose down
+
+launch:          # lanceur officiel (env + infra + doctor + gate)
+	bash scripts/apex-launch.sh
+
+launch-stop:     # arrêter l'infrastructure démarrée par `make launch`
+	bash scripts/apex-launch.sh stop
 
 test:            # suite de tests, stdlib uniquement
 	python -m unittest discover -s tests -t . -v

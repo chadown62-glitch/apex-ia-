@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>ApexLauncher</AssemblyName>
+    <RootNamespace>ApexSetup.Launcher</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Publié en win-x64 uniquement (§7 Packaging) — compile aussi sur
+         Linux/macOS pour les tests unitaires (LauncherStateEngine) et la
+         CI de ce dépôt, mais tout code réellement Windows (élévation,
+         TaskDialog) est isolé derrière des interfaces et des builds
+         conditionnels OS. -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApexSetup.Application\ApexSetup.Application.csproj" />
+  </ItemGroup>
+
+</Project>

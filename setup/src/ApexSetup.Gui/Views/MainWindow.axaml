@@ -1,0 +1,26 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ApexSetup.Gui.ViewModels"
+        xmlns:views="using:ApexSetup.Gui.Views"
+        x:Class="ApexSetup.Gui.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Apex Setup"
+        Width="820" Height="600" MinWidth="640" MinHeight="480">
+
+    <Window.DataTemplates>
+        <DataTemplate DataType="vm:WelcomeViewModel"><views:WelcomeView /></DataTemplate>
+        <DataTemplate DataType="vm:DetectionViewModel"><views:DetectionView /></DataTemplate>
+        <DataTemplate DataType="vm:CheckViewModel"><views:CheckView /></DataTemplate>
+        <DataTemplate DataType="vm:ProfileViewModel"><views:ProfileView /></DataTemplate>
+        <DataTemplate DataType="vm:PlanViewModel"><views:PlanView /></DataTemplate>
+        <DataTemplate DataType="vm:InstallProgressViewModel"><views:InstallProgressView /></DataTemplate>
+        <DataTemplate DataType="vm:RecoveryViewModel"><views:RecoveryView /></DataTemplate>
+        <DataTemplate DataType="vm:ValidationViewModel"><views:ValidationView /></DataTemplate>
+        <DataTemplate DataType="vm:FinalReadyViewModel"><views:FinalReadyView /></DataTemplate>
+    </Window.DataTemplates>
+
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" Text="{Binding CurrentStep}" FontSize="12" Opacity="0.6" Margin="0,0,0,8" />
+        <ContentControl Content="{Binding CurrentViewModel}" />
+    </DockPanel>
+</Window>

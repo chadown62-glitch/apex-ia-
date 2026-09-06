@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ApexSetup.Gui.ViewModels"
+             xmlns:conv="using:Avalonia.Data.Converters"
+             x:Class="ApexSetup.Gui.Views.RecoveryView"
+             x:DataType="vm:RecoveryViewModel">
+    <StackPanel Spacing="10" MaxWidth="560" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBlock Text="Récupération" FontSize="20" FontWeight="Bold" />
+        <TextBlock Text="Analyse et récupération de l'état transactionnel — jamais silencieuse : l'état détecté et l'action entreprise sont toujours affichés." TextWrapping="Wrap" Opacity="0.8" />
+
+        <TextBlock Text="Analyse en cours..." IsVisible="{Binding IsBusy}" />
+        <TextBlock Text="{Binding ErrorMessage}" Foreground="Red" IsVisible="{Binding ErrorMessage, Converter={x:Static conv:ObjectConverters.IsNotNull}}" TextWrapping="Wrap" />
+
+        <StackPanel IsVisible="{Binding Result, Converter={x:Static conv:ObjectConverters.IsNotNull}}" Spacing="4">
+            <TextBlock Text="{Binding Result.StateDetected, StringFormat='État détecté : {0}'}" />
+            <TextBlock Text="{Binding Result.ActionTaken, StringFormat='Action : {0}'}" />
+            <TextBlock Text="{Binding Result.Result, StringFormat='Résultat : {0}'}" />
+            <TextBlock Text="{Binding Result.Detail}" TextWrapping="Wrap" Opacity="0.8" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="Analyser / Récupérer" Command="{Binding RecoverCommand}" />
+            <Button Content="Continuer" Command="{Binding ContinueCommand}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

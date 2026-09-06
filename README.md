@@ -31,6 +31,28 @@ docker compose up -d
 python -m apex.cli.main doctor
 ```
 
+## Lancement (Windows)
+
+Depuis Windows (WSL2 déjà configuré comme ci-dessus), double-cliquer sur
+`apex.bat` à la racine du dépôt — ou l'exécuter depuis une invite :
+
+```bat
+apex.bat
+```
+
+`apex.bat` est un délégateur PUR : il ne fait que résoudre son propre
+emplacement, appeler `wsl.exe` pour transmettre fidèlement les arguments à
+`scripts/apex-launch.sh` (exécuté dans WSL), et relayer le code de sortie.
+Il n'installe rien, ne modifie jamais Windows/WSL, et ne contourne jamais
+`apex doctor`/`apex gate`. Voir `scripts/apex-launch.sh` pour le détail du
+préflight (environnement, infrastructure, Doctor, Gate).
+
+Pour une expérience un-clic complète (double-clic, sans jamais ouvrir de
+terminal, avec détection d'installation/réparation automatique et
+élévation administrateur seulement si nécessaire), voir le launcher de
+production `setup/src/ApexSetup.Launcher` — architecture détaillée dans
+`setup/docs/LAUNCHER_ARCHITECTURE.md`.
+
 ## Commandes disponibles
 
 | Commande | Rôle |
