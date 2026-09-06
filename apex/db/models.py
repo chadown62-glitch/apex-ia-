@@ -66,7 +66,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String, Text, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -754,6 +754,98 @@ class PopulationMemberRow(Base):
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat(),
             "decided_at": self.decided_at.isoformat() if self.decided_at else None,
+        }
+
+
+class LearningSessionRow(Base):
+    """Persiste `apex.metalearner.learning_session_model.LearningSession`
+    (passe « Autonomous Multi-Generation Learning Orchestrator ») — une
+    boucle RÉPÉTÉE de `PopulationEvolutionService.evolve_generation`,
+    jamais une seconde implémentation de la boucle évolutive elle-même.
+
+    **Exclusion mutuelle RÉELLEMENT inter-processus** — l'index UNIQUE
+    partiel `learning_sessions_one_running_per_specialty_idx` (`specialty`
+    WHERE `status = 'running'`, migration) est le SEUL mécanisme qui
+    empêche deux sessions `running` simultanées pour la même spécialité :
+    contrairement à `CycleAlreadyRunning`
+    (`apex.metalearner.autonomy.AutonomousLearningService`, verrou mémoire
+    documenté comme valide PAR PROCESSUS seulement), cette garantie tient
+    même avec plusieurs workers API — le SGBD est le seul arbitre, jamais
+    un verrou applicatif (même philosophie que `MissionRepository.
+    claim_running`, `apex/db/repositories.py`).
+
+    `best_member_id`/`best_fitness`/`best_genome_version_id` REFLÈTENT
+    simplement le `CHAMPION` courant de la population de cette spécialité
+    (`apex.metalearner.population_service.PopulationService.get_champion`)
+    après chaque génération — jamais un second calcul de « meilleur » : le
+    Champion porte déjà l'invariant « jamais remplacé par un individu
+    moins performant » (passe N+6), la session ne fait que le recopier
+    pour un accès direct sans recalcul.
+
+    `generations_completed` et le numéro de génération réellement produit
+    par `evolve_generation` (dérivé de `population_members.generation`,
+    jamais fourni par cette session) restent deux sources de vérité
+    délibérément séparées mais toujours cohérentes : reprendre une session
+    n'a JAMAIS besoin de rejouer un numéro de génération — `evolve_
+    generation` le dérive lui-même de l'état de population déjà persisté,
+    ce qui rend la reprise sûre par construction (aucun doublon de
+    génération/membre/lignage possible, voir la docstring de
+    `LearningOrchestrator`).
+
+    `status` : `running` -> `completed`/`failed`/`cancelled` (états
+    terminaux) ou `cancel_requested` (transitoire, vérifié entre deux
+    générations par la boucle elle-même, jamais une interruption en cours
+    de génération — voir `LearningOrchestrator._run_loop`)."""
+
+    __tablename__ = "learning_sessions"
+    __table_args__ = (
+        # Exclusion mutuelle RÉELLE inter-processus (voir docstring de la
+        # classe) — déclarée ici, PAS seulement dans la migration, pour
+        # que `Base.metadata.create_all()` (SQLite en mémoire, tests
+        # unitaires) l'applique aussi ; la migration Alembic répète le même
+        # DDL par cohérence avec le reste de ce module (index créés via
+        # `op.execute`, jamais l'autogénération).
+        Index(
+            "learning_sessions_one_running_per_specialty_idx", "specialty", unique=True,
+            postgresql_where=text("status = 'running'"), sqlite_where=text("status = 'running'"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    specialty: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    max_generations: Mapped[int] = mapped_column(Integer, nullable=False)
+    generations_completed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    convergence_patience: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    generations_since_improvement: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    best_member_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    best_fitness: Mapped[float | None] = mapped_column(Float, nullable=True)
+    best_genome_version_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    stop_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "specialty": self.specialty,
+            "status": self.status,
+            "max_generations": self.max_generations,
+            "generations_completed": self.generations_completed,
+            "convergence_patience": self.convergence_patience,
+            "generations_since_improvement": self.generations_since_improvement,
+            "best_member_id": self.best_member_id,
+            "best_fitness": self.best_fitness,
+            "best_genome_version_id": self.best_genome_version_id,
+            "stop_reason": self.stop_reason,
+            "error": self.error,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
 

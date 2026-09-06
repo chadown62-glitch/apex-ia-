@@ -304,6 +304,11 @@ population:
   generation_size: 3
   elite_size: 2
   enable_crossover: true
+  # Plafond administrateur sur le nombre de générations qu'une session
+  # d'apprentissage multi-génération peut demander (passe « Autonomous
+  # Multi-Generation Learning Orchestrator ») — un appelant fournit
+  # toujours un nombre explicite, jamais une boucle non bornée.
+  max_session_generations: 20
 
 # ----------------------------------------------------------------------------
 # Model Router (passe « Adaptive Model Router V1 ») — poids du score de

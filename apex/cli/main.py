@@ -321,6 +321,154 @@ def _cmd_learn_stop(args: argparse.Namespace) -> int:
     return 0
 
 
+def _format_learning_session(session: Any, *, as_json: bool) -> str:
+    if as_json:
+        return json.dumps(
+            {
+                "id": session.id, "specialty": session.specialty, "status": session.status.value,
+                "max_generations": session.max_generations, "generations_completed": session.generations_completed,
+                "convergence_patience": session.convergence_patience,
+                "generations_since_improvement": session.generations_since_improvement,
+                "best_member_id": session.best_member_id, "best_fitness": session.best_fitness,
+                "best_genome_version_id": session.best_genome_version_id, "stop_reason": session.stop_reason,
+                "error": session.error, "created_by": session.created_by,
+                "created_at": session.created_at.isoformat(),
+                "completed_at": session.completed_at.isoformat() if session.completed_at else None,
+            },
+            indent=2, ensure_ascii=False,
+        )
+    lines = [
+        f"session : {session.id}", f"spécialité : {session.specialty}", f"état : {session.status.value}",
+        f"générations : {session.generations_completed}/{session.max_generations}",
+    ]
+    if session.best_fitness is not None:
+        lines.append(f"meilleur fitness : {session.best_fitness} (membre {session.best_member_id})")
+    if session.stop_reason:
+        lines.append(f"raison d'arrêt : {session.stop_reason}")
+    if session.error:
+        lines.append(f"erreur : {session.error}")
+    return "\n".join(lines)
+
+
+def _cmd_learning_start(args: argparse.Namespace) -> int:
+    """Démarre réellement une session d'apprentissage multi-génération via
+    l'UNIQUE orchestrateur autoritaire `apex.metalearner.learning_
+    orchestrator.LearningOrchestrator` (même service que `POST
+    /learning-sessions` — aucune logique de boucle dupliquée ici). Rend la
+    main IMMÉDIATEMENT (`RUNNING`) : la boucle multi-génération continue en
+    tâche de fond dans le processus API/CLI qui l'a démarrée — cette
+    commande n'attend PAS sa fin (contrairement à `apex learn start`, qui
+    enveloppe un unique cycle court) ; utiliser `apex learning status` pour
+    suivre sa progression durable (DB), depuis n'importe quel processus."""
+    from apex.errors import LearningSessionAlreadyRunning
+    from apex.specialties.registry import by_id
+
+    if by_id(args.specialty) is None:
+        print(f"erreur : spécialité « {args.specialty} » inconnue", file=sys.stderr)
+        return 1
+
+    from apex.api.dependencies import get_learning_orchestrator
+
+    try:
+        session = get_learning_orchestrator().start_session(
+            args.specialty, max_generations=args.generations, convergence_patience=args.convergence_patience,
+        )
+    except LearningSessionAlreadyRunning as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return exc.exit_code
+    except ValueError as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+    print(_format_learning_session(session, as_json=args.json))
+    return 0
+
+
+def _cmd_learning_status(args: argparse.Namespace) -> int:
+    from apex.api.dependencies import get_learning_orchestrator
+
+    try:
+        session = get_learning_orchestrator().get_session(args.session_id)
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+    if session is None:
+        print(f"erreur : session « {args.session_id} » introuvable", file=sys.stderr)
+        return 1
+    print(_format_learning_session(session, as_json=args.json))
+    return 0
+
+
+def _cmd_learning_list(args: argparse.Namespace) -> int:
+    from apex.api.dependencies import get_learning_orchestrator
+
+    try:
+        sessions = get_learning_orchestrator().list_sessions(specialty=args.specialty, limit=args.limit)
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+
+    if args.json:
+        print(json.dumps([json.loads(_format_learning_session(s, as_json=True)) for s in sessions], indent=2, ensure_ascii=False))
+        return 0
+    if not sessions:
+        print("aucune session d'apprentissage.")
+        return 0
+    for s in sessions:
+        print(
+            f"{s.created_at.isoformat()}  {s.status.value:<16}  {s.id}  spécialité={s.specialty}  "
+            f"générations={s.generations_completed}/{s.max_generations}"
+        )
+    return 0
+
+
+def _cmd_learning_resume(args: argparse.Namespace) -> int:
+    """Reprend une session ARRÊTÉE (`failed`/`cancelled`) à la génération
+    suivant la dernière réellement complétée — jamais depuis 0 (voir la
+    docstring de `LearningOrchestrator` : `evolve_generation` dérive
+    toujours son numéro de la population déjà persistée)."""
+    from apex.errors import LearningSessionAlreadyRunning
+
+    from apex.api.dependencies import get_learning_orchestrator
+
+    try:
+        session = get_learning_orchestrator().resume_session(args.session_id)
+    except LookupError as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return 1
+    except LearningSessionAlreadyRunning as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return exc.exit_code
+    except ValueError as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+    print(_format_learning_session(session, as_json=args.json))
+    return 0
+
+
+def _cmd_learning_cancel(args: argparse.Namespace) -> int:
+    """No-op si la session n'est pas `running` — jamais une erreur pour un
+    appel redondant (même patron que `POST /learning-sessions/{id}/cancel`).
+    Une génération déjà en cours va toujours à son terme."""
+    from apex.api.dependencies import get_learning_orchestrator
+
+    try:
+        session = get_learning_orchestrator().cancel_session(args.session_id)
+    except LookupError as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+    print(_format_learning_session(session, as_json=args.json))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="apex",
@@ -400,6 +548,43 @@ def build_parser() -> argparse.ArgumentParser:
     learn_stop_cmd = learn_sub.add_parser("stop", help="demander l'annulation du cycle en cours")
     learn_stop_cmd.add_argument("--json", action="store_true")
     learn_stop_cmd.set_defaults(func=_cmd_learn_stop)
+
+    learning_cmd = sub.add_parser(
+        "learning",
+        help="session d'apprentissage MULTI-génération (apex.metalearner.learning_orchestrator)",
+    )
+    learning_sub = learning_cmd.add_subparsers(dest="learning_command", required=True)
+
+    learning_start_cmd = learning_sub.add_parser("start", help="démarrer une session (rend la main immédiatement)")
+    learning_start_cmd.add_argument("--specialty", required=True, help="ex. « coding »")
+    learning_start_cmd.add_argument("--generations", type=int, required=True, help="nombre maximal de générations")
+    learning_start_cmd.add_argument(
+        "--convergence-patience", type=int, default=0,
+        help="arrêt anticipé après N générations sans amélioration (0 = désactivé)",
+    )
+    learning_start_cmd.add_argument("--json", action="store_true")
+    learning_start_cmd.set_defaults(func=_cmd_learning_start)
+
+    learning_status_cmd = learning_sub.add_parser("status", help="état durable d'une session (par id)")
+    learning_status_cmd.add_argument("session_id")
+    learning_status_cmd.add_argument("--json", action="store_true")
+    learning_status_cmd.set_defaults(func=_cmd_learning_status)
+
+    learning_list_cmd = learning_sub.add_parser("list", help="sessions passées/en cours (durable)")
+    learning_list_cmd.add_argument("--specialty", default=None)
+    learning_list_cmd.add_argument("--limit", type=int, default=20)
+    learning_list_cmd.add_argument("--json", action="store_true")
+    learning_list_cmd.set_defaults(func=_cmd_learning_list)
+
+    learning_resume_cmd = learning_sub.add_parser("resume", help="reprendre une session arrêtée")
+    learning_resume_cmd.add_argument("session_id")
+    learning_resume_cmd.add_argument("--json", action="store_true")
+    learning_resume_cmd.set_defaults(func=_cmd_learning_resume)
+
+    learning_cancel_cmd = learning_sub.add_parser("cancel", help="demander l'annulation (effective entre deux générations)")
+    learning_cancel_cmd.add_argument("session_id")
+    learning_cancel_cmd.add_argument("--json", action="store_true")
+    learning_cancel_cmd.set_defaults(func=_cmd_learning_cancel)
 
     return parser
 

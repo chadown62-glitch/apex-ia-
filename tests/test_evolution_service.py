@@ -51,7 +51,10 @@ class FakeConfig:
 
 
 def a_policy(**overrides) -> PopulationPolicy:
-    defaults = dict(max_population_size=8, generation_size=3, elite_size=2, enable_crossover=True)
+    defaults = dict(
+        max_population_size=8, generation_size=3, elite_size=2, enable_crossover=True,
+        max_session_generations=20,
+    )
     defaults.update(overrides)
     return PopulationPolicy(**defaults)
 

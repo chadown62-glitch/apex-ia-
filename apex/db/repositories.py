@@ -30,6 +30,7 @@ from apex.db.models import (
     EvalRunRow,
     EventRow,
     GenomeVersionRow,
+    LearningSessionRow,
     MemoryRecordRow,
     MemoryRelationRow,
     MessageRow,
@@ -841,6 +842,144 @@ class PopulationMemberRepository:
         self._session.execute(stmt)
         self._session.flush()
         return self._session.get(PopulationMemberRow, member_id)
+
+
+class LearningSessionRepository:
+    """Persistance de `apex.metalearner.learning_session_service` (passe
+    « Autonomous Multi-Generation Learning Orchestrator »). N'importe
+    jamais `apex.metalearner` : même règle de couche que
+    `PopulationMemberRepository` — méthodes en mots-clés, jamais un objet
+    `LearningSession`.
+
+    `create` ne rattrape JAMAIS lui-même une violation de l'index UNIQUE
+    partiel (`learning_sessions_one_running_per_specialty_idx`) — cette
+    couche reste un CRUD fin, la traduction en `LearningSessionAlreadyRunning`
+    vit dans la couche domaine (`apex.metalearner.learning_session_service`,
+    seule à savoir quelle exception métier produire), même séparation que
+    partout ailleurs dans ce module.
+
+    `transition_to_running`/`record_generation`/`finish`/`request_cancel`
+    sont toutes des `UPDATE ... WHERE status = ...` conditionnels — même
+    discipline que `MissionRepository.claim_running`/`PopulationMemberRepository.
+    set_status` : le SGBD est le seul arbitre, `rowcount != 1` signifie
+    qu'un AUTRE appelant a déjà changé l'état entre-temps, jamais une
+    erreur, juste `None`."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        specialty: str,
+        status: str,
+        max_generations: int,
+        convergence_patience: int,
+        created_by: str,
+        created_at: datetime,
+    ) -> LearningSessionRow:
+        row = LearningSessionRow(
+            id=id, specialty=specialty, status=status, max_generations=max_generations,
+            convergence_patience=convergence_patience, created_by=created_by, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, session_id: str) -> LearningSessionRow | None:
+        return self._session.get(LearningSessionRow, session_id)
+
+    def list_by_specialty(self, specialty: str, *, limit: int = 50) -> list[LearningSessionRow]:
+        stmt = (
+            select(LearningSessionRow)
+            .where(LearningSessionRow.specialty == specialty)
+            .order_by(LearningSessionRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_all(self, *, limit: int = 50) -> list[LearningSessionRow]:
+        stmt = select(LearningSessionRow).order_by(LearningSessionRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def transition_to_running(self, session_id: str, *, from_statuses: tuple[str, ...]) -> LearningSessionRow | None:
+        """Utilisé par la reprise (`failed`/`cancelled` -> `running`) — la
+        même violation d'index UNIQUE que `create` peut survenir ici si une
+        AUTRE session de la même spécialité est déjà `running`, remontée
+        telle quelle (rattrapée en couche domaine)."""
+        stmt = (
+            update(LearningSessionRow)
+            .where(LearningSessionRow.id == session_id, LearningSessionRow.status.in_(from_statuses))
+            .values(status="running")
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(LearningSessionRow, session_id)
+
+    def record_generation(
+        self,
+        session_id: str,
+        *,
+        generations_completed: int,
+        generations_since_improvement: int,
+        best_member_id: str | None,
+        best_fitness: float | None,
+        best_genome_version_id: str | None,
+    ) -> LearningSessionRow | None:
+        # `cancel_requested` reste éligible ici, PAS seulement `running` :
+        # une génération qui vient de se terminer a réellement produit des
+        # membres/population (déjà persistés, jamais perdus) même si une
+        # annulation a été demandée PENDANT son exécution — l'enregistrer
+        # est correct, seule la décision de CONTINUER (tour de boucle
+        # suivant) doit respecter l'annulation, jamais l'enregistrement
+        # d'un travail déjà réellement accompli.
+        stmt = (
+            update(LearningSessionRow)
+            .where(
+                LearningSessionRow.id == session_id,
+                LearningSessionRow.status.in_(("running", "cancel_requested")),
+            )
+            .values(
+                generations_completed=generations_completed,
+                generations_since_improvement=generations_since_improvement,
+                best_member_id=best_member_id, best_fitness=best_fitness,
+                best_genome_version_id=best_genome_version_id,
+            )
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(LearningSessionRow, session_id)
+
+    def finish(
+        self, session_id: str, *, status: str, stop_reason: str, error: str | None, completed_at: datetime,
+    ) -> LearningSessionRow | None:
+        stmt = (
+            update(LearningSessionRow)
+            .where(LearningSessionRow.id == session_id, LearningSessionRow.status.in_(("running", "cancel_requested")))
+            .values(status=status, stop_reason=stop_reason, error=error, completed_at=completed_at)
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(LearningSessionRow, session_id)
+
+    def request_cancel(self, session_id: str) -> LearningSessionRow | None:
+        stmt = (
+            update(LearningSessionRow)
+            .where(LearningSessionRow.id == session_id, LearningSessionRow.status == "running")
+            .values(status="cancel_requested")
+        )
+        result = self._session.execute(stmt)
+        self._session.flush()
+        if result.rowcount != 1:
+            return None
+        return self._session.get(LearningSessionRow, session_id)
 
 
 class ProjectRepository:

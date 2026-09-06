@@ -690,12 +690,21 @@ class PopulationPolicy:
     `enable_crossover` : autorise `apex.genome.mutation.crossover` entre
     deux élites existantes (jamais entre autre chose) quand au moins deux
     existent — sinon, uniquement `mutate` sur un seul parent (§6 : mutation
-    robuste avant crossover artificiel)."""
+    robuste avant crossover artificiel).
+    `max_session_generations` (passe « Autonomous Multi-Generation Learning
+    Orchestrator ») : plafond ADMINISTRATEUR sur `LearningSession.
+    max_generations` — un appelant (API/CLI) demande TOUJOURS un nombre
+    explicite de générations (§8 de la mission : « jamais une boucle
+    autonome non bornée »), mais ce plafond empêche qu'un appelant fasse
+    valider une valeur déraisonnable ; `apex.metalearner.
+    learning_session_service.LearningSessionService.start` rejette toute
+    demande qui le dépasse, jamais un simple avertissement ignoré."""
 
     max_population_size: int
     generation_size: int
     elite_size: int
     enable_crossover: bool
+    max_session_generations: int
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> PopulationPolicy:
@@ -713,9 +722,15 @@ class PopulationPolicy:
                 "elite_size ne peut pas dépasser generation_size", field="population.elite_size"
             )
         enable_crossover = as_bool(raw.get("enable_crossover", True), field="population.enable_crossover")
+        max_session_generations = int(raw.get("max_session_generations", 20))
+        if max_session_generations < 1:
+            raise ConfigError(
+                "max_session_generations doit être >= 1", field="population.max_session_generations"
+            )
         return cls(
             max_population_size=max_population_size, generation_size=generation_size,
             elite_size=elite_size, enable_crossover=enable_crossover,
+            max_session_generations=max_session_generations,
         )
 
 

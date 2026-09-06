@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from apex.metalearner.autonomous_scheduler import AutonomousLearningScheduler
     from apex.metalearner.autonomy import AutonomousLearningService
     from apex.metalearner.evolution import PopulationEvolutionService
+    from apex.metalearner.learning_orchestrator import LearningOrchestrator
     from apex.scheduler.service import SchedulerService
 
 
@@ -77,6 +78,24 @@ def get_evolution_service() -> "PopulationEvolutionService":
     session_factory = get_session_factory()
     config = load_config()
     return PopulationEvolutionService(session_factory, agent_runtime=AgentRuntime(session_factory), config=config)
+
+
+def get_learning_orchestrator() -> "LearningOrchestrator":
+    """PAS de singleton mis en cache — même raisonnement qu'`get_evolution_
+    service` : `LearningOrchestrator` ne porte AUCUN état mémoire entre deux
+    appels (contrairement à `AutonomousLearningService`/`SchedulerService`)
+    — toute session vit dans `learning_sessions` (DB), y compris
+    l'exclusion mutuelle inter-processus (index UNIQUE partiel, jamais un
+    verrou en mémoire). Chaque `start_session()`/`resume_session()` lance
+    son propre thread démon borné — jamais un scheduler, jamais un état
+    partagé entre requêtes qui exigerait un singleton."""
+    from apex.agents.runtime import AgentRuntime
+    from apex.config.loader import load_config
+    from apex.metalearner.learning_orchestrator import LearningOrchestrator
+
+    session_factory = get_session_factory()
+    config = load_config()
+    return LearningOrchestrator(session_factory, agent_runtime=AgentRuntime(session_factory), config=config)
 
 
 _scheduler_service: "SchedulerService | None" = None

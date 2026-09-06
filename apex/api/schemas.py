@@ -634,3 +634,39 @@ class EvolutionGenerationOut(BaseModel):
     champion: PopulationMemberOut | None
     elite: list[PopulationMemberOut]
     failures: list[str]
+
+
+# -- learning sessions (multi-génération) -------------------------------------
+
+
+class LearningSessionStartIn(BaseModel):
+    """Aucun champ d'identité — `apex.metalearner.learning_orchestrator.
+    LearningOrchestrator.start_session` force `Subject.HUMAN` en dur (voir
+    `apex/api/routes/learning_sessions.py`)."""
+
+    specialty: str
+    max_generations: int = Field(ge=1)
+    convergence_patience: int = Field(default=0, ge=0)
+
+
+class LearningSessionOut(BaseModel):
+    """Projette `apex.metalearner.learning_session_model.LearningSession`
+    — `best_member_id`/`best_fitness`/`best_genome_version_id` reflètent
+    simplement le CHAMPION courant de la population de cette spécialité,
+    jamais un second calcul (voir `apex.db.models.LearningSessionRow`)."""
+
+    id: str
+    specialty: str
+    status: str
+    max_generations: int
+    generations_completed: int
+    convergence_patience: int
+    generations_since_improvement: int
+    best_member_id: str | None
+    best_fitness: float | None
+    best_genome_version_id: str | None
+    stop_reason: str | None
+    error: str | None
+    created_by: str
+    created_at: str
+    completed_at: str | None

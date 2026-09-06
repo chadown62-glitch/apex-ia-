@@ -187,3 +187,23 @@ class PopulationCapExceeded(ApexError):
         super().__init__(
             f"plafond de population atteint pour « {specialty} » ({active}/{limit} membres actifs)"
         )
+
+
+class LearningSessionAlreadyRunning(ApexError):
+    """Une session d'apprentissage multi-génération (`apex.metalearner.
+    learning_orchestrator.LearningOrchestrator`, passe « Autonomous
+    Multi-Generation Learning Orchestrator ») est déjà `RUNNING` pour cette
+    spécialité — garanti par un index UNIQUE partiel en base
+    (`learning_sessions`, une seule ligne `running` par spécialité),
+    JAMAIS par un simple verrou mémoire par processus (contrairement à
+    `CycleAlreadyRunning`, limite explicitement documentée comme
+    par-processus) : le SGBD reste le seul arbitre, correct même avec
+    plusieurs processus/workers API concurrents."""
+
+    exit_code = 13
+
+    def __init__(self, specialty: str) -> None:
+        self.specialty = specialty
+        super().__init__(
+            f"une session d'apprentissage est déjà en cours pour « {specialty} »"
+        )

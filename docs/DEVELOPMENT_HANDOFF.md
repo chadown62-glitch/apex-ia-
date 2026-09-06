@@ -45,6 +45,13 @@ ce qui ne l'est pas encore, composant par composant) :
   py::test_full_chain_mission_run_via_agent_with_a_fake_provider`, double
   fidèle du seul point réseau — `OllamaProvider.generate`/`.detect` — jamais
   du reste de la chaîne).
+- **`LearningOrchestrator`** (passe « Autonomous Multi-Generation Learning
+  Orchestrator ») — boucle MULTI-génération réelle au-dessus de
+  `PopulationEvolutionService.evolve_generation` (table `learning_sessions`,
+  API `/learning-sessions`, CLI `apex learning`) : combien de générations,
+  où s'arrêter, comment reprendre après une panne — jamais une seconde
+  implémentation de l'évolution elle-même. Voir la sous-section dédiée
+  ci-dessous.
 
 Rien n'est prétendu `IMPLEMENTED` sans preuve empirique. Tout ce qui reste
 `PLANNED`/déféré est documenté avec sa raison exacte dans le registre
@@ -719,6 +726,130 @@ propose`/`apex.genome.mutation.mutate`/`crossover` (Phase 17),
   descendant (mentionné §12 de la mission, non implémenté — aucun
   mécanisme réel ne relie encore un `Skill` ACQUIRED à la configuration
   d'un nouveau clone).
+
+### Autonomous Multi-Generation Learning Orchestrator
+
+Construit la première boucle MULTI-génération réelle (§ mission N+7) :
+
+```
+specialty -> generation 0 -> fitness -> selection -> evolution
+          -> generation 1 -> fitness -> selection -> evolution
+          -> ...
+          -> arrêt selon une politique explicite (max_generations / échec /
+             annulation / convergence optionnelle)
+```
+
+Compose EXCLUSIVEMENT `apex.metalearner.evolution.PopulationEvolutionService.
+evolve_generation` (passe précédente, INCHANGÉE) — ce module n'ajoute QUE la
+politique de boucle, jamais une seconde implémentation de l'évolution
+elle-même (sélection de parents, spawn, mutation/croisement, expérience,
+fitness restent exactement ceux de N+6).
+
+- **`apex.metalearner.learning_session_model`/`learning_session_repository`/
+  `learning_session_service`** — bookkeeping PUR d'une « session
+  d'apprentissage » (table `learning_sessions`, migration
+  `dfd9571d6020`) : `specialty`, `status` (`running`/`cancel_requested`/
+  `completed`/`failed`/`cancelled`), `max_generations`,
+  `generations_completed`, `convergence_patience`/
+  `generations_since_improvement`, `best_member_id`/`best_fitness`/
+  `best_genome_version_id` (reflètent simplement le CHAMPION courant de la
+  population — jamais un second calcul), `stop_reason`, `error`,
+  `created_by`, `created_at`/`completed_at`. Vit dans `apex.metalearner`,
+  même raison que N+6 (`runtime_build/selection.py`, fichier RÉSERVÉ,
+  classe déjà ce paquet Research — un nouveau paquet top-level casserait la
+  partition Runtime/Research qu'il impose).
+- **`apex.metalearner.learning_orchestrator.LearningOrchestrator`** —
+  l'orchestrateur : `start_session`/`resume_session`/`cancel_session`/
+  `get_session`/`list_sessions`. Chaque `start_session`/`resume_session`
+  lance un thread démon borné (même patron qu'`AutonomousLearningService`)
+  qui appelle `evolve_generation` en boucle jusqu'à l'arrêt — jamais un
+  scheduler/planificateur : ce module exécute la session explicitement
+  demandée, il n'en démarre jamais une lui-même.
+- **Reprise sûre par construction** — `evolve_generation` dérive TOUJOURS
+  son numéro de génération de `population_members` déjà persisté
+  (`PopulationService.latest_generation`), jamais d'un paramètre fourni par
+  l'orchestrateur : reprendre une session après une panne revient à
+  rappeler `evolve_generation`, qui reprend naturellement à la bonne
+  génération — jamais un rejeu de 0, jamais un doublon de membre/lignage/
+  `experiment_ref` (idempotence N+6, `PopulationService.add_member`,
+  intégralement réutilisée). `resume_session` refuse une session `running`/
+  `completed` (`ValueError`) — seules `failed`/`cancelled` sont reprenables.
+- **Exclusion mutuelle RÉELLEMENT inter-processus** — au plus une session
+  `running` par spécialité, imposée par un index UNIQUE PARTIEL en base
+  (`learning_sessions_one_running_per_specialty_idx`, `specialty` WHERE
+  `status = 'running'`), déclaré à la fois côté ORM
+  (`apex.db.models.LearningSessionRow.__table_args__`, pour que les tests
+  SQLite en mémoire l'appliquent aussi) et dans la migration — JAMAIS un
+  `threading.Lock`/booléen mémoire (contrairement à `CycleAlreadyRunning`,
+  `apex.metalearner.autonomy`, explicitement documenté comme valide PAR
+  PROCESSUS seulement) : cette garantie tient avec plusieurs
+  processus/workers API. Une tentative concurrente échoue au niveau du
+  SGBD (`IntegrityError`), traduite en `LearningSessionAlreadyRunning`
+  (`apex/errors.py`, `exit_code = 13`) par le repository.
+- **Annulation ENTRE générations, jamais en cours de génération** — `_run_loop`
+  relit le statut de la session (DB, jamais un drapeau mémoire) AVANT de
+  démarrer chaque nouvelle génération ; une génération déjà commencée va
+  toujours à son terme (elle a sa propre valeur scientifique). `record_
+  generation` enregistre le résultat réel même si une annulation est
+  arrivée pendant l'exécution — seule la décision de CONTINUER la boucle,
+  jamais celle d'enregistrer, respecte l'annulation en attente
+  (`generations_completed` reste toujours cohérent avec `population_members`
+  réellement persisté).
+- **Taxonomie précise des raisons d'arrêt** (`stop_reason`) —
+  `max_generations_reached` (COMPLETED), `population_at_capacity`
+  (COMPLETED — plafond de population déjà atteint, un état attendu, jamais
+  une panne), `generation_failed_all_members` (FAILED — panne
+  d'infrastructure réelle, ex. aucun Genome PROMOTED), `generation_raised`
+  (FAILED — `evolve_generation` a levé), `cancelled` (CANCELLED),
+  `converged` (COMPLETED, optionnel — voir ci-dessous).
+- **Convergence déterministe, optionnelle** (`convergence_patience`, défaut
+  `0` = désactivée) — arrêt anticipé après N générations consécutives sans
+  amélioration réelle du meilleur fitness (marge fixe `1e-9`, une garde
+  numérique contre l'égalité flottante fragile, jamais un seuil ML
+  arbitraire) : jamais activée sans que l'appelant le demande explicitement.
+- **Deux plafonds indépendants sur `max_generations` (§ jamais une boucle
+  non bornée)** — la valeur demandée par l'appelant (`1` à
+  `PopulationPolicy.max_session_generations`, `config.yaml` `population:`,
+  défaut `20`) : dépasser ce plafond ADMINISTRATEUR lève `ValueError`,
+  jamais un plafonnement silencieux.
+- **Déclenchement HUMAIN, modèle N+4/N+6 inchangé** — `start_session` ne
+  prend AUCUN paramètre d'identité ; `Subject.HUMAN` reste fourni en dur
+  par `evolve_generation` lui-même à chaque génération, jamais négociable
+  depuis l'extérieur. Aucune extension de `PolicyEngine` nécessaire :
+  toutes les opérations privilégiées réelles (spawn, proposition de
+  Genome) restent gouvernées transitivement par `PopulationEvolutionService`
+  déjà composé.
+- **API** (`apex/api/routes/learning_sessions.py`) — `POST
+  /learning-sessions` (aucun corps d'identité possible), `GET
+  /learning-sessions`, `GET /learning-sessions/{id}`, `POST
+  /learning-sessions/{id}/resume`, `POST /learning-sessions/{id}/cancel` ;
+  `start`/`resume` rendent la main IMMÉDIATEMENT (`running`), la boucle
+  continue en tâche de fond. `LearningSessionAlreadyRunning` -> 409 ;
+  spécialité inconnue/`max_generations` hors bornes -> 422 (vérifié AVANT
+  toute connexion DB) ; session introuvable/non reprenable -> 404/422 ;
+  DB injoignable -> `DataEnvelope(status="unknown")`, jamais une 500.
+- **CLI** (`apex/cli/main.py`, groupe `apex learning`, DISTINCT du groupe
+  `apex learn` déjà existant à un seul cycle) — `start --specialty ... --
+  generations N [--convergence-patience N]`, `status <id>`, `list
+  [--specialty ...]`, `resume <id>`, `cancel <id>`. Appelle exactement
+  `apex.api.dependencies.get_learning_orchestrator()`, LE MÊME service que
+  l'API — aucune seconde implémentation de la boucle. Contrairement à
+  `apex learn start` (qui BLOQUE jusqu'à la fin d'un cycle unique),
+  `apex learning start` rend la main immédiatement (`running`) : une
+  session multi-génération peut durer largement plus longtemps qu'un
+  processus CLI ne devrait bloquer — `apex learning status <id>` interroge
+  ensuite l'état durable (DB), depuis n'importe quel processus.
+- **Non fait dans cette passe (différé explicitement)** : AUCUN
+  scheduler/démon qui démarre automatiquement des sessions (l'appelant
+  décide toujours quand démarrer/reprendre — même discipline que N+6 pour
+  une génération unique) ; aucun ordonnancement GPU/parallélisme spéculatif
+  (séquentiel, déterministe — le contrat public n'empêche pas une future
+  exécution parallèle, mais n'en construit aucune ici) ; frontend NON
+  câblé (le contrat backend/CLI vient de se stabiliser cette passe ;
+  câbler l'Experiment/Learning Lab existant sans fabriquer de progression
+  inventée est un chantier distinct, volontairement différé plutôt que
+  bâclé) ; aucun nouvel `Action` `PolicyEngine` (aucune opération
+  privilégiée nouvelle ne le justifiait).
 
 ### Décisions d'architecture importantes
 
