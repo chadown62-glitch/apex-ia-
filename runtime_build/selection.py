@@ -45,6 +45,7 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "missions",
         "models",
         "obs",
+        "operator",
         "policy",
         "projects",
         "routing",

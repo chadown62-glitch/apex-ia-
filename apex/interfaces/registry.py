@@ -1316,6 +1316,58 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "champion_candidacy` (`EventRepository`, observabilité humaine — "
               "pas encore un signal d'apprentissage consommé automatiquement).",
     ),
+    # -- Ajout N+16 — Operator (couche de contrôle centrale d'APEX) -----------
+    Abstraction(
+        "Operator",
+        "contrôle du lifecycle d'APEX (Start/Stop/Pause/Resume/Status) et façade "
+        "unique de contrôle des tâches (Submit/Cancel/GetStatus/GetResult/"
+        "GetRecentOperations), consommable par une future UI sans terminal", 27, 27,
+        ImplStatus.STUB, "pas de boucle de fond partagée entre plusieurs instances ; "
+        "pas de mapping appelant -> Subject précis (même limite que /missions)",
+        module="apex.operator.service",
+        notes="STUB et non IMPLEMENTED délibérément, mêmes raisons structurelles que "
+              "`Scheduler` : `OperatorService` (singleton applicatif, "
+              "apex.api.dependencies.get_operator_service) ajoute la boucle de "
+              "supervision permanente que l'entrée « Scheduler » ci-dessus documentait "
+              "explicitement comme PLANNED (« pourra être ajoutée sans modifier ce "
+              "module ») — SchedulerService.tick()/cancel_mission()/capacity() restent "
+              "entièrement inchangés, jamais dupliqués. Un « Task » au sens Operator "
+              "EST une apex.missions.model.Mission — jamais un second concept ni un "
+              "second moteur d'exécution : SubmitTask délègue à MissionService.create "
+              "puis tente un ordonnancement immédiat (scheduler.tick(), sous un verrou "
+              "dédié — voir _tick_lock — pour ne jamais laisser le thread de "
+              "supervision et un appel explicite s'entrelacer) ; CancelTask délègue "
+              "entièrement à SchedulerService.cancel_mission (annulation réelle, "
+              "killpg vérifié) ; GetTaskStatus/GetTaskResult projettent directement "
+              "l'état/le résultat persistés de la Mission ; GetRecentOperations "
+              "projette apex.db.repositories.EventRepository.recent (aucun second "
+              "journal). Machine à états fermée (apex.operator.states, même patron que "
+              "apex.missions.states) : STOPPED/STARTING/READY/RUNNING/PAUSED/"
+              "STOPPING/FAULTED, READY<->RUNNING dérivés automatiquement de "
+              "ExecutionRegistry, jamais une décision de l'appelant. PAUSED n'interrompt "
+              "JAMAIS une tâche déjà en cours (ce serait une annulation déguisée) — "
+              "suspend seulement le déclenchement de nouvelles tâches. Récupération "
+              "après erreur : un `start()` en échec (Scheduler/DB indisponible) "
+              "transitionne vers FAULTED avec l'erreur observable via `status()` "
+              "(jamais un READY optimiste) ; un `start()` ultérieur, une fois le "
+              "Runtime de nouveau sain, ramène à READY normalement. Autorisation : "
+              "START_OPERATOR/STOP_OPERATOR/PAUSE_OPERATOR/RESUME_OPERATOR "
+              "(apex.policy.model.Action, N+16) réservées à Subject.HUMAN seul (ni "
+              "CORE, ni aucun clone) ; SubmitTask/CancelTask n'introduisent AUCUNE "
+              "action nouvelle, l'autorisation reste entièrement celle déjà déléguée à "
+              "MissionService/SchedulerService (CREATE_MISSION/CANCEL_MISSION), jamais "
+              "dupliquée ici. Exposé via 10 routes HTTP (`/api/v1/operator/*`, même "
+              "authentification par jeton et même hypothèse simplificatrice "
+              "Subject.HUMAN implicite que `/missions`) — voir apex/api/routes/"
+              "operator.py. Limite honnête, même nature que celle de `Scheduler` : "
+              "aucun état de supervision partagé entre plusieurs instances/processus "
+              "(le thread de supervision est local à CE processus, comme "
+              "ExecutionRegistry) ; aucune persistance du lifecycle Operator lui-même "
+              "(redémarrer le processus API repart de STOPPED, jamais un état fantôme) "
+              "— un choix délibéré, pas un oubli : l'état d'installation/Runtime/Gate "
+              "réel reste entièrement celui déjà persisté par Setup (voir "
+              "setup/docs/LAUNCHER_ARCHITECTURE.md, N+15), jamais réinventé ici.",
+    ),
 )
 
 

@@ -133,6 +133,20 @@ class Action(str, Enum):
     DELETE_AGENT = "delete_agent"
     RUN_AGENT_EXECUTION = "run_agent_execution"
     CREATE_AGENT_TEAM = "create_agent_team"
+    # -- Operator (N+16) — contrôle du lifecycle d'APEX lui-même -------------
+    # Les quatre réservées à HUMAIN seul, même motif que CREATE_MISSION :
+    # démarrer/arrêter/mettre en pause/reprendre APEX est une décision
+    # humaine explicite, jamais un clone (aucune allow-list de clone ne les
+    # contient — refus par défaut, pas une liste noire séparée), jamais CORE
+    # non plus (CORE exécute déjà les missions une fois lancées ; il ne
+    # décide pas lui-même de démarrer ou d'arrêter tout APEX). Distinctes de
+    # LAUNCH_MISSION/CANCEL_MISSION (déjà existantes, réutilisées telles
+    # quelles par `apex.operator.service.OperatorService` pour
+    # SubmitTask/CancelTask — jamais dupliquées ici).
+    START_OPERATOR = "start_operator"
+    STOP_OPERATOR = "stop_operator"
+    PAUSE_OPERATOR = "pause_operator"
+    RESUME_OPERATOR = "resume_operator"
 
     # -- Interdits absolus — jamais accordables, à quiconque -----------------
     MODIFY_CORE = "modify_core"

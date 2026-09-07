@@ -397,6 +397,32 @@ class SchedulerStatusOut(BaseModel):
     heartbeat: MeasurementOut
 
 
+# -- Operator (N+16) -----------------------------------------------------------
+
+
+class OperatorStatusOut(BaseModel):
+    """Projection directe d'`apex.operator.model.OperatorStatus` — un
+    « Task » au sens Operator EST une Mission (voir `MissionOut`), jamais un
+    second concept."""
+
+    state: Literal["stopped", "starting", "ready", "running", "paused", "stopping", "faulted"]
+    since: str
+    active_task_ids: list[str]
+    queued_task_count: int
+    max_concurrent_tasks: int
+    last_error: str | None = None
+
+
+class TaskResultOut(BaseModel):
+    """Projection directe d'`apex.operator.model.TaskResult`."""
+
+    task_id: str
+    state: str
+    ready: bool
+    result: str | None
+    error: str | None
+
+
 # -- évaluation / apprentissage (passe « API Évaluation/Apprentissage ») -----
 # Projections directes de `apex.tasks`/`apex.evalrunner`/`apex.weakness`/
 # `apex.calibration`/`apex.costgain`/`apex.skills`/`apex.selfmodel` — aucun

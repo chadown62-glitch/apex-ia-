@@ -1448,6 +1448,47 @@ d'évolution, ou une capacité non réellement supportée.
   chacun respecte honnêtement son propre sous-plafond, jamais un optimum
   global unique prétendu).
 
+### APEX Operator (N+16)
+
+**Objectif** : faire passer APEX d'un système piloté au coup par coup
+(`POST /missions/{id}/launch`, un seul `tick()` par appel, rien ne tourne en
+continu) à un système pilotable normalement par une future UI/un client
+local, sans terminal — voir `docs/AGENT_HANDOFF.md` pour le détail complet
+(architecture, machine à états, 10 routes HTTP, permissions, limites).
+
+**Ce qui a été ajouté**, sans dupliquer ni contourner l'existant :
+- `apex/operator/{states,model,service}.py` — `OperatorService`, singleton
+  applicatif construit AU-DESSUS de `SchedulerService`/`MissionService`
+  (inchangés). Ajoute la boucle de supervision permanente que
+  `apex.interfaces.registry` (entrée `Scheduler`) documentait explicitement
+  comme la seule pièce manquante (« pourra être ajoutée sans modifier ce
+  module ») — jamais touché.
+- Machine à états fermée (`STOPPED/STARTING/READY/RUNNING/PAUSED/
+  STOPPING/FAULTED`), même patron qu'`apex.missions.states`.
+- 4 nouvelles `Action` (`START_OPERATOR`/`STOP_OPERATOR`/`PAUSE_OPERATOR`/
+  `RESUME_OPERATOR`, `apex.policy.model`) réservées à `Subject.HUMAN` seul —
+  `SubmitTask`/`CancelTask` n'introduisent AUCUNE action nouvelle, délégation
+  pure à `MissionService.create`/`SchedulerService.cancel_mission`.
+- `apex/api/routes/operator.py` (10 routes, `/api/v1/operator/*`), même
+  authentification/enveloppe (`DataEnvelope`) que le reste de l'API.
+- Entrée `Operator` (STUB) dans `apex.interfaces.registry`.
+
+**Vérifié réellement** : `tests/test_operator_service.py` (33 tests,
+lifecycle + concurrence réelle + exécution sandboxée réelle + FAULTED/
+récupération) et `tests/test_api_operator.py` (11 tests, dont un parcours
+HTTP complet Stopped→Start→Submit→Completed→Stop contre PostgreSQL réel,
+disponible dans cet environnement — voir §5.5+ pour la procédure). Suite
+complète (unitaire + intégration) exécutée sans régression après l'ajout.
+
+**Non fait dans cette passe** (limites honnêtes, voir §6 d'`AGENT_HANDOFF.md`) :
+aucun état de supervision partagé entre plusieurs instances/processus API
+(même nature que `SchedulerService.ExecutionRegistry`, jamais un oubli) ;
+aucun mapping appelant → identité précise (même limite préexistante que
+`/missions`/`/agents`) ; frontend NON câblé sur `/operator/*` (hors
+périmètre explicite de N+16 — l'architecture est conçue pour qu'une future
+UI puisse le faire directement, aucun changement d'API ne devrait être
+nécessaire).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

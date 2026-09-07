@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from apex.metalearner.autonomous_scheduler import AutonomousLearningScheduler
     from apex.metalearner.autonomy import AutonomousLearningService
     from apex.metalearner.evolution import PopulationEvolutionService
+    from apex.operator.service import OperatorService
     from apex.metalearner.learning_orchestrator import LearningOrchestrator
     from apex.scheduler.service import SchedulerService
 
@@ -156,6 +157,53 @@ def reset_scheduler_service_for_tests() -> None:
         if _scheduler_service is not None:
             _scheduler_service.shutdown(wait=True)
         _scheduler_service = None
+
+
+#: Même discipline « singleton paresseux » que `get_scheduler_service` —
+#: `OperatorService` (N+16) porte un état EN MÉMOIRE (thread de supervision,
+#: lifecycle STOPPED/STARTING/READY/RUNNING/PAUSED/STOPPING/FAULTED) qui doit
+#: rester LE MÊME objet entre deux requêtes HTTP. Construit AU-DESSUS du
+#: `SchedulerService` singleton existant (`get_scheduler_service` ci-dessus)
+#: — jamais un second Scheduler, jamais une seconde connexion DB.
+_operator_service: "OperatorService | None" = None
+_operator_lock = threading.Lock()
+
+
+def get_operator_service() -> "OperatorService":
+    """Construit — UNE SEULE FOIS par processus — l'Operator applicatif et
+    le retourne. Même double-checked locking que `get_scheduler_service`.
+    Le lifecycle d'APEX (STOPPED par défaut) N'EST PAS démarré ici : c'est
+    un appel explicite à `POST /operator/start` (donc `OperatorService.start`)
+    qui le fait — jamais un démarrage implicite au premier accès HTTP, qui
+    contournerait justement le contrôle explicite que N+16 introduit."""
+    global _operator_service
+    if _operator_service is not None:
+        return _operator_service
+    with _operator_lock:
+        if _operator_service is not None:
+            return _operator_service
+        from apex.missions.service import MissionService
+        from apex.operator.service import OperatorService
+
+        scheduler_service = get_scheduler_service()
+        session_factory = get_session_factory()
+        _operator_service = OperatorService(
+            session_factory, scheduler=scheduler_service, mission_service=MissionService(session_factory),
+        )
+        return _operator_service
+
+
+def reset_operator_service_for_tests() -> None:
+    """Réservé aux tests. Même discipline que
+    `reset_scheduler_service_for_tests` — arrête le thread de supervision
+    s'il tourne, puis vide le cache. Ne touche jamais le singleton
+    `SchedulerService` sous-jacent (réinitialisé séparément si besoin, voir
+    `reset_scheduler_service_for_tests`)."""
+    global _operator_service
+    with _operator_lock:
+        if _operator_service is not None:
+            _operator_service.shutdown(wait=True)
+        _operator_service = None
 
 
 #: Même discipline « singleton paresseux » que `get_scheduler_service` —

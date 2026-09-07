@@ -96,6 +96,7 @@ from apex.api.routes import (
     learning_sessions,
     missions,
     models,
+    operator,
     population,
     projects,
     registry,
@@ -181,7 +182,7 @@ def create_app() -> FastAPI:
     auth_dependency = Depends(require_api_token)
     for router in (
         health.router, gate.router, registry.router, events.router, audit.router,
-        agents.router, missions.router, scheduler.router,
+        agents.router, missions.router, scheduler.router, operator.router,
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, learning.router, population.router,
         learning_sessions.router, gauntlets.router, learning_feedback.router, capability.router,

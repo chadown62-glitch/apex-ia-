@@ -112,6 +112,9 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # jamais RUN_AGENT_EXECUTION (réservé à CORE, même motif que
             # LAUNCH_MISSION jamais accordé à HUMAIN directement).
             Action.CREATE_AGENT, Action.UPDATE_AGENT, Action.DELETE_AGENT, Action.CREATE_AGENT_TEAM,
+            # Operator (N+16) : HUMAIN seul contrôle le lifecycle d'APEX —
+            # jamais CORE, jamais un clone (absentes de leurs allow-lists).
+            Action.START_OPERATOR, Action.STOP_OPERATOR, Action.PAUSE_OPERATOR, Action.RESUME_OPERATOR,
         }
     ),
     Subject.RESEARCH: frozenset(
