@@ -37,6 +37,7 @@ from typing import TYPE_CHECKING, Any
 from apex.errors import ApexError
 
 if TYPE_CHECKING:
+    from apex.design.service import DesignService
     from apex.metalearner.autonomous_scheduler import AutonomousLearningScheduler
     from apex.metalearner.autonomy import AutonomousLearningService
     from apex.metalearner.evolution import PopulationEvolutionService
@@ -159,12 +160,48 @@ def reset_scheduler_service_for_tests() -> None:
         _scheduler_service = None
 
 
+#: Même discipline « singleton paresseux » — `DesignService` (N+17) porte un
+#: état EN MÉMOIRE (les exécutions de pipeline, `DesignService._runs`) qui
+#: doit rester LE MÊME objet entre deux requêtes HTTP, exactement comme
+#: `SchedulerService.registry`. Aucune dépendance DB à sa construction
+#: (contrairement à `get_scheduler_service` : `apex.artifacts`/`apex.design.
+#: research`/`apex.design.visual_provider` sont tous sans base de données) —
+#: pas de réconciliation au démarrage nécessaire.
+_design_service: "DesignService | None" = None
+_design_lock = threading.Lock()
+
+
+def get_design_service() -> "DesignService":
+    """Construit — UNE SEULE FOIS par processus — le Design Engine
+    applicatif et le retourne. Même double-checked locking que
+    `get_scheduler_service`/`get_operator_service`."""
+    global _design_service
+    if _design_service is not None:
+        return _design_service
+    with _design_lock:
+        if _design_service is not None:
+            return _design_service
+        from apex.design.service import DesignService
+
+        _design_service = DesignService()
+        return _design_service
+
+
+def reset_design_service_for_tests() -> None:
+    """Réservé aux tests — vide le cache ; le prochain appel à
+    `get_design_service()` en reconstruit un, sans exécutions en cours."""
+    global _design_service
+    with _design_lock:
+        _design_service = None
+
+
 #: Même discipline « singleton paresseux » que `get_scheduler_service` —
 #: `OperatorService` (N+16) porte un état EN MÉMOIRE (thread de supervision,
 #: lifecycle STOPPED/STARTING/READY/RUNNING/PAUSED/STOPPING/FAULTED) qui doit
 #: rester LE MÊME objet entre deux requêtes HTTP. Construit AU-DESSUS du
 #: `SchedulerService` singleton existant (`get_scheduler_service` ci-dessus)
-#: — jamais un second Scheduler, jamais une seconde connexion DB.
+#: et du `DesignService` singleton (`get_design_service` ci-dessus, N+17) —
+#: jamais un second Scheduler, jamais une seconde connexion DB.
 _operator_service: "OperatorService | None" = None
 _operator_lock = threading.Lock()
 
@@ -186,9 +223,11 @@ def get_operator_service() -> "OperatorService":
         from apex.operator.service import OperatorService
 
         scheduler_service = get_scheduler_service()
+        design_service = get_design_service()
         session_factory = get_session_factory()
         _operator_service = OperatorService(
             session_factory, scheduler=scheduler_service, mission_service=MissionService(session_factory),
+            design_service=design_service,
         )
         return _operator_service
 

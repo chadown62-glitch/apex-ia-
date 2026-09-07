@@ -115,6 +115,9 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # Operator (N+16) : HUMAIN seul contrôle le lifecycle d'APEX —
             # jamais CORE, jamais un clone (absentes de leurs allow-lists).
             Action.START_OPERATOR, Action.STOP_OPERATOR, Action.PAUSE_OPERATOR, Action.RESUME_OPERATOR,
+            # Design Engine (N+17) : HUMAIN seul soumet une demande de
+            # conception — même motif que CREATE_MISSION/CREATE_TASK.
+            Action.SUBMIT_DESIGN,
         }
     ),
     Subject.RESEARCH: frozenset(

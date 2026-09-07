@@ -207,3 +207,19 @@ class LearningSessionAlreadyRunning(ApexError):
         super().__init__(
             f"une session d'apprentissage est déjà en cours pour « {specialty} »"
         )
+
+
+class VisualBackendUnavailable(ApexError):
+    """Aucun backend de génération visuelle réel n'est connecté
+    (`apex.design.visual_provider.VisualGenerationProvider`, N+17) —
+    l'étape VISUALIZE du pipeline de conception le capture et le rapporte
+    honnêtement (`VisualResult.state = "unavailable"`) plutôt que de
+    prétendre qu'une image a été générée (§79 du cahier des charges :
+    aucun composant ne retourne silencieusement une valeur plausible
+    lorsqu'il n'est pas implémenté)."""
+
+    exit_code = 15
+
+    def __init__(self, detail: str) -> None:
+        self.detail = detail
+        super().__init__(f"VISUAL_BACKEND_UNAVAILABLE : {detail}")

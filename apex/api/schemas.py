@@ -423,6 +423,137 @@ class TaskResultOut(BaseModel):
     error: str | None
 
 
+# -- Design Engine (N+17) — projections directes d'`apex.design.model`, aucun
+# champ calculé ici. `DesignPackageOut` est la forme complète retournée par
+# `GetDesignStatus`/`GetDesignResult` (Operator) — un seul et même objet,
+# jamais deux représentations distinctes pour statut/résultat.
+
+
+class DesignSubmitIn(BaseModel):
+    """Corps de `POST /operator/designs` — style `{"type": "design",
+    "request": "..."}` demandé par la mission N+17. `type` est optionnel :
+    le chemin de la route porte déjà la distinction, jamais un second
+    routage caché sur ce champ."""
+
+    request: str
+    type: Literal["design"] | None = "design"
+
+
+class DesignStepRecordOut(BaseModel):
+    step: str
+    state: str
+    input_summary: str
+    output_summary: str
+    provenance: str
+    logs: list[str]
+    error: str | None
+    started_at: str | None
+    completed_at: str | None
+    duration_s: float | None
+
+
+class DesignBriefOut(BaseModel):
+    design_id: str
+    summary: str
+    goals: list[str]
+    constraints: list[str]
+    audience: str
+    style_keywords: list[str]
+    source_request: str
+    provenance: str
+
+
+class ResearchResultOut(BaseModel):
+    source: str
+    title: str
+    url: str | None
+    excerpt: str
+    relevance: float
+    timestamp: str
+    provenance: str
+
+
+class DesignConceptOut(BaseModel):
+    id: str
+    design_id: str
+    version: int
+    title: str
+    narrative: str
+    key_elements: list[str]
+    based_on_research: list[int]
+    provenance: str
+
+
+class VisualPromptOut(BaseModel):
+    id: str
+    concept_id: str
+    variant: int
+    subject: str
+    environment: str
+    composition: str
+    architecture_design: str
+    materials: str
+    colors: str
+    light: str
+    camera: str
+    style: str
+    constraints: str
+    elements_to_avoid: str
+    rendered: str
+
+
+class VisualResultOut(BaseModel):
+    id: str
+    prompt_id: str
+    state: str
+    provider: str
+    detail: str
+    artifact_content_hash: str | None
+
+
+class DesignArtifactRefOut(BaseModel):
+    content_hash: str
+    kind: str
+    created_at: str
+
+
+class DesignValidationOut(BaseModel):
+    design_id: str
+    passed: bool
+    checks: list[str]
+    failures: list[str]
+    validated_at: str
+
+
+class DesignRequestOut(BaseModel):
+    id: str
+    text: str
+    requested_by: str
+    created_at: str
+
+
+class DesignPackageOut(BaseModel):
+    """Projection directe d'`apex.design.model.DesignPackage` (`to_dict()`)
+    — l'unité renvoyée par `POST /operator/designs`, `GET /operator/designs/
+    {id}` et `GET /operator/designs/{id}/result`."""
+
+    design_id: str
+    request: DesignRequestOut
+    state: str
+    steps: list[DesignStepRecordOut]
+    brief: DesignBriefOut | None
+    research: list[ResearchResultOut]
+    concepts: list[DesignConceptOut]
+    visual_prompts: list[VisualPromptOut]
+    visual_results: list[VisualResultOut]
+    validation: DesignValidationOut | None
+    artifacts: list[DesignArtifactRefOut]
+    error: str | None
+    created_at: str
+    completed_at: str | None
+    ready: bool
+
+
 # -- évaluation / apprentissage (passe « API Évaluation/Apprentissage ») -----
 # Projections directes de `apex.tasks`/`apex.evalrunner`/`apex.weakness`/
 # `apex.calibration`/`apex.costgain`/`apex.skills`/`apex.selfmodel` — aucun

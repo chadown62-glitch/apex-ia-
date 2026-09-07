@@ -147,6 +147,17 @@ class Action(str, Enum):
     STOP_OPERATOR = "stop_operator"
     PAUSE_OPERATOR = "pause_operator"
     RESUME_OPERATOR = "resume_operator"
+    # -- Design Engine (N+17) --------------------------------------------------
+    # Une seule action nouvelle, même motif exact que CREATE_MISSION/
+    # CREATE_TASK/CREATE_CONVERSATION : soumettre une demande de conception
+    # est une action humaine directe, jamais un clone ni le CORE en
+    # autonomie (aucune allow-list de clone ni celle de CORE ne la
+    # contient). Les étapes internes du pipeline (recherche, synthèse,
+    # génération visuelle, validation, empaquetage) ne sont PAS soumises à
+    # une autorisation séparée : elles s'exécutent sous la même demande déjà
+    # autorisée, exactement comme le lancement effectif d'une Mission
+    # (LAUNCH_MISSION) ne re-vérifie pas CREATE_MISSION à chaque étape.
+    SUBMIT_DESIGN = "submit_design"
 
     # -- Interdits absolus — jamais accordables, à quiconque -----------------
     MODIFY_CORE = "modify_core"

@@ -25,6 +25,8 @@ _GET_PATHS = (
     "/api/v1/operator/tasks/x",
     "/api/v1/operator/tasks/x/result",
     "/api/v1/operator/operations",
+    "/api/v1/operator/designs/x",
+    "/api/v1/operator/designs/x/result",
 )
 _POST_PATHS = (
     "/api/v1/operator/start",
@@ -32,6 +34,7 @@ _POST_PATHS = (
     "/api/v1/operator/pause",
     "/api/v1/operator/resume",
     "/api/v1/operator/tasks/x/cancel",
+    "/api/v1/operator/designs/x/resume",
 )
 
 
@@ -66,6 +69,15 @@ class TestOperatorRoutesRequireAuthentication(unittest.TestCase):
             "/api/v1/operator/tasks",
             json={"title": "t", "specialty": "research", "objective": "o"},
         )
+        self.assertEqual(response.status_code, 401)
+
+    def test_submit_design_route_rejects_missing_token(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from apex.api.app import create_app
+
+        anonymous = TestClient(create_app())
+        response = anonymous.post("/api/v1/operator/designs", json={"request": "un pavillon"})
         self.assertEqual(response.status_code, 401)
 
 
@@ -109,6 +121,16 @@ class TestOperatorRoutesWithoutDatabase(unittest.TestCase):
 
     def test_get_unknown_task_degrades_to_unknown_never_a_500(self) -> None:
         response = self.client.get("/api/v1/operator/tasks/does-not-exist")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "unknown")
+
+    def test_submit_design_degrades_to_unknown_never_a_500(self) -> None:
+        response = self.client.post("/api/v1/operator/designs", json={"request": "un pavillon"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "unknown")
+
+    def test_get_unknown_design_degrades_to_unknown_never_a_500(self) -> None:
+        response = self.client.get("/api/v1/operator/designs/does-not-exist")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "unknown")
 
@@ -227,6 +249,67 @@ class TestOperatorRoutesWithRealDatabase(unittest.TestCase):
         self.assertEqual(ops.status_code, 200)
         kinds = {e["msg"] for e in ops.json()["data"]}
         self.assertIn("operator.started", kinds)
+
+    def test_e2e_create_a_modern_urban_skatepark_concept(self) -> None:
+        """Scénario E2E N+17 imposé par la mission : « Créer le concept d'un
+        skatepark urbain moderne », de bout en bout via HTTP, sans terminal.
+        Va aussi loin que RÉELLEMENT possible et rapporte honnêtement
+        `VISUAL_BACKEND_UNAVAILABLE` (aucune image n'est fabriquée) plutôt
+        que de prétendre une génération visuelle réelle — aucun backend de
+        ce type n'est connecté dans ce dépôt (voir `apex.design.
+        visual_provider`)."""
+        started = self.client.post("/api/v1/operator/start")
+        self.assertEqual(started.json()["data"]["state"], "ready")
+
+        submitted = self.client.post(
+            "/api/v1/operator/designs", json={"type": "design", "request": "Créer le concept d'un skatepark urbain moderne"},
+        )
+        self.assertEqual(submitted.status_code, 200)
+        self.assertEqual(submitted.json()["status"], "real")
+        package = submitted.json()["data"]
+        design_id = package["design_id"]
+        self.assertTrue(package["ready"])
+        self.assertEqual(package["state"], "completed")
+        self.assertIsNone(package["error"])
+
+        # ANALYZE/SYNTHESIZE/DESIGN : réels, déterministes, jamais fabriqués.
+        self.assertIsNotNone(package["brief"])
+        self.assertIn("urbain", package["brief"]["style_keywords"])
+        self.assertGreaterEqual(len(package["concepts"]), 1)
+
+        # VISUALIZE : prompts structurés réels, résultat honnêtement indisponible.
+        self.assertGreaterEqual(len(package["visual_prompts"]), 1)
+        self.assertTrue(package["visual_results"])
+        for visual_result in package["visual_results"]:
+            self.assertEqual(visual_result["state"], "unavailable")
+            self.assertIn("VISUAL_BACKEND_UNAVAILABLE", visual_result["detail"])
+            self.assertIsNone(visual_result["artifact_content_hash"])
+
+        # VALIDATE/PACKAGE : QA structurelle réelle, artefacts réellement persistés.
+        self.assertIsNotNone(package["validation"])
+        self.assertTrue(package["validation"]["passed"])
+        self.assertGreaterEqual(len(package["artifacts"]), 1)
+
+        # Étapes complètes, dans l'ordre fixe, aucune fabriquée.
+        self.assertEqual(
+            [s["step"] for s in package["steps"]],
+            ["analyze", "research", "synthesize", "design", "visualize", "validate", "package"],
+        )
+
+        # GetDesignResult (Operator) — même objet, relu séparément.
+        result = self.client.get(f"/api/v1/operator/designs/{design_id}/result")
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(result.json()["data"]["design_id"], design_id)
+        self.assertTrue(result.json()["data"]["ready"])
+
+        # Visible dans les opérations récentes — même journal `events` que le
+        # reste de l'Operator, jamais un second canal.
+        ops = self.client.get("/api/v1/operator/operations")
+        kinds = {e["msg"] for e in ops.json()["data"]}
+        self.assertIn("design.submitted", kinds)
+
+        stopped = self.client.post("/api/v1/operator/stop")
+        self.assertEqual(stopped.json()["data"]["state"], "stopped")
 
 
 if __name__ == "__main__":

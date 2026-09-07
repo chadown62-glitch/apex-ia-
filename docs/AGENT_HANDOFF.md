@@ -162,3 +162,238 @@ d'autorisation :
 
 Voir le rapport de mission N+16 pour les résultats exacts (PASS/SKIP) de
 cette exécution.
+
+---
+
+# APEX — Handoff Design Engine (N+17)
+
+Ce chapitre décrit le **pipeline de conception assistée** introduit en
+N+17 : d'une demande en langage naturel à un `DesignPackage` traçable
+(brief, recherche, concepts, prompts visuels, résultats visuels,
+validation, artefacts), pilotable sans terminal via l'Operator (N+16).
+
+## 1. Ce que N+17 change
+
+Avant N+17, rien dans ce dépôt ne transformait une demande de conception
+en un résultat structuré : `apex.artifacts` (ArtifactStore, phase 10)
+existait mais n'était câblé nulle part ; aucune recherche web, aucune
+génération visuelle, aucun moteur de synthèse n'existaient, même à l'état
+de stub.
+
+**`apex.design`** ajoute cette pièce manquante — un pipeline réel en 7
+étapes, la première utilisation réelle d'`apex.artifacts`, et deux
+nouvelles abstractions honnêtement documentées (`ResearchProvider` côté
+Design Engine, `VisualGenerationProvider`) — sans dupliquer ni l'Operator,
+ni le Task System, ni `apex.policy`.
+
+## 2. Architecture
+
+```
+Client (Operator, script, curl)
+    │  POST /api/v1/operator/designs  {"type": "design", "request": "..."}
+    ▼
+apex/api/routes/operator.py            (4 routes /api/v1/operator/designs*)
+    │  DataEnvelope[DesignPackageOut]
+    ▼
+apex.operator.service.OperatorService  (N+16, inchangé dans sa nature)
+    │  submit_design/resume_design/get_design_status/get_design_result
+    │  même garde `accepts_submissions`, même journal `events`
+    ▼
+apex.design.service.DesignService      (façade, N+17, singleton applicatif)
+    │  exécution SYNCHRONE — aucune étape n'attend un backend lent réel
+    ▼
+apex.design.pipeline.DesignPipeline    (orchestrateur, 7 étapes)
+    │  ANALYZE -> RESEARCH -> SYNTHESIZE -> DESIGN -> VISUALIZE -> VALIDATE -> PACKAGE
+    ├─ apex.design.synthesis    (ANALYZE/SYNTHESIZE/DESIGN, déterministe)
+    ├─ apex.design.research     (RESEARCH — aucun backend réel connecté)
+    ├─ apex.design.prompt_engine (construction des VisualPrompt)
+    ├─ apex.design.visual_provider (VISUALIZE — aucun backend réel connecté)
+    └─ apex.design.validation   (VALIDATE — QA structurelle)
+    ▼
+apex.artifacts (LocalFilesystemArtifactStore)  — chaque résultat durable
+    persisté, adressé par contenu (sha256:...), PREMIÈRE utilisation réelle
+    de ce magasin dans ce dépôt (phase 10, jusqu'ici non câblé)
+```
+
+Un `DesignPackage` référence tout : `request`, `steps` (un `StepRecord`
+par étape, avec état/entrée-sortie/erreur/logs/durée/provenance),
+`brief`, `research`, `concepts`, `visual_prompts`, `visual_results`,
+`validation`, `artifacts` (références `sha256:...` vers `apex.artifacts`).
+
+## 3. Machine à états (`apex.design.states.DesignPipelineState`)
+
+| État | Atteint par |
+|---|---|
+| `REQUEST` | création du `DesignPackage`, avant toute étape |
+| `ANALYZING` / `RESEARCHING` / `SYNTHESIZING` / `DESIGNING` / `VISUALIZING` / `VALIDATING` / `PACKAGING` | une étape en cours, une par nom d'étape |
+| `COMPLETED` | les 7 étapes ont réussi |
+| `FAILED` | une étape a réellement échoué (jamais RESEARCH/VISUALIZE indisponibles — voir §4) |
+
+Table de transitions fermée (`assert_transition_allowed`, même patron que
+`apex.missions.states`/`apex.operator.states`) : une transition absente
+lève `InvalidDesignTransition`. `FAILED` peut reprendre vers N'IMPORTE
+quelle étape de traitement — `DesignPipeline.resume()` choisit la cible
+exacte selon la DERNIÈRE étape réellement en échec, ne ré-exécute JAMAIS
+les étapes déjà réussies (leurs artefacts ne sont pas dupliqués).
+
+**Reprise après échec** : `resume(design_id)` (via `DesignService`/
+`OperatorService.resume_design`) rejoue le pipeline à partir de l'étape en
+échec — testé (`tests/test_design_pipeline.py::TestPipelineEdgeCases::
+test_interrupted_pipeline_resumes_from_the_failed_step_only`) avec une
+panne transitoire réelle (exception levée, pas une simulation).
+
+## 4. Honnêteté RESEARCH/VISUALIZE — jamais une fabrication
+
+Aucun backend de recherche web réel, aucun backend de génération visuelle
+réel n'est connecté dans ce dépôt (confirmé par audit N+17 : aucune
+dépendance, aucune clé API, `apex.routing.model.Capability.VISION` jamais
+dérivée — même vide que `SearchProvider`, `apex.interfaces.registry`,
+PLANNED depuis la Phase 13, non comblé ici, seulement consommé
+honnêtement) :
+
+- **RESEARCH** (`apex.design.research.NullResearchProvider`) : `detect()`
+  répond `UNAVAILABLE_ON_DEV`, `search()` retourne un tuple VIDE. L'étape
+  est marquée `StepRecord.state = SKIPPED`, jamais `FAILED` — le pipeline
+  continue, `DesignConcept.based_on_research` reste vide plutôt que
+  fabriqué.
+- **VISUALIZE** (`apex.design.visual_provider.NullVisualGenerationProvider`) :
+  un `VisualPrompt` structuré RÉEL est toujours construit
+  (`apex.design.prompt_engine`, aucun backend requis pour ça), mais
+  `generate()` lève `apex.errors.VisualBackendUnavailable` — capturé par
+  le pipeline et traduit en `VisualResult(state="unavailable",
+  artifact_content_hash=None)`, jamais un octet d'image inventé. Le
+  scénario E2E (§7) rapporte explicitement ce résultat plutôt que de
+  prétendre une génération.
+
+Un futur backend réel (recherche web via une API configurée, génération
+d'image via un service réel) se brancherait dans le SEUL point de
+construction de chaque contrat (`get_default_provider()` de
+`apex.design.research`/`apex.design.visual_provider`) — aucun consommateur
+(`apex.design.pipeline`) n'a besoin de changer.
+
+Un double de test (`_MockVisualGenerationProvider`, sous-classe RÉELLE du
+contrat `VisualGenerationProvider`) existe UNIQUEMENT dans
+`tests/test_design_pipeline.py` — jamais dans `apex/design/`, même
+discipline que `_FakeProvider(ModelProvider)` dans
+`tests/test_routing_generation.py`. Il exerce le chemin `state="completed"`
+sans jamais être présenté comme une preuve de génération réelle en
+production.
+
+## 5. API HTTP (`/api/v1/operator/designs*`)
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| `POST` | `/operator/designs` | soumet `{"type": "design", "request": "..."}`, exécute le pipeline, retourne le `DesignPackage` complet |
+| `POST` | `/operator/designs/{id}/resume` | reprend une conception en échec |
+| `GET` | `/operator/designs/{id}` | statut/résultat courant (même objet que POST) |
+| `GET` | `/operator/designs/{id}/result` | alias explicite, même sémantique `ready`/ `result`/`error` que `GetTaskResult` |
+
+Même `DataEnvelope[T]`/authentification que le reste de l'Operator —
+jamais un HTTP 500 : Operator non démarré, conception inconnue, ou requête
+vide dégradent en `status: "unknown"` avec un `detail` humain.
+
+## 6. Permissions
+
+Une seule action nouvelle, `Action.SUBMIT_DESIGN`
+(`apex.policy.model.Action`), réservée à **`Subject.HUMAN` seul** — même
+motif que `CREATE_MISSION`/`CREATE_TASK` : un clone ne peut jamais
+soumettre de conception (absente de toutes les allow-lists de clone et de
+CORE). Les étapes internes du pipeline ne re-vérifient jamais cette
+autorisation individuellement — elles s'exécutent sous la demande déjà
+autorisée, comme `LAUNCH_MISSION` ne re-vérifie pas `CREATE_MISSION`.
+
+## 7. Scénario E2E validé
+
+`tests/test_api_operator.py::TestOperatorRoutesWithRealDatabase::
+test_e2e_create_a_modern_urban_skatepark_concept` — le scénario imposé par
+la mission N+17 (« Créer le concept d'un skatepark urbain moderne »), de
+bout en bout via HTTP réel (PostgreSQL) : Start -> Submit -> 7 étapes
+COMPLETED/SKIPPED (jamais FAILED) -> `ready=True` -> chaque
+`VisualResult.detail` contient littéralement `VISUAL_BACKEND_UNAVAILABLE`
+-> GetResult -> visible dans `GetRecentOperations` (`design.submitted`) ->
+Stop. Aucune image n'est fabriquée ; le rapport reste honnête du début à
+la fin.
+
+## 8. Intégration Operator (N+16)
+
+`OperatorService` (N+16) compose désormais, en plus du Scheduler/
+MissionService, un `DesignService | None` optionnel
+(`apex.api.dependencies.get_design_service`, même discipline « singleton
+paresseux » que `get_scheduler_service`/`get_operator_service`) :
+
+- `submit_design`/`resume_design` suivent la MÊME garde
+  `accepts_submissions` (READY/RUNNING/PAUSED) que `submit_task` — jamais
+  une seconde machine à états.
+- `_observe_activity` additionne `DesignService.active_count()` au nombre
+  de Missions actives du Scheduler pour dériver READY↔RUNNING — une
+  exécution de pipeline de conception compte comme une activité Operator,
+  jamais un second compteur.
+- Chaque soumission/reprise de conception écrit dans `events`
+  (`design.submitted`/`design.resumed`), lisible via
+  `GET /operator/operations` — jamais un second journal.
+- Un `OperatorService` construit SANS `DesignService` (ex. un test N+16
+  non modifié) reste entièrement fonctionnel pour Start/Stop/Pause/Resume/
+  SubmitTask ; seules les méthodes `submit_design`/`get_design_*`/
+  `resume_design` lèvent alors `OperatorNotReady`.
+
+## 9. Artefacts
+
+Chaque résultat durable produit par le pipeline (brief, brief finalisé,
+chaque concept, chaque prompt visuel, chaque résultat visuel réellement
+généré, la validation, le paquet final) est écrit dans
+`apex.artifacts.LocalFilesystemArtifactStore` — content-addressed
+(`sha256:<64 hex>`), intégrité re-vérifiée à la lecture. C'est la PREMIÈRE
+utilisation réelle de ce magasin dans ce dépôt (phase 10, jusqu'ici
+délibérément non câblé — voir sa propre entrée de registre). Chaque
+`DesignArtifactRef` porte `content_hash`/`kind`/`created_at` ; aucune
+table SQL dédiée — la durabilité vient entièrement du magasin de
+contenu, jamais réinventée.
+
+## 10. Limites honnêtes
+
+- **Recherche et génération visuelle réellement indisponibles** (§4) —
+  documenté, jamais contourné par une fabrication.
+- **État de suivi en mémoire, PAR PROCESSUS** (`DesignService._runs`) —
+  même limite déjà documentée pour `OperatorService`/`ExecutionRegistry` :
+  redémarrer le processus API perd le SUIVI d'une conception déjà
+  terminée (le `DesignPackage` final reste lui-même durable, car déjà
+  écrit dans `apex.artifacts`).
+- **Décision volontaire de NE PAS intégrer `apex.memory`** en v1 : câbler
+  une écriture `MemoryService.write()` depuis le Design Engine exigerait
+  d'étendre l'allow-list HUMAN/CORE avec `WRITE_OWN_MEMORY` — un
+  changement de portée de sécurité que cette étape ne prend jamais sans
+  décision explicite. L'architecture (dataclasses immuables, provenance
+  déjà portée par chaque enregistrement) reste prête pour un futur
+  câblage sans réécriture.
+- **Decision Trace absente de ce dépôt** — confirmé par audit N+17
+  (aucune occurrence, aucune entrée de registre) : rien à intégrer, ce
+  n'est pas un oubli de cette étape.
+- **ANALYZE/SYNTHESIZE/DESIGN sont déterministes** (`apex.design.
+  synthesis`), jamais un appel `ModelProvider` — un enrichissement futur
+  par modèle réellement invoqué reste une extension documentée, jamais
+  une simulation aujourd'hui.
+- **VALIDATE est une QA structurelle**, jamais une validation par modèle
+  de vision (aucun modèle de vision connecté dans ce dépôt) — l'abstraction
+  reste prête pour une future validation réelle, jamais simulée.
+
+## 11. Tests
+
+- `tests/test_design_pipeline.py` (29 tests) — états, modèle, recherche/
+  génération visuelle honnêtes, synthèse déterministe, moteur de prompts,
+  validation, pipeline complet (y compris un backend visuel simulé pour le
+  chemin `completed`, un échec de backend visuel, une reprise après panne
+  transitoire réelle).
+- `tests/test_design_service.py` (10 tests) — façade seule : soumission,
+  permissions, suivi en mémoire, `active_count()` observé PENDANT une
+  exécution réellement bloquée (pas une valeur devinée).
+- `tests/test_operator_service.py`, classe `TestDesignIntegration` (8
+  tests) — intégration RÉELLE avec `OperatorService` : garde
+  `accepts_submissions`, permissions, `GetRecentOperations`, Operator sans
+  `DesignService`.
+- `tests/test_api_operator.py` (4 tests dédiés + le scénario E2E du §7) —
+  authentification, dégradation propre sans DB, scénario complet contre
+  PostgreSQL réel.
+
+Voir le rapport de mission N+17 pour les résultats exacts (PASS/SKIP) de
+cette exécution, et ce que N+18 (APEX 3D Engine) trouvera prêt à l'emploi
+sans devoir être réarchitecturé.

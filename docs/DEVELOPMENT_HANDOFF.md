@@ -1489,6 +1489,59 @@ périmètre explicite de N+16 — l'architecture est conçue pour qu'une future
 UI puisse le faire directement, aucun changement d'API ne devrait être
 nécessaire).
 
+### APEX Design Engine (N+17)
+
+**Objectif** : transformer une demande de conception en langage naturel
+en un `DesignPackage` traçable (brief, recherche, concepts, prompts
+visuels, résultats visuels, validation, artefacts), pilotable sans
+terminal via l'Operator (N+16) — voir `docs/AGENT_HANDOFF.md` §« Design
+Engine » pour le détail complet (architecture, machine à états, honnêteté
+recherche/visuel, API, scénario E2E).
+
+**Ce qui a été ajouté**, sans dupliquer ni contourner l'existant :
+- `apex/design/{states,model,synthesis,research,prompt_engine,
+  visual_provider,validation,pipeline,service}.py` — pipeline réel en 7
+  étapes (ANALYZE/RESEARCH/SYNTHESIZE/DESIGN/VISUALIZE/VALIDATE/PACKAGE),
+  machine à états fermée (même patron qu'`apex.missions.states`).
+  PREMIÈRE utilisation réelle d'`apex.artifacts` (phase 10, jusqu'ici non
+  câblé) : chaque résultat durable y est persisté, adressé par contenu.
+- `ResearchProvider`/`VisualGenerationProvider` — contrats ABC réels, un
+  seul point de construction chacun (`get_default_provider()`), AUCUN
+  backend réel connecté aujourd'hui (recherche web, génération d'image) :
+  comportement de production honnête (`Null*Provider`), jamais une
+  fabrication — voir §4 d'`AGENT_HANDOFF.md`.
+- 1 nouvelle `Action` (`SUBMIT_DESIGN`, `apex.policy.model`) réservée à
+  `Subject.HUMAN` seul — même motif que `CREATE_MISSION`.
+- `OperatorService` (N+16) étendu avec `submit_design`/`resume_design`/
+  `get_design_status`/`get_design_result` — même garde
+  `accepts_submissions`, même journal `events`, `DesignService` optionnel
+  (rétrocompatible avec tout `OperatorService` construit sans lui).
+- `apex/api/routes/operator.py` (4 routes supplémentaires,
+  `/api/v1/operator/designs*`), même `DataEnvelope`/authentification.
+- Entrées `DesignEngine`/`VisualGenerationProvider` (STUB) dans
+  `apex.interfaces.registry`.
+
+**Vérifié réellement** : `tests/test_design_pipeline.py` (29 tests),
+`tests/test_design_service.py` (10 tests), `tests/test_operator_service.py`
+classe `TestDesignIntegration` (8 tests), `tests/test_api_operator.py` (4
+tests dédiés + le scénario E2E imposé par la mission — « Créer le concept
+d'un skatepark urbain moderne », de bout en bout contre PostgreSQL réel,
+rapportant honnêtement `VISUAL_BACKEND_UNAVAILABLE`). Suite complète
+(unitaire + intégration, 1793 tests hors `test_runtime_packaging.py`)
+exécutée sans régression après l'ajout.
+
+**Non fait dans cette passe** (limites honnêtes, voir §10
+d'`AGENT_HANDOFF.md`) : aucune intégration `apex.memory`/RAG (exigerait
+d'étendre l'allow-list HUMAN/CORE avec `WRITE_OWN_MEMORY`, un changement
+de portée de sécurité hors périmètre sans décision explicite) ; aucune
+Decision Trace (absente de ce dépôt, confirmé par audit, rien à
+intégrer) ; ANALYZE/SYNTHESIZE/DESIGN déterministes, jamais un appel
+`ModelProvider` (extension future documentée) ; VALIDATE structurel
+seulement, jamais une validation par modèle de vision (aucun modèle de
+vision connecté) ; frontend NON câblé sur `/operator/designs*` (même
+raisonnement que N+16 — l'architecture est prête pour qu'une future UI le
+fasse directement).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

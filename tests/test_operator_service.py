@@ -21,6 +21,7 @@ from apex.agents.runtime import AgentRuntime
 from apex.config.schema import Capability, ComputePool, PoolLocation, TrustLevel
 from apex.db.engine import build_session_factory
 from apex.db.models import Base
+from apex.design.service import DesignService
 from apex.errors import PolicyDenied
 from apex.missions.model import MissionPriority
 from apex.missions.service import MissionService
@@ -78,9 +79,15 @@ class _OperatorTestCase(unittest.TestCase):
             self.factory, mission_service=self.mission_service, agent_runtime=self.runtime,
             max_concurrent_missions=2,
         )
+        # N+17 : toujours fourni (comme `apex.api.dependencies.
+        # get_operator_service` le fait réellement) — les tests N+16
+        # existants n'exercent jamais `submit_design`, donc ceci ne change
+        # rien à leur comportement, mais rapproche la fixture de test de la
+        # construction de production.
+        self.design_service = DesignService()
         self.operator = OperatorService(
             self.factory, scheduler=self.scheduler, mission_service=self.mission_service,
-            tick_interval_s=self.tick_interval_s,
+            design_service=self.design_service, tick_interval_s=self.tick_interval_s,
         )
 
     def tearDown(self) -> None:
@@ -388,6 +395,70 @@ class TestRecentOperations(_OperatorTestCase):
         ops = self.operator.get_recent_operations(limit=50)
         kinds = {op.msg for op in ops}
         self.assertIn("operator.started", kinds)
+
+
+class TestDesignIntegration(_OperatorTestCase):
+    """Intégration Design Engine <-> Operator (N+17) — `submit_design` suit
+    la même garde `accepts_submissions` que `submit_task`, jamais une
+    seconde machine à états, et le pipeline exécuté est le RÉEL
+    `apex.design.service.DesignService`, jamais simulé."""
+
+    def test_submit_design_requires_operator_ready(self) -> None:
+        with self.assertRaises(OperatorNotReady):
+            self.operator.submit_design("un pavillon minimaliste")
+
+    def test_submit_design_from_ready_completes(self) -> None:
+        self.operator.start()
+        package = self.operator.submit_design("Créer le concept d'un skatepark urbain moderne")
+        self.assertEqual(package.state.value, "completed")
+        self.assertTrue(package.ready)
+        self.assertGreaterEqual(len(package.concepts), 1)
+        self.assertTrue(all(v.state == "unavailable" for v in package.visual_results))
+
+    def test_submit_design_denies_non_human_subject(self) -> None:
+        self.operator.start()
+        with self.assertRaises(PolicyDenied):
+            self.operator.submit_design("test", requested_by=Subject.CORE)
+
+    def test_get_design_status_and_result_round_trip(self) -> None:
+        self.operator.start()
+        package = self.operator.submit_design("Un jardin japonais contemplatif")
+        status = self.operator.get_design_status(package.design_id)
+        result = self.operator.get_design_result(package.design_id)
+        self.assertIsNotNone(status)
+        self.assertEqual(status.design_id, package.design_id)
+        self.assertEqual(result.design_id, package.design_id)
+
+    def test_get_design_status_unknown_id_returns_none(self) -> None:
+        self.operator.start()
+        self.assertIsNone(self.operator.get_design_status("does-not-exist"))
+
+    def test_submit_design_without_design_service_raises_operator_not_ready(self) -> None:
+        operator = OperatorService(
+            self.factory, scheduler=self.scheduler, mission_service=self.mission_service,
+            tick_interval_s=self.tick_interval_s,
+        )
+        operator.start()
+        with self.assertRaises(OperatorNotReady):
+            operator.submit_design("test")
+        operator.shutdown(wait=True)
+
+    def test_design_submission_visible_in_recent_operations(self) -> None:
+        self.operator.start()
+        self.operator.submit_design("Un pont piéton contemporain")
+        ops = self.operator.get_recent_operations(limit=50)
+        kinds = {op.msg for op in ops}
+        self.assertIn("design.submitted", kinds)
+
+    def test_pause_still_allows_design_submission(self) -> None:
+        """`pause()` suspend UNIQUEMENT le déclenchement de nouvelles tâches
+        (Scheduler/Mission, via le thread de supervision) — une conception
+        n'implique aucun tick Scheduler, donc `accepts_submissions` (READY/
+        RUNNING/PAUSED) l'autorise sans changement de comportement."""
+        self.operator.start()
+        self.operator.pause()
+        package = self.operator.submit_design("Une bibliothèque communautaire")
+        self.assertEqual(package.state.value, "completed")
 
 
 if __name__ == "__main__":

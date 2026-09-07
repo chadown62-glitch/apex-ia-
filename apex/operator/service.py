@@ -38,6 +38,8 @@ import threading
 from datetime import datetime, timezone
 from typing import Any
 
+from apex.design.model import DesignPackage
+from apex.design.service import DesignService
 from apex.errors import ApexError
 from apex.missions.model import Mission, MissionPriority
 from apex.missions.service import MissionService
@@ -76,12 +78,19 @@ class OperatorService:
         *,
         scheduler: SchedulerService,
         mission_service: MissionService,
+        design_service: DesignService | None = None,
         policy: PolicyEngine | None = None,
         tick_interval_s: float = 1.0,
     ) -> None:
         self._session_factory = session_factory
         self._scheduler = scheduler
         self._mission_service = mission_service
+        # N+17 : optionnel — un `OperatorService` construit sans Design Engine
+        # (ex. un ancien test N+16 non modifié) reste entièrement fonctionnel
+        # pour Start/Stop/Pause/Resume/SubmitTask ; seules les méthodes
+        # `submit_design`/`get_design_*`/`resume_design` exigent qu'il soit
+        # fourni (voir `_require_design_service`).
+        self._design_service = design_service
         self.policy = policy or PolicyEngine()
         self._tick_interval_s = tick_interval_s
 
@@ -274,6 +283,42 @@ class OperatorService:
             result=mission.result, error=mission.error,
         )
 
+    # -- conceptions (Design Engine, N+17) ---------------------------------------
+
+    def submit_design(self, request_text: str, *, requested_by: Subject = Subject.HUMAN) -> DesignPackage:
+        """Soumission `{"type": "design", "request": "..."}` — même garde
+        `accepts_submissions` que `submit_task` (READY/RUNNING/PAUSED),
+        jamais une seconde machine à états dupliquée. Exécute le pipeline de
+        conception de bout en bout (synchrone, voir `apex.design.service.
+        DesignService`) et journalise le résultat via `events`, comme toute
+        autre opération Operator."""
+        self._require_accepts_submissions("submit_design")
+        package = self._require_design_service().submit(request_text, requested_by=requested_by)
+        self._safe_record_operation(
+            "design.submitted",
+            {"design_id": package.design_id, "state": package.state.value, "requested_by": requested_by.value},
+        )
+        return package
+
+    def resume_design(self, design_id: str, *, requested_by: Subject = Subject.HUMAN) -> DesignPackage:
+        """Reprend une conception en échec — n'exige PAS que l'Operator
+        accepte de nouvelles soumissions (achever une conception déjà
+        commencée n'est pas en soi une nouvelle soumission), mais exige tout
+        de même `Subject.HUMAN` via `SUBMIT_DESIGN`, même autorisation que
+        la soumission initiale."""
+        self.policy.authorize(requested_by, Action.SUBMIT_DESIGN)
+        package = self._require_design_service().resume(design_id)
+        self._safe_record_operation(
+            "design.resumed", {"design_id": package.design_id, "state": package.state.value},
+        )
+        return package
+
+    def get_design_status(self, design_id: str) -> DesignPackage | None:
+        return self._require_design_service().get_status(design_id)
+
+    def get_design_result(self, design_id: str) -> DesignPackage | None:
+        return self._require_design_service().get_result(design_id)
+
     def get_recent_operations(self, limit: int = 100) -> list[Any]:
         """Projette `events` (`apex.db.repositories.EventRepository.recent`,
         déjà la source de vérité de tout ce que Mission/Scheduler/Operator
@@ -305,6 +350,11 @@ class OperatorService:
         if not state.accepts_submissions:
             raise OperatorNotReady(operation, current_state=state)
 
+    def _require_design_service(self) -> DesignService:
+        if self._design_service is None:
+            raise OperatorNotReady("design_engine_unavailable", current_state=self._state)
+        return self._design_service
+
     def _transition(self, target: OperatorState) -> None:
         """Appelée UNIQUEMENT sous `self._lock` déjà tenu par l'appelant."""
         self._state = target
@@ -332,6 +382,12 @@ class OperatorService:
 
     def _observe_activity(self) -> None:
         active = len(self._scheduler.registry)
+        if self._design_service is not None:
+            # Une exécution de pipeline de conception EST une activité
+            # Operator au même titre qu'une Mission en cours — jamais un
+            # second compteur RUNNING/READY dupliqué, juste une seconde
+            # source additionnée à la même dérivation.
+            active += self._design_service.active_count()
         with self._lock:
             if active > 0 and self._state is OperatorState.READY:
                 self._transition(OperatorState.RUNNING)

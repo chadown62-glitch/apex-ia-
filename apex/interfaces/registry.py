@@ -1368,6 +1368,70 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "réel reste entièrement celui déjà persisté par Setup (voir "
               "setup/docs/LAUNCHER_ARCHITECTURE.md, N+15), jamais réinventé ici.",
     ),
+    Abstraction(
+        "DesignEngine", "pipeline de conception assistée (brief -> concepts -> visuels -> paquet)", 28, 28,
+        ImplStatus.STUB, "recherche et génération visuelle indisponibles — pipeline structurel réel",
+        module="apex.design.service",
+        notes="STUB et non IMPLEMENTED délibérément (N+17) : les 7 étapes "
+              "(ANALYZE/RESEARCH/SYNTHESIZE/DESIGN/VISUALIZE/VALIDATE/PACKAGE, "
+              "`apex.design.states.DesignPipelineState`) s'exécutent RÉELLEMENT — "
+              "machine à états fermée (même patron que `apex.missions.states`), "
+              "chaque étape produit un `StepRecord` (durée/provenance/logs "
+              "réels) et un artefact adressé par contenu RÉELLEMENT écrit "
+              "dans `apex.artifacts` (première utilisation réelle de ce "
+              "magasin, jusqu'ici non câblé — voir son entrée `ArtifactStore` "
+              "ci-dessus). ANALYZE/SYNTHESIZE/DESIGN (`apex.design.synthesis`) "
+              "sont déterministes, jamais un appel `ModelProvider` simulé — "
+              "extension future documentée, pas une simulation aujourd'hui. "
+              "RESEARCH (`apex.design.research.ResearchProvider`) retourne "
+              "honnêtement zéro résultat : aucun backend de recherche web "
+              "réel n'est connecté dans ce dépôt (même vide que `SearchProvider` "
+              "ci-dessus, PLANNED depuis la Phase 13 — non comblé par N+17, "
+              "seulement consommé honnêtement). VISUALIZE consomme "
+              "`VisualGenerationProvider` (entrée séparée ci-dessous) — un "
+              "prompt structuré RÉEL est toujours construit "
+              "(`apex.design.prompt_engine`), le résultat est marqué "
+              "`VisualResult.state=\"unavailable\"` (jamais fabriqué) en "
+              "l'absence de backend. VALIDATE (`apex.design.validation`) est "
+              "une QA structurelle réelle (présence/cohérence/provenance/ordre "
+              "des étapes), jamais une validation par modèle de vision "
+              "(aucun modèle de vision connecté — architecture prête, non "
+              "simulée). Reprise après échec (`DesignPipeline.resume`) réelle : "
+              "repart de la dernière étape en échec, jamais une ré-exécution "
+              "complète. Intégration Operator (N+16) : `OperatorService."
+              "submit_design`/`resume_design`/`get_design_status`/"
+              "`get_design_result`, même garde `accepts_submissions` que "
+              "`submit_task`, même journal `events` — jamais un second canal. "
+              "Autorisation : une seule action nouvelle, `SUBMIT_DESIGN` "
+              "(`apex.policy.model.Action`), réservée à `Subject.HUMAN` seul, "
+              "même motif que `CREATE_MISSION`. Intégration Memory/RAG "
+              "délibérément ABSENTE en v1 (décision explicite, pas un oubli) : "
+              "câbler une écriture `MemoryService.write()` depuis le Design "
+              "Engine exigerait d'étendre l'allow-list HUMAN/CORE avec "
+              "`WRITE_OWN_MEMORY` — un changement de portée de sécurité "
+              "hors du périmètre de cette étape, jamais fait sans décision "
+              "explicite. Decision Trace : ABSENTE de ce dépôt (aucune "
+              "occurrence, aucune entrée de registre) — rien à intégrer, "
+              "constaté par audit N+17, pas une omission.",
+    ),
+    Abstraction(
+        "VisualGenerationProvider", "génération d'image agnostique du backend pour le Design Engine", 28, 28,
+        ImplStatus.STUB, "aucun backend réel connecté — VISUAL_BACKEND_UNAVAILABLE explicite",
+        module="apex.design.visual_provider",
+        notes="Contrat ABC réel (`generate`/`status`/`retrieve`/`validate`), "
+              "même patron qu'`ArtifactStoreProvider`/`ModelProvider` : un "
+              "seul point de construction (`get_default_provider()`). "
+              "`NullVisualGenerationProvider` est le comportement de "
+              "PRODUCTION actuel (pas un double de test) : `generate()` lève "
+              "`apex.errors.VisualBackendUnavailable` plutôt que de "
+              "prétendre lancer une génération — confirmé par audit N+17 : "
+              "aucune dépendance de génération d'image, aucune clé API dans "
+              "ce dépôt, `apex.routing.model.Capability.VISION` jamais "
+              "dérivée. Un double de test (`_MockVisualGenerationProvider`) "
+              "existe UNIQUEMENT dans `tests/test_design_pipeline.py`, jamais "
+              "dans ce module — même discipline que `_FakeProvider("
+              "ModelProvider)` dans `tests/test_routing_generation.py`.",
+    ),
 )
 
 

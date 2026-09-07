@@ -19,6 +19,8 @@ from fastapi import APIRouter
 
 from apex.api.schemas import (
     DataEnvelope,
+    DesignPackageOut,
+    DesignSubmitIn,
     EventOut,
     MissionCreateIn,
     MissionOut,
@@ -27,6 +29,10 @@ from apex.api.schemas import (
 )
 
 router = APIRouter(prefix="/operator", tags=["operator"])
+
+
+def _to_design_package_out(package: object) -> DesignPackageOut:
+    return DesignPackageOut(**package.to_dict(), ready=package.ready)  # type: ignore[attr-defined]
 
 
 def _to_status_out(status: object) -> OperatorStatusOut:
@@ -159,6 +165,59 @@ def get_task_result(task_id: str) -> DataEnvelope[TaskResultOut]:
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=_to_task_result_out(result))
+
+
+@router.post("/designs", response_model=DataEnvelope[DesignPackageOut])
+def submit_design(payload: DesignSubmitIn) -> DataEnvelope[DesignPackageOut]:
+    """Soumission `{"type": "design", "request": "..."}` — exécute le
+    pipeline de conception de bout en bout (synchrone, voir
+    `apex.design.service.DesignService`) et retourne le `DesignPackage`
+    complet, prêt (`ready=True`) dès cette réponse : aucune étape de cette
+    version n'attend un backend externe lent."""
+    try:
+        from apex.api.dependencies import get_operator_service
+
+        package = get_operator_service().submit_design(payload.request)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_design_package_out(package))
+
+
+@router.post("/designs/{design_id}/resume", response_model=DataEnvelope[DesignPackageOut])
+def resume_design(design_id: str) -> DataEnvelope[DesignPackageOut]:
+    try:
+        from apex.api.dependencies import get_operator_service
+
+        package = get_operator_service().resume_design(design_id)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_design_package_out(package))
+
+
+@router.get("/designs/{design_id}", response_model=DataEnvelope[DesignPackageOut])
+def get_design_status(design_id: str) -> DataEnvelope[DesignPackageOut]:
+    try:
+        from apex.api.dependencies import get_operator_service
+
+        package = get_operator_service().get_design_status(design_id)
+        if package is None:
+            return DataEnvelope(status="unknown", data=None, detail=f"conception « {design_id} » introuvable")
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_design_package_out(package))
+
+
+@router.get("/designs/{design_id}/result", response_model=DataEnvelope[DesignPackageOut])
+def get_design_result(design_id: str) -> DataEnvelope[DesignPackageOut]:
+    try:
+        from apex.api.dependencies import get_operator_service
+
+        package = get_operator_service().get_design_result(design_id)
+        if package is None:
+            return DataEnvelope(status="unknown", data=None, detail=f"conception « {design_id} » introuvable")
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_design_package_out(package))
 
 
 @router.get("/operations", response_model=DataEnvelope[list[EventOut]])
