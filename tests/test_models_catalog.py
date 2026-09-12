@@ -162,6 +162,49 @@ class TestBuildModelCatalog(unittest.TestCase):
         self.assertEqual(coder.display_name, "qwen2.5-coder:7b-instruct")
 
 
+class TestPerformanceWiring(unittest.TestCase):
+    """Passe « Routing & Execution Observability Hardening » (N+18) — le
+    point de câblage anticipé par `PerformanceHistory` (« vide jusqu'à ce
+    qu'une agrégation par modèle soit câblée ») est maintenant réellement
+    utilisable, sans dépendance vers `apex.agent_registry` (le paramètre
+    `performance` reste optionnel, calculé par l'APPELANT — voir
+    `apex.api.routes.models._real_performance_map`)."""
+
+    def setUp(self) -> None:
+        self.cfg = parse_config(config())
+        self.candidates = resolve_candidates(self.cfg)
+        self.coder = next(c for c in self.candidates if c.role == "coder_main")
+
+    def test_omitting_performance_keeps_history_empty_exactly_as_before(self) -> None:
+        catalog = build_model_catalog(self.cfg)
+        coder_entry = next(m for m in catalog if m.candidate.role == "coder_main")
+        self.assertTrue(coder_entry.history.is_empty)
+
+    def test_real_performance_populates_history_for_the_matching_model_only(self) -> None:
+        from apex.obs.status import Measurement
+        from apex.routing.model import ModelPerformanceStats
+
+        stats = ModelPerformanceStats(
+            model_id=self.coder.ref.id, usage_count=5, success_count=3, failure_count=2,
+            success_rate=Measurement.real(0.6), mean_latency_s=Measurement.unknown(),
+            failure_reasons={"rate_limited": 2}, last_failure_reason="rate_limited",
+        )
+        catalog = build_model_catalog(self.cfg, performance={self.coder.ref.id: stats})
+        coder_entry = next(m for m in catalog if m.candidate.role == "coder_main")
+        self.assertEqual(coder_entry.history.usage_count, 5)
+        self.assertEqual(coder_entry.history.success_count, 3)
+        self.assertEqual(coder_entry.history.failure_count, 2)
+        self.assertEqual(coder_entry.history.last_failure_reason, "rate_limited")
+        self.assertEqual(coder_entry.history.failure_reasons, {"rate_limited": 2})
+
+        # Un autre modèle du même catalogue, sans entrée dans `performance`,
+        # reste vide — jamais une contamination croisée entre modèles.
+        other_entries = [m for m in catalog if m.candidate.role != "coder_main"]
+        self.assertTrue(any(other_entries))
+        for other in other_entries:
+            self.assertTrue(other.history.is_empty)
+
+
 class TestBuildProviderCatalog(unittest.TestCase):
     def setUp(self) -> None:
         self.cfg = parse_config(config())

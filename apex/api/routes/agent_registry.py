@@ -24,6 +24,7 @@ from apex.api.schemas import (
     ConfiguredAgentOut,
     ConfiguredAgentUpdateIn,
     DataEnvelope,
+    ExecutionTraceOut,
 )
 
 router = APIRouter(tags=["configured-agents"])
@@ -205,6 +206,34 @@ def list_agent_executions(agent_id: str) -> DataEnvelope[list[AgentExecutionOut]
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=views)
+
+
+@router.get(
+    "/configured-agents/{agent_id}/executions/{execution_id}/trace",
+    response_model=DataEnvelope[ExecutionTraceOut],
+)
+def get_execution_trace(agent_id: str, execution_id: str) -> DataEnvelope[ExecutionTraceOut]:
+    """Reconstruit APRÈS COUP la décision de routage (candidat sélectionné,
+    score, `ScoreBreakdown`, alternatives écartées) et les tentatives de
+    fallback (catégorie réelle de chaque échec) d'UNE exécution — passe
+    « Routing & Execution Observability Hardening » (N+18). `agent_id`
+    n'est pas réutilisé pour filtrer (l'`execution_id` seul identifie déjà
+    l'exécution) : conservé dans le chemin pour rester cohérent avec
+    `/configured-agents/{agent_id}/executions`, jamais une seconde clé
+    primaire."""
+    try:
+        from apex.agent_registry.service import AgentRegistryService
+        from apex.api.dependencies import get_session_factory
+
+        trace = AgentRegistryService(get_session_factory()).get_execution_trace(execution_id)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    if trace["routing"] is None and trace["fallback"] is None:
+        return DataEnvelope(
+            status="unknown", data=None,
+            detail=f"aucune trace trouvée pour l'exécution « {execution_id} » (hors fenêtre récente, ou inexistante)",
+        )
+    return DataEnvelope(status="real", data=ExecutionTraceOut(**trace))
 
 
 @router.get("/agent-teams", response_model=DataEnvelope[list[AgentTeamOut]])

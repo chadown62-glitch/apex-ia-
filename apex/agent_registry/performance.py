@@ -67,11 +67,20 @@ def aggregate_model_performance(model_id: str, executions: Sequence[AgentExecuti
     )
 
     failure_reasons: dict[str, int] = {}
+    last_failure_reason: str | None = None
+    last_failure_at = None
     for execution in executions:
         if execution.status is not AgentExecutionStatus.FAILED or execution.fallback_reason is None:
             continue
         key = execution.fallback_reason.value
         failure_reasons[key] = failure_reasons.get(key, 0) + 1
+        # La plus RÉCENTE selon `started_at` (toujours renseigné, contrairement
+        # à `completed_at` qui pourrait manquer sur un chemin d'échec précoce)
+        # — jamais l'ordre d'itération de `executions`, qui n'est pas garanti
+        # chronologique par l'appelant.
+        if last_failure_at is None or execution.started_at > last_failure_at:
+            last_failure_at = execution.started_at
+            last_failure_reason = key
 
     return ModelPerformanceStats(
         model_id=model_id,
@@ -83,4 +92,5 @@ def aggregate_model_performance(model_id: str, executions: Sequence[AgentExecuti
         mean_tokens_prompt=mean_tokens_prompt,
         mean_tokens_completion=mean_tokens_completion,
         failure_reasons=failure_reasons,
+        last_failure_reason=last_failure_reason,
     )

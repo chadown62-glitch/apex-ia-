@@ -372,6 +372,20 @@ export interface AgentTemplateCreateInput {
 export type CatalogAvailability = "available" | "unavailable" | "unknown" | "disabled";
 export type DiscoverySource = "configured" | "discovered" | "verified";
 
+/**
+ * Historique réel d'exécution pour un modèle — passe « Routing & Execution
+ * Observability Hardening » (N+18), projection directe d'`apex.models.
+ * catalog.PerformanceHistory`. `usage_count === 0` signifie « aucune
+ * AgentExecution réelle connue », jamais un défaut masqué.
+ */
+export interface ModelHistory {
+  usage_count: number;
+  success_count: number;
+  failure_count: number;
+  last_failure_reason: string | null;
+  failure_reasons: Record<string, number>;
+}
+
 export interface CatalogModel {
   model_id: string;
   display_name: string;
@@ -390,6 +404,7 @@ export interface CatalogModel {
   served_model: string | null;
   max_context: number | null;
   vram_gb: number | null;
+  history: ModelHistory;
 }
 
 export interface ProviderInfo {

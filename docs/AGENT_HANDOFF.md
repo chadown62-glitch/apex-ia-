@@ -395,5 +395,140 @@ contenu, jamais réinventée.
   PostgreSQL réel.
 
 Voir le rapport de mission N+17 pour les résultats exacts (PASS/SKIP) de
-cette exécution, et ce que N+18 (APEX 3D Engine) trouvera prêt à l'emploi
-sans devoir être réarchitecturé.
+cette exécution.
+
+---
+
+# APEX — Handoff Routing & Execution Observability Hardening (N+18)
+
+Ce chapitre décrit le durcissement du pipeline **modèle → routing →
+exécution → fallback** existant (`apex.models`/`apex.routing`/
+`apex.agent_registry`) — jamais une nouvelle couche d'orchestration. Note
+de cadrage : une version antérieure de cette mission avait mélangé APEX
+avec un projet Game Dev/UE5 totalement séparé (connexion de plusieurs
+assistants IA — Claude/Gemini/ChatGPT/Codex — comme agents de
+développement) ; ce cadrage a été explicitement retiré par l'utilisateur
+avant toute implémentation. N+18 porte UNIQUEMENT sur l'architecture
+`ModelProvider`/`ModelEndpoint`/`select_model` déjà réelle dans ce dépôt.
+
+## 1. Ce que N+18 change
+
+Avant N+18 : un échec de génération produisait toujours
+`FallbackReason.PROVIDER_ERROR` — le vocabulaire `QUOTA_EXCEEDED`/
+`RATE_LIMITED`/`AUTH_ERROR`/`OFFLINE`/`CONTEXT_TOO_LONG` existait déjà dans
+`apex.agent_registry.model.FallbackReason` mais n'était **jamais produit**,
+faute de signal structuré : `ModelProviderError` ne portait qu'un message
+texte, et `classify_outcome()` devinait une catégorie par correspondance
+de sous-chaîne fragile sur ce texte.
+
+N+18 relie ce vocabulaire à un **signal réel** :
+
+1. `apex.errors.ModelErrorCategory` — catégorie fermée, dérivée UNIQUEMENT
+   d'un code HTTP réel ou d'un type d'exception réseau (jamais devinée).
+2. `OllamaProvider`/`OpenAICompatibleProvider` classent réellement chaque
+   échec (429 → `RATE_LIMITED`, 401/403 → `AUTH_ERROR`, un champ JSON
+   structuré `error.code == "context_length_exceeded"` → `CONTEXT_TOO_LONG`,
+   `URLError` sans code → `OFFLINE`, tout autre code HTTP réel →
+   `PROVIDER_ERROR`).
+3. `apex.routing.generation.GenerationAttempt.category` porte ce signal
+   jusqu'à `apex.agent_registry.fallback.classify_outcome`, qui devient un
+   mappage TOTAL et fermé — plus une seule correspondance de sous-chaîne.
+4. Un axe de score `capacity_risk` (`apex.routing.router`) pénalise, de
+   façon strictement proportionnelle, un ratio RÉEL d'échecs
+   `rate_limited` déjà observés (`ModelPerformanceStats.failure_reasons`)
+   — `UNKNOWN` sans historique, jamais un quota/coût inventé.
+5. La décision de routage (candidat sélectionné, `ScoreBreakdown`,
+   alternatives écartées) et les tentatives de fallback (catégorie réelle
+   par tentative) sont désormais **persistées** dans `events` (réutilisé,
+   jamais un second journal) et reconstructibles après coup via
+   `AgentRegistryService.get_execution_trace(execution_id)`.
+6. `apex.models.catalog.PerformanceHistory` — anticipé mais vide depuis la
+   Phase 10, maintenant réellement câblé (`build_model_catalog(config,
+   performance=...)`) — expose `usage_count`/`success_count`/
+   `failure_count`/`last_failure_reason`/`failure_reasons` par modèle.
+
+## 2. Ce qui n'a PAS changé (contrainte explicite de la mission)
+
+- Aucun adaptateur provider supplémentaire (Anthropic ou autre) — hors
+  périmètre explicite de cette passe.
+- Aucune nouvelle abstraction Provider/Orchestrator/Dashboard — tout étend
+  `ModelProvider`/`ModelEndpoint`/`select_model`/`ScoreBreakdown`/
+  `AgentExecution`/`generate_with_fallback`/`FallbackReason`/
+  `SecretBroker` déjà réels.
+- `FallbackReason.QUOTA_EXCEEDED` reste délibérément jamais produit : un
+  HTTP 429 seul ne permet pas de le distinguer honnêtement de
+  `RATE_LIMITED` — un fournisseur devrait exposer un signal plus précis
+  avant qu'APEX ne prétende faire cette distinction.
+
+## 3. Catégorisation réelle des erreurs (`apex.errors.ModelErrorCategory`)
+
+| Signal réel observé | Catégorie |
+|---|---|
+| HTTP 429 | `RATE_LIMITED` |
+| HTTP 401 / 403 | `AUTH_ERROR` |
+| HTTP 400 + `error.code == "context_length_exceeded"` (JSON structuré) | `CONTEXT_TOO_LONG` |
+| `apex.errors.TimeoutExceeded` (exception distincte) | `TIMEOUT` (unifiée au niveau de la tentative) |
+| `urllib.error.URLError` sans code HTTP (connexion refusée, DNS) | `OFFLINE` |
+| Tout autre code HTTP réel (ex. 500, 503) | `PROVIDER_ERROR` |
+| Exception inattendue, corps illisible, annulation demandée | `UNKNOWN` |
+
+Un code HTTP 400 SANS le champ structuré exact reste `PROVIDER_ERROR` —
+jamais promu à `CONTEXT_TOO_LONG` par simple supposition (un 400 a de
+nombreuses autres causes : validation, champ manquant...).
+
+## 4. Traçabilité — reconstruire une décision après coup
+
+`AgentRegistryService.get_execution_trace(execution_id)` relit les
+événements `agent_execution.model_selected`/`agent_execution.completed`|
+`.failed` déjà écrits par `run_execution` et reconstitue :
+- `routing` : candidat sélectionné, raison, la liste COMPLÈTE des
+  candidats considérés (retenus ou exclus) avec leur `ScoreBreakdown`
+  (contributions nommées, statut REAL/UNKNOWN, raison) ;
+- `fallback` : chaque tentative (candidat, succès/échec, catégorie réelle,
+  métadonnées — jamais le texte généré ni le prompt, voir `apex.
+  agent_registry.observability`).
+
+Exposé en lecture via `GET /configured-agents/{agent_id}/executions/
+{execution_id}/trace`.
+
+## 5. Dashboard
+
+`ModelsPage.tsx` affiche désormais, par modèle, un historique RÉEL
+(`usage_count`/`success_count`/`last_failure_reason`) dérivé de
+`PerformanceHistory` — vide (`usage_count=0`) tant qu'aucune
+`AgentExecution` réelle n'existe pour ce modèle, jamais une statistique
+fabriquée. `GET /models`/`POST /models/discover` calculent cet historique
+depuis de vraies `AgentExecution` (dégradation silencieuse à un historique
+vide si la DB est indisponible — le catalogue lui-même reste `"real"`,
+purement dérivé de `config.yaml`).
+
+## 6. Limites honnêtes
+
+- `QUOTA_EXCEEDED` jamais produit (voir §2).
+- Le scan de `get_execution_trace` porte sur les N événements les plus
+  récents (`event_scan_limit`, défaut 1000) — pas d'index dédié par
+  `execution_id` dans `events` ; une exécution ancienne au-delà de cette
+  fenêtre ne sera pas retrouvée (limite honnête, pas une garantie brisée
+  silencieusement).
+- `capacity_risk` ne considère que les échecs `rate_limited` — un échec
+  `auth_error`/`offline` observé n'influence jamais cet axe (catégorie
+  conceptuellement différente).
+
+## 7. Tests
+
+- `tests/test_models_error_classification.py` (12 tests) — classification
+  RÉELLE contre un vrai serveur HTTP local : 429/401/403/500/context-length
+  structuré/connexion refusée/timeout, pour les deux providers.
+- `tests/test_agent_registry_fallback.py` (10 tests) — mappage total
+  `ModelErrorCategory` → `FallbackReason`, `QUOTA_EXCEEDED` jamais produit.
+- `tests/test_routing_router_scoring.py`, classe `TestCapacityRiskAxis` (6
+  tests) — `UNKNOWN` sans historique, pénalité réelle proportionnelle,
+  jamais d'autres catégories d'échec n'influencent cet axe.
+- `tests/test_models_catalog.py`, classe `TestPerformanceWiring` (2 tests)
+  — `PerformanceHistory` correctement peuplée, sans contamination croisée
+  entre modèles.
+- `tests/test_agent_registry_observability.py` (7 tests) — sérialisation
+  + reconstruction complète d'une trace, aucune fuite de texte généré.
+
+Voir le rapport de mission N+18 pour les résultats exacts (PASS/SKIP) de
+cette exécution.

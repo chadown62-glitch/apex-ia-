@@ -24,7 +24,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from apex.config.schema import ModelEndpoint
-from apex.errors import ModelProviderError, TimeoutExceeded
+from apex.errors import ModelErrorCategory, ModelProviderError, TimeoutExceeded, category_from_http_status
 from apex.models.model import GenerationRequest, GenerationResult, ModelCapabilityReport
 from apex.models.provider import ModelProvider
 from apex.obs.capability import CapabilityStatus
@@ -111,10 +111,12 @@ class OllamaProvider(ModelProvider):
             raise ModelProviderError(
                 "OllamaProvider.generate", endpoint_url=self._base_url,
                 detail=f"backend non disponible : {report.status.value}",
+                category=ModelErrorCategory.OFFLINE,
             )
         if request.cancel_event is not None and request.cancel_event.is_set():
             raise ModelProviderError(
                 "OllamaProvider.generate", endpoint_url=self._base_url, detail="annulé avant tout appel",
+                category=ModelErrorCategory.UNKNOWN,
             )
 
         body = self._payload(request, stream=False)
@@ -152,6 +154,7 @@ class OllamaProvider(ModelProvider):
             raise ModelProviderError(
                 "OllamaProvider.generate_stream", endpoint_url=self._base_url,
                 detail=f"backend non disponible : {report.status.value}",
+                category=ModelErrorCategory.OFFLINE,
             )
         if request.cancel_event is not None and request.cancel_event.is_set():
             return
@@ -181,6 +184,7 @@ class OllamaProvider(ModelProvider):
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise ModelProviderError(
                 "OllamaProvider.generate_stream", endpoint_url=self._base_url, detail=_truncate(str(exc)),
+                category=ModelErrorCategory.OFFLINE if isinstance(exc, urllib.error.URLError) else ModelErrorCategory.UNKNOWN,
             ) from exc
 
     # -- internes -----------------------------------------------------------
@@ -199,12 +203,19 @@ class OllamaProvider(ModelProvider):
             raise ModelProviderError(
                 "OllamaProvider.generate", endpoint_url=self._base_url,
                 detail=f"HTTP {exc.code} : {_truncate(exc.reason or '')}",
+                category=category_from_http_status(exc.code), http_status=exc.code,
             ) from exc
         except urllib.error.URLError as exc:
+            # `URLError` sans code HTTP — connexion refusée, résolution DNS
+            # échouée, réseau injoignable : un signal réel et distinct d'un
+            # code HTTP (Ollama n'a alors même pas répondu), jamais confondu
+            # avec `PROVIDER_ERROR` (qui suppose une réponse HTTP réelle).
             raise ModelProviderError(
                 "OllamaProvider.generate", endpoint_url=self._base_url, detail=_truncate(str(exc.reason)),
+                category=ModelErrorCategory.OFFLINE,
             ) from exc
         except (OSError, ValueError) as exc:
             raise ModelProviderError(
                 "OllamaProvider.generate", endpoint_url=self._base_url, detail=_truncate(str(exc)),
+                category=ModelErrorCategory.UNKNOWN,
             ) from exc

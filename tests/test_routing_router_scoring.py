@@ -154,8 +154,11 @@ class TestUnavailableAxesAlwaysVisible(unittest.TestCase):
         self.assertIs(names["cost"].status, DataStatus.UNKNOWN)
         self.assertEqual(names["eval_quality"].value, 0.0)
         self.assertEqual(names["cost"].value, 0.0)
-        # Jamais silencieusement omis de la décomposition.
-        self.assertEqual(len(breakdown.contributions), 6)
+        # Jamais silencieusement omis de la décomposition — 7 axes depuis
+        # l'ajout de `capacity_risk` (N+18) : capability_match,
+        # local_preference, historical_reliability, historical_latency,
+        # capacity_risk, eval_quality, cost.
+        self.assertEqual(len(breakdown.contributions), 7)
 
 
 class TestScoringPolicyConfigurable(unittest.TestCase):
@@ -177,6 +180,79 @@ class TestDeterminism(unittest.TestCase):
         second = select_model([candidate], request, performance=perf)
         self.assertEqual(first.ranked_candidates[0].score, second.ranked_candidates[0].score)
         self.assertEqual(first.selected, second.selected)
+
+
+class TestCapacityRiskAxis(unittest.TestCase):
+    """Passe « Routing & Execution Observability Hardening » (N+18) — un
+    axe de score fondé UNIQUEMENT sur des échecs `rate_limited` RÉELLEMENT
+    observés (`ModelPerformanceStats.failure_reasons`), jamais un quota
+    inventé. `UNKNOWN` sans historique, `REAL` avec une pénalité
+    strictement proportionnelle sinon."""
+
+    def _contribution(self, breakdown, name: str):
+        return next(c for c in breakdown.contributions if c.name == name)
+
+    def test_unknown_without_any_performance_data(self) -> None:
+        candidate = a_candidate()
+        decision = select_model([candidate], RoutingRequest())
+        contribution = self._contribution(decision.ranked_candidates[0].breakdown, "capacity_risk")
+        self.assertIs(contribution.status, DataStatus.UNKNOWN)
+        self.assertEqual(contribution.value, 0.0)
+
+    def test_unknown_when_usage_count_is_zero(self) -> None:
+        candidate = a_candidate()
+        perf = {candidate.ref.id: real_perf(candidate.ref.id, usage_count=0, success_count=0)}
+        decision = select_model([candidate], RoutingRequest(), performance=perf)
+        contribution = self._contribution(decision.ranked_candidates[0].breakdown, "capacity_risk")
+        self.assertIs(contribution.status, DataStatus.UNKNOWN)
+
+    def test_real_zero_when_no_rate_limited_failures_observed(self) -> None:
+        candidate = a_candidate()
+        perf = {candidate.ref.id: real_perf(candidate.ref.id, usage_count=10, success_count=10)}
+        decision = select_model([candidate], RoutingRequest(), performance=perf)
+        contribution = self._contribution(decision.ranked_candidates[0].breakdown, "capacity_risk")
+        self.assertIs(contribution.status, DataStatus.REAL)
+        self.assertEqual(contribution.value, 0.0)
+
+    def test_real_negative_penalty_proportional_to_observed_rate_limited_ratio(self) -> None:
+        candidate = a_candidate()
+        stats = ModelPerformanceStats(
+            model_id=candidate.ref.id, usage_count=10, success_count=6, failure_count=4,
+            success_rate=Measurement.real(0.6), mean_latency_s=Measurement.unknown(),
+            failure_reasons={"rate_limited": 4},
+        )
+        policy = RouterScoringPolicy(capacity_risk_weight=1.0)
+        decision = select_model([candidate], RoutingRequest(), performance={candidate.ref.id: stats}, scoring_policy=policy)
+        contribution = self._contribution(decision.ranked_candidates[0].breakdown, "capacity_risk")
+        self.assertIs(contribution.status, DataStatus.REAL)
+        self.assertAlmostEqual(contribution.value, -0.4)  # -weight * (4/10)
+
+    def test_capacity_risk_lowers_the_total_score_never_ignored(self) -> None:
+        candidate = a_candidate()
+        healthy_stats = real_perf(candidate.ref.id, usage_count=10, success_count=10)
+        risky_stats = ModelPerformanceStats(
+            model_id=candidate.ref.id, usage_count=10, success_count=6, failure_count=4,
+            success_rate=Measurement.real(0.6), mean_latency_s=Measurement.unknown(),
+            failure_reasons={"rate_limited": 4},
+        )
+        healthy_decision = select_model([candidate], RoutingRequest(), performance={candidate.ref.id: healthy_stats})
+        risky_decision = select_model([candidate], RoutingRequest(), performance={candidate.ref.id: risky_stats})
+        self.assertLess(risky_decision.ranked_candidates[0].score, healthy_decision.ranked_candidates[0].score)
+
+    def test_other_failure_reasons_never_contribute_to_capacity_risk(self) -> None:
+        """Seul `rate_limited` alimente cet axe — un échec `auth_error` ou
+        `offline` observé ne doit jamais influencer un risque de CAPACITÉ,
+        catégorie conceptuellement différente."""
+        candidate = a_candidate()
+        stats = ModelPerformanceStats(
+            model_id=candidate.ref.id, usage_count=10, success_count=6, failure_count=4,
+            success_rate=Measurement.real(0.6), mean_latency_s=Measurement.unknown(),
+            failure_reasons={"auth_error": 4},
+        )
+        decision = select_model([candidate], RoutingRequest(), performance={candidate.ref.id: stats})
+        contribution = self._contribution(decision.ranked_candidates[0].breakdown, "capacity_risk")
+        self.assertIs(contribution.status, DataStatus.REAL)
+        self.assertEqual(contribution.value, 0.0)
 
 
 if __name__ == "__main__":

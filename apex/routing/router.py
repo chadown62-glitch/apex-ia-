@@ -151,6 +151,46 @@ def _score_breakdown(
             )
         )
 
+    #: Passe « Routing & Execution Observability Hardening » (N+18) —
+    #: pénalité proportionnelle à un ratio d'échecs RATE_LIMITED réellement
+    #: observés localement (`ModelPerformanceStats.failure_reasons`,
+    #: alimenté par `apex.agent_registry.fallback.classify_outcome`,
+    #: jamais un quota/coût/pourcentage d'utilisation inventé). La clé
+    #: littérale `"rate_limited"` reproduit `apex.agent_registry.model.
+    #: FallbackReason.RATE_LIMITED.value` SANS importer ce module (`apex.
+    #: routing` ne dépend jamais d'`apex.agent_registry` — voir la
+    #: docstring de `ModelPerformanceStats`).
+    if performance is not None and performance.usage_count > 0:
+        rate_limited_count = performance.failure_reasons.get("rate_limited", 0)
+        if rate_limited_count > 0:
+            risk_ratio = rate_limited_count / performance.usage_count
+            contributions.append(
+                ScoreContribution(
+                    name="capacity_risk",
+                    value=-policy.capacity_risk_weight * risk_ratio,
+                    status=DataStatus.REAL,
+                    reason=(
+                        f"{rate_limited_count}/{performance.usage_count} exécution(s) récente(s) "
+                        f"en échec par limite de débit réellement observée (poids "
+                        f"{policy.capacity_risk_weight})"
+                    ),
+                )
+            )
+        else:
+            contributions.append(
+                ScoreContribution(
+                    name="capacity_risk", value=0.0, status=DataStatus.REAL,
+                    reason="aucun échec par limite de débit observé récemment pour ce modèle",
+                )
+            )
+    else:
+        contributions.append(
+            ScoreContribution(
+                name="capacity_risk", value=0.0, status=DataStatus.UNKNOWN,
+                reason="aucun historique réel d'exécution pour ce modèle (AgentExecution) — capacité inconnue",
+            )
+        )
+
     contributions.append(
         ScoreContribution(
             name="eval_quality",

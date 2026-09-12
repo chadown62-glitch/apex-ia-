@@ -36,7 +36,7 @@ fermé :
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from urllib.parse import urlparse
@@ -46,7 +46,7 @@ from apex.errors import ModelProviderError, TimeoutExceeded
 from apex.models.provider import ModelProvider, get_default_provider
 from apex.models.registry import ModelCandidate, resolve_candidates
 from apex.obs.status import Measurement
-from apex.routing.model import Capability, derive_capabilities
+from apex.routing.model import Capability, ModelPerformanceStats, derive_capabilities
 
 
 class Availability(str, Enum):
@@ -75,6 +75,11 @@ class PerformanceHistory:
     failure_count: int = 0
     estimated_cost: Measurement = field(default_factory=Measurement.unknown)
     observed_latency_s: Measurement = field(default_factory=Measurement.unknown)
+    #: Passe « Routing & Execution Observability Hardening » (N+18) —
+    #: `apex.routing.model.ModelPerformanceStats.last_failure_reason`/
+    #: `.failure_reasons` projetés tels quels, jamais recalculés ici.
+    last_failure_reason: str | None = None
+    failure_reasons: dict[str, int] = field(default_factory=dict)
 
     @property
     def is_empty(self) -> bool:
@@ -150,10 +155,32 @@ def _availability_for(candidate: ModelCandidate) -> Availability:
     return Availability.UNKNOWN  # déclaré, jamais encore sondé en direct
 
 
-def build_model_catalog(config: ApexConfig) -> tuple[CatalogModel, ...]:
+def _history_from_stats(stats: ModelPerformanceStats) -> PerformanceHistory:
+    return PerformanceHistory(
+        usage_count=stats.usage_count, success_count=stats.success_count, failure_count=stats.failure_count,
+        estimated_cost=Measurement.unknown(),  # aucune source de coût déclarée nulle part (ModelEndpoint/ModelRef)
+        observed_latency_s=stats.mean_latency_s,
+        last_failure_reason=stats.last_failure_reason, failure_reasons=dict(stats.failure_reasons),
+    )
+
+
+def build_model_catalog(
+    config: ApexConfig, *, performance: Mapping[str, ModelPerformanceStats] | None = None,
+) -> tuple[CatalogModel, ...]:
     """Vue STATIQUE — aucun appel réseau. `availability` reste `UNKNOWN`
     pour tout candidat non désactivé tant que `discover_live()` n'a pas été
-    appelé explicitement dessus."""
+    appelé explicitement dessus.
+
+    `performance` (passe « Routing & Execution Observability Hardening »,
+    N+18) — optionnel, même patron qu'`apex.routing.router.select_model` :
+    un appelant qui a réellement agrégé un historique
+    (`apex.agent_registry.performance.aggregate_model_performance`, depuis
+    de vraies `AgentExecution`) peut l'injecter ici pour peupler
+    `CatalogModel.history` — jamais recalculé ni dupliqué par ce module,
+    qui reste sans dépendance DB. Omis (`None`), `history` reste la
+    `PerformanceHistory` vide par défaut — exactement le comportement
+    d'avant cette passe."""
+    perf_map = performance or {}
     catalog: list[CatalogModel] = []
     for candidate in resolve_candidates(config):
         provider_id = (
@@ -161,12 +188,14 @@ def build_model_catalog(config: ApexConfig) -> tuple[CatalogModel, ...]:
             if candidate.endpoint is not None
             else _provider_id("unconfigured", "")
         )
+        stats = perf_map.get(candidate.ref.id)
         catalog.append(
             CatalogModel(
                 candidate=candidate, provider_id=provider_id,
                 capabilities=derive_capabilities(candidate),
                 availability=_availability_for(candidate),
                 discovery=DiscoverySource.CONFIGURED,
+                history=_history_from_stats(stats) if stats is not None else PerformanceHistory(),
             )
         )
     return tuple(catalog)

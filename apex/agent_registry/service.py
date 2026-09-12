@@ -22,6 +22,7 @@ from apex.agent_registry.model import (
     Permission,
     ToolName,
 )
+from apex.agent_registry.observability import serialize_fallback_result, serialize_routing_decision
 from apex.agent_registry.repository import AgentExecutionRepository, AgentTeamRepository, ConfiguredAgentRepository
 from apex.agent_templates.model import AgentRole
 from apex.policy.engine import PolicyEngine
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
     from apex.missions.service import MissionService
     from apex.models.provider import ModelProvider
     from apex.models.registry import ModelCandidate
+    from apex.routing.generation import FallbackResult
     from apex.routing.model import RoutingRequest
 
 
@@ -153,6 +155,47 @@ class AgentRegistryService:
     def latest_execution(self, agent_id: str) -> AgentExecution | None:
         return self._executions.latest_for_agent(agent_id)
 
+    def get_execution_trace(self, execution_id: str, *, event_scan_limit: int = 1000) -> dict[str, Any]:
+        """Reconstruit APRÈS COUP la trace complète d'UNE exécution —
+        décision de routage (candidat sélectionné, score, `ScoreBreakdown`,
+        alternatives écartées et leur raison), tentatives de fallback
+        (catégorie réelle de chaque échec), et le résultat final déjà
+        persisté sur `AgentExecution`. Ne lit AUCUNE nouvelle source : les
+        deux événements déjà écrits par `run_execution`
+        (`agent_execution.model_selected`/`agent_execution.completed`|
+        `.failed`) portent tout ce dont ce module a besoin — reconstitués
+        ici, jamais un second stockage.
+
+        `event_scan_limit` — `events` n'a pas d'index par `execution_id`
+        (passe volontairement minimale, N+18) : on relit les N événements
+        les plus récents et on filtre côté Python. Un exécution ancienne
+        au-delà de cette fenêtre ne sera pas retrouvée — limite honnête,
+        pas une garantie brisée silencieusement."""
+        from apex.db.engine import session_scope
+        from apex.db.repositories import EventRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = EventRepository(session).recent(limit=event_scan_limit)
+
+        routing: dict[str, Any] | None = None
+        fallback: dict[str, Any] | None = None
+        completion_kind: str | None = None
+        for row in rows:
+            if row.context.get("execution_id") != execution_id:
+                continue
+            if row.msg == "agent_execution.model_selected":
+                routing = row.context.get("routing")
+            elif row.msg in ("agent_execution.completed", "agent_execution.failed"):
+                fallback = row.context.get("fallback")
+                completion_kind = row.msg
+
+        return {
+            "execution_id": execution_id,
+            "routing": routing,
+            "fallback": fallback,
+            "completion_kind": completion_kind,
+        }
+
     # -- Team V1 minimale -----------------------------------------------------
 
     def create_team(
@@ -228,7 +271,10 @@ class AgentRegistryService:
             required_capabilities=frozenset(Capability(c) for c in agent.required_capabilities),
         )
         decision = select_model(list(candidates), request)
-        self._record_event(agent.id, "agent_execution.model_selected", {"execution_id": execution.id})
+        self._record_event(
+            agent.id, "agent_execution.model_selected",
+            {"execution_id": execution.id, "routing": serialize_routing_decision(decision)},
+        )
 
         # QUEUED -> RUNNING une seule fois, avant toute tentative — même
         # discipline que `generate_mission_response_via_router` : la Mission
@@ -241,7 +287,7 @@ class AgentRegistryService:
             return self._complete(
                 execution, mission=failed_mission, model_id=None, provider_id=None,
                 result=None, error=decision.reason,
-                fallback_reason=classify_outcome(decision, None),
+                fallback_reason=classify_outcome(decision, None), fallback_result=None,
             )
 
         ranked = [sc.candidate for sc in decision.ranked_candidates if sc.score > 0.0]
@@ -264,6 +310,7 @@ class AgentRegistryService:
             return self._complete(
                 execution, mission=failed_mission, model_id=None, provider_id=None,
                 result=None, error=error, fallback_reason=classify_outcome(decision, fallback_result),
+                fallback_result=fallback_result,
             )
 
         served = fallback_result.succeeded_with
@@ -274,7 +321,7 @@ class AgentRegistryService:
         return self._complete(
             execution, mission=reviewed_mission, model_id=served.ref.id, provider_id=provider_id,
             result=generation.text, error=None,
-            fallback_reason=classify_outcome(decision, fallback_result),
+            fallback_reason=classify_outcome(decision, fallback_result), fallback_result=fallback_result,
             elapsed_s=generation.elapsed_s,
             tokens_prompt=_real_measurement(generation.tokens_prompt),
             tokens_completion=_real_measurement(generation.tokens_completion),
@@ -290,6 +337,7 @@ class AgentRegistryService:
         result: str | None,
         error: str | None,
         fallback_reason: FallbackReason,
+        fallback_result: "FallbackResult | None",
         elapsed_s: float | None = None,
         tokens_prompt: int | None = None,
         tokens_completion: int | None = None,
@@ -298,7 +346,14 @@ class AgentRegistryService:
         Model Router V1 » : `None` sur tout chemin qui n'a produit aucun
         `GenerationResult` réel (aucun candidat sélectionné, tous les
         candidats ont échoué) — seul le chemin de succès dans
-        `run_execution` les fournit, jamais une valeur devinée."""
+        `run_execution` les fournit, jamais une valeur devinée.
+
+        `fallback_result` (passe « Routing & Execution Observability
+        Hardening », N+18) — sérialisé (`serialize_fallback_result`) dans
+        l'événement de complétion : quelle tentative a échoué, avec quelle
+        catégorie réelle, avant qu'un éventuel fallback ne réussisse —
+        reconstructible après coup, jamais seulement `fallback_reason`
+        (la conclusion finale, sans le détail des tentatives)."""
         from apex.missions.states import MissionState
 
         status = AgentExecutionStatus.COMPLETED if mission.state is MissionState.REVIEW else AgentExecutionStatus.FAILED
@@ -311,7 +366,10 @@ class AgentRegistryService:
         self._record_event(
             execution.agent_id,
             "agent_execution.completed" if status is AgentExecutionStatus.COMPLETED else "agent_execution.failed",
-            {"execution_id": execution.id, "mission_id": mission.id, "fallback_reason": fallback_reason.value},
+            {
+                "execution_id": execution.id, "mission_id": mission.id, "fallback_reason": fallback_reason.value,
+                "fallback": serialize_fallback_result(fallback_result),
+            },
         )
         return completed
 

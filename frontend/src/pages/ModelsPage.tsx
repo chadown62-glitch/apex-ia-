@@ -117,6 +117,7 @@ export function ModelsPage() {
                   <th>Contexte</th>
                   <th>Capacités</th>
                   <th>Disponibilité</th>
+                  <th>Historique réel</th>
                 </tr>
               </thead>
               <tbody>
@@ -148,6 +149,22 @@ export function ModelsPage() {
                         <span className="status-badge__dot" aria-hidden="true" />
                         {AVAILABILITY_LABEL[m.availability]}
                       </span>
+                    </td>
+                    <td>
+                      {m.history.usage_count === 0 ? (
+                        <span className="models-page__history-empty">Aucune exécution connue</span>
+                      ) : (
+                        <div className="models-page__history">
+                          <span>
+                            {m.history.success_count}/{m.history.usage_count} réussie(s)
+                          </span>
+                          {m.history.last_failure_reason && (
+                            <span className="models-page__history-last-failure mono">
+                              dernier échec : {m.history.last_failure_reason}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}

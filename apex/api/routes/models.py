@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from apex.api.schemas import CatalogModelOut, DataEnvelope, ProviderInfoOut
+from apex.api.schemas import CatalogModelOut, DataEnvelope, ModelHistoryOut, ProviderInfoOut
 
 router = APIRouter(tags=["models"])
 
@@ -24,6 +24,7 @@ router = APIRouter(tags=["models"])
 def _to_catalog_model_out(model: object) -> CatalogModelOut:
     candidate = model.candidate  # type: ignore[attr-defined]
     endpoint = candidate.endpoint
+    history = model.history  # type: ignore[attr-defined]
     return CatalogModelOut(
         model_id=model.model_id,  # type: ignore[attr-defined]
         display_name=model.display_name,  # type: ignore[attr-defined]
@@ -42,7 +43,40 @@ def _to_catalog_model_out(model: object) -> CatalogModelOut:
         served_model=endpoint.served_model if endpoint is not None else None,
         max_context=endpoint.max_context if endpoint is not None else None,
         vram_gb=endpoint.vram_gb if endpoint is not None else None,
+        history=ModelHistoryOut(
+            usage_count=history.usage_count, success_count=history.success_count,
+            failure_count=history.failure_count, last_failure_reason=history.last_failure_reason,
+            failure_reasons=dict(history.failure_reasons),
+        ),
     )
+
+
+def _real_performance_map(config: object) -> dict[str, object]:
+    """Agrège un `apex.routing.model.ModelPerformanceStats` RÉEL par
+    `model_id` — passe « Routing & Execution Observability Hardening »
+    (N+18). Dégrade silencieusement à `{}` si la DB est indisponible
+    (même discipline que le reste de ce fichier : `list_models`/
+    `list_providers` restent utilisables SANS base de données, l'historique
+    y devient alors simplement vide, jamais une raison de faire échouer
+    toute la route)."""
+    try:
+        from apex.agent_registry.performance import aggregate_model_performance
+        from apex.agent_registry.repository import AgentExecutionRepository
+        from apex.api.dependencies import get_session_factory
+        from apex.models.registry import resolve_candidates
+
+        session_factory = get_session_factory()
+        executions_repo = AgentExecutionRepository(session_factory)
+        performance: dict[str, object] = {}
+        for candidate in resolve_candidates(config):  # type: ignore[arg-type]
+            model_id = candidate.ref.id
+            if model_id in performance:
+                continue
+            executions = executions_repo.list_by_model(model_id)
+            performance[model_id] = aggregate_model_performance(model_id, executions)
+        return performance
+    except Exception:
+        return {}
 
 
 def _to_provider_info_out(provider: object) -> ProviderInfoOut:
@@ -64,7 +98,8 @@ def list_models() -> DataEnvelope[list[CatalogModelOut]]:
         from apex.config.loader import load_config
         from apex.models.catalog import build_model_catalog
 
-        catalog = build_model_catalog(load_config())
+        config = load_config()
+        catalog = build_model_catalog(config, performance=_real_performance_map(config))
         views = [_to_catalog_model_out(m) for m in catalog]
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
@@ -95,7 +130,8 @@ def discover_models() -> DataEnvelope[list[CatalogModelOut]]:
         from apex.config.loader import load_config
         from apex.models.catalog import build_model_catalog, discover_live
 
-        catalog = build_model_catalog(load_config())
+        config = load_config()
+        catalog = build_model_catalog(config, performance=_real_performance_map(config))
         resolved = discover_live(catalog)
         views = [_to_catalog_model_out(m) for m in resolved]
     except Exception as exc:

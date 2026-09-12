@@ -897,19 +897,30 @@ class RouterScoringPolicy:
       mean_latency_s` RÉEL — une forme monotone décroissante standard
       (jamais négative, jamais indéfinie), pas un seuil arbitraire choisi
       pour produire un résultat souhaité.
+    - `capacity_risk_weight` (défaut `0.4`, passe « Routing & Execution
+      Observability Hardening », N+18) : pénalité PROPORTIONNELLE au ratio
+      RÉEL d'échecs `RATE_LIMITED` observés (`ModelPerformanceStats.
+      failure_reasons["rate_limited"] / usage_count`) — jamais un quota
+      inventé, jamais un pourcentage d'utilisation supposé : seulement un
+      compteur d'échecs LOCAUX déjà réellement observés qui décourage un
+      candidat qui a récemment montré des signes réels de limite de débit.
+      Nulle tant qu'aucun échec de ce type n'a été observé, ou qu'aucun
+      historique n'existe — jamais une supposition de capacité.
 
-    Les deux nouveaux poids (`reliability_weight`/`latency_weight`) ne
-    changent AUCUNE décision de routage tant qu'aucun historique réel
-    n'existe pour un candidat (l'environnement actuel — un seul candidat
-    local Ollama, aucune `AgentExecution` avec `model_id` renseigné avant
-    cette passe) : leur contribution est alors structurellement nulle, pas
-    parce que le poids serait nul.
+    Les poids fondés sur l'historique (`reliability_weight`/
+    `latency_weight`/`capacity_risk_weight`) ne changent AUCUNE décision de
+    routage tant qu'aucun historique réel n'existe pour un candidat
+    (l'environnement actuel — un seul candidat local Ollama, aucune
+    `AgentExecution` avec `model_id` renseigné avant cette passe) : leur
+    contribution est alors structurellement nulle, pas parce que le poids
+    serait nul.
     """
 
     capability_match_weight: float = 1.0
     local_preference_weight: float = 0.5
     reliability_weight: float = 0.3
     latency_weight: float = 0.2
+    capacity_risk_weight: float = 0.4
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> RouterScoringPolicy:
@@ -929,6 +940,7 @@ class RouterScoringPolicy:
             "local_preference_weight": float(raw.get("local_preference_weight", defaults.local_preference_weight)),
             "reliability_weight": float(raw.get("reliability_weight", defaults.reliability_weight)),
             "latency_weight": float(raw.get("latency_weight", defaults.latency_weight)),
+            "capacity_risk_weight": float(raw.get("capacity_risk_weight", defaults.capacity_risk_weight)),
         }
         for field_name, value in values.items():
             if not math.isfinite(value):

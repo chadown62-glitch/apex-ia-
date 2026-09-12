@@ -9,11 +9,73 @@ l'état réel du système soit toujours lisible depuis le code et depuis
 
 from __future__ import annotations
 
+from enum import Enum
+
 
 class ApexError(Exception):
     """Racine de toutes les erreurs APEX."""
 
     exit_code: int = 1
+
+
+class ModelErrorCategory(str, Enum):
+    """Catégorie RÉELLE d'échec d'un `ModelProvider` (passe « Routing &
+    Execution Observability Hardening », N+18) — dérivée UNIQUEMENT d'un
+    signal structurel (code HTTP réel, type d'exception réseau, ou un champ
+    d'erreur structuré exact dans un corps de réponse), JAMAIS d'un texte
+    libre deviné. Vocabulaire fermé, volontairement restreint à ce qui est
+    réellement observable aujourd'hui par `OllamaProvider`/
+    `OpenAICompatibleProvider` :
+
+    - `RATE_LIMITED` : HTTP 429 exactement — jamais un autre code.
+    - `AUTH_ERROR` : HTTP 401 ou 403 exactement.
+    - `CONTEXT_TOO_LONG` : UNIQUEMENT si le corps de réponse porte un champ
+      d'erreur structuré et reconnu (ex. `error.code ==
+      "context_length_exceeded"`, le code documenté de l'API OpenAI) —
+      jamais dérivé du seul code HTTP générique (400 a de nombreuses
+      autres causes).
+    - `TIMEOUT` : notre propre `apex.errors.TimeoutExceeded` — jamais levée
+      par `ModelProviderError` lui-même (une exception distincte), mais la
+      même catégorie sert à unifier la classification d'une tentative
+      (`apex.routing.generation.GenerationAttempt.category`).
+    - `OFFLINE` : connexion impossible (`urllib.error.URLError` sans code
+      HTTP — DNS, connexion refusée, réseau injoignable), ou un backend
+      que `detect()` a déjà constaté indisponible avant tout appel.
+    - `PROVIDER_ERROR` : un code HTTP réel a été observé mais ne correspond
+      à aucune catégorie plus précise ci-dessus (ex. 500, 503) — jamais
+      « inconnu », le code exact reste porté par
+      `ModelProviderError.http_status`.
+    - `UNKNOWN` : aucun signal structurel exploitable (exception inattendue,
+      réponse illisible, annulation demandée par l'appelant) — jamais un
+      défaut silencieusement traité comme `PROVIDER_ERROR`.
+
+    `QUOTA_EXCEEDED` (déjà déclaré dans `apex.agent_registry.model.
+    FallbackReason`) reste délibérément ABSENT de ce vocabulaire : un HTTP
+    429 seul ne permet pas de distinguer honnêtement une limite de débit
+    temporaire d'un quota définitivement épuisé — un fournisseur devrait
+    exposer un signal plus précis (ex. un en-tête ou un code d'erreur
+    dédié) avant qu'APEX ne prétende faire cette distinction."""
+
+    RATE_LIMITED = "rate_limited"
+    AUTH_ERROR = "auth_error"
+    CONTEXT_TOO_LONG = "context_too_long"
+    TIMEOUT = "timeout"
+    OFFLINE = "offline"
+    PROVIDER_ERROR = "provider_error"
+    UNKNOWN = "unknown"
+
+
+def category_from_http_status(status: int) -> ModelErrorCategory:
+    """Seule fonction qui traduit un code HTTP RÉEL en `ModelErrorCategory`
+    — un point unique, jamais dupliqué entre `OllamaProvider`/
+    `OpenAICompatibleProvider`. Un code non reconnu retourne
+    `PROVIDER_ERROR`, jamais `UNKNOWN` (le code HTTP EST un signal réel,
+    même s'il ne correspond à aucune catégorie plus précise)."""
+    if status == 429:
+        return ModelErrorCategory.RATE_LIMITED
+    if status in (401, 403):
+        return ModelErrorCategory.AUTH_ERROR
+    return ModelErrorCategory.PROVIDER_ERROR
 
 
 class ConfigError(ApexError):
@@ -112,14 +174,28 @@ class ModelProviderError(ApexError):
     UNAVAILABLE_ON_DEV`, jamais une exception). Le message ne porte JAMAIS le
     corps de la requête/réponse (prompt, sortie du modèle) ni d'en-tête
     d'authentification — seuls l'URL de l'endpoint et un résumé borné de la
-    cause sont conservés (§72)."""
+    cause sont conservés (§72).
+
+    **N+18** : porte désormais `category`/`http_status`, un signal
+    STRUCTURÉ (jamais deviné depuis `detail`, un texte libre) que
+    `apex.routing.generation`/`apex.agent_registry.fallback.
+    classify_outcome` consomment pour dériver un `FallbackReason` réel.
+    `category` vaut `ModelErrorCategory.UNKNOWN` par défaut — un appelant
+    qui construit cette erreur sans classification explicite n'affirme
+    jamais une catégorie qu'il n'a pas réellement établie."""
 
     exit_code = 9
 
-    def __init__(self, component: str, *, endpoint_url: str, detail: str) -> None:
+    def __init__(
+        self, component: str, *, endpoint_url: str, detail: str,
+        category: ModelErrorCategory = ModelErrorCategory.UNKNOWN,
+        http_status: int | None = None,
+    ) -> None:
         self.component = component
         self.endpoint_url = endpoint_url
         self.detail = detail
+        self.category = category
+        self.http_status = http_status
         super().__init__(f"« {component} » a échoué sur {endpoint_url} : {detail}")
 
 

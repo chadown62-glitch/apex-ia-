@@ -16,7 +16,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Callable
 
-from apex.errors import ModelProviderError, TimeoutExceeded
+from apex.errors import ModelErrorCategory, ModelProviderError, TimeoutExceeded
 from apex.models.model import GenerationRequest, GenerationResult
 from apex.models.provider import ModelProvider, get_default_provider
 from apex.models.registry import ModelCandidate
@@ -24,10 +24,17 @@ from apex.models.registry import ModelCandidate
 
 @dataclass(frozen=True)
 class GenerationAttempt:
+    """`category` (passe « Routing & Execution Observability Hardening »,
+    N+18) — `None` pour une tentative réussie ; sinon un signal RÉEL
+    (`ModelErrorCategory`), jamais deviné depuis `error` (le texte libre)
+    — `apex.agent_registry.fallback.classify_outcome` s'appuie
+    exclusivement sur ce champ, jamais sur une correspondance de sous-chaîne."""
+
     candidate: ModelCandidate
     succeeded: bool
     error: str | None
     result: GenerationResult | None
+    category: ModelErrorCategory | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +52,7 @@ def _attempt(
         return GenerationAttempt(
             candidate=candidate, succeeded=False,
             error="aucun ModelEndpoint réel déclaré pour ce candidat", result=None,
+            category=ModelErrorCategory.UNKNOWN,
         )
     provider = provider_factory(candidate)
     request = GenerationRequest(
@@ -53,9 +61,19 @@ def _attempt(
     )
     try:
         result = provider.generate(request)
-    except (ModelProviderError, TimeoutExceeded) as exc:
-        return GenerationAttempt(candidate=candidate, succeeded=False, error=str(exc), result=None)
-    return GenerationAttempt(candidate=candidate, succeeded=True, error=None, result=result)
+    except TimeoutExceeded as exc:
+        # Exception distincte de `ModelProviderError` (jamais levée par un
+        # provider comme catégorie propre) — mais la même catégorie unifiée
+        # `ModelErrorCategory.TIMEOUT` sert la classification d'une tentative.
+        return GenerationAttempt(
+            candidate=candidate, succeeded=False, error=str(exc), result=None,
+            category=ModelErrorCategory.TIMEOUT,
+        )
+    except ModelProviderError as exc:
+        return GenerationAttempt(
+            candidate=candidate, succeeded=False, error=str(exc), result=None, category=exc.category,
+        )
+    return GenerationAttempt(candidate=candidate, succeeded=True, error=None, result=result, category=None)
 
 
 def _default_provider_factory(candidate: ModelCandidate) -> ModelProvider:

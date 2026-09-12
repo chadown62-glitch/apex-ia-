@@ -1542,6 +1542,81 @@ vision connecté) ; frontend NON câblé sur `/operator/designs*` (même
 raisonnement que N+16 — l'architecture est prête pour qu'une future UI le
 fasse directement).
 
+### Routing & Execution Observability Hardening (N+18)
+
+**Objectif** : durcir le pipeline modèle → routing → exécution → fallback
+DÉJÀ EXISTANT (`apex.models`/`apex.routing`/`apex.agent_registry`) pour
+qu'il soit entièrement traçable et fondé sur des signaux réels — voir
+`docs/AGENT_HANDOFF.md` §« Routing & Execution Observability Hardening »
+pour le détail complet. Note de cadrage : une version antérieure de cette
+mission avait mélangé APEX avec le projet Game Dev/UE5 (agents Claude/
+Gemini/ChatGPT/Codex à connecter) ; retiré par l'utilisateur avant toute
+implémentation — N+18 ne porte QUE sur l'architecture `ModelProvider`
+existante.
+
+**Ce qui a été ajouté**, sans dupliquer ni remplacer l'existant :
+- `apex.errors.ModelErrorCategory` + `category_from_http_status()` —
+  catégorie d'échec RÉELLE (code HTTP/type d'exception réseau), jamais
+  devinée depuis un texte libre. `ModelProviderError` porte désormais
+  `category`/`http_status`.
+- `OllamaProvider`/`OpenAICompatibleProvider` classent réellement chaque
+  échec (429/401/403/un champ JSON structuré `context_length_exceeded`/
+  connexion impossible/autre code HTTP).
+- `apex.routing.generation.GenerationAttempt.category` + réécriture
+  complète de `apex.agent_registry.fallback.classify_outcome` — un
+  mappage TOTAL et fermé `ModelErrorCategory` → `FallbackReason`, plus
+  aucune correspondance de sous-chaîne fragile.
+- Axe de score `capacity_risk` (`apex.routing.router`,
+  `RouterScoringPolicy.capacity_risk_weight`) — pénalité proportionnelle à
+  un ratio RÉEL d'échecs `rate_limited` déjà observés, `UNKNOWN` sans
+  historique.
+- `apex.agent_registry.observability` (nouveau module) — sérialise la
+  décision de routage et les tentatives de fallback dans `events`
+  (réutilisé) ; `AgentRegistryService.get_execution_trace()` reconstruit
+  après coup « pourquoi ce modèle, quelles alternatives, pourquoi cet
+  échec » — exposé via `GET /configured-agents/{agent_id}/executions/
+  {execution_id}/trace`.
+- `apex.routing.model.ModelPerformanceStats.last_failure_reason` +
+  câblage réel de `apex.models.catalog.PerformanceHistory` (anticipé mais
+  vide depuis la Phase 10) dans `build_model_catalog(config,
+  performance=...)`.
+- `ModelsPage.tsx` étendu avec l'historique réel par modèle
+  (`usage_count`/`success_count`/`last_failure_reason`).
+
+**Vérifié réellement** : 37 tests nouveaux (`test_models_error_
+classification.py`, `test_agent_registry_fallback.py`, classe
+`TestCapacityRiskAxis` dans `test_routing_router_scoring.py`, classe
+`TestPerformanceWiring` dans `test_models_catalog.py`,
+`test_agent_registry_observability.py`) — classification HTTP réelle
+(429/401/403/500/timeout/connexion impossible/context-length structuré),
+mappage total vers `FallbackReason`, `capacity_risk` UNKNOWN/REAL,
+reconstruction complète d'une trace sans fuite de texte généré. Suite
+complète (1830 tests, hors `test_runtime_packaging.py`) + build/tests
+frontend (100 tests, `tsc -b` propre) exécutés sans régression.
+
+**Découverte pendant l'audit final** (non introduite par cette passe,
+confirmée pré-existante par isolation `git stash -u` contre le commit
+N+17 déjà poussé) : 4 échecs dans `test_runtime_packaging.py`
+(`TestAntiLeakVerification::test_clean_artifact_passes`,
+`TestBuildRuntimeArtifact::test_migrations_never_reference_a_research_module`,
+2 dans `TestWorktreeValidationBuild`) — une dette d'architecture
+« imports Research fuités dans des docstrings Runtime » (`apex.metalearner`/
+`apex.tasks`/`apex.taskgen`/`apex.evalrunner` cités en commentaire dans
+plusieurs fichiers `apex/api/`/`apex/cli/`/une migration Alembic), jusqu'ici
+masquée à chaque passe précédente (N+16/N+17) par une erreur `setUpClass`
+antérieure (nouveau sous-paquet non encore committé). N+18 n'ajoutant aucun
+nouveau sous-paquet, ces 4 tests s'exécutent enfin jusqu'au bout et
+révèlent une dette réelle, hors périmètre de cette passe — non corrigée
+ici, signalée honnêtement.
+
+**Non fait dans cette passe** (limites honnêtes, voir §6
+d'`AGENT_HANDOFF.md`) : aucun adaptateur provider supplémentaire (hors
+périmètre explicite) ; `QUOTA_EXCEEDED` jamais produit (HTTP 429 seul ne
+le distingue pas honnêtement de `RATE_LIMITED`) ; `get_execution_trace`
+borné aux N événements les plus récents (pas d'index dédié par
+`execution_id`) ; la dette Research-imports ci-dessus, pré-existante,
+signalée mais non corrigée (hors périmètre).
+
 ### Décisions d'architecture importantes
 
 - **Aucune boucle d'apprentissage n'écrit dans le Core** — invariant

@@ -137,6 +137,15 @@ class ModelPerformanceStats:
     mean_tokens_prompt: Measurement = field(default_factory=Measurement.unknown)
     mean_tokens_completion: Measurement = field(default_factory=Measurement.unknown)
     failure_reasons: dict[str, int] = field(default_factory=dict)
+    #: Passe « Routing & Execution Observability Hardening » (N+18) — la
+    #: valeur de `FallbackReason` (chaîne, même vocabulaire fermé que
+    #: `failure_reasons`) de la PLUS RÉCENTE `AgentExecution` en échec pour
+    #: ce modèle, ou `None` si aucun échec n'est connu. Distinct de
+    #: `failure_reasons` (un agrégat de comptages) : ceci répond
+    #: spécifiquement à « quelle a été la dernière cause d'échec connue ? »
+    #: (§7 du hardening — dashboard), jamais une inférence, uniquement la
+    #: dernière valeur réellement enregistrée.
+    last_failure_reason: str | None = None
 
 
 @dataclass(frozen=True)

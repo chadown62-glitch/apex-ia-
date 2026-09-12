@@ -38,7 +38,13 @@ import urllib.request
 from typing import Any
 
 from apex.config.schema import ModelEndpoint
-from apex.errors import ModelProviderError, SecretNotFound, TimeoutExceeded
+from apex.errors import (
+    ModelErrorCategory,
+    ModelProviderError,
+    SecretNotFound,
+    TimeoutExceeded,
+    category_from_http_status,
+)
 from apex.models.model import GenerationRequest, GenerationResult, ModelCapabilityReport
 from apex.models.provider import ModelProvider
 from apex.obs.capability import CapabilityStatus
@@ -47,10 +53,37 @@ from apex.secrets.provider import EnvSecretBroker, SecretBroker
 
 _ERROR_DETAIL_MAX_CHARS = 300
 
+#: Code d'erreur structuré RÉEL et documenté de l'API OpenAI — la SEULE
+#: source acceptée pour dériver `CONTEXT_TOO_LONG` : un champ exact dans un
+#: corps JSON structuré, jamais une déduction depuis le seul code HTTP 400
+#: (qui a de nombreuses autres causes) ni depuis un message texte deviné.
+_CONTEXT_LENGTH_ERROR_CODE = "context_length_exceeded"
+
 
 def _truncate(text: str) -> str:
     text = text.strip()
     return text if len(text) <= _ERROR_DETAIL_MAX_CHARS else text[:_ERROR_DETAIL_MAX_CHARS] + "…"
+
+
+def _classify_http_error(exc: urllib.error.HTTPError) -> ModelErrorCategory:
+    """`category_from_http_status(exc.code)` d'abord (signal réel, toujours
+    disponible) ; affiné en `CONTEXT_TOO_LONG` UNIQUEMENT si le corps de
+    réponse est un JSON structuré portant EXACTEMENT
+    `error.code == "context_length_exceeded"` — jamais un autre champ,
+    jamais une correspondance partielle. Le corps n'est JAMAIS conservé ni
+    journalisé au-delà de cette vérification structurelle (§72 : pourrait
+    échoïter le prompt envoyé)."""
+    category = category_from_http_status(exc.code)
+    if exc.code != 400:
+        return category
+    try:
+        body = json.loads(exc.read().decode("utf-8"))
+    except (OSError, ValueError, UnicodeDecodeError):
+        return category
+    error = body.get("error") if isinstance(body, dict) else None
+    if isinstance(error, dict) and error.get("code") == _CONTEXT_LENGTH_ERROR_CODE:
+        return ModelErrorCategory.CONTEXT_TOO_LONG
+    return category
 
 
 class OpenAICompatibleProvider(ModelProvider):
@@ -134,10 +167,12 @@ class OpenAICompatibleProvider(ModelProvider):
             raise ModelProviderError(
                 "OpenAICompatibleProvider.generate", endpoint_url=self._base_url,
                 detail=f"backend non disponible : {report.status.value}",
+                category=ModelErrorCategory.OFFLINE,
             )
         if request.cancel_event is not None and request.cancel_event.is_set():
             raise ModelProviderError(
                 "OpenAICompatibleProvider.generate", endpoint_url=self._base_url, detail="annulé avant tout appel",
+                category=ModelErrorCategory.UNKNOWN,
             )
 
         headers = self._auth_headers()
@@ -192,16 +227,22 @@ class OpenAICompatibleProvider(ModelProvider):
             # échoïter le prompt envoyé, ou des détails internes du
             # fournisseur) — seulement le code et un résumé borné, jamais
             # l'en-tête Authorization (jamais relu depuis `req`, jamais
-            # inclus ici).
+            # inclus ici). `_classify_http_error` peut lire le corps pour
+            # une vérification structurelle exacte (`error.code`), mais ne
+            # le conserve ni ne le journalise jamais lui-même.
+            category = _classify_http_error(exc)
             raise ModelProviderError(
                 "OpenAICompatibleProvider.generate", endpoint_url=self._base_url,
                 detail=f"HTTP {exc.code} : {_truncate(exc.reason or '')}",
+                category=category, http_status=exc.code,
             ) from exc
         except urllib.error.URLError as exc:
             raise ModelProviderError(
                 "OpenAICompatibleProvider.generate", endpoint_url=self._base_url, detail=_truncate(str(exc.reason)),
+                category=ModelErrorCategory.OFFLINE,
             ) from exc
         except (OSError, ValueError) as exc:
             raise ModelProviderError(
                 "OpenAICompatibleProvider.generate", endpoint_url=self._base_url, detail=_truncate(str(exc)),
+                category=ModelErrorCategory.UNKNOWN,
             ) from exc

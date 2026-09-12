@@ -354,6 +354,7 @@ routing:
   local_preference_weight: 0.5
   reliability_weight: 0.3
   latency_weight: 0.2
+  capacity_risk_weight: 0.4
 
 # ----------------------------------------------------------------------------
 # Services d'infrastructure locaux

@@ -330,6 +330,25 @@ class AgentExecutionOut(BaseModel):
     completed_at: str | None
 
 
+class ExecutionTraceOut(BaseModel):
+    """Reconstruction APRÈS COUP d'UNE décision de routage + ses tentatives
+    de fallback — passe « Routing & Execution Observability Hardening »
+    (N+18), projection directe des événements `agent_execution.
+    model_selected`/`agent_execution.completed`|`.failed` déjà écrits par
+    `AgentRegistryService.run_execution` (`apex.agent_registry.
+    observability.serialize_routing_decision`/`serialize_fallback_result`).
+    Forme volontairement `dict[str, Any]` pour `routing`/`fallback` : une
+    décomposition (`ScoreBreakdown`) a une profondeur variable selon le
+    nombre de candidats et de contributions, jamais figée dans un schéma
+    rigide — ce module ne fait que projeter ce qui a été réellement
+    persisté, jamais un recalcul."""
+
+    execution_id: str
+    routing: dict[str, Any] | None
+    fallback: dict[str, Any] | None
+    completion_kind: str | None
+
+
 class RunAgentExecutionIn(BaseModel):
     prompt: str | None = None
 
@@ -363,6 +382,19 @@ class ProviderInfoOut(BaseModel):
     model_ids: list[str]
 
 
+class ModelHistoryOut(BaseModel):
+    """Projection directe d'`apex.models.catalog.PerformanceHistory` —
+    passe « Routing & Execution Observability Hardening » (N+18). Vide par
+    défaut (`usage_count=0`) tant qu'aucune `AgentExecution` réelle n'a été
+    agrégée pour ce modèle — jamais une statistique fabriquée."""
+
+    usage_count: int
+    success_count: int
+    failure_count: int
+    last_failure_reason: str | None
+    failure_reasons: dict[str, int]
+
+
 class CatalogModelOut(BaseModel):
     model_id: str
     display_name: str
@@ -381,6 +413,7 @@ class CatalogModelOut(BaseModel):
     served_model: str | None
     max_context: int | None
     vram_gb: float | None
+    history: ModelHistoryOut
 
 
 class SchedulerStatusOut(BaseModel):
