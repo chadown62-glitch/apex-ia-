@@ -548,6 +548,87 @@ class EvalRunRow(Base):
         }
 
 
+class ExperienceRow(Base):
+    """Persistance d'une `apex.metalearner.experience.Experience` (boucle
+    d'apprentissage adaptative, N+20) — **INSERT seul**, même garantie que
+    `TaskRow`/`EvalRunRow` : une expérience, réussie ou non, n'est jamais
+    modifiée ni supprimée après coup (une correction est une nouvelle ligne
+    de génération suivante, jamais un UPDATE de celle-ci).
+
+    Distincte d'`EvalRunRow` : un `EvalRun` est le résultat BRUT d'UNE
+    tentative (jugement + statut d'exécution) ; une `Experience` est
+    l'INTERPRÉTATION de ce résultat pour la boucle d'apprentissage — fitness
+    réel (`apex.metalearner.population_fitness.compute_fitness`, réutilisé,
+    jamais recalculé ici), catégorie d'échec réelle
+    (`apex.metalearner.failure_taxonomy.classify_failure`, réutilisée), et
+    surtout la GÉNÉALOGIE (`generation_number`/`parent_experience_id`/
+    `mutation_description`) qui n'a structurellement aucune place sur
+    `EvalRunRow` (une tâche d'évaluation Phase 5 ne connaît rien de la
+    notion de génération évolutive). `eval_run_id` référence l'`EvalRun`
+    RÉELLEMENT produit — pas de `ForeignKey` (même simplification documentée
+    que `MissionRow.assigned_agent`), vérifiée au niveau service.
+
+    `parent_experience_id`/`parent_generation` restent `NULL` pour une
+    expérience de génération 0 (aucun parent, premier essai) — jamais une
+    valeur inventée pour satisfaire une contrainte de forme.
+    `solution_fingerprint` est un hash SHA-256 du CODE CANDIDAT réellement généré (jamais le texte
+    brut, potentiellement long — voir `apex.evalrunner.service.
+    _MAX_STORED_RESPONSE_CHARS` pour la même discipline de non-stockage
+    illimité), permettant de détecter si deux tentatives ont produit un code
+    identique sans dupliquer ce code une seconde fois."""
+
+    __tablename__ = "experiences"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    eval_run_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    candidate_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    model_id: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
+    strategy_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    generation_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    generation_config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    solution_fingerprint: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    execution_status: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    exit_code: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    oracle_verdict: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    fitness: Mapped[float] = mapped_column(Float, nullable=False)
+    failure_category: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    parent_experience_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    parent_generation: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mutation_description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    improvement_delta: Mapped[float | None] = mapped_column(Float, nullable=True)
+    experiment_ref: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    created_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False, index=True
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "task_id": self.task_id,
+            "eval_run_id": self.eval_run_id,
+            "candidate_id": self.candidate_id,
+            "model_id": self.model_id,
+            "strategy_id": self.strategy_id,
+            "generation_number": self.generation_number,
+            "generation_config": dict(self.generation_config),
+            "solution_fingerprint": self.solution_fingerprint,
+            "execution_status": self.execution_status,
+            "exit_code": self.exit_code,
+            "oracle_verdict": self.oracle_verdict,
+            "fitness": self.fitness,
+            "failure_category": self.failure_category,
+            "parent_experience_id": self.parent_experience_id,
+            "parent_generation": self.parent_generation,
+            "mutation_description": self.mutation_description,
+            "improvement_delta": self.improvement_delta,
+            "experiment_ref": self.experiment_ref,
+            "created_by": self.created_by,
+            "created_at": self.created_at.isoformat(),
+        }
+
+
 class SkillRow(Base):
     """Persistance d'un `apex.skills.model.Skill` (`SkillRegistry`, phase 14).
 

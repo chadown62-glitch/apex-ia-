@@ -2022,3 +2022,39 @@ sable, pas une régression de code ; la base a été réinitialisée
 - `CodeIntelligence` (écriture de code dans un projet réel arbitraire) et
   `SearchProvider` (recherche web réelle) restent hors périmètre, comme
   explicitement demandé par la mission N+19.
+
+### Premier Vrai Lancement + Boucle d'Apprentissage (N+20)
+
+Priorité 1 (audit environnement + premier lancement réel) : **bloquée par
+l'infrastructure, pas par le code** — Ollama absent de ce bac à sable et
+`ollama.com` explicitement refusé par la politique d'egress (403,
+confirmé aussi sur une tentative Docker Hub de repli, bloquée au même
+niveau générique CDN) ; Docker/PostgreSQL/Redis natifs ont en revanche été
+démarrés réellement et vérifiés. Voir `docs/AGENT_HANDOFF.md`, chapitre
+N+20 §2, pour le détail complet de l'audit et la justification de ne pas
+avoir contourné la politique.
+
+Priorité 2 (boucle d'apprentissage) : `apex/metalearner/failure_taxonomy.py`
+(10 catégories d'échec, preuve-based), `apex/metalearner/experience.py`
+(persistance `experiences`, migration `05be04a5103d`), `apex/metalearner/
+adaptive_solution_loop.py` (`run_adaptive_learning_loop`/
+`decide_next_strategies`) — compose `compare_generated_solutions` (N+19)
+génération après génération, la stratégie de chaque génération dérivant
+RÉELLEMENT de l'expérience persistée de la précédente (propriété vérifiée
+par test : supprimer l'expérience de G0 change la décision de G1). Second
+levier de génération câblé au Genome : `generation.prompt_suffix`
+(`apex.genome.clone_config.resolve_generation_prompt_suffix`, additif).
+
+**Non fait dans cette passe** :
+- Aucune validation contre un modèle réellement servi (Ollama absent, voir
+  ci-dessus) — la boucle d'apprentissage est prouvée sur l'architecture
+  réelle (sandbox/oracle/fitness/persistance), avec un double fidèle au
+  contrat `ModelProvider` pour la génération elle-même.
+- Aucune sélection de MODÈLE par la stratégie adaptative (seuls
+  température/prompt_suffix) — pas de vue `model-aware` agrégée
+  inter-tâches construite par cette passe (chaque `Experience` porte déjà
+  `model_id` réel, une agrégation future pourrait s'appuyer dessus sans
+  migration supplémentaire).
+- `run_adaptive_learning_loop` et `evolve_generation()`/
+  `apex.metalearner.cycle.run_experiment_cycle` restent des boucles
+  distinctes, non fusionnées.

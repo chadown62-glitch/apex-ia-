@@ -124,3 +124,35 @@ def resolve_generation_temperature(genome_content: dict[str, Any] | None) -> flo
     if not (_MIN_TEMPERATURE <= value <= _MAX_TEMPERATURE):
         return None
     return float(value)
+
+
+#: Longueur maximale RÉELLE d'un `prompt_suffix` de Genome — un Genome
+#: (potentiellement issu d'une mutation automatique, jamais promue par un
+#: humain avant application, voir la docstring du module) ne doit jamais
+#: pouvoir injecter un texte de taille arbitraire dans un `GenerationRequest`
+#: — même discipline de borne que `_MIN_TEMPERATURE`/`_MAX_TEMPERATURE`.
+_MAX_PROMPT_SUFFIX_CHARS = 500
+
+
+def resolve_generation_prompt_suffix(genome_content: dict[str, Any] | None) -> str | None:
+    """Lit `genome_content["generation"]["prompt_suffix"]` si c'est une
+    chaîne non vide d'au plus `_MAX_PROMPT_SUFFIX_CHARS` caractères — sinon
+    `None` (jamais une valeur inventée). Second levier RÉEL de stratégie de
+    génération (passe N+20, boucle d'apprentissage adaptative), câblé au
+    même point d'entrée que `resolve_generation_temperature` : un TEXTE
+    ADDITIF, jamais une réécriture du prompt — `EvalRunnerService.
+    run_generated_solution` l'ajoute toujours APRÈS `task.description`,
+    jamais à sa place (la description de la tâche, montrée au modèle,
+    reste inchangée par construction ; le suffixe ne fait qu'ajouter une
+    consigne, jamais retirer d'information)."""
+    if not isinstance(genome_content, dict):
+        return None
+    generation = genome_content.get(_GENERATION_KEY)
+    if not isinstance(generation, dict):
+        return None
+    value = generation.get("prompt_suffix")
+    if not isinstance(value, str) or not value.strip():
+        return None
+    if len(value) > _MAX_PROMPT_SUFFIX_CHARS:
+        return None
+    return value

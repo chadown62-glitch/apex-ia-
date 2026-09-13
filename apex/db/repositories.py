@@ -31,6 +31,7 @@ from apex.db.models import (
     CurriculumChallengeRow,
     EvalRunRow,
     EventRow,
+    ExperienceRow,
     GauntletResultRow,
     GenomeVersionRow,
     JudgeLearningSignalRow,
@@ -569,6 +570,84 @@ class EvalRunRepository:
             .order_by(EvalRunRow.created_at.desc())
             .limit(limit)
         )
+        return list(self._session.scalars(stmt))
+
+
+class ExperienceRepository:
+    """Persistance de `apex.metalearner.experience` (boucle d'apprentissage
+    adaptative, N+20) — INSERT seul, même garantie que `EvalRunRepository` :
+    une expérience n'est jamais modifiée ni supprimée après coup par le Core
+    lui-même (voir la docstring d'`ExperienceRow`)."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(
+        self,
+        *,
+        id: str,
+        task_id: str,
+        eval_run_id: str,
+        candidate_id: str,
+        strategy_id: str,
+        generation_number: int,
+        generation_config: dict[str, Any],
+        oracle_verdict: str,
+        fitness: float,
+        failure_category: str,
+        created_by: str,
+        created_at: datetime,
+        model_id: str | None = None,
+        solution_fingerprint: str | None = None,
+        execution_status: str | None = None,
+        exit_code: int | None = None,
+        parent_experience_id: str | None = None,
+        parent_generation: int | None = None,
+        mutation_description: str | None = None,
+        improvement_delta: float | None = None,
+        experiment_ref: str | None = None,
+    ) -> ExperienceRow:
+        row = ExperienceRow(
+            id=id, task_id=task_id, eval_run_id=eval_run_id, candidate_id=candidate_id,
+            model_id=model_id, strategy_id=strategy_id, generation_number=generation_number,
+            generation_config=generation_config, solution_fingerprint=solution_fingerprint,
+            execution_status=execution_status, exit_code=exit_code, oracle_verdict=oracle_verdict,
+            fitness=fitness, failure_category=failure_category,
+            parent_experience_id=parent_experience_id, parent_generation=parent_generation,
+            mutation_description=mutation_description, improvement_delta=improvement_delta,
+            experiment_ref=experiment_ref, created_by=created_by, created_at=created_at,
+        )
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, experience_id: str) -> ExperienceRow | None:
+        return self._session.get(ExperienceRow, experience_id)
+
+    def list_by_task(self, task_id: str, limit: int = 200) -> list[ExperienceRow]:
+        stmt = (
+            select(ExperienceRow)
+            .where(ExperienceRow.task_id == task_id)
+            .order_by(ExperienceRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
+    def list_by_task_and_generation(
+        self, task_id: str, generation_number: int, *, experiment_ref: str | None = None, limit: int = 200
+    ) -> list[ExperienceRow]:
+        """Point d'entrée RÉEL de la boucle adaptative (`apex.metalearner.
+        adaptive_solution_loop.decide_next_strategies`) : lit les expériences
+        RÉELLEMENT persistées d'une génération donnée — si elles ont été
+        supprimées (ou n'ont jamais existé), cette méthode retourne une liste
+        vide et la décision de la génération suivante retombe honnêtement sur
+        sa stratégie par défaut (jamais une expérience reconstruite/devinée)."""
+        stmt = select(ExperienceRow).where(
+            ExperienceRow.task_id == task_id, ExperienceRow.generation_number == generation_number
+        )
+        if experiment_ref is not None:
+            stmt = stmt.where(ExperienceRow.experiment_ref == experiment_ref)
+        stmt = stmt.order_by(ExperienceRow.created_at.asc()).limit(limit)
         return list(self._session.scalars(stmt))
 
 

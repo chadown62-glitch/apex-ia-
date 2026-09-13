@@ -62,6 +62,14 @@ from apex.tasks.repository import TaskRepository
 #: limite a été appliquée.
 _MAX_STORED_RESPONSE_CHARS = 50_000
 
+#: Même discipline que `_MAX_STORED_RESPONSE_CHARS`, appliquée à la sortie
+#: RÉELLE du candidat sandboxé (`SandboxResult.stdout`/`.stderr`) — nécessaire
+#: (passe N+20) pour que `apex.metalearner.failure_taxonomy.classify_failure`
+#: dispose d'une preuve textuelle réelle (le résumé JSON produit par un
+#: harness, voir `apex.taskgen.solution_tasks`) sans jamais stocker une
+#: sortie de taille non bornée.
+_MAX_STORED_CANDIDATE_OUTPUT_CHARS = 20_000
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -323,10 +331,16 @@ class EvalRunnerService:
         eval_run_id = str(uuid.uuid4())
         resolved_provider = provider or get_default_model_provider(endpoint)
         temperature = clone_config.resolve_generation_temperature(genome_content)
+        # Deuxième levier RÉEL de stratégie de génération (passe N+20) —
+        # ADDITIF uniquement, voir la docstring de
+        # `resolve_generation_prompt_suffix` : `task.description` (montrée
+        # au modèle) n'est jamais modifiée, seulement complétée.
+        prompt_suffix = clone_config.resolve_generation_prompt_suffix(genome_content)
+        prompt = task.description if prompt_suffix is None else f"{task.description}\n\n{prompt_suffix}"
         started_at = _utcnow()
 
         request = GenerationRequest(
-            endpoint=endpoint, prompt=task.description, temperature=temperature,
+            endpoint=endpoint, prompt=prompt, temperature=temperature,
             timeout_s=generation_timeout_s,
         )
         try:
@@ -390,6 +404,7 @@ class EvalRunnerService:
             oracle_verdict=oracle_result.verdict, oracle_detail=oracle_result.detail,
             started_at=started_at, completed_at=completed_at,
             model_id=generation.model_used, model_facts=self._model_response_facts(generation),
+            sandbox_facts=self._candidate_execution_facts(sandbox_result),
         )
         self._repo.create(run)
         self._record_event(
@@ -440,6 +455,31 @@ class EvalRunnerService:
             }
         }
 
+    @staticmethod
+    def _candidate_execution_facts(sandbox_result: SandboxResult) -> dict[str, Any]:
+        """Sac `facts["candidate_execution"]` (passe N+20) — même discipline
+        de troncature que `_model_response_facts` : la sortie RÉELLE du
+        candidat (`SandboxResult.stdout`/`.stderr`) est la seule preuve
+        textuelle dont dispose `apex.metalearner.failure_taxonomy.
+        classify_failure` pour distinguer un candidat structurellement
+        invalide (script qui n'a jamais produit son résumé JSON) d'une
+        réponse simplement incorrecte (résumé JSON valide, cas cachés
+        réellement échoués) — jamais mélangé à `facts["model_response"]`
+        (le PROMPT/la réponse texte du modèle, distincts de ce que ce texte
+        a PRODUIT une fois exécuté)."""
+        stdout = sandbox_result.stdout
+        stderr = sandbox_result.stderr
+        stdout_truncated = sandbox_result.stdout_truncated or len(stdout) > _MAX_STORED_CANDIDATE_OUTPUT_CHARS
+        stderr_truncated = sandbox_result.stderr_truncated or len(stderr) > _MAX_STORED_CANDIDATE_OUTPUT_CHARS
+        return {
+            "candidate_execution": {
+                "stdout": stdout[:_MAX_STORED_CANDIDATE_OUTPUT_CHARS],
+                "stdout_truncated": stdout_truncated,
+                "stderr": stderr[:_MAX_STORED_CANDIDATE_OUTPUT_CHARS],
+                "stderr_truncated": stderr_truncated,
+            }
+        }
+
     # -- lecture -------------------------------------------------------------
 
     def get(self, eval_run_id: str) -> EvalRun | None:
@@ -474,6 +514,7 @@ class EvalRunnerService:
         strategy_facts: dict[str, Any] | None = None,
         model_id: str | None = None,
         model_facts: dict[str, Any] | None = None,
+        sandbox_facts: dict[str, Any] | None = None,
     ) -> EvalRun:
         from apex.obs.status import DataStatus
 
@@ -513,6 +554,11 @@ class EvalRunnerService:
         # même format `facts["model_response"]`, lisible identiquement.
         if model_facts:
             facts.update(model_facts)
+        # `sandbox_facts` (passe N+20) — voir `_candidate_execution_facts` :
+        # même fusion à plat que `model_facts`, un namespace distinct
+        # (`candidate_execution`) qui ne collisionne avec aucune autre clé.
+        if sandbox_facts:
+            facts.update(sandbox_facts)
         return EvalRun(
             id=eval_run_id, task_id=task.id, clone_id=clone_id, method=method,
             oracle_verdict=oracle_verdict, oracle_detail=oracle_detail,
