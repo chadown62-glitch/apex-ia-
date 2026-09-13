@@ -44,6 +44,7 @@ class TaskBankService:
         created_by: Subject,
         dataset_ref: str | None = None,
         expected_answer: str | None = None,
+        solution_harness: str | None = None,
     ) -> Task:
         self.policy.authorize(created_by, Action.CREATE_TASK)
 
@@ -67,7 +68,7 @@ class TaskBankService:
         task = Task.new(
             split=split, specialty=specialty, title=title, description=description,
             command=command, created_by=created_by.value, dataset_ref=dataset_ref,
-            expected_answer=expected_answer,
+            expected_answer=expected_answer, solution_harness=solution_harness,
         )
         self._repo.create(task)
         self._record_event(task, "task.created", {})

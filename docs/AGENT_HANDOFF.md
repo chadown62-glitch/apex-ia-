@@ -532,3 +532,136 @@ purement dérivé de `config.yaml`).
 
 Voir le rapport de mission N+18 pour les résultats exacts (PASS/SKIP) de
 cette exécution.
+
+# APEX — Handoff Generated-Solution Evaluation Loop + Self-Healing Launcher (N+19)
+
+## 1. Objectif
+
+Deux axes, AXE A prioritaire (§2 de la mission N+19) :
+
+- **AXE A** : connecter, pour la première fois, un `ModelProvider` réel à
+  une exécution RÉELLEMENT sandboxée jugée par code de sortie — fermer le
+  bottleneck racine identifié par l'audit N+19 Phase 0 (le pipeline
+  d'expérimentation existant ne testait qu'un script déterministe fixe,
+  jamais une solution réellement générée).
+- **AXE B** : un launcher unique diagnostic → auto-réparation sûre →
+  vérification → gate → démarrage.
+
+## 2. AXE A — ce qui est réel
+
+- `apex/evalrunner/generated_solution.py` — `build_candidate_command()` :
+  substitution de texte (jamais `eval()`/`exec()`) du marqueur
+  `CANDIDATE_CODE_MARKER` dans `Task.solution_harness` par le code
+  RÉELLEMENT généré, produisant un argv `("python3", "-c", <script>)`
+  exécuté par un VRAI sous-processus dans le sandbox NAMESPACED déjà réel.
+- `apex/tasks/model.py` — `Task.solution_harness` (nouveau champ optionnel,
+  `NULL` par défaut, aucune tâche existante affectée), colonne + migration
+  `b7c9d1e3f5a2` (testée réellement contre PostgreSQL 16 : upgrade →
+  downgrade → upgrade, chaîne complète de 20 migrations).
+- `apex/evalrunner/service.py::run_generated_solution()` — TROISIÈME chemin
+  d'`EvalRunnerService` (distinct de `run()`/`run_model_eval()`) :
+  TASK → `ModelProvider.generate()` (réel, via `select_model`/
+  `get_default_provider`, aucun couplage direct) → candidat substitué dans
+  le harness → `AgentRuntime.execute_in_sandbox()` (réel) →
+  `ExitCodeOracle.judge()` (même oracle que le chemin déterministe) →
+  `EvalRun` persisté avec `model_id` ET `clone_id`/`sandbox_status`
+  SIMULTANÉMENT (jamais l'un sans l'autre auparavant).
+- `apex/genome/clone_config.py::resolve_generation_temperature()` — SEUL
+  paramètre de stratégie de génération câblé au Genome à ce jour
+  (`generation.temperature`, borné `[0.0, 2.0]`, jamais un choix de
+  modèle) — même discipline de clamp que `resolve_resource_limits`.
+- `apex/metalearner/generated_solution_cycle.py::compare_generated_solutions()`
+  — boucle multi-candidats (§11 de la mission) : spawn un clone RÉEL par
+  candidat (un `Clone` ne peut exécuter qu'UNE tentative sandboxée),
+  réutilise `apex.metalearner.population_fitness.compute_fitness` (JAMAIS
+  un second système de fitness) pour retenir le meilleur.
+- `apex/taskgen/solution_tasks.py::build_palindrome_task_spec()` — première
+  tâche réelle (`is_palindrome`), choisie pour rester résoluble par un
+  modèle local modeste (`qwen2.5-coder:7b-instruct`), jamais un modèle
+  20B+/27B+/30B+ supposé disponible.
+
+## 3. AXE A — tests (21, tous PASS dans ce bac à sable, 1 skip honnête)
+
+`tests/test_evalrunner_generated_solution.py` : construction du harness
+(marqueur, script correct/incorrect/cassé exécuté pour de vrai via
+subprocess), résolution de température, chemin heureux/échec/tâche
+invalide via un double `ModelProvider` fidèle au contrat + une VRAIE
+`AgentRuntime`/sandbox namespaced, comparaison multi-candidats (le
+candidat correct l'emporte réellement sur le candidat incorrect par
+fitness), trace event/audit. `TestRealOllamaGeneratedSolution` : SAUTÉ
+dans ce bac à sable (Ollama non joignable, constaté empiriquement, jamais
+supposé) — voir `docs/HOW_TO_LAUNCH.md` pour l'exécuter sur une machine
+avec un Ollama réel.
+
+## 4. AXE A — limites réelles
+
+- Le Genome ne pilote QUE la température — jamais un choix de modèle, de
+  prompt-système, ou de skills (documenté explicitement dans
+  `apex/interfaces/registry.py`, entrées `Population`/`EvalRunner`).
+- `evolve_generation()` (boucle d'évolution existante) et
+  `compare_generated_solutions()` (cette passe) COEXISTENT, non fusionnées
+  — un futur pas séparé.
+- Un seul domaine de tâche (`is_palindrome`) livré — le harness est
+  générique (n'importe quel problème Python auto-contenu avec assertions
+  cachées peut être encodé de la même façon), mais aucune bibliothèque de
+  tâches n'a été construite dans cette passe.
+
+## 5. AXE B — ce qui est réel
+
+- `apex/doctor/repair.py` — `classify()` : classification FERMÉE en liste
+  BLANCHE (`SAFE_AUTO_FIX`/`RETRY_ONLY`/`MANUAL_REQUIRED`/
+  `BLOCKED_BY_POLICY`) d'un `CheckResult` déjà produit par `apex doctor`
+  (jamais un second diagnostic). Seuls deux types de réparation réelle sont
+  câblés : redémarrer le démon Docker (`docker.present`), et
+  `docker compose up -d <service>` scopé au SEUL service en échec pour
+  `service.postgres`/`service.redis`/`service.minio`/`service.ollama`
+  (jamais `docker compose up -d` nu). `gpu.*`/`docker.isolation`/
+  `docker.flavour`/`fs.placement`/`fs.space` sont TOUJOURS
+  `MANUAL_REQUIRED` — limites matérielles/hôte, aucune réparation
+  logicielle sûre n'existe. `ollama.models` (modèle absent) n'a
+  délibérément AUCUNE règle — jamais de téléchargement automatique.
+- `apex/doctor/startup_history.py` — historique JSONL append-only
+  (`state/startup_history.jsonl`), `recurring_problems()` : télémétrie
+  structurée pure (comptage réel, taux de succès réel), explicitement PAS
+  du machine learning.
+- `apex/doctor/launcher.py::run_preflight_and_repair()` — orchestration
+  DIAGNOSTIC → AUTO-REPAIR → VERIFY → GATE, réutilise `apex.doctor.runner.
+  run_checks`/`apex.gate.runner.run_gate` tels quels (jamais réimplémentés,
+  jamais court-circuités — le doctor bloquant empêche même l'appel à
+  Gate ; Gate bloquant empêche le démarrage, exactement comme `apex serve`
+  invoqué directement).
+- `apex/cli/main.py::_cmd_start` — `apex start [--dry-run] [--verbose]` : le
+  point d'entrée unique demandé, délègue le démarrage réel à `_cmd_serve`
+  (aucun second chemin de démarrage).
+
+## 6. AXE B — limites réelles (importantes)
+
+- **Aucun test d'intégration contre un VRAI Docker/PostgreSQL-via-compose/
+  Redis/MinIO/Ollama n'a pu être exécuté** dans ce bac à sable : le démon
+  Docker n'y tourne pas (constaté : `docker ps` échoue, pas de socket), et
+  Redis/MinIO/Ollama ne sont pas installés. Un PostgreSQL 16 natif (hors
+  Docker) a été démarré manuellement pour vérifier la migration
+  `solution_harness` (§2), mais les scénarios de réparation Docker-Compose
+  eux-mêmes restent NON vérifiés en conditions réelles ici — seule la
+  LOGIQUE de classification/décision est testée (29 tests, tous réels sur
+  la logique, tous avec un `CommandRunner`/des `CheckResult` injectés —
+  jamais un vrai `docker compose` invoqué dans ces tests).
+- Sur les ~20 scénarios de test listés par la mission (§28), seuls ceux
+  réellement exécutables sans Docker/Redis/MinIO/Ollama réels ont été
+  couverts : dry-run, clean/second startup (checks synthétiques), échec
+  non réparable bloquant avant Gate, historique. Les scénarios nécessitant
+  ces services réellement arrêtés/relancés (PostgreSQL arrêté, Redis
+  arrêté, MinIO arrêté, port 5432 occupé par un docker-proxy stale, réseau
+  Docker absent) n'ont PAS pu être vérifiés de bout en bout ici — la
+  logique de classification qui les gouvernerait est testée séparément
+  (`test_doctor_repair.py`), mais l'intégration réelle nécessite une
+  machine avec ces services (la machine WSL2 réelle de l'utilisateur,
+  d'après `setup/docs/LAUNCHER_ARCHITECTURE.md` et le contexte de mission).
+- Aucune détection de processus/port (§19/§20, l'exemple 5432) n'a été
+  implémentée dans cette passe — hors périmètre réellement livré, à
+  documenter comme non fait plutôt que simulé.
+
+## 7. Tests AXE B (31, tous PASS dans ce bac à sable)
+
+`tests/test_doctor_repair.py` (16), `tests/test_doctor_startup_history.py`
+(7), `tests/test_doctor_launcher.py` (6), `tests/test_cli_start.py` (2).

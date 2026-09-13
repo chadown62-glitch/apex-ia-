@@ -52,6 +52,22 @@ class Task:
     run_model_eval`, chemin distinct de `run`) — jamais consultée par
     `ExitCodeOracle`/`ExactMatchResponseJudge`. `None` par défaut : une tâche
     déterministe existante n'a jamais besoin de ce champ, jamais rétrofitté.
+
+    `solution_harness` (passe « Generated-Solution Evaluation Loop », N+19) :
+    un template de script Python contenant le marqueur littéral
+    `apex.evalrunner.generated_solution.CANDIDATE_CODE_MARKER` — remplacé par
+    le code RÉELLEMENT généré par un `ModelProvider` avant exécution sandboxée
+    (`EvalRunnerService.run_generated_solution`, un TROISIÈME chemin,
+    distinct de `run()`/`run_model_eval()`, qui n'affecte ni l'un ni l'autre).
+    Contrairement à `run_model_eval` (jugé par comparaison de texte, jamais
+    exécuté), une tâche portant `solution_harness` produit un script EXÉCUTÉ
+    dans le sandbox réel et jugé par `ExitCodeOracle` — le harness porte donc
+    les tests cachés (jamais montrés au modèle, seule `description` l'est).
+    `command` reste renseigné (contrat inchangé, `TaskBankService.create`
+    l'exige toujours) mais n'est JAMAIS exécuté pour une tâche de ce genre —
+    voir la docstring de `run_generated_solution` pour la commande réellement
+    construite. `None` par défaut : toute tâche existante n'a jamais ce champ,
+    jamais rétrofittée.
     """
 
     id: str
@@ -63,6 +79,7 @@ class Task:
     dataset_ref: str | None
     created_by: str
     expected_answer: str | None = None
+    solution_harness: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
 
     @classmethod
@@ -77,6 +94,7 @@ class Task:
         created_by: str,
         dataset_ref: str | None = None,
         expected_answer: str | None = None,
+        solution_harness: str | None = None,
     ) -> Task:
         return cls(
             id=str(uuid.uuid4()),
@@ -88,6 +106,7 @@ class Task:
             dataset_ref=dataset_ref,
             created_by=created_by,
             expected_answer=expected_answer,
+            solution_harness=solution_harness,
         )
 
     @classmethod
@@ -102,5 +121,6 @@ class Task:
             dataset_ref=row.dataset_ref,
             created_by=row.created_by,
             expected_answer=row.expected_answer,
+            solution_harness=getattr(row, "solution_harness", None),
             created_at=row.created_at,
         )

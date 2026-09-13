@@ -437,6 +437,12 @@ class TaskRow(Base):
     #: pas `task`). `NULL` par défaut : une tâche déterministe existante n'a
     #: jamais ce champ renseigné, jamais rétrofitté.
     expected_answer: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Passe « Generated-Solution Evaluation Loop » (N+19) — template de
+    #: script portant le marqueur de substitution du code candidat + les
+    #: tests cachés, consulté UNIQUEMENT par `EvalRunnerService.
+    #: run_generated_solution` (jamais par `run()`/`run_model_eval()`).
+    #: `NULL` par défaut — aucune tâche existante n'a besoin de ce champ.
+    solution_harness: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )

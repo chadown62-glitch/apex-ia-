@@ -32,7 +32,8 @@ class TaskRepository:
                 id=task.id, split=task.split.value, specialty=task.specialty,
                 title=task.title, description=task.description, command=task.command,
                 dataset_ref=task.dataset_ref, created_by=task.created_by,
-                expected_answer=task.expected_answer, created_at=task.created_at,
+                expected_answer=task.expected_answer, solution_harness=task.solution_harness,
+                created_at=task.created_at,
             )
 
     def get(self, task_id: str) -> Task | None:

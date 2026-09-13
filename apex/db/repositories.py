@@ -450,11 +450,12 @@ class TaskRepository:
         created_by: str,
         created_at: datetime,
         expected_answer: str | None = None,
+        solution_harness: str | None = None,
     ) -> TaskRow:
         row = TaskRow(
             id=id, split=split, specialty=specialty, title=title, description=description,
             command=list(command), dataset_ref=dataset_ref, created_by=created_by,
-            expected_answer=expected_answer, created_at=created_at,
+            expected_answer=expected_answer, solution_harness=solution_harness, created_at=created_at,
         )
         self._session.add(row)
         self._session.flush()

@@ -194,6 +194,38 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_start(args: argparse.Namespace) -> int:
+    """Launcher auto-réparant — N+19, AXE B : UN SEUL point d'entrée
+    DIAGNOSTIC -> AUTO-REPAIR -> VERIFY -> GATE -> START. Réutilise
+    intégralement `apex doctor` (lecture seule, inchangé) et `apex gate`
+    (jamais court-circuitée, même discipline que `_cmd_serve`) — ce module
+    n'ajoute que la couche de classification/réparation
+    (`apex.doctor.repair`) entre les deux."""
+    from apex.doctor.launcher import StartupStatus, render_text, run_preflight_and_repair
+    from apex.doctor.startup_history import DEFAULT_HISTORY_PATH
+
+    outcome = run_preflight_and_repair(
+        config_path=args.config, dry_run=args.dry_run, timeout_s=args.timeout,
+        history_path=DEFAULT_HISTORY_PATH,
+    )
+    print(render_text(outcome, verbose=args.verbose))
+
+    if outcome.status is StartupStatus.DRY_RUN:
+        return 0
+    if outcome.status is StartupStatus.BLOCKED_DOCTOR:
+        print("erreur : environnement non sain après réparation — APEX ne démarre pas.", file=sys.stderr)
+        return 1
+    if outcome.status is StartupStatus.BLOCKED_GATE:
+        print("erreur : apex gate refuse l'autorisation — APEX ne démarre pas.", file=sys.stderr)
+        return 1
+
+    # STARTUP_STATUS.READY_TO_SERVE : démarrage réel, exactement le même
+    # chemin que `apex serve` (aucun second serveur, aucune duplication).
+    args.host = getattr(args, "host", "127.0.0.1")
+    args.port = getattr(args, "port", 8000)
+    return _cmd_serve(args)
+
+
 def _format_cycle_status(status: Any, *, as_json: bool) -> str:
     if as_json:
         return json.dumps(
@@ -565,6 +597,20 @@ def build_parser() -> argparse.ArgumentParser:
     serve_cmd.add_argument("--host", default="127.0.0.1")
     serve_cmd.add_argument("--port", type=int, default=8000)
     serve_cmd.set_defaults(func=_cmd_serve)
+
+    start_cmd = sub.add_parser(
+        "start",
+        help="launcher auto-réparant : diagnostic -> réparation sûre -> vérification -> gate -> démarrage",
+    )
+    start_cmd.add_argument("--host", default="127.0.0.1")
+    start_cmd.add_argument("--port", type=int, default=8000)
+    start_cmd.add_argument("--timeout", type=float, default=5.0, help="timeout par vérification (s)")
+    start_cmd.add_argument(
+        "--dry-run", action="store_true",
+        help="diagnostiquer et afficher les réparations sans les exécuter, jamais démarrer",
+    )
+    start_cmd.add_argument("-v", "--verbose", action="store_true")
+    start_cmd.set_defaults(func=_cmd_start)
 
     learn_cmd = sub.add_parser(
         "learn", help="cycle d'apprentissage autonome (apex.metalearner.autonomy)"

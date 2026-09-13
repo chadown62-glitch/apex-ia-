@@ -85,3 +85,42 @@ def _clamp(value: Any, *, ceiling: float) -> float | None:
     if value > ceiling:
         return None
     return float(value)
+
+
+#: Clé de premier niveau portant les overrides de GÉNÉRATION (distincts des
+#: overrides d'EXÉCUTION ci-dessus) — passe « Generated-Solution Evaluation
+#: Loop » (N+19). Second sous-ensemble, minimal et délibérément restreint,
+#: du même principe que `_EXECUTION_KEY` : le contenu d'un Genome peut
+#: influencer un paramètre de génération RÉEL et déjà sûr par construction
+#: (`GenerationRequest.temperature`, borné par le contrat `ModelProvider`
+#: lui-même), jamais un choix de MODÈLE (nécessiterait de savoir quels
+#: `ModelEndpoint` sont réellement joignables au moment de la résolution —
+#: hors périmètre de cette passe, voir `docs/DEVELOPMENT_HANDOFF.md`).
+_GENERATION_KEY = "generation"
+#: Bornes RÉELLES, larges mais non infinies — un `temperature` en dehors de
+#: cette plage n'est structurellement pas une variation de stratégie
+#: raisonnable pour un `ModelProvider` (voir `apex.models.model.
+#: GenerationRequest.temperature`, jamais validé côté provider lui-même).
+_MIN_TEMPERATURE = 0.0
+_MAX_TEMPERATURE = 2.0
+
+
+def resolve_generation_temperature(genome_content: dict[str, Any] | None) -> float | None:
+    """Lit `genome_content["generation"]["temperature"]` si c'est un nombre
+    fini dans `[0.0, 2.0]` — sinon `None` (jamais une valeur inventée ou
+    hors bornes). Contenu absent/mal formé -> `None`, jamais une exception :
+    un Genome invalide ne doit jamais empêcher une génération, seulement ne
+    pas l'influencer — même discipline que `resolve_resource_limits`."""
+    if not isinstance(genome_content, dict):
+        return None
+    generation = genome_content.get(_GENERATION_KEY)
+    if not isinstance(generation, dict):
+        return None
+    value = generation.get("temperature")
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    if not math.isfinite(value):
+        return None
+    if not (_MIN_TEMPERATURE <= value <= _MAX_TEMPERATURE):
+        return None
+    return float(value)

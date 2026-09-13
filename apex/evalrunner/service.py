@@ -35,6 +35,7 @@ from typing import Any
 from apex.agents.runtime import AgentRuntime
 from apex.config.schema import ModelEndpoint
 from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
+from apex.evalrunner.generated_solution import MissingCandidateMarkerError, build_candidate_command
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
 from apex.genome import clone_config
@@ -266,6 +267,148 @@ class EvalRunnerService:
         )
         return run
 
+    def run_generated_solution(
+        self,
+        *,
+        task_id: str,
+        clone_id: str,
+        endpoint: ModelEndpoint,
+        method: EvalMethod,
+        provider: ModelProvider | None = None,
+        seed: int | None = None,
+        experiment_ref: str | None = None,
+        limits: ResourceLimits | None = None,
+        genome_content: dict[str, Any] | None = None,
+        requested_by: Subject = Subject.CORE,
+        cancel_token: CancellationToken | None = None,
+        generation_timeout_s: float = 30.0,
+    ) -> EvalRun:
+        """TROISIÈME chemin d'exécution d'`EvalRunner` (passe « Generated-
+        Solution Evaluation Loop », N+19), DISTINCT de `run()` (script
+        déterministe fixe) et de `run_model_eval()` (jugé par comparaison de
+        texte, jamais sandboxé) :
+
+            TASK (avec solution_harness) -> MODEL PROVIDER -> CODE CANDIDAT
+                -> SANDBOX RÉEL -> ORACLE (code de sortie) -> EVAL_RUN
+                (model_id ET sandbox_status persistés ensemble)
+
+        C'est le premier chemin où une solution RÉELLEMENT générée par un
+        `ModelProvider` (jamais un script fixe) est RÉELLEMENT exécutée dans
+        le sandbox namespaced déjà réel et jugée par le même `OracleProvider`
+        (code de sortie, preuve noyau) que le chemin déterministe — jamais un
+        second vocabulaire de jugement. `clone_id` est ici une RÉELLE
+        attribution d'exécution (contrairement à `run_model_eval`, cette
+        tentative tourne bien dans un sandbox rattaché à ce clone).
+
+        `genome_content` (optionnel, `None` par défaut) influence à la fois
+        les limites d'exécution (`apex.genome.clone_config.
+        resolve_resource_limits`, inchangé) et — nouveau dans cette passe —
+        `GenerationRequest.temperature` via `apex.genome.clone_config.
+        resolve_generation_temperature` : le SEUL paramètre de stratégie de
+        génération câblé à ce jour (jamais un choix de modèle, voir la
+        docstring de `resolve_generation_temperature`)."""
+        task = self._task_repo.get(task_id)
+        if task is None:
+            raise LookupError(f"tâche « {task_id} » introuvable")
+        if task.solution_harness is None:
+            raise ValueError(
+                f"la tâche « {task_id} » ne porte pas de « solution_harness » — "
+                "run_generated_solution() exige une tâche de ce genre"
+            )
+
+        clone = self._get_clone(clone_id)
+        if clone is None:
+            raise ValueError(f"agent « {clone_id} » introuvable")
+
+        eval_run_id = str(uuid.uuid4())
+        resolved_provider = provider or get_default_model_provider(endpoint)
+        temperature = clone_config.resolve_generation_temperature(genome_content)
+        started_at = _utcnow()
+
+        request = GenerationRequest(
+            endpoint=endpoint, prompt=task.description, temperature=temperature,
+            timeout_s=generation_timeout_s,
+        )
+        try:
+            generation = resolved_provider.generate(request)
+        except (ModelProviderError, TimeoutExceeded) as exc:
+            # Même discipline que `run_model_eval` sur le même type
+            # d'échec : une génération impossible est un résultat
+            # d'évaluation (ERROR), jamais une exception remontée à
+            # l'appelant. `sandbox_status`/`model_id` restent `None` —
+            # aucune exécution sandboxée n'a même été tentée.
+            run = EvalRun(
+                id=eval_run_id, task_id=task.id, clone_id=clone.clone_id, method=method,
+                oracle_verdict=OracleVerdict.ERROR, oracle_detail=f"génération impossible : {exc}",
+                sandbox_status=None, exit_code=None, elapsed_s=None, model_id=None,
+                facts={}, created_by=requested_by.value, seed=seed, dataset_ref=task.dataset_ref,
+                experiment_ref=experiment_ref, started_at=started_at, completed_at=_utcnow(),
+            )
+            self._repo.create(run)
+            self._record_event(run, "evalrun.generated_solution_generation_error", {"reason": str(exc)})
+            return run
+
+        candidate_command = build_candidate_command(
+            solution_harness=task.solution_harness, candidate_code=generation.text,
+        )
+        resolved_sandbox = self._sandbox or get_default_provider()
+        if limits is not None:
+            resolved_limits = limits
+        else:
+            resolved_limits = clone_config.resolve_resource_limits(genome_content, self._default_limits())
+        spec = SandboxSpec(
+            mission_id=eval_run_id, clone_id=clone.clone_id, command=candidate_command,
+            limits=resolved_limits,
+        )
+
+        try:
+            sandbox_result = self._agent_runtime.execute_in_sandbox(
+                clone, resolved_sandbox, spec, requested_by=requested_by, cancel_token=cancel_token,
+            )
+        except IsolationUnavailable as exc:
+            # Même discipline que `run()` : `AgentRuntime.execute_in_sandbox`
+            # a déjà journalisé (event + audit) et fait échouer le clone —
+            # `model_id` reste renseigné (la génération, elle, a réellement
+            # abouti) : seule l'exécution sandboxée a échoué.
+            run = EvalRun(
+                id=eval_run_id, task_id=task.id, clone_id=clone.clone_id, method=method,
+                oracle_verdict=OracleVerdict.ERROR, oracle_detail=f"sandbox indisponible : {exc}",
+                sandbox_status=ExecutionStatus.PERMISSION_DENIED, exit_code=None, elapsed_s=None,
+                model_id=generation.model_used, facts=self._model_response_facts(generation),
+                created_by=requested_by.value, seed=seed, dataset_ref=task.dataset_ref,
+                experiment_ref=experiment_ref, started_at=started_at, completed_at=_utcnow(),
+            )
+            self._repo.create(run)
+            self._record_event(run, "evalrun.generated_solution_sandbox_error", {"reason": str(exc)})
+            return run
+
+        completed_at = _utcnow()
+        oracle_result = self._oracle.judge(sandbox_result=sandbox_result, task=task)
+        run = self._build_eval_run(
+            eval_run_id=eval_run_id, task=task, clone_id=clone.clone_id, method=method, seed=seed,
+            experiment_ref=experiment_ref, requested_by=requested_by, sandbox_result=sandbox_result,
+            oracle_verdict=oracle_result.verdict, oracle_detail=oracle_result.detail,
+            started_at=started_at, completed_at=completed_at,
+            model_id=generation.model_used, model_facts=self._model_response_facts(generation),
+        )
+        self._repo.create(run)
+        self._record_event(
+            run, "evalrun.generated_solution_completed",
+            {
+                "oracle_verdict": run.oracle_verdict.value,
+                "sandbox_status": run.sandbox_status.value if run.sandbox_status else None,
+                "model_id": run.model_id,
+            },
+        )
+        self._record_audit(
+            run, actor=requested_by.value, action="evalrun.generated_solution_completed",
+            details={
+                "task_id": task.id, "clone_id": clone.clone_id, "model_id": run.model_id,
+                "oracle_verdict": run.oracle_verdict.value,
+            },
+        )
+        return run
+
     @staticmethod
     def _model_response_facts(generation: Any) -> dict[str, Any]:
         """Sac `facts["model_response"]` — jamais mélangé aux clés déjà
@@ -329,6 +472,8 @@ class EvalRunnerService:
         started_at: datetime,
         completed_at: datetime,
         strategy_facts: dict[str, Any] | None = None,
+        model_id: str | None = None,
+        model_facts: dict[str, Any] | None = None,
     ) -> EvalRun:
         from apex.obs.status import DataStatus
 
@@ -361,11 +506,18 @@ class EvalRunnerService:
         # Phase 5 inchangé pour tout appelant existant).
         if strategy_facts:
             facts["strategy"] = dict(strategy_facts)
+        # `model_facts` (passe « Generated-Solution Evaluation Loop », N+19)
+        # — sac `model_response`, fusionné au même niveau que dans
+        # `run_model_eval` (jamais imbriqué sous `strategy`, un namespace
+        # distinct dédié à MetaLearner) : les deux chemins produisent le
+        # même format `facts["model_response"]`, lisible identiquement.
+        if model_facts:
+            facts.update(model_facts)
         return EvalRun(
             id=eval_run_id, task_id=task.id, clone_id=clone_id, method=method,
             oracle_verdict=oracle_verdict, oracle_detail=oracle_detail,
             sandbox_status=sandbox_result.status, exit_code=exit_code, elapsed_s=elapsed_s,
-            facts=facts, created_by=requested_by.value, seed=seed,
+            model_id=model_id, facts=facts, created_by=requested_by.value, seed=seed,
             dataset_ref=task.dataset_ref, experiment_ref=experiment_ref,
             started_at=started_at, completed_at=completed_at,
         )

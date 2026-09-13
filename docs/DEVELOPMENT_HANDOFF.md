@@ -1973,3 +1973,52 @@ suivante se détermine à partir du résultat de la première exécution réelle
 Règle de décision à conserver : **UTILISER APEX → MESURER APEX → AMÉLIORER
 APEX**, plutôt que construire de nouvelles abstractions avant que les
 composants existants n'aient travaillé sur de vraies données.
+
+### Generated-Solution Evaluation Loop + Self-Healing Launcher (N+19)
+
+**Objectif** : exactement le changement de périmètre anticipé ci-dessus —
+`EvalRunnerService` gagne un troisième chemin (`run_generated_solution`) où
+`task.command` n'est plus toujours déterministe : le code réellement exécuté
+vient d'un `ModelProvider` réel, substitué dans un `solution_harness` porté
+par la tâche. En parallèle (AXE B, secondaire), un launcher auto-réparant.
+
+**Ce qui a été ajouté** : voir `docs/AGENT_HANDOFF.md` (chapitre N+19) pour
+le détail fichier par fichier. En résumé : `Task.solution_harness` (colonne
++ migration `b7c9d1e3f5a2`, testée contre PostgreSQL 16 réel),
+`EvalRunnerService.run_generated_solution()`, `apex.genome.clone_config.
+resolve_generation_temperature()` (seul paramètre de stratégie de
+génération câblé au Genome), `apex.metalearner.generated_solution_cycle.
+compare_generated_solutions()` (multi-candidats, réutilise
+`compute_fitness`), `apex.doctor.repair`/`startup_history`/`launcher`
+(AXE B), `apex start` (CLI).
+
+**Vérifié réellement** : 21 tests AXE A (double `ModelProvider` + VRAIE
+sandbox namespaced + VRAI oracle par code de sortie ; le candidat correct
+l'emporte réellement sur l'incorrect par fitness), migration testée
+upgrade/downgrade/upgrade contre PostgreSQL 16 réel, 31 tests AXE B
+(classification/historique/orchestration, logique pure ou `CommandRunner`
+injecté — jamais un vrai `docker compose`/service invoqué dans les tests).
+Suite backend complète re-passée sans régression (voir rapport final
+N+19).
+
+**Découvert pendant l'audit** : en tentant de valider la migration contre
+un VRAI PostgreSQL, le rôle `apex_core` (créé par la migration initiale,
+partagé au niveau du cluster) est entré en conflit avec `tests/
+test_db_security.py` (qui gère ses propres rôles applicatifs et suppose la
+base cible vierge) — un artefact de la vérification manuelle dans ce bac à
+sable, pas une régression de code ; la base a été réinitialisée
+(`DROP DATABASE`/`CREATE DATABASE`) après vérification.
+
+**Non fait dans cette passe** :
+- `evolve_generation()` (boucle d'évolution existante) n'a pas été
+  fusionnée avec `compare_generated_solutions()` — les deux coexistent.
+- Aucun choix de MODÈLE par le Genome (seule la température).
+- AXE B : aucune détection de conflit de port (5432 etc.), aucun test
+  d'intégration contre un Docker/Redis/MinIO/Ollama réellement lancés dans
+  ce bac à sable (aucun de ces services n'y est disponible) — seule la
+  logique de décision est vérifiée. Une machine réelle avec ces services
+  (voir `setup/docs/LAUNCHER_ARCHITECTURE.md`) est nécessaire pour
+  compléter cette vérification.
+- `CodeIntelligence` (écriture de code dans un projet réel arbitraire) et
+  `SearchProvider` (recherche web réelle) restent hors périmètre, comme
+  explicitement demandé par la mission N+19.
