@@ -104,7 +104,11 @@ services:
     image: minio/minio:latest
     container_name: apex-minio
     restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
+    # `--address :9000` explicite (au lieu du port API par défaut implicite) :
+    # modification volontaire conservée telle quelle — voir la mission
+    # « Hardware-accurate local runtime configuration » (N+21), jamais
+    # annulée par une passe suivante.
+    command: ["server", "/data", "--address", ":9000", "--console-address", ":9001"]
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-apex}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD est obligatoire}

@@ -71,7 +71,18 @@ def _service_check(name: str, required_default: bool = True):
         return result(
             f"service.{name}", CATEGORY_SVC, severity,
             f"{name} injoignable sur {endpoint.host}:{endpoint.port}",
-            remediation="docker compose up -d",
+            remediation=(
+                "docker compose up -d — si le conteneur est déjà démarré et "
+                "« healthy » mais reste injoignable ICI (TCP réellement refusé "
+                "malgré un healthcheck interne réussi), la cause n'est plus "
+                "APEX mais le réseau hôte : vérifier le mappage réel du port "
+                f"(`docker port <conteneur {name}>`), puis le backend "
+                "iptables/nftables de WSL2 (`sudo update-alternatives --config "
+                "iptables`) — un mode incohérent avec celui utilisé par le "
+                "démon Docker empêche silencieusement la règle DNAT du port "
+                "publié vers 127.0.0.1 de s'appliquer, sans qu'aucune erreur "
+                "ne remonte au niveau du conteneur."
+            ),
             host=endpoint.host, port=endpoint.port,
         )
 

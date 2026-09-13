@@ -173,8 +173,12 @@ def check_gpu(ctx: CheckContext) -> CheckResult:
     remediation = ""
     if total < min_vram_gb:
         remediation = (
-            f"Sous {min_vram_gb:.0f} Go, le rôle coder-main de référence (30B MoE) ne tient pas. "
-            "Revoir le catalogue de modèles dans config.yaml."
+            f"Sous {min_vram_gb:.0f} Go, le candidat de référence historique (30B MoE) ne "
+            "tient pas — non bloquant : `models.roles.coder_main.candidates[0]` de "
+            "config.yaml doit alors référencer un modèle qui tient réellement sur cette "
+            "VRAM (voir `apex.doctor.checks.services._reference_is_hardware_compatible`, "
+            "qui bascule automatiquement l'absence d'un candidat 24 Go en WARN plutôt "
+            "qu'en FAIL une fois `APEX_GPU_VRAM_GB` réellement configuré)."
         )
     return result("gpu.present", CATEGORY_GPU, severity, message,
                   remediation=remediation, gpus=gpus, total_vram_gb=total)

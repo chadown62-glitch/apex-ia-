@@ -88,18 +88,42 @@ models:
       selection: benchmark_driven
       resident: false
       notes: >
-        Candidat de référence pour 24 Go. MoE : peu de paramètres actifs, donc
-        débit élevé — c'est le débit qui détermine la puissance statistique
-        atteignable en une nuit. Le statut de référence ne préjuge en rien de
-        sa supériorité : il devra la démontrer contre les concurrents ci-dessous.
+        Candidat de référence RÉEL sur une machine à 8 Go de VRAM (RTX 4060 Ti) :
+        qwen2.5-coder:7b-instruct, déjà installé et empiriquement vérifié
+        générer réellement (voir la note du rôle « fast » ci-dessous, même
+        modèle servi). Les candidats qwen3-coder:30b-a3b-instruct/qwen3.6:27b/
+        devstral-2:22b restent dans le catalogue comme référence pour une
+        machine à 24 Go (`compute.pools.local-gpu`, valeurs par défaut avant
+        override d'environnement) — `apex.doctor.checks.services.
+        _reference_is_hardware_compatible` les marque WARN (non bloquant),
+        jamais FAIL, sur une machine dont la VRAM déclarée est réellement
+        mesurée à 8 Go (voir APEX_GPU_VRAM_GB dans .env). Le statut de
+        référence ne préjuge en rien de la supériorité d'un candidat : il
+        devra la démontrer par benchmark, une fois plusieurs candidats
+        installés sur le même matériel.
       candidates:
-        - {family: qwen3-coder, version: 30b-a3b-instruct, quantization: q4_k_m, capability_class: coder}
-        - {family: qwen3.6,     version: 27b,              quantization: q4_k_m, capability_class: coder}
-        - {family: devstral-2,  version: 22b,              quantization: q4_k_m, capability_class: coder}
+        - {family: qwen2.5-coder, version: 7b-instruct,     quantization: q4_k_m, capability_class: coder}
+        - {family: qwen3-coder,   version: 30b-a3b-instruct, quantization: q4_k_m, capability_class: coder}
+        - {family: qwen3.6,       version: 27b,              quantization: q4_k_m, capability_class: coder}
+        - {family: devstral-2,    version: 22b,              quantization: q4_k_m, capability_class: coder}
 
     reasoner:
       selection: benchmark_driven
       resident: false
+      notes: >
+        Aucun modèle installé ne correspond aujourd'hui proprement à ce rôle
+        sur une machine à 8 Go de VRAM : qwen3.6:27b (seul candidat déclaré)
+        n'est ni installé ni compatible avec 8 Go (VRAM déclarée 17 Go).
+        Décision délibérée : NE PAS réaffecter qwen2.5-coder:7b-instruct
+        (spécialisé code, capability_class « coder ») ni gemma4:12b
+        (capability_class « judge », VRAM déclarée 8 Go = 0 marge sur une
+        carte à 8 Go, jamais empiriquement vérifié en génération réelle pour
+        DU RAISONNEMENT — voir `docs/AGENT_HANDOFF.md`, chapitre N+21) à ce
+        rôle sans preuve : ce serait inventer une capacité de reasoning
+        (§ mission « Hardware-accurate local runtime configuration »).
+        `ollama.models` signale donc honnêtement ce rôle en WARN (candidat de
+        référence incompatible avec la VRAM mesurée), jamais un PASS fabriqué
+        — voir `apex.doctor.checks.services.check_ollama_models`.
       candidates:
         - {family: qwen3.6, version: 27b, quantization: q4_k_m, capability_class: generalist}
 
