@@ -462,6 +462,13 @@ class SandboxDefaults:
     timeout_s: int
     read_only_rootfs: bool
     required_isolation_for_red_team: str
+    #: Image OCI utilisée par `apex.sandbox.container.ContainerSandbox` — jamais
+    #: `latest` par défaut (reproductibilité), jamais lue depuis une variable
+    #: d'environnement : ce paramètre n'a pas besoin d'être surchargé par
+    #: machine (contrairement au matériel), `config.yaml` seul suffit, comme le
+    #: reste de cette section. Doit fournir `python3` : c'est l'interpréteur
+    #: que `apex.missions.workloads.research_diagnostic_command()` invoque.
+    container_image: str
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> SandboxDefaults:
@@ -470,6 +477,12 @@ class SandboxDefaults:
             raise ConfigError(
                 "network doit valoir « none » ou « proxy » — aucun accès direct autorisé",
                 field="sandbox.network",
+            )
+        container_image = str(raw.get("container_image", "python:3.12-slim")).strip()
+        if not container_image:
+            raise ConfigError(
+                "container_image ne peut pas être vide — aucune image implicite n'est devinée",
+                field="sandbox.container_image",
             )
         return cls(
             provider=str(raw.get("provider", "docker")),
@@ -482,6 +495,7 @@ class SandboxDefaults:
             required_isolation_for_red_team=str(
                 raw.get("required_isolation_for_red_team", "gvisor_or_dedicated_host")
             ),
+            container_image=container_image,
         )
 
 

@@ -123,14 +123,25 @@ n'est qu'un scan ».
 
 Un futur rendu de page web dans un environnement isolé (« Browser Sandbox »)
 et le contrôle réseau fin (proxy filtrant, domaines autorisés) sont des
-**backends/capacités futurs de `SandboxProvider`**, exactement comme
-`ContainerSandbox` (déjà anticipé, non implémenté — démon Docker injoignable
-sur cette machine) et le mode réseau `"proxy"` de `SandboxDefaults.network`
-(déjà modélisé, lève `NotImplementedYet` depuis l'étape 7). Aucune nouvelle
-abstraction top-niveau : `apex.sandbox.provider.get_default_provider()` reste
-le seul point où un futur backend serait choisi — `AgentRuntime` et
-`MissionEngine` n'auraient rien à changer (même garantie que celle déjà
-tenue pour `ContainerSandbox`).
+**backends/capacités futurs de `SandboxProvider`**, comme `ContainerSandbox`
+l'était avant la mission N+25 : `apex.sandbox.container.ContainerSandbox`
+existe désormais réellement (Docker, `IsolationLevel.CONTAINERIZED`, réseau
+coupé + utilisateur non-root + racine en lecture seule + cgroups, tous
+vérifiés empiriquement — voir `apex.sandbox.container.
+detect_container_capabilities`, jamais crus du seul fait que `docker` est
+installé), sélectionné explicitement par `apex.sandbox.provider.
+select_sandbox_provider()` quand NAMESPACED n'est pas disponible sur l'hôte.
+Sur cette machine de développement, NAMESPACED reste disponible et Docker
+injoignable : `ContainerSandbox` n'y est donc jamais exercé en intégration
+réelle, ce qui est honnêtement documenté (jamais contourné) par
+`tests/test_sandbox_container.py::TestRealDockerExecution`, sauté ici. Le
+mode réseau `"proxy"` de `SandboxDefaults.network` reste, lui, non implémenté
+sur LES DEUX backends (lève `NotImplementedYet` depuis l'étape 7). Aucune
+nouvelle abstraction top-niveau n'a été créée pour ajouter ce second
+backend : `apex.sandbox.provider.get_default_provider()` est resté le seul
+point où le second backend a été branché — `AgentRuntime` et `MissionEngine`
+n'ont rien eu à changer, exactement la garantie que cette section promettait
+avant que `ContainerSandbox` n'existe.
 
 ---
 

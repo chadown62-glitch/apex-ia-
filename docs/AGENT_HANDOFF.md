@@ -990,3 +990,174 @@ physique reste à faire — voir le rapport livré en conversation pour les
 commandes exactes, notamment `docker compose up -d --force-recreate
 --wait` (déjà proposée en remédiation manuelle si besoin) et confirmer
 que `docker compose ps` affiche enfin `127.0.0.1:5432->5432/tcp`.
+
+# APEX — Backend `ContainerSandbox` réel + sélection explicite de backend (N+25)
+
+## 1. Contexte
+
+Sur une machine réelle (WSL2, Docker Engine joignable) où `unshare`/cgroups
+v1/`setpriv`/isolation réseau namespace sont TOUS refusés par la politique
+de virtualisation de l'hôte (`SandboxCapabilityReport.level = RLIMIT_ONLY`),
+`LinuxNamespaceSandbox` ne peut JAMAIS atteindre NAMESPACED —
+`launch_mission()` échouait systématiquement (`IsolationUnavailable`), alors
+que Docker, seul mécanisme d'isolation noyau réellement disponible sur cette
+machine, restait inexploité : `SandboxProvider` = STUB, mais un seul backend
+existait (`get_default_provider()` retournait `LinuxNamespaceSandbox()` sans
+condition, ignorant même `sandbox.provider: docker` déjà présent dans
+`config.yaml` depuis la phase 1).
+
+## 2. Ce qui existait déjà (inspection avant code, comme exigé)
+
+Le contrat `SandboxProvider` (`detect()`/`execute()`), `SandboxSpec`/
+`SandboxResult`/`ResourceLimits`/`CancellationToken`/
+`SandboxCapabilityReport`/`ExecutionStatus`, `IsolationLevel.CONTAINERIZED`
+(déjà dans le vocabulaire, jamais instancié), et `docs/
+UNTRUSTED_DATA_SECURITY.md` §6 anticipaient tous explicitement un futur
+`ContainerSandbox` comme second backend du MÊME contrat — aucune
+architecture parallèle à inventer. `apex.sandbox.detect._check_docker_daemon`
+existait déjà (utilisé par `detect_capabilities()` pour peupler
+`docker_daemon_reachable`, jamais pour construire un backend). GATE-19
+(`apex.gate.checks.gate_19_isolation_state`) évaluait déjà un plafond
+« docker_hardened »/« gvisor » — un jugement Gate INDÉPENDANT, jamais un
+backend d'exécution ; non modifié par cette mission.
+
+## 3. Implémentation
+
+`apex/sandbox/container.py` (nouveau) — `ContainerSandbox(SandboxProvider)` :
+
+- `detect_container_capabilities(image)` : filtre bon marché
+  (`_check_docker_daemon`, réutilisé, jamais dupliqué) puis sonde EMPIRIQUE —
+  un vrai `docker run --rm` jetable, AVEC les drapeaux de sécurité réels
+  (`--network none --read-only --tmpfs /tmp:... --user 65534:65534
+  --cap-drop ALL --security-opt no-new-privileges --pids-limit --memory
+  --memory-swap --cpus`), qui rapporte depuis l'intérieur du conteneur
+  (`os.getuid()`, tentative de connexion sortante, tentative d'écriture
+  hors `/tmp`) si chaque garantie a un EFFET constaté — jamais crue du seul
+  fait que `docker info` répond. `IsolationLevel.CONTAINERIZED` seulement si
+  les trois checks passent ; `NONE` sinon (jamais RLIMIT_ONLY : ce backend
+  ne fournit RIEN sans Docker, contrairement à `LinuxNamespaceSandbox` qui a
+  toujours `resource.setrlimit`).
+- `execute()` : mêmes drapeaux EXACTS que la sonde (`_security_argv()`,
+  facteur commun — jamais deux jeux de drapeaux qui pourraient diverger).
+  Pas de `-v`/`--mount` (aucun montage du dépôt hôte), jamais
+  `--privileged`, jamais le socket Docker monté — ABSENCE structurelle,
+  vérifiée par `TestBuildArgv::test_never_contains_privileged_or_host_
+  mounts_or_docker_socket`, jamais filtrée après coup. Timeout/cancel : tuer
+  le CLI `docker run` (processus parent Python) NE tue PAS le conteneur —
+  piège symétrique à celui déjà documenté pour `unshare` dans
+  `linux_namespace.py` — donc `docker kill <name>` explicite, câblé via
+  `CancellationToken._register`. Cleanup : PAS de `--rm` (l'état
+  `OOMKilled`/`ExitCode` doit être lu, via `docker inspect`, AVANT
+  suppression, sans quoi Docker aurait déjà effacé la preuve) ; `docker rm
+  -f` inconditionnel dans un `finally`, filet de sécurité idempotent.
+  `PROCESS_LIMIT_EXCEEDED` n'est JAMAIS déduit (Docker ne distingue pas un
+  fork() bloqué par `--pids-limit` d'un échec ordinaire du workload,
+  contrairement à `pids.events` lu directement en cgroup v1) : `FAILED`
+  reste honnête plutôt qu'une classification devinée.
+
+`apex/sandbox/provider.py` — `select_sandbox_provider()` (nouveau, sélection
+EXPLICITE et OBSERVABLE) : 1) NAMESPACED si réellement disponible (préféré,
+aucune dépendance à un démon tiers) ; 2) sinon CONTAINERIZED SEULEMENT si la
+sonde conteneur réelle confirme les garanties (jamais choisi au seul motif
+que le binaire `docker` existe) ; 3) sinon `LinuxNamespaceSandbox` est quand
+même retourné (message d'échec le plus détaillé) mais son `execute()` lève
+`IsolationUnavailable` — jamais un backend fonctionnel fabriqué. Chaque
+sélection porte un `SandboxSelection.reason` en texte lisible expliquant
+POURQUOI. `get_default_provider()` délègue entièrement à cette fonction
+(comportement inchangé pour l'appelant existant, `apex.missions.execution`).
+
+`apex/config/schema.py` — `SandboxDefaults.container_image` (nouveau champ,
+défaut sûr `python:3.12-slim`, jamais vide, jamais `latest` implicite) ;
+`config.yaml` documenté et peuplé — AUCUNE nouvelle variable d'environnement
+(le reste de la section `sandbox:` n'en utilise déjà aucune).
+
+`apex/interfaces/registry.py`, `docs/UNTRUSTED_DATA_SECURITY.md` §6 —
+notes mises à jour : `ContainerSandbox` n'est plus « PLANNED, démon Docker
+injoignable » mais réel ; honnêteté conservée sur le fait que CETTE machine
+(NAMESPACED disponible, Docker injoignable) ne l'exerce jamais en
+intégration réelle.
+
+## 4. Fichiers modifiés/créés
+
+`apex/sandbox/container.py` (nouveau), `apex/sandbox/provider.py`,
+`apex/sandbox/__init__.py`, `apex/config/schema.py`, `config.yaml`,
+`apex/interfaces/registry.py`, `docs/UNTRUSTED_DATA_SECURITY.md`,
+`tests/test_sandbox_container.py` (nouveau), `tests/
+test_sandbox_provider_selection.py` (nouveau), `tests/test_config.py`
+(3 tests ajoutés).
+
+## 5. Tests
+
+Deux familles, jamais confondues (voir docstring de tests/
+test_sandbox_container.py) :
+
+- **Logique pure** (29 tests, s'exécutent PARTOUT, y compris ici) : double
+  déterministe de `docker` (`unittest.mock.patch` sur `subprocess.Popen`/
+  `subprocess.run`, PAS un vrai conteneur) — construction d'argv (drapeaux
+  de sécurité présents, `--privileged`/montages/socket Docker
+  structurellement absents), détection (démon injoignable, sonde uid-root/
+  réseau-non-bloqué/rootfs-inscriptible/code-retour-non-nul/sortie-illisible
+  tous honnêtement rejetés, jamais devinés SUCCESS), exécution (succès,
+  échec, OOM via `docker inspect` PAS le code de sortie, timeout déclenchant
+  un VRAI `docker kill` puis classification TIMEOUT, annulation — synchrone
+  ET depuis un autre thread — déclenchant `docker kill` et classification
+  CANCELLED, échec de création `OSError`), nettoyage (conteneur supprimé
+  après succès/échec/timeout/annulation, `docker rm -f` tenté même sans
+  conteneur créé, `inspect` prouvé AVANT `rm` par l'ordre des appels).
+  6 tests de sélection de backend (NAMESPACED préféré sans jamais sonder
+  Docker, CONTAINERIZED choisi seulement si la sonde de sécurité réussit,
+  jamais choisi sur la seule joignabilité du démon, refus observable et
+  `execute()` qui lève réellement, aucune re-sonde après sélection).
+  3 tests de config (`container_image` défaut/surchargeable/rejet si vide).
+- **Intégration RÉELLE** (`TestRealDockerExecution`, 5 tests) — contre un
+  VRAI démon Docker, avec les VRAIS drapeaux. `skipUnless(detect_container_
+  capabilities().is_available)`, même patron que `postgres_testable()`
+  (`tests/db_test_support.py`). **Sautée sur cette machine** (NAMESPACED
+  disponible, Docker injoignable — voir §1) : c'est le comportement attendu
+  ici, pas une preuve que ces tests fonctionnent, ni qu'ils ne le font pas.
+  Ces 5 tests, et EUX SEULS, prouvent les garanties de sécurité réelles ;
+  ils s'exécuteront sur une machine où Docker fonctionne (voir §7).
+
+Suite ciblée (34+6+ tests config) : PASS. Suite backend complète
+(`pytest --ignore=tests/test_runtime_packaging.py`) : voir le rapport livré
+en conversation pour le résultat exact. `ruff`/`mypy` : mêmes catégories de
+findings baseline que `linux_namespace.py`/`detect.py` (S108/S603/SIM105/
+type-arg Popen-CompletedProcess non typés) — aucune catégorie nouvelle
+introduite.
+
+## 6. Ce qui N'A PAS été fait (scope délibérément non couvert)
+
+Aucun seccomp personnalisé (`IsolationLevel.HARDENED` reste hors de portée
+des deux backends) ; aucun câblage CLI (`apex doctor`) pour afficher
+`SandboxSelection.reason` — l'observabilité existe au niveau code
+(`select_sandbox_provider()`, testable et appelable directement) mais n'est
+pas encore exposée dans une commande utilisateur, à faire dans une mission
+ultérieure si le besoin se confirme ; réseau `"proxy"` toujours
+`NotImplementedYet` sur les deux backends (inchangé depuis l'étape 7).
+
+## 7. Limitation — jamais prétendu vérifié physiquement
+
+Aucun accès à une machine où Docker fonctionne réellement dans cette
+session : le comportement de `ContainerSandbox.execute()` contre un VRAI
+`dockerd` (réseau réellement coupé, uid réellement non-root, rootfs
+réellement lecture seule, `docker kill`/`docker rm -f` réellement
+efficaces) n'a jamais été observé ici — seulement simulé via le double
+déterministe (§5). Validation physique (WSL2, Docker Engine 29.6.1) :
+
+```bash
+git pull origin claude/apex-official-development-4kao8t
+
+# 1. Confirmer que la sonde de sécurité réelle passe
+python3 -c "
+from apex.sandbox.container import detect_container_capabilities
+r = detect_container_capabilities()
+print(r.level.value, r.is_available)
+print(r.detail)
+"
+
+# 2. Lancer la suite d'intégration réelle (les 5 tests sautés ici)
+python3 -m pytest tests/test_sandbox_container.py -v -k TestRealDockerExecution
+
+# 3. Confirmer qu'aucun conteneur apex_* ne traîne après la suite
+docker ps -a --filter "name=apex_"
+```

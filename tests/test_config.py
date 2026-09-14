@@ -291,6 +291,20 @@ class TestLockedPrinciples(unittest.TestCase):
         with self.assertRaises(ConfigError):
             parse_config(config(**{"sandbox.network": "host"}))
 
+    def test_sandbox_container_image_defaults_when_absent(self) -> None:
+        """N+25 : ContainerSandbox a besoin d'une image même si `config.yaml`
+        ne la mentionne pas explicitement — jamais None/vide implicite."""
+        cfg = parse_config(config())
+        self.assertEqual(cfg.sandbox.container_image, "python:3.12-slim")
+
+    def test_sandbox_container_image_is_overridable(self) -> None:
+        cfg = parse_config(config(**{"sandbox.container_image": "python:3.13-slim"}))
+        self.assertEqual(cfg.sandbox.container_image, "python:3.13-slim")
+
+    def test_sandbox_container_image_rejects_empty_string(self) -> None:
+        with self.assertRaises(ConfigError):
+            parse_config(config(**{"sandbox.container_image": "   "}))
+
     def test_local_pool_is_mandatory(self) -> None:
         """Fallback 100 % local : sans pool local, la configuration est invalide."""
         document = config()
