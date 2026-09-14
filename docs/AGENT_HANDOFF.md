@@ -857,3 +857,65 @@ Cette correction ne peut être vérifiée par `apex doctor`/`apex gate` RÉELS
 que sur la machine de l'utilisateur (aucun Docker/Postgres/Ollama réel dans
 ce bac à sable) — voir le rapport livré dans la conversation pour la
 reproduction automatisée qui remplace cette vérification manquante ici.
+
+# APEX — Launcher : conflits de port `docker-proxy` orphelin (N+23)
+
+## 1. Bug réel rapporté
+
+`./scripts/apex-launch.sh` (donc `docker compose up -d --wait`) échouait
+avec « address already in use » sur 5432/6379/9000/9001, alors que
+`apex-postgres` etc. étaient déjà `healthy` selon Docker. Diagnostic de
+l'utilisateur : d'anciens processus `docker-proxy` survivaient à un arrêt
+brutal du démon, tenant les ports, alors que les conteneurs correspondants
+n'apparaissaient plus que comme `Created`.
+
+## 2. Cause racine
+
+`docker-compose.yml`/`config.yaml` publient DÉJÀ correctement ces ports sur
+`127.0.0.1` — aucun bug d'architecture réseau. Le vrai manque : `compose_up()`
+appelait `docker compose up -d --wait` sans jamais distinguer « port occupé
+par un `docker-proxy` orphelin à APEX (récupérable en toute sécurité) » de
+« port occupé par un service réellement externe (jamais à toucher) » — la
+commande échouait avec le message brut de Docker, sans diagnostic actionnable.
+
+## 3. Correction
+
+3 fonctions ajoutées à `scripts/apex-launch.sh`, appelées depuis
+`compose_up()` (uniquement quand `compose_has_running_services` est faux —
+sinon rien à réconcilier) :
+- `apex_declared_ports` : lit les ports hôte dans `docker-compose.yml`
+  (source unique, jamais recopiés).
+- `port_is_open`/`find_docker_proxy_pid_for_port` : preuve réelle
+  (`/dev/tcp`, `/proc/<pid>/cmdline`) — jamais une supposition ; le nom du
+  processus doit être EXACTEMENT `docker-proxy` (`argv[0]`), le port doit
+  matcher EXACTEMENT `-host-port <port>`.
+- `reconcile_stale_ports` : diagnostic TOUJOURS affiché ; le `kill` réel
+  n'a lieu QUE si `APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1` (désactivé par
+  défaut) ET que le processus est un `docker-proxy` vérifié — un port
+  occupé par autre chose n'est JAMAIS touché, avec ou sans cette variable.
+
+`docker compose up -d --wait` lui-même est inchangé ; aucun nouveau code de
+sortie (toujours 2 si la réconciliation ne résout pas le conflit).
+
+## 4. Fichiers modifiés
+
+`scripts/apex-launch.sh`, `tests/test_launcher.py` (67 tests, dont ~20
+nouveaux + 2 anciens réécrits pour refléter l'exception `kill` désormais
+scopée et vérifiée, au lieu de l'ancien interdit absolu).
+
+## 5. Tests (tous PASS, `bash -n` propre)
+
+Primitives testées avec de VRAIS processus/sockets (jamais un double qui
+ferait semblant) : `exec -a docker-proxy python3 ...` produit un PID réel
+dont `argv[0]` est authentiquement `docker-proxy`. Couvre : port libre,
+orphelin sans opt-in (diagnostiqué, jamais tué), orphelin avec opt-in
+(tué, port réellement libéré), port externe (jamais touché même avec
+l'opt-in), bout en bout via `apex-launch.sh` complet (pas seulement les
+fonctions isolées).
+
+## 6. Limitation
+
+Vérifié dans ce bac à sable avec de vrais processus/sockets Linux, jamais
+avec le VRAI `dockerd`/`docker-proxy` de l'utilisateur (absent ici) — la
+validation physique reste à faire sur sa machine (commandes exactes dans
+le rapport livré en conversation).

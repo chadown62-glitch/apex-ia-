@@ -20,6 +20,23 @@
 #   - aucun affichage de valeur issue de `.env` (seuls les NOMS de
 #     variables sont journalisés, jamais leur contenu).
 #
+# `APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1` (variable d'environnement, jamais
+# un drapeau CLI — cohérent avec la convention `APEX_*` déjà utilisée par
+# `.env`) : cas réel diagnostiqué — un arrêt brutal du démon Docker peut
+# laisser un `docker-proxy` orphelin tenir un port publié par APEX (5432/
+# 6379/9000/9001) alors que le conteneur compose correspondant n'est plus
+# `running` (`docker compose ps` ne le voit plus, il apparaît seulement
+# comme `Created`) : `docker compose up -d --wait` échoue alors avec
+# « address already in use », sans diagnostic utile. Voir
+# `reconcile_stale_ports`. DÉSACTIVÉ PAR DÉFAUT : ce script ne termine
+# JAMAIS un processus de sa propre initiative sans que l'utilisateur l'ait
+# explicitement demandé — le diagnostic (port, PID, nature du processus)
+# est TOUJOURS affiché, la commande exacte de remédiation manuelle
+# (`kill <PID>`) TOUJOURS proposée ; seule l'action elle-même est
+# conditionnée par cette variable. Un port occupé par autre chose qu'un
+# `docker-proxy` (service réellement externe à APEX) n'est JAMAIS touché,
+# avec ou sans cette variable.
+#
 # Codes de sortie (documentés une fois ici, source unique pour ce script
 # et les commits suivants qui les utiliseront) :
 #   0   - préflight réussi (ou `stop` : rien à arrêter / arrêt propre)
@@ -72,9 +89,13 @@ log_err()  { printf '[apex-launch] ERREUR : %s\n' "$*" >&2; }
 # UNIQUE, jamais un message dupliqué ni un `exit` concurrent. Ce script ne
 # background jamais rien (docker compose up/down, doctor, gate tournent
 # tous au premier plan) : un Ctrl+C réel envoie SIGINT à tout le groupe de
-# processus, donc à l'éventuel enfant en cours aussi — ce script n'a donc
-# aucun PID d'enfant à cibler lui-même, et ne tue jamais rien explicitement
-# (aucun `kill`/`pkill`/`killall` nulle part dans ce fichier).
+# processus, donc à l'éventuel enfant en cours aussi — ce SIGINT n'est donc
+# jamais relayé explicitement à un PID d'enfant par ce script.
+#
+# Exception UNIQUE au reste de ce fichier (N+23, `reconcile_stale_ports`) :
+# un signal explicite vers UN PID individuellement vérifié comme un
+# `docker-proxy` orphelin réel (jamais un nom/motif de processus — cette
+# forme de cible reste et restera absente de ce fichier).
 on_interrupt() {
     trap '' INT
     log_warn "interrompu (Ctrl+C) — aucun processus externe n'a été arrêté par ce script."
@@ -269,6 +290,124 @@ record_compose_ownership() {
     mv -f -- "${tmp_file}" "${state_file}"
 }
 
+# -- Conflits de port : docker-proxy orphelin vs service réellement externe --
+#
+# Cas réel diagnostiqué : un arrêt brutal du démon Docker peut laisser un
+# `docker-proxy` orphelin tenir l'un des ports publiés par APEX alors que
+# `docker compose ps` ne connaît plus aucun conteneur `running` — le
+# conteneur correspondant reste visible mais à l'état `Created`. Sans
+# détection, `docker compose up -d --wait` échoue avec « address already in
+# use », un message qui ne dit jamais QUI tient le port ni si c'est sûr d'y
+# toucher. Les trois fonctions ci-dessous répondent chacune à une question
+# précise, aucune ne devine :
+#   - quels ports APEX est sur le point de publier (lus dans
+#     `docker-compose.yml`, jamais dupliqués/codés en dur ici) ;
+#   - un port est-il réellement occupé (connexion TCP réelle, jamais une
+#     supposition) ;
+#   - le processus qui le tient est-il RÉELLEMENT `docker-proxy` (préfixe
+#     `argv[0]` via `/proc/<pid>/cmdline`, jamais un nom de commande deviné
+#     — un service externe qui tourne sous un autre nom n'est jamais pris
+#     pour un `docker-proxy`).
+
+# Lit les ports HÔTE déclarés dans `docker-compose.yml` (`"ip:host:container"`)
+# — source UNIQUE de vérité, jamais une liste de ports recopiée ici : si le
+# fichier compose change, cette fonction suit sans modification.
+apex_declared_ports() {
+    local project_root="$1"
+    local compose_file="${project_root}/docker-compose.yml"
+    [[ -f "${compose_file}" ]] || return 0
+
+    local line
+    while IFS= read -r line; do
+        if [[ "${line}" =~ \"[0-9.]+:([0-9]+):[0-9]+\" ]]; then
+            printf '%s\n' "${BASH_REMATCH[1]}"
+        fi
+    done < "${compose_file}"
+}
+
+# Connexion TCP réelle (`/dev/tcp`, fonctionnalité bash native — aucun outil
+# externe requis) — jamais une supposition sur l'état d'un port.
+port_is_open() {
+    local host="$1" port="$2"
+    (exec 3<>"/dev/tcp/${host}/${port}") 2>/dev/null
+}
+
+# Cherche, parmi les process RÉELS (`/proc`), un `docker-proxy` dont la
+# ligne de commande porte `-host-port <port>` EXACTEMENT — jamais un préfixe
+# de port ambigu (ex. le port 543 ne doit jamais matcher 5432). Le nom du
+# processus est vérifié sur `argv[0]` (`/proc/<pid>/cmdline`, premier champ,
+# préfixe de chemin retiré) : c'est ce que porte réellement l'invocation de
+# `docker-proxy` par le démon Docker, contrairement à `/proc/<pid>/comm`
+# (tronqué à 15 caractères et sensible à la façon dont le processus a été
+# exec'é — un test double fidèle peut le contrôler précisément via
+# `exec -a`, voir `tests/test_launcher.py`). Retourne le PID sur stdout,
+# rien et un statut non nul si introuvable — jamais un PID inventé.
+find_docker_proxy_pid_for_port() {
+    local port="$1"
+    local pid_dir pid argv0 cmdline
+    for pid_dir in /proc/[0-9]*; do
+        pid="${pid_dir#/proc/}"
+        [[ -r "${pid_dir}/cmdline" ]] || continue
+        cmdline="$(tr '\0' '\n' < "${pid_dir}/cmdline" 2>/dev/null || true)"
+        [[ -n "${cmdline}" ]] || continue
+        argv0="$(head -n1 <<< "${cmdline}")"
+        [[ "${argv0##*/}" == "docker-proxy" ]] || continue
+        if grep -qxF -- "-host-port" <<< "${cmdline}"; then
+            local next_is_port=false line
+            while IFS= read -r line; do
+                if [[ "${next_is_port}" == "true" ]]; then
+                    if [[ "${line}" == "${port}" ]]; then
+                        printf '%s\n' "${pid}"
+                        return 0
+                    fi
+                    next_is_port=false
+                elif [[ "${line}" == "-host-port" ]]; then
+                    next_is_port=true
+                fi
+            done <<< "${cmdline}"
+        fi
+    done
+    return 1
+}
+
+# Pour chaque port qu'APEX est sur le point de publier : s'il est libre,
+# rien à faire. S'il est occupé par un `docker-proxy` réellement identifié
+# (voir `find_docker_proxy_pid_for_port`) : diagnostic clair TOUJOURS
+# affiché, action de libération SEULEMENT si
+# `APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1` (désactivé par défaut, voir
+# l'en-tête du fichier). S'il est occupé par autre chose : diagnostic
+# « service externe » — jamais touché, avec ou sans cette variable.
+reconcile_stale_ports() {
+    local project_root="$1"
+    local port pid
+
+    while IFS= read -r port; do
+        [[ -n "${port}" ]] || continue
+        port_is_open "127.0.0.1" "${port}" || continue
+
+        if pid="$(find_docker_proxy_pid_for_port "${port}")"; then
+            log_warn "port ${port} (infrastructure APEX) occupé par un docker-proxy orphelin (PID ${pid})."
+            log_warn "  aucun conteneur APEX 'running' ne le revendique — état Docker incohérent, généralement après un arrêt brutal du démon."
+            if [[ "${APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS:-0}" == "1" ]]; then
+                log_warn "  APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1 : libération du port ${port} (arrêt du docker-proxy orphelin PID ${pid})."
+                kill "${pid}" 2>/dev/null || true
+                local waited=0
+                while port_is_open "127.0.0.1" "${port}" && (( waited < 20 )); do
+                    sleep 0.1
+                    waited=$((waited + 1))
+                done
+            else
+                log_warn "  remédiation manuelle sûre : kill ${pid}"
+                log_warn "  ou relancer avec APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1 pour une libération automatique de ce cas précis uniquement."
+            fi
+        else
+            log_warn "port ${port} (infrastructure APEX) déjà occupé par un processus qui n'est PAS un docker-proxy — probablement un service externe à APEX."
+            log_warn "  ce launcher ne touche jamais un processus qu'il n'a pas identifié avec certitude comme lui appartenant."
+            log_warn "  diagnostic : ss -ltnp | grep ':${port} '   (ou : lsof -i :${port})"
+        fi
+    done <<< "$(apex_declared_ports "${project_root}")"
+}
+
 # Démarre l'infrastructure existante. N'exécute jamais `docker compose
 # down`/`rm`/`prune` : seul `up -d --wait` est utilisé, jamais un arrêt.
 compose_up() {
@@ -289,6 +428,15 @@ compose_up() {
     local already_running=false
     if compose_has_running_services "${project_root}"; then
         already_running=true
+    fi
+
+    # Seulement quand RIEN de compose n'est actif (sinon les ports occupés
+    # le sont légitimement par l'infrastructure déjà en cours — rien à
+    # réconcilier) : le cas réel diagnostiqué est exactement celui-ci, un
+    # `docker compose ps` qui ne voit plus rien tourner alors qu'un port
+    # reste occupé au niveau du système d'exploitation.
+    if [[ "${already_running}" == "false" ]]; then
+        reconcile_stale_ports "${project_root}"
     fi
 
     log_info "démarrage de l'infrastructure (docker compose up -d --wait)..."

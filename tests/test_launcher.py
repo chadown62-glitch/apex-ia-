@@ -20,9 +20,11 @@ machine qui exécute les tests.
 from __future__ import annotations
 
 import shutil
+import socket
 import stat
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -35,6 +37,7 @@ _COREUTILS = (
     "dirname", "basename", "stat", "cat", "grep", "mktemp", "env", "bash", "sh", "readlink",
     "mkdir", "mv", "rm", "date",  # requis par le launcher pour l'état d'ownership compose (commit 4)
     "sleep", "touch",  # requis par le faux `docker` (test SIGINT, marqueur d'état) — jamais par le launcher
+    "tr", "head", "kill",  # requis par find_docker_proxy_pid_for_port/reconcile_stale_ports (N+23)
 )
 
 
@@ -168,11 +171,16 @@ class LauncherFixture:
         docker_path.chmod(docker_path.stat().st_mode | stat.S_IEXEC)
         return docker_path
 
-    def run(self, *, cwd: Path | None = None, extra_path: str = "") -> subprocess.CompletedProcess[str]:
+    def run(
+        self, *, cwd: Path | None = None, extra_path: str = "",
+        extra_env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
         env = {
             "PATH": f"{extra_path}:{self.bin_dir}" if extra_path else str(self.bin_dir),
             "HOME": str(self.root),
         }
+        if extra_env:
+            env.update(extra_env)
         return subprocess.run(
             [str(self.launcher)],
             cwd=str(cwd or self.root),
@@ -193,12 +201,16 @@ class LauncherFixture:
             timeout=10,
         )
 
-    def source_and_call(self, expression: str) -> subprocess.CompletedProcess[str]:
+    def source_and_call(
+        self, expression: str, *, extra_env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
         """Source le script (le garde `BASH_SOURCE == 0` empêche `main` de
         s'exécuter) puis évalue `expression` — pour tester une fonction
         individuelle sans déclencher le préflight complet."""
         script = f'source "{self.launcher}"; {expression}'
         env = {"PATH": str(self.bin_dir), "HOME": str(self.root)}
+        if extra_env:
+            env.update(extra_env)
         return subprocess.run(
             ["bash", "-c", script],
             cwd=str(self.root),
@@ -404,7 +416,13 @@ class TestNoUnauthorizedInstallOrStart(LauncherTestCase):
     """Le launcher ne doit ni installer ni démarrer quoi que ce soit au-delà
     de `docker compose up` sur le compose déjà versionné — aucune commande
     `apt`, `curl | sh`, `ollama`, `sudo`, `dockerd`, ni un `docker compose
-    down`/`rm`/`prune` n'apparaît dans le script."""
+    down`/`rm`/`prune` n'apparaît dans le script.
+
+    N+23 : `kill` apparaît désormais, mais SEULEMENT dans
+    `reconcile_stale_ports` (voir `TestKillIsScopedToVerifiedOrphanReclaim`
+    ci-dessous), jamais `killall`/`pkill` (aucune cible par nom/motif,
+    toujours un PID individuellement vérifié) — ces deux restent interdits
+    partout, sans exception."""
 
     def test_script_never_mentions_install_or_service_start_commands(self) -> None:
         # Ignore les commentaires : le script DOCUMENTE volontairement ces
@@ -425,17 +443,56 @@ class TestNoUnauthorizedInstallOrStart(LauncherTestCase):
         for pattern in forbidden:
             self.assertNotIn(pattern, code_lines, f"motif interdit trouvé dans le launcher : {pattern!r}")
 
-    def test_no_bare_kill_command_anywhere(self) -> None:
-        """Ni `kill`, ni `killall`, ni `pkill` : ce launcher ne cible jamais
-        un PID pour lui envoyer un signal — SIGINT est géré par un `trap`
-        sur le process courant, jamais en signalant un autre process."""
+
+class TestKillIsScopedToVerifiedOrphanReclaim(LauncherTestCase):
+    """N+23 — le launcher a désormais UNE exception, précise et vérifiée
+    ici, à l'ancienne règle absolue « jamais de `kill` » : la libération
+    d'un `docker-proxy` orphelin RÉELLEMENT identifié (voir
+    `TestFindDockerProxyPidForPort`), jamais activée par défaut. Cette
+    classe remplace `test_no_bare_kill_command_anywhere` (ex-invariant
+    absolu, devenu faux par construction) par une preuve plus précise :
+    `kill` n'apparaît QUE dans le corps de `reconcile_stale_ports`."""
+
+    def test_kill_appears_only_inside_reconcile_stale_ports(self) -> None:
         import re
 
-        code_lines = "\n".join(
-            line for line in LAUNCHER.read_text().splitlines()
-            if not line.strip().startswith("#")
+        text = LAUNCHER.read_text()
+        start = text.index("reconcile_stale_ports() {")
+        # Fin de la fonction : la ligne "}" en tout début de ligne suivante.
+        end = text.index("\n}\n", start) + len("\n}\n")
+        body = text[start:end]
+        rest = text[:start] + text[end:]
+
+        rest_code_lines = "\n".join(
+            line for line in rest.splitlines() if not line.strip().startswith("#")
         )
-        self.assertIsNone(re.search(r"\bkill\b", code_lines), "commande 'kill' trouvée dans le launcher")
+        self.assertIsNone(
+            re.search(r"\bkill\b", rest_code_lines),
+            "commande 'kill' trouvée EN DEHORS de reconcile_stale_ports",
+        )
+        self.assertIn('kill "${pid}"', body)
+
+    def test_kill_targets_only_a_variable_pid_never_a_literal_or_pattern(self) -> None:
+        """Jamais `killall`/`pkill` (cible par nom/motif) — uniquement
+        `kill "${pid}"`, un PID individuellement vérifié par
+        `find_docker_proxy_pid_for_port` juste avant."""
+        text = LAUNCHER.read_text()
+        self.assertNotIn("killall", text)
+        self.assertNotIn("pkill", text)
+        start = text.index("reconcile_stale_ports() {")
+        end = text.index("\n}\n", start)
+        body = text[start:end]
+        self.assertIn("find_docker_proxy_pid_for_port", body)
+        self.assertIn('kill "${pid}"', body)
+
+    def test_kill_is_gated_behind_an_explicit_opt_in_never_on_by_default(self) -> None:
+        text = LAUNCHER.read_text()
+        start = text.index("reconcile_stale_ports() {")
+        end = text.index("\n}\n", start)
+        body = text[start:end]
+        kill_idx = body.index('kill "${pid}"')
+        guard_idx = body.rindex("APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS", 0, kill_idx)
+        self.assertLess(guard_idx, kill_idx, "'kill' doit rester à l'intérieur du if de l'opt-in")
 
 
 class TestDockerComposeIntegration(LauncherTestCase):
@@ -880,6 +937,284 @@ class TestInterruptHandlerIsIsolated(LauncherTestCase):
             stderr.count("interrompu (Ctrl+C)"), 1,
             f"le handler doit s'exécuter exactement une fois — sortie : {stderr!r}",
         )
+
+
+def _free_port() -> int:
+    """Un port TCP RÉELLEMENT libre au moment de l'appel (le système
+    d'exploitation choisit, jamais un numéro fixe arbitraire qui risquerait
+    d'entrer en collision sur la machine qui exécute les tests)."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
+#: Un VRAI listener TCP (jamais un double qui ferait semblant) — lit son
+#: port dans `-host-port <port>`, exactement le format d'invocation réel de
+#: `docker-proxy` que `find_docker_proxy_pid_for_port` recherche.
+_LISTENER_SCRIPT = (
+    "import socket, sys, time\n"
+    'idx = sys.argv.index("-host-port")\n'
+    "port = int(sys.argv[idx + 1])\n"
+    "s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)\n"
+    "s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)\n"
+    's.bind(("127.0.0.1", port))\n'
+    "s.listen(1)\n"
+    "time.sleep(30)\n"
+)
+
+
+def _spawn_named_listener(root: Path, port: int, *, name: str) -> subprocess.Popen:
+    """Un VRAI processus, PID unique, dont `argv[0]` (visible via
+    `/proc/<pid>/cmdline`, ce que le launcher inspecte réellement) est
+    EXACTEMENT `name` — `exec -a` (builtin bash) remplace bash par
+    `python3` en imposant ce nom, sans processus intermédiaire ni enfant
+    séparé (vérifié manuellement avant l'écriture de ces tests : PID
+    identique avant/après `exec`, port réellement lié). C'est ainsi que
+    RÉELLEMENT `dockerd` invoque `docker-proxy` — pas une simulation du nom
+    de commande, un contrôle réel de ce que `argv[0]` porte."""
+    listener_path = root / "_listener.py"
+    if not listener_path.exists():
+        listener_path.write_text(_LISTENER_SCRIPT)
+    return subprocess.Popen(
+        ["bash", "-c", f'exec -a "{name}" python3 "{listener_path}" "$@"', "--", "-host-port", str(port)],
+    )
+
+
+class TestApexDeclaredPorts(LauncherTestCase):
+    """Ports HÔTE lus dans `docker-compose.yml` — source UNIQUE de vérité,
+    jamais une liste recopiée dans le launcher."""
+
+    def test_a_extracts_all_declared_host_ports(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        (fx.root / "docker-compose.yml").write_text(
+            'services:\n  postgres:\n    ports:\n      - "127.0.0.1:5432:5432"\n'
+            '  redis:\n    ports:\n      - "127.0.0.1:6379:6379"\n'
+        )
+        result = fx.source_and_call('apex_declared_ports "$(pwd)"')
+        self.assertEqual(result.stdout.split(), ["5432", "6379"])
+
+    def test_b_missing_compose_file_yields_nothing(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        result = fx.source_and_call('apex_declared_ports "$(pwd)"')
+        self.assertEqual(result.stdout.strip(), "")
+
+    def test_c_the_real_apex_compose_file_yields_exactly_the_four_reported_ports(self) -> None:
+        """Contre le VRAI `docker-compose.yml` du dépôt — exactement les 4
+        ports rapportés en conflit (5432/6379/9000/9001)."""
+        fx = LauncherFixture(self.tmp)
+        shutil.copy2(LAUNCHER.parent.parent / "docker-compose.yml", fx.root / "docker-compose.yml")
+        result = fx.source_and_call('apex_declared_ports "$(pwd)"')
+        self.assertEqual(sorted(result.stdout.split(), key=int), ["5432", "6379", "9000", "9001"])
+
+
+class TestPortIsOpen(LauncherTestCase):
+    """Connexion TCP RÉELLE (`/dev/tcp`) — jamais une supposition."""
+
+    def test_a_closed_port_is_detected(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        result = fx.source_and_call(f'port_is_open 127.0.0.1 {port} && echo OPEN || echo CLOSED')
+        self.assertEqual(result.stdout.strip(), "CLOSED")
+
+    def test_b_a_real_listener_is_detected_as_open(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        proc = _spawn_named_listener(fx.root, port, name="python3")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call(f'port_is_open 127.0.0.1 {port} && echo OPEN || echo CLOSED')
+            self.assertEqual(result.stdout.strip(), "OPEN")
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+
+class TestFindDockerProxyPidForPort(LauncherTestCase):
+    """Identification RÉELLE d'un `docker-proxy` — jamais un nom de
+    commande deviné : `argv[0]` (`/proc/<pid>/cmdline`) doit être EXACTEMENT
+    `docker-proxy`, et `-host-port <port>` doit matcher EXACTEMENT (jamais
+    un préfixe : le port 543 ne doit jamais matcher 5432)."""
+
+    def test_a_finds_a_real_docker_proxy_process_by_exact_port(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        proc = _spawn_named_listener(fx.root, port, name="docker-proxy")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call(f'find_docker_proxy_pid_for_port {port}')
+            self.assertEqual(result.stdout.strip(), str(proc.pid))
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+    def test_b_a_process_not_named_docker_proxy_is_never_matched(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        proc = _spawn_named_listener(fx.root, port, name="some-other-process")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call(f'find_docker_proxy_pid_for_port {port} || echo NOTFOUND')
+            self.assertIn("NOTFOUND", result.stdout)
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+    def test_c_a_docker_proxy_on_a_different_port_is_never_matched(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        other_port = _free_port()
+        proc = _spawn_named_listener(fx.root, port, name="docker-proxy")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call(f'find_docker_proxy_pid_for_port {other_port} || echo NOTFOUND')
+            self.assertIn("NOTFOUND", result.stdout)
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+
+class TestReconcileStalePorts(LauncherTestCase):
+    """`compose_up` n'appelle `reconcile_stale_ports` que lorsque rien de
+    compose n'est `running` — ces tests l'appellent directement, dans les
+    mêmes conditions. Cas réel diagnostiqué : un `docker-proxy` orphelin
+    survit à un arrêt brutal du démon alors que le conteneur correspondant
+    n'est plus `running` (visible seulement comme `Created`)."""
+
+    @staticmethod
+    def _write_compose(fx: LauncherFixture, port: int) -> None:
+        (fx.root / "docker-compose.yml").write_text(
+            f'services:\n  fake:\n    ports:\n      - "127.0.0.1:{port}:{port}"\n'
+        )
+
+    def test_a_free_port_is_a_silent_no_op(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        self._write_compose(fx, port)
+        result = fx.source_and_call('reconcile_stale_ports "$(pwd)"')
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stderr.strip(), "")
+
+    def test_b_orphan_docker_proxy_without_opt_in_is_diagnosed_never_killed(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        self._write_compose(fx, port)
+        proc = _spawn_named_listener(fx.root, port, name="docker-proxy")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call('reconcile_stale_ports "$(pwd)"')
+            self.assertIn("docker-proxy orphelin", result.stderr)
+            self.assertIn(f"kill {proc.pid}", result.stderr)
+            self.assertIn("APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1", result.stderr)
+            self.assertIsNone(proc.poll(), "jamais tué sans APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS=1")
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+    def test_c_orphan_docker_proxy_with_opt_in_is_reclaimed_and_port_freed(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        self._write_compose(fx, port)
+        proc = _spawn_named_listener(fx.root, port, name="docker-proxy")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call(
+                'reconcile_stale_ports "$(pwd)"',
+                extra_env={"APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS": "1"},
+            )
+            self.assertIn("libération du port", result.stderr)
+            proc.wait(timeout=5)
+            self.assertIsNotNone(proc.poll(), "le docker-proxy orphelin doit avoir été réellement terminé")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            with self.assertRaises(OSError):
+                sock.connect(("127.0.0.1", port))
+            sock.close()
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
+
+    def test_d_externally_occupied_port_is_never_touched_even_with_opt_in(self) -> None:
+        fx = LauncherFixture(self.tmp)
+        port = _free_port()
+        self._write_compose(fx, port)
+        proc = _spawn_named_listener(fx.root, port, name="some-external-service")
+        try:
+            time.sleep(0.5)
+            result = fx.source_and_call(
+                'reconcile_stale_ports "$(pwd)"',
+                extra_env={"APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS": "1"},
+            )
+            self.assertIn("PAS un docker-proxy", result.stderr)
+            self.assertIn("service externe", result.stderr)
+            self.assertIsNone(proc.poll(), "un service externe n'est jamais touché, même avec l'opt-in")
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+
+class TestComposeUpStalePortEndToEnd(LauncherTestCase):
+    """Bout en bout RÉEL via `fx.run()` (le VRAI `apex-launch.sh`, pas un
+    appel de fonction isolé) — preuve que `reconcile_stale_ports` est bien
+    câblée dans `compose_up`, AVANT `docker compose up -d --wait`."""
+
+    def test_a_orphan_diagnosed_but_compose_up_still_fails_without_opt_in(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        (fx.root / "docker-compose.yml").write_text(
+            f'services:\n  fake:\n    ports:\n      - "127.0.0.1:{port}:{port}"\n'
+        )
+        fx.write_fake_docker(compose_up_exit=1, compose_up_output="Error: address already in use")
+        proc = _spawn_named_listener(fx.root, port, name="docker-proxy")
+        try:
+            time.sleep(0.5)
+            result = fx.run()
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("docker-proxy orphelin", result.stderr)
+            self.assertIsNone(proc.poll(), "jamais tué sans opt-in, même en bout en bout")
+        finally:
+            proc.kill()
+            proc.wait(timeout=5)
+
+    def test_b_orphan_reclaimed_with_opt_in_and_compose_up_then_succeeds(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        (fx.root / "docker-compose.yml").write_text(
+            f'services:\n  fake:\n    ports:\n      - "127.0.0.1:{port}:{port}"\n'
+        )
+        fx.write_fake_docker(compose_up_exit=0)
+        proc = _spawn_named_listener(fx.root, port, name="docker-proxy")
+        try:
+            time.sleep(0.5)
+            result = fx.run(extra_env={"APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS": "1"})
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("libération du port", result.stderr)
+            proc.wait(timeout=5)
+            self.assertIsNotNone(proc.poll())
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait(timeout=5)
+
+    def test_c_a_free_port_never_triggers_any_reconcile_log_line(self) -> None:
+        """Non-régression : le cas normal (rien d'orphelin) ne doit
+        afficher aucun message de réconciliation — comportement inchangé
+        pour l'écrasante majorité des lancements."""
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        (fx.root / "docker-compose.yml").write_text(
+            f'services:\n  fake:\n    ports:\n      - "127.0.0.1:{port}:{port}"\n'
+        )
+        fx.write_fake_docker()
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("docker-proxy orphelin", result.stderr)
+        self.assertNotIn("service externe", result.stderr)
 
 
 class TestBashSyntax(unittest.TestCase):
