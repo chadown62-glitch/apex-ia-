@@ -127,6 +127,41 @@ def check_cgroups_v2(ctx: CheckContext) -> CheckResult:
     )
 
 
+def check_data_root(ctx: CheckContext) -> CheckResult:
+    """`paths.data_root` (N+26) — résolu par `${APEX_DATA_ROOT:-/home/apex/
+    apex-data}` (voir `apex.config.loader.substitute_env`), jamais validé
+    par le chargeur lui-même (qui reste sans effet de bord filesystem par
+    conception, voir K1_K2_CORRECTIONS.md — un répertoire pas encore créé
+    est un état légitime). C'est ICI, en lecture seule, que l'absence ou la
+    non-écrivabilité devient un diagnostic observable — jamais un FAIL : un
+    répertoire manquant est le cas ATTENDU sur une première installation
+    (créé paresseusement à l'usage, ou automatiquement par le safe-fix
+    `apex.doctor.repair` — `mkdir -p`, jamais destructeur)."""
+    if ctx.config is None:
+        return result("fs.data_root", CATEGORY, Severity.SKIP, "configuration non chargée")
+    path = ctx.config.paths.data_root
+    if not ctx.probe.exists(path):
+        return result(
+            "fs.data_root", CATEGORY, Severity.WARN,
+            f"répertoire de données absent : {path}",
+            remediation=(
+                "mkdir -p " + path + "  — sûr, ne supprime jamais rien ; "
+                "APEX_DATA_ROOT (variable d'environnement ou .env) permet de "
+                "pointer ailleurs sans modifier config.yaml."
+            ),
+            path=path, exists=False,
+        )
+    if not ctx.probe.is_writable_dir(path):
+        return result(
+            "fs.data_root", CATEGORY, Severity.FAIL,
+            f"répertoire de données non accessible en écriture : {path}",
+            remediation=f"Corriger les permissions : chown/chmod sur {path} (ou pointer APEX_DATA_ROOT ailleurs).",
+            path=path, exists=True, writable=False,
+        )
+    return result("fs.data_root", CATEGORY, Severity.PASS, f"répertoire de données prêt : {path}",
+                  path=path, exists=True, writable=True)
+
+
 CHECKS = (
     ("python.version", check_python_version),
     ("python.packages", check_optional_packages),
@@ -134,4 +169,5 @@ CHECKS = (
     ("host.cgroups", check_cgroups_v2),
     ("wsl.interop", check_wsl_interop),
     ("wsl.systemd", check_wsl_systemd),
+    ("fs.data_root", check_data_root),
 )

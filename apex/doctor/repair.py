@@ -116,8 +116,22 @@ def _repair_compose_service(result: CheckResult) -> tuple[str, ...] | None:
     return ("docker", "compose", "up", "-d", service_name)
 
 
+def _repair_missing_data_root(result: CheckResult) -> tuple[str, ...] | None:
+    # `fs.data_root` WARN avec `exists=False` (apex.doctor.checks.
+    # environment.check_data_root, N+26) : créer le répertoire est sûr et
+    # explicitement autorisé par la mission (« création de répertoires
+    # manquants ») — `mkdir -p` ne touche jamais un répertoire déjà
+    # existant, jamais destructeur, jamais de suppression.
+    if result.facts.get("exists") is False:
+        path = result.facts.get("path")
+        if isinstance(path, str) and path:
+            return ("mkdir", "-p", path)
+    return None
+
+
 _SAFE_REPAIR_RULES: dict[str, Any] = {
     "docker.present": _repair_docker_present,
+    "fs.data_root": _repair_missing_data_root,
     **{name: _repair_compose_service for name in _COMPOSE_SERVICE_CHECKS},
 }
 

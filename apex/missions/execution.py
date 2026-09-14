@@ -41,23 +41,55 @@ dans l'ordre jusqu'au premier succès. `generate_mission_response` n'est PAS
 modifiée par ce troisième chemin — un appelant qui fournit déjà son
 `ModelEndpoint` continue de l'utiliser sans aucun changement de
 comportement.
+
+**N+26 — recovery/retry/reassignment, STRICTEMENT opt-in.** `launch_mission`
+accepte désormais `pool`/`alternate_pools`/`max_attempts`, tous optionnels.
+`pool is None` (la valeur par défaut) préserve EXACTEMENT le comportement
+historique — une seule tentative, `IsolationUnavailable`/tout échec ->
+`mark_failed` immédiat, AUCUN appel à `apex.recovery` — vérifié par
+l'intégralité de la suite de tests existante, inchangée. Fournir `pool`
+active la boucle bornée décrite par `apex.recovery.policy.decide` : chaque
+nouvelle tentative (`RETRY`/`REASSIGN`) spawn un NOUVEAU `Clone`
+(`AgentRuntime.spawn`), jamais une reprise du clone en échec — cohérent
+avec l'invariant déjà documenté par `apex.scheduler.recovery.
+RecoveryService`/`AgentRuntime.recover_orphan` (« jamais de reprise, une
+tentative authentiquement nouvelle »). `CANCELLED` continue de court-
+circuiter la boucle exactement comme avant : `apex.scheduler.service.
+SchedulerService.cancel_mission` reste seul juge de cette transition.
+
+`classify_sandbox_outcome` (`apex.recovery.classify`) ne produit, depuis ce
+chemin, que `SANDBOX_FAILURE`/`TIMEOUT`/`CANCELLED`/`RESOURCE_EXHAUSTED`/
+`EXECUTION_FAILURE` — `launch_mission` n'exécute ni Judge ni appel
+`ModelProvider` direct, donc `INCORRECT_SOLUTION`/`PROVIDER_FAILURE`/
+`PROVIDER_UNAVAILABLE`/`INVALID_CANDIDATE` ne sont JAMAIS atteintes ici
+aujourd'hui (elles restent câblées et testées au niveau politique — voir
+`tests/test_recovery_policy.py` — pour un futur appelant qui les produirait
+réellement). `PROVIDER_FAILURE`/`PROVIDER_UNAVAILABLE` ont déjà un
+mécanisme de reassignment RÉEL et INDÉPENDANT :
+`generate_mission_response_via_router`/`apex.routing.generate_with_fallback`
+— cette boucle ne le duplique jamais.
 """
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable, Sequence
+from dataclasses import replace
+from datetime import datetime, timezone
 from typing import Any
 
 from apex.agents.model import Clone, CloneState
 from apex.agents.runtime import AgentRuntime
-from apex.config.schema import ExternalPolicy, ModelEndpoint
+from apex.config.schema import ComputePool, ExternalPolicy, ModelEndpoint
 from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
 from apex.missions.model import Mission
 from apex.missions.service import MissionService
 from apex.models.model import GenerationRequest
-from apex.models.provider import ModelProvider, get_default_provider as get_default_model_provider
+from apex.models.provider import ModelProvider
+from apex.models.provider import get_default_provider as get_default_model_provider
 from apex.models.registry import ModelCandidate
 from apex.policy.model import Subject
+from apex.recovery import AttemptHistory, AttemptRecord, RecoveryAction, classify_sandbox_outcome, decide
 from apex.routing.generation import generate_with_fallback
 from apex.routing.model import RoutingRequest
 from apex.routing.router import select_model
@@ -69,6 +101,10 @@ from apex.sandbox import (
     SandboxSpec,
     get_default_provider,
 )
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 def _default_limits(session_factory: Any) -> ResourceLimits:
@@ -87,6 +123,33 @@ def _get_clone(session_factory: Any, clone_id: str) -> Clone | None:
         return Clone.from_row(row) if row is not None else None
 
 
+def _record_mission_event(
+    session_factory: Any, mission: Mission, kind: str, details: dict[str, Any],
+) -> None:
+    """Même patron que `MissionService._record_event`/`AgentRuntime.
+    _record_event` — jamais un troisième mécanisme de journalisation."""
+    from apex.db.engine import session_scope
+    from apex.db.repositories import EventRepository
+
+    with session_scope(session_factory) as session:
+        EventRepository(session).add(
+            ts=_utcnow(), level="INFO", logger="apex.missions.execution",
+            msg=kind, context={"mission_id": mission.id, "kind": kind, **details},
+        )
+
+
+def _rotate_pool(pools: tuple[ComputePool, ...], current: ComputePool) -> ComputePool:
+    """Alterne vers le pool RÉEL suivant — jamais un choix arbitraire.
+    `pools` a toujours au moins `current` dedans (voir son unique appelant) ;
+    un seul pool disponible retourne `current` inchangé (aucune alternative
+    réelle, la politique ne devrait alors jamais avoir décidé REASSIGN)."""
+    if len(pools) <= 1:
+        return current
+    ids = [p.pool_id for p in pools]
+    idx = ids.index(current.pool_id)
+    return pools[(idx + 1) % len(pools)]
+
+
 def launch_mission(
     mission_id: str,
     *,
@@ -98,7 +161,13 @@ def launch_mission(
     limits: ResourceLimits | None = None,
     requested_by: Subject = Subject.CORE,
     cancel_token: CancellationToken | None = None,
+    pool: ComputePool | None = None,
+    alternate_pools: tuple[ComputePool, ...] = (),
+    max_attempts: int | None = None,
 ) -> Mission:
+    """`pool`/`alternate_pools`/`max_attempts` : voir la docstring du module,
+    §N+26 — tous optionnels, `pool is None` préserve le comportement
+    historique à une seule tentative sans AUCUN changement observable."""
     mission = mission_service.get(mission_id)
     if mission is None:
         raise LookupError(f"mission « {mission_id} » introuvable")
@@ -121,6 +190,10 @@ def launch_mission(
     # si la mission n'est pas QUEUED — aucune règle de permission dupliquée ici.
     mission = mission_service.mark_running(mission_id, requested_by=requested_by)
 
+    # Résolution INCHANGÉE depuis avant N+26 (même fonction, même provider
+    # retourné — `get_default_provider()` délègue déjà à
+    # `select_sandbox_provider().provider`, voir apex.sandbox.provider) :
+    # aucune différence observable pour un appelant qui ne fournit pas `pool`.
     resolved_sandbox = sandbox or get_default_provider()
     resolved_limits = limits or _default_limits(session_factory)
     resolved_command = command
@@ -129,34 +202,141 @@ def launch_mission(
 
         resolved_command = research_diagnostic_command()
 
-    spec = SandboxSpec(
-        mission_id=mission.id, clone_id=clone.clone_id,
-        command=resolved_command, limits=resolved_limits,
-    )
-
-    # 2. AGENT RUNTIME -> SANDBOX. `execute_in_sandbox` vérifie elle-même
-    # Action.EXECUTE_IN_SANDBOX (CORE seul) et l'état READY du clone.
-    try:
-        result = agent_runtime.execute_in_sandbox(
-            clone, resolved_sandbox, spec, requested_by=requested_by, cancel_token=cancel_token,
+    if pool is None:
+        # Comportement historique, INCHANGÉ — aucun appel à apex.recovery.
+        spec = SandboxSpec(
+            mission_id=mission.id, clone_id=clone.clone_id,
+            command=resolved_command, limits=resolved_limits,
         )
-    except IsolationUnavailable as exc:
-        return mission_service.mark_failed(mission_id, error=f"sandbox indisponible : {exc}")
+        try:
+            result = agent_runtime.execute_in_sandbox(
+                clone, resolved_sandbox, spec, requested_by=requested_by, cancel_token=cancel_token,
+            )
+        except IsolationUnavailable as exc:
+            return mission_service.mark_failed(mission_id, error=f"sandbox indisponible : {exc}")
+        return _finalize(mission_service, mission_id, mission, result)
 
-    # 3. MISSION -> RESULT -> REVIEW (ou FAILED). La décision COMPLETED/rejetée
-    # reste HUMAN (validate/reject, apex.missions.service) — jamais automatique.
+    # -- N+26 : boucle de recovery bornée, opt-in via `pool` -----------------
+    from apex.config.loader import load_config
+
+    recovery_cfg = load_config().recovery
+    if max_attempts is not None:
+        recovery_cfg = replace(recovery_cfg, max_attempts=max_attempts)
+
+    if sandbox is None:
+        # N+26 : câble enfin `SandboxSelection.reason` (N+25 §6, jamais
+        # affiché nulle part jusqu'ici) dans la trace observable de la
+        # mission — seulement sur ce chemin (opt-in via `pool`), jamais
+        # ajouté au comportement historique. Deuxième sonde volontairement
+        # bon marché : `detect()` est mis en cache par l'instance déjà
+        # construite par `get_default_provider()` ci-dessus.
+        from apex.sandbox.provider import select_sandbox_provider
+
+        selection = select_sandbox_provider()
+        _record_mission_event(
+            session_factory, mission, "provider.selected",
+            {"provider_name": selection.provider_name, "reason": selection.reason},
+        )
+
+    available_pools = (pool, *alternate_pools)
+    current_pool = pool
+    current_clone = clone
+    history = AttemptHistory()
+    attempt_number = 0
+
+    while True:
+        attempt_number += 1
+        spec = SandboxSpec(
+            mission_id=mission.id, clone_id=current_clone.clone_id,
+            command=resolved_command, limits=resolved_limits,
+        )
+        _record_mission_event(
+            session_factory, mission, "execution.started",
+            {
+                "attempt_number": attempt_number, "pool_id": current_pool.pool_id,
+                "clone_id": current_clone.clone_id,
+            },
+        )
+        started = time.perf_counter()
+        try:
+            result = agent_runtime.execute_in_sandbox(
+                current_clone, resolved_sandbox, spec, requested_by=requested_by, cancel_token=cancel_token,
+            )
+        except IsolationUnavailable as exc:
+            duration_s = time.perf_counter() - started
+            category = classify_sandbox_outcome(isolation_unavailable=exc)
+            failure_text = str(exc)
+            sandbox_level = resolved_sandbox.detect().level.value
+        else:
+            duration_s = time.perf_counter() - started
+            if result.status is ExecutionStatus.SUCCESS:
+                history.add(AttemptRecord(
+                    attempt_number=attempt_number, provider_name=type(resolved_sandbox).__name__,
+                    sandbox_level=result.isolation_level.value, category=None, reason="succès",
+                    strategy=None, judge_result=None, started_at=_utcnow(), duration_s=duration_s,
+                    reassigned=current_pool is not pool, decision=None,
+                ))
+                _record_mission_event(
+                    session_factory, mission, "execution.completed",
+                    {"attempt_number": attempt_number, "status": result.status.value},
+                )
+                return mission_service.mark_review(mission_id, result=result.stdout)
+            if result.status is ExecutionStatus.CANCELLED:
+                # Inchangé — voir la docstring du module : jamais interféré
+                # par la boucle de recovery.
+                return mission_service.get(mission_id) or mission
+            category = classify_sandbox_outcome(result=result)
+            failure_text = result.error_detail or result.status.value
+            sandbox_level = result.isolation_level.value
+
+        decision = decide(
+            category, attempt_number=attempt_number, policy=recovery_cfg,
+            has_alternate_target=len(available_pools) > 1, previous_failure=failure_text,
+        )
+        history.add(AttemptRecord(
+            attempt_number=attempt_number, provider_name=type(resolved_sandbox).__name__,
+            sandbox_level=sandbox_level, category=category, reason=decision.reason,
+            strategy=decision.strategy_change, judge_result=None, started_at=_utcnow(),
+            duration_s=duration_s, reassigned=False, decision=decision.action,
+        ))
+        _record_mission_event(session_factory, mission, "recovery.decided", decision.to_dict())
+
+        if decision.action is RecoveryAction.RETRY:
+            _record_mission_event(
+                session_factory, mission, "retry.started", {"next_attempt_number": attempt_number + 1},
+            )
+            current_clone = agent_runtime.spawn(
+                current_clone.type, pool=current_pool, genome_ref=current_clone.genome_ref,
+                spawned_by=requested_by, mission_id=mission.id,
+            )
+            continue
+        if decision.action is RecoveryAction.REASSIGN:
+            next_pool = _rotate_pool(available_pools, current_pool)
+            _record_mission_event(
+                session_factory, mission, "reassignment.decided",
+                {"from_pool": current_pool.pool_id, "to_pool": next_pool.pool_id},
+            )
+            current_pool = next_pool
+            current_clone = agent_runtime.spawn(
+                current_clone.type, pool=current_pool, genome_ref=current_clone.genome_ref,
+                spawned_by=requested_by, mission_id=mission.id,
+            )
+            continue
+        if decision.action is RecoveryAction.ESCALATE:
+            _record_mission_event(session_factory, mission, "recovery.escalated", decision.to_dict())
+            return mission_service.mark_failed(mission_id, error=f"ESCALATE: {failure_text}")
+        # RecoveryAction.BLOCK
+        return mission_service.mark_failed(mission_id, error=failure_text)
+
+
+def _finalize(mission_service: MissionService, mission_id: str, mission: Mission, result: Any) -> Mission:
+    """Chemin historique (`pool is None`) — extrait tel quel, comportement
+    strictement identique à avant N+26."""
     if result.status is ExecutionStatus.SUCCESS:
         return mission_service.mark_review(mission_id, result=result.stdout)
     if result.status is ExecutionStatus.CANCELLED:
-        # Étape 8 : la transition RUNNING -> CANCELLED est décidée UNE seule
-        # fois, par `apex.scheduler.service.SchedulerService.cancel_mission`
-        # (qui a demandé cette annulation) — jamais ici, pour éviter que
-        # deux chemins ne se disputent la finalisation de l'état de la
-        # mission. On se contente de renvoyer l'état réellement persisté.
         return mission_service.get(mission_id) or mission
-    return mission_service.mark_failed(
-        mission_id, error=result.error_detail or result.status.value,
-    )
+    return mission_service.mark_failed(mission_id, error=result.error_detail or result.status.value)
 
 
 def generate_mission_response(

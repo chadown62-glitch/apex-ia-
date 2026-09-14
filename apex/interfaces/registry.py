@@ -1552,6 +1552,70 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "dans ce module — même discipline que `_FakeProvider("
               "ModelProvider)` dans `tests/test_routing_generation.py`.",
     ),
+    Abstraction(
+        "RecoveryPolicy", "décision RETRY/REASSIGN/BLOCK/ESCALATE après un échec de mission", 29, 29,
+        ImplStatus.STUB, "aucune récupération automatique — mark_failed immédiat (comportement pré-N+26)",
+        module="apex.recovery.policy",
+        notes="STUB et non IMPLEMENTED délibérément : `apex.recovery.classify."
+              "classify_sandbox_outcome` -> `apex.recovery.policy.decide` "
+              "n'est réellement exercé, depuis `apex.missions.execution."
+              "launch_mission` (opt-in via le paramètre `pool`, comportement "
+              "historique inchangé si omis), que pour les catégories "
+              "atteignables par une exécution sandboxée directe "
+              "(SANDBOX_FAILURE/TIMEOUT/CANCELLED/RESOURCE_EXHAUSTED/"
+              "EXECUTION_FAILURE) — `PROVIDER_FAILURE`/`PROVIDER_UNAVAILABLE` "
+              "(déjà couvertes par un mécanisme RÉEL et INDÉPENDANT, "
+              "`apex.routing.generation.generate_with_fallback`, jamais "
+              "dupliqué ici) et `INVALID_CANDIDATE`/`INCORRECT_SOLUTION` "
+              "(exigeraient un Judge attaché à l'exécution d'une Mission, "
+              "qui n'existe pas encore) restent câblées et testées "
+              "exhaustivement au niveau politique (`tests/"
+              "test_recovery_policy.py`) sans jamais être atteintes en "
+              "pratique par ce chemin. Chaque nouvelle tentative RETRY/"
+              "REASSIGN spawn un NOUVEAU `Clone` (`AgentRuntime.spawn`), "
+              "jamais une reprise — cohérent avec l'invariant déjà tenu par "
+              "`apex.scheduler.recovery.RecoveryService`/`AgentRuntime."
+              "recover_orphan`. Borné inconditionnellement par "
+              "`apex.config.schema.RecoveryPolicy.max_attempts` — aucune "
+              "boucle infinie possible, vérifié par test.",
+    ),
+    Abstraction(
+        "TaskLoop", "OBJECTIVE -> ... -> COMPLETE/BLOCK, fondations de l'exécution autonome bornée", 29, 29,
+        ImplStatus.STUB, "aucune boucle exécutable — seules les garde-fous et la machine à états existent",
+        module="apex.taskloop.model",
+        notes="STUB et non IMPLEMENTED, ni même DEFINED, DÉLIBÉRÉMENT : "
+              "consigne explicite de la mission N+26 (« NE PAS encore "
+              "transformer APEX en système totalement autonome incontrôlé »). "
+              "Deux pièces RÉELLES et testées existent : la machine à états "
+              "`TaskLoopStage` (`assert_stage_transition_allowed`, même "
+              "patron que `MissionState`/`CloneState`) et `check_stop` "
+              "(fonction PURE, garde-fous obligatoires — annulation/échec "
+              "d'infrastructure/indisponibilité provider priment toujours sur "
+              "un budget de tentatives ou un critère de succès/échec, "
+              "jamais l'inverse). AUCUNE implémentation de "
+              "OBJECTIVE->TASK_GENERATION->PLAN->EXECUTION->TEST->JUDGE "
+              "n'existe : un futur composant devra composer `apex.recovery` "
+              "(réel), `apex.missions.execution` (réel), `apex.judge`/"
+              "`apex.oracles` (réels) — jamais les redécouvrir.",
+    ),
+    Abstraction(
+        "RecommendationSource", "observation/analyse/recommandation issues du learning — jamais une décision", 29, 29,
+        ImplStatus.STUB, "aucun appelant ne consomme la sortie pour modifier une politique automatiquement",
+        module="apex.metalearner.recommendation",
+        notes="STUB et non IMPLEMENTED délibérément : `recommend_from_"
+              "experience` N'EST PAS un stub au sens fonctionnel — elle "
+              "interroge réellement `apex.metalearner.experience."
+              "ExperienceRepository` (réel depuis N+20) et calcule des "
+              "statistiques réelles (taux de succès, catégorie d'échec "
+              "dominante) — mais AUCUN appelant de ce dépôt ne consomme "
+              "aujourd'hui sa sortie pour modifier `apex.config.schema."
+              "RecoveryPolicy` ni aucune autre politique opérationnelle : "
+              "c'est exactement la frontière posée par cette mission "
+              "(« LEARNING != DECISION AUTHORITY »). Le contrat "
+              "`RecommendationSource` (Protocol) ne définit "
+              "STRUCTURELLEMENT aucune méthode `decide`/`apply`/`enforce` — "
+              "vérifié par test, pas seulement documenté.",
+    ),
 )
 
 

@@ -1,0 +1,172 @@
+# APEX — Démarrage / Validation
+
+Ce document répond à une seule question : **« je reviens sur ma machine,
+comment je sais si APEX est prêt, et si non, comment je corrige ? »**
+
+```
+commande unique
+    ↓
+diagnostic (environnement, infrastructure, sandbox, config)
+    ↓
+corrections sûres appliquées automatiquement (liste blanche fermée)
+    ↓
+validation (doctor + gate + tests ciblés)
+    ↓
+READY / READY WITH WARNINGS / BLOCKED / FAILED
+```
+
+## La commande unique
+
+```bash
+cd ~/apex-ia-
+./scripts/apex-preflight.sh
+```
+
+Elle :
+
+1. résout `.env`/l'interpréteur Python (`.venv` ou `python3` système) ;
+2. démarre l'infrastructure Docker (`docker compose up -d --wait`, y
+   compris les correctifs d'idempotence N+23/N+24 déjà en place) ;
+3. lance `apex doctor`, **applique les safe-fixes** (liste blanche fermée,
+   voir plus bas), puis relit `apex doctor` et consulte `apex gate` ;
+4. lance un sous-ensemble rapide de tests (config/sandbox/recovery/
+   doctor/taskloop/learning — aucune dépendance Docker/Postgres réelle) ;
+5. affiche un verdict final : `READY`, `READY WITH WARNINGS`, `BLOCKED`,
+   ou `FAILED`, avec la liste exacte de ce qui bloque le cas échéant.
+
+Codes de sortie : `0` = READY(-WARN), `1` = BLOCKED, `2` = FAILED (erreur
+de l'orchestration elle-même, pas de l'environnement).
+
+### Options
+
+| Option | Effet |
+|---|---|
+| `--dry-run` | n'applique AUCUN safe-fix — affiche seulement le plan |
+| `--full` | suite de tests complète + sonde sandbox coûteuse (`apex doctor --full`) |
+| `--skip-tests` | diagnostic + safe-fixes seuls, aucun test |
+
+## Ce qui est corrigé automatiquement (safe-fixes)
+
+Liste blanche **fermée**, définie dans `apex/doctor/repair.py` — rien
+d'autre n'est jamais exécuté automatiquement :
+
+- création d'un répertoire `APEX_DATA_ROOT` manquant (`mkdir -p`, jamais
+  destructeur) ;
+- démarrage du service Docker (`service docker start`) si le démon est
+  injoignable ;
+- `docker compose up -d <service>` pour UN service précis (postgres,
+  redis, minio, ollama) qui a une définition Compose mais n'est pas
+  joignable — jamais `docker compose up -d` nu, qui recréerait tout.
+
+## Ce qui nécessite une intervention humaine
+
+Tout le reste — jamais deviné, jamais forcé :
+
+- absence de GPU / VRAM insuffisante / pilote NVIDIA ;
+- Docker Desktop au lieu de Docker Engine natif (isolation limitée) ;
+- `runsc`/gVisor absent (plafond d'isolation Docker durci, pas gVisor —
+  acceptable pour du code généré ordinaire, bloquant seulement pour un
+  futur Red Team) ;
+- modèles Ollama absents (`ollama pull <modèle>`) ;
+- `.env` absent ou mal configuré (`cp .env.example .env` puis éditer) ;
+- cgroups v2 absent (mise à jour WSL2, `wsl --update`) ;
+- espace disque insuffisant.
+
+Chaque cas apparaît dans le rapport `apex doctor` avec sa remédiation
+exacte.
+
+## Sandbox — quel backend, et pourquoi
+
+`apex doctor --full` (ou `./scripts/apex-preflight.sh --full`) affiche
+désormais (N+26) **quel backend d'isolation serait réellement choisi et
+pourquoi** :
+
+1. `LinuxNamespaceSandbox` (NAMESPACED) si les namespaces Linux + cgroups
+   v1 + abaissement de privilège réel + coupure réseau sont TOUS
+   vérifiés empiriquement sur cet hôte — préféré (aucune dépendance à un
+   démon tiers).
+2. Sinon `ContainerSandbox` (CONTAINERIZED) SEULEMENT si Docker est
+   réellement joignable ET si une sonde de sécurité réelle (réseau coupé,
+   utilisateur non-root, racine en lecture seule, vérifiés sur un vrai
+   conteneur jetable) réussit — jamais choisi au seul motif que `docker`
+   est installé.
+3. Sinon : refus explicite. Aucune mission ne s'exécute en sandbox tant
+   qu'aucun des deux n'est réellement fonctionnel — jamais une exécution
+   dégradée silencieuse.
+
+C'est exactement le cas d'un déploiement WSL2 où `unshare`/cgroups v1 sont
+refusés par la politique de virtualisation de l'hôte mais où Docker
+fonctionne : `ContainerSandbox` (N+25) prend le relais automatiquement.
+
+## Recovery / retry / reassignment (N+26)
+
+Une mission lancée avec un `pool` (voir `apex.missions.execution.
+launch_mission`, paramètre optionnel — le comportement historique à une
+seule tentative reste inchangé si omis) bénéficie d'une politique de
+récupération bornée (`apex.recovery.policy.decide`) :
+
+| Catégorie d'échec | Décision |
+|---|---|
+| Isolation sandbox indisponible | BLOCK immédiat (jamais de retry — structurel) |
+| Timeout | RETRY borné |
+| Annulation explicite | BLOCK, jamais relancé automatiquement |
+| Candidat/commande invalide | RETRY avec stratégie différente |
+| Échec d'exécution générique | RETRY borné |
+| Solution jugée incorrecte | RETRY (feedback du judge), puis ESCALATE si le budget est épuisé |
+| Provider modèle en échec/injoignable | REASSIGN si une alternative réelle existe, sinon RETRY/BLOCK |
+| Ressources épuisées (OOM, etc.) | RETRY une seule fois (budget plus strict), puis BLOCK |
+
+Chaque tentative est tracée (`mission.started`, `execution.started`,
+`sandbox.*`, `recovery.decided`, `retry.started`/`reassignment.decided`,
+`mission.review`/`mission.failed`) — jamais un événement fabriqué pour une
+étape qui n'a pas eu lieu. `apex.config.schema.RecoveryPolicy` (section
+`recovery:` de `config.yaml`) borne le nombre de tentatives —
+`max_attempts: 3` par défaut, aucune boucle infinie possible.
+
+## Fondations N+27 (Autonomous Task Loop) — PAS encore une boucle autonome
+
+`apex.taskloop` pose deux garde-fous réels et testés, sans exécuter
+aucune génération/plan/exécution automatique :
+
+- la machine à états des étapes (`OBJECTIVE -> TASK_GENERATION -> PLAN ->
+  EXECUTION -> TEST -> JUDGE -> COMPLETE`, avec le chemin d'échec
+  `JUDGE -> ANALYZE -> STRATEGY_UPDATE -> RETRY/REASSIGN/BLOCK`) ;
+- `check_stop` : une fonction pure qui applique les garde-fous
+  obligatoires (nombre max de tentatives, durée maximale, budget de
+  ressources, critères de succès/échec vérifiables par du code, annulation,
+  arrêt sur échec d'infrastructure/indisponibilité provider — ces deux
+  derniers priment toujours).
+
+Aucune boucle autonome n'existe encore dans ce dépôt — c'est délibéré.
+
+## Frontière Learning (N+28) — observer/recommander, jamais décider
+
+`apex.metalearner.recommendation.recommend_from_experience` agrège
+réellement les `Experience` déjà persistées (taux de succès, catégorie
+d'échec dominante) pour produire des `Recommendation` — texte + preuve.
+**Rien dans ce dépôt ne consomme cette sortie pour modifier automatiquement
+une politique** (`RecoveryPolicy` comprise) : c'est la frontière que cette
+mission établit, vérifiée par test (le contrat `RecommendationSource` ne
+définit structurellement aucune méthode `decide`).
+
+## Limites connues
+
+- La validation Docker **réelle** (namespaces indisponibles, Docker
+  fonctionnel, `ContainerSandbox` réellement exercé) dépend de la machine
+  physique — jamais affirmée depuis un environnement où Docker est
+  injoignable. `apex doctor --full`/`./scripts/apex-preflight.sh --full`
+  le disent honnêtement (SKIP/FAIL selon le cas), jamais un PASS fabriqué.
+- `apex-preflight.sh` ne démarre jamais réellement APEX — c'est
+  volontaire (`./scripts/apex-launch.sh serve` ou `apex start` restent des
+  actions explicites et séparées).
+- Le sous-ensemble de tests « quick » ne couvre pas tout — utiliser
+  `--full` avant une validation de mise en production.
+
+## Procédures manuelles restantes
+
+- `ollama pull <modèle>` pour tout modèle de référence manquant (jamais
+  automatisé — téléchargement volumineux, décision explicite requise).
+- Réparation matérielle/pilote (GPU, cgroups v2, Docker Desktop vs
+  Engine) — toujours signalée, jamais corrigée automatiquement.
+- `cp .env.example .env` puis édition manuelle des valeurs (secrets,
+  chemins spécifiques à la machine).

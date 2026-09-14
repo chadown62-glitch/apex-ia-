@@ -1161,3 +1161,184 @@ python3 -m pytest tests/test_sandbox_container.py -v -k TestRealDockerExecution
 # 3. Confirmer qu'aucun conteneur apex_* ne traîne après la suite
 docker ps -a --filter "name=apex_"
 ```
+
+# APEX — N+26 + Hardening + Préparation N+27/N+28 (mission « démarrage/validation en une commande »)
+
+## 1. Contexte
+
+Mission enveloppe couvrant : (1) le problème connu `APEX_DATA_ROOT` non
+résolu en environnement de test, (2) l'implémentation réelle de N+26
+(recovery/retry/reassignment de mission), (3) les fondations de N+27
+(Autonomous Task Loop, interfaces uniquement), (4) la frontière de N+28
+(recommandations du learning, jamais une décision), (5) un mécanisme
+`apex doctor --full`/`scripts/apex-preflight.sh` unique pour qu'une
+personne puisse valider l'environnement en une seule commande.
+
+## 2. `APEX_DATA_ROOT` — cause racine et correction
+
+`config.yaml` résout `paths.data_root` via `${APEX_DATA_ROOT:-/home/apex/
+apex-data}`. `apply_dotenv` (charge `.env` dans `os.environ`) n'est
+appelée QUE par `apex.cli.main.main()` — `pytest` ne l'invoque jamais.
+Tout test appelant `load_config()` directement (~20 sites d'appel)
+résolvait donc ce chemin contre l'environnement shell réel, sans repli sur
+`.env`, sur un dépôt fraîchement cloné sans `APEX_DATA_ROOT` exporté.
+
+**Correction** : `tests/conftest.py` (nouveau — aucun `conftest.py`
+n'existait) — `pytest_configure` fixe `APEX_DATA_ROOT` à un répertoire
+temporaire réel AVANT toute collecte de test, **seulement s'il n'est pas
+déjà défini** (jamais un `.env`/export réel écrasé), nettoyé à la fin de
+la session. `apex.config.loader` reste volontairement inchangé (aucune
+validation d'existence ajoutée — resterait un effet de bord filesystem
+dans un module qui doit rester side-effect-free, voir K1_K2_CORRECTIONS.md).
+
+## 3. N+26 — `apex.recovery` (recovery/retry/reassignment)
+
+`apex/recovery/` (nouveau package) :
+
+- `model.py` : `FailureCategory` (9 valeurs EXACTES de la mission :
+  SANDBOX_FAILURE/TIMEOUT/CANCELLED/INVALID_CANDIDATE/EXECUTION_FAILURE/
+  INCORRECT_SOLUTION/PROVIDER_FAILURE/PROVIDER_UNAVAILABLE/
+  RESOURCE_EXHAUSTED) — DISTINCTE d'`apex.metalearner.failure_taxonomy.
+  FailureCategory` (classe un `EvalRun` candidat/contenu ; celle-ci classe
+  une exécution sandbox/provider — deux couches, jamais fusionnées).
+  `RecoveryAction` (RETRY/REASSIGN/BLOCK/ESCALATE), `RecoveryDecision`,
+  `AttemptRecord`/`AttemptHistory`.
+- `classify.py` : `classify_sandbox_outcome`/`classify_provider_error` —
+  mapping FERMÉ depuis `ExecutionStatus`/`IsolationUnavailable`/
+  `ModelErrorCategory` (déjà réels), jamais un texte deviné.
+- `policy.py` : `decide()` — table déterministe exacte de §5 de la
+  mission (SANDBOX_FAILURE -> BLOCK toujours ; CANCELLED -> BLOCK
+  toujours ; TIMEOUT/INVALID_CANDIDATE/EXECUTION_FAILURE -> RETRY borné ;
+  INCORRECT_SOLUTION -> RETRY puis ESCALATE si budget épuisé ;
+  PROVIDER_FAILURE/PROVIDER_UNAVAILABLE -> REASSIGN si alternative réelle,
+  sinon RETRY/BLOCK ; RESOURCE_EXHAUSTED -> RETRY une seule fois, budget
+  séparé et plus strict que `max_attempts`).
+
+`apex.config.schema.RecoveryPolicy` (nouveau, `config.yaml` section
+`recovery:` — `max_attempts: 3`, `resource_exhausted_max_retries: 1`) —
+aucune nouvelle variable d'environnement.
+
+**Intégration dans `apex.missions.execution.launch_mission`** —
+STRICTEMENT opt-in via un nouveau paramètre `pool: ComputePool | None =
+None` (+ `alternate_pools`/`max_attempts`) : `pool is None` (défaut)
+préserve EXACTEMENT le comportement historique, vérifié par la suite de
+tests existante inchangée. Avec `pool`, une boucle bornée s'active :
+chaque RETRY/REASSIGN spawn un NOUVEAU `Clone` (`AgentRuntime.spawn`),
+jamais une reprise — cohérent avec l'invariant déjà tenu par
+`RecoveryService`/`AgentRuntime.recover_orphan`. `CANCELLED` continue de
+court-circuiter la boucle exactement comme avant (le Scheduler reste seul
+juge de cette transition). Nouveaux événements observables :
+`provider.selected` (câble enfin `SandboxSelection.reason` de N+25 dans
+la trace — gap explicitement noté dans le chapitre N+25), `execution.
+started`, `recovery.decided`, `retry.started`, `reassignment.decided`,
+`recovery.escalated`.
+
+**Limite honnête** : `classify_sandbox_outcome` ne produit, depuis ce
+chemin, que SANDBOX_FAILURE/TIMEOUT/CANCELLED/RESOURCE_EXHAUSTED/
+EXECUTION_FAILURE (`launch_mission` n'exécute ni Judge ni appel
+`ModelProvider` direct). PROVIDER_FAILURE/PROVIDER_UNAVAILABLE ont déjà un
+mécanisme RÉEL et INDÉPENDANT (`apex.routing.generation.
+generate_with_fallback`, N+18/19), jamais dupliqué ici. INVALID_CANDIDATE/
+INCORRECT_SOLUTION restent câblées et testées exhaustivement au niveau
+politique (`tests/test_recovery_policy.py`) sans être atteintes en
+pratique par ce chemin aujourd'hui.
+
+## 4. Préparation N+27 — `apex.taskloop` (fondations, AUCUNE autonomie)
+
+Consigne explicite respectée à la lettre : « NE PAS encore transformer
+APEX en système totalement autonome incontrôlé ». `apex/taskloop/model.py`
+pose exactement deux pièces RÉELLES et testées, zéro exécution :
+
+- `TaskLoopStage` + `assert_stage_transition_allowed` — machine à états du
+  schéma §10, même discipline que `MissionState`/`CloneState`.
+- `TaskLoopStopCriteria` + `check_stop` — fonction PURE appliquant les
+  garde-fous OBLIGATOIRES de §11 (max_attempts, max_wall_clock_s, budget
+  de ressources documenté, critères de succès/échec vérifiables par du
+  code, annulation — réutilise `apex.sandbox.CancellationToken` tel quel
+  — arrêt sur échec d'infrastructure/indisponibilité provider, ces deux
+  derniers priment toujours sur un budget épuisé).
+
+Aucune implémentation d'OBJECTIVE->...->COMPLETE n'existe : un futur
+composant devra composer `apex.recovery`/`apex.missions.execution`/
+`apex.judge`/`apex.oracles` (tous réels), jamais les redécouvrir.
+
+## 5. Préparation N+28 — `apex.metalearner.recommendation` (frontière)
+
+**LEARNING != DECISION AUTHORITY**, appliqué structurellement, pas
+seulement documenté : `RecommendationSource` (Protocol) ne définit
+délibérément aucune méthode `decide`/`apply`/`enforce` — vérifié par
+test. `recommend_from_experience` N'EST PAS un stub : elle interroge
+réellement `ExperienceRepository` (réel depuis N+20) et calcule des
+statistiques réelles (taux de succès, catégorie d'échec dominante) sur un
+échantillon — `()` si l'échantillon est trop petit pour dire quoi que ce
+soit honnêtement. Aucun appelant de ce dépôt ne consomme cette sortie pour
+modifier `RecoveryPolicy` ni aucune autre politique automatiquement.
+
+## 6. Doctor/Preflight (section prioritaire de la mission)
+
+- `apex/doctor/checks/environment.py::check_data_root` (nouveau) —
+  WARN si `data_root` absent (jamais FAIL : état attendu sur une première
+  installation), FAIL si présent mais non accessible en écriture, PASS
+  sinon. Nouvelle primitive `apex.util.probe.Probe.is_writable_dir`
+  (réelle + `FakeProbe`).
+- `apex/doctor/repair.py` — nouvelle règle `SAFE_AUTO_FIX` : `mkdir -p`
+  pour un `data_root` manquant (jamais s'il existe déjà — ne masque jamais
+  un problème de permissions réel, qui reste `MANUAL_REQUIRED`).
+- `apex/doctor/checks/sandbox.py` (nouveau) — `check_sandbox_selection`
+  câble enfin `apex.sandbox.provider.select_sandbox_provider()` (gap
+  explicitement noté par N+25 §6) dans `apex doctor`. Coûteux (sous-
+  processus réels, potentiellement un `docker run` de sonde) : **jamais
+  dans `apex doctor` par défaut**, seulement `apex doctor --full`
+  (nouveau flag CLI, nouveau `apex.doctor.runner.FULL_CHECKS = ALL_CHECKS
+  + sandbox.CHECKS`, additif, jamais un second jeu de checks divergent).
+- `scripts/apex-preflight.sh` (nouveau) — point d'entrée UNIQUE :
+  source `apex-launch.sh` (résolution .env/Python/Docker, jamais
+  dupliquée) -> `apex.doctor.launcher.run_preflight_and_repair` (réel
+  depuis N+19 — Diagnostic -> Auto-repair liste blanche fermée -> Verify
+  -> Gate, safe-fixes appliqués PAR DÉFAUT, `--dry-run` pour prévisualiser
+  seulement) -> `apex doctor --full` en option -> sous-ensemble de tests
+  curé (« quick », rapide, aucune dépendance Docker/Postgres réelle
+  requise) ou suite complète (`--full`) -> verdict final READY/READY WITH
+  WARNINGS/BLOCKED/FAILED, avec ce qui bloque exactement. **Ne démarre
+  JAMAIS le serveur APEX** — orchestration diagnostic uniquement,
+  exactement le principe qu'`apex-launch.sh` applique déjà à lui-même.
+
+`docs/DEMARRAGE_VALIDATION.md` (nouveau) — le document human-readable
+« une commande, un verdict » demandé par la mission.
+
+## 7. Registre (`apex/interfaces/registry.py`)
+
+Trois nouvelles entrées, toutes `ImplStatus.STUB` (réelles mais
+partielles, jamais IMPLEMENTED par excès de confiance) : `RecoveryPolicy`,
+`TaskLoop`, `RecommendationSource` — chacune documente précisément ce qui
+est réel contre ce qui reste hors de portée aujourd'hui, même discipline
+que `SandboxProvider`.
+
+## 8. Fichiers modifiés/créés (résumé)
+
+Nouveaux : `apex/recovery/{__init__,model,classify,policy}.py`,
+`apex/taskloop/{__init__,model}.py`, `apex/metalearner/recommendation.py`,
+`apex/doctor/checks/sandbox.py`, `tests/conftest.py`,
+`scripts/apex-preflight.sh`, `docs/DEMARRAGE_VALIDATION.md`, et les
+fichiers de tests correspondants (`test_recovery_policy.py`,
+`test_missions_execution_recovery.py`, `test_taskloop_foundations.py`,
+`test_learning_recommendation.py`, `test_conftest_data_root.py`,
+`test_doctor_recovery_additions.py`, `test_apex_preflight_script.py`).
+
+Modifiés : `apex/missions/execution.py` (boucle opt-in), `apex/config/
+schema.py`+`loader.py` (`RecoveryPolicy`), `config.yaml` (section
+`recovery:`), `apex/doctor/checks/environment.py`+`repair.py`+`runner.py`,
+`apex/util/probe.py` (`is_writable_dir`), `apex/cli/main.py` (`doctor
+--full`), `apex/interfaces/registry.py`.
+
+## 9. Limitations — jamais prétendu vérifié physiquement
+
+`apex doctor --full`/`ContainerSandbox` restent, sur CETTE machine,
+exactement dans l'état honnête déjà documenté par N+25 (NAMESPACED
+disponible, Docker injoignable) — aucune nouvelle validation Docker réelle
+n'a été effectuée ici. `scripts/apex-preflight.sh` a été exécuté
+réellement sur cette machine (`--dry-run`, avec et sans `--skip-tests`) et
+produit honnêtement `BLOCKED` (`.env` absent, démon Docker injoignable,
+services non démarrés) — comportement attendu, jamais un READY fabriqué.
+Voir le rapport livré en conversation pour le résultat exact de la suite
+backend complète et les commandes de validation physique.

@@ -144,6 +144,7 @@ class Probe(Protocol):
     def run(self, argv: list[str], *, timeout_s: float) -> CommandResult: ...
     def read_text(self, path: str, *, max_bytes: int = 65536) -> str | None: ...
     def exists(self, path: str) -> bool: ...
+    def is_writable_dir(self, path: str) -> bool: ...
     def disk_probe(self, path: str) -> DiskProbeResult: ...
     def disk_free_gb(self, path: str) -> float | None: ...
     def tcp_open(self, host: str, port: int, *, timeout_s: float) -> bool: ...
@@ -195,6 +196,15 @@ class SystemProbe:
 
     def exists(self, path: str) -> bool:
         return Path(path).exists()
+
+    def is_writable_dir(self, path: str) -> bool:
+        """`os.access(..., W_OK)` seul mentirait sur un lien symbolique cassé
+        ou un fichier ordinaire portant ce nom — vérifie explicitement
+        `is_dir()` d'abord. Toujours en lecture seule au sens de la sonde :
+        interroge les permissions, n'écrit jamais rien (contrairement à un
+        essai réel d'écriture, qui serait un effet de bord)."""
+        p = Path(path)
+        return p.is_dir() and os.access(p, os.W_OK)
 
     def disk_probe(self, path: str) -> DiskProbeResult:
         """Mesure l'espace disque, en remontant vers un ancetre existant.
@@ -280,6 +290,7 @@ class FakeProbe:
     commands: dict[tuple[str, ...], CommandResult] = field(default_factory=dict)
     files: dict[str, str] = field(default_factory=dict)
     paths: set[str] = field(default_factory=set)
+    writable_dirs: set[str] = field(default_factory=set)
     free_gb: dict[str, float] = field(default_factory=dict)
     disk_total_gb: dict[str, float] = field(default_factory=dict)
     disk_errors: dict[str, str] = field(default_factory=dict)
@@ -314,6 +325,9 @@ class FakeProbe:
 
     def exists(self, path: str) -> bool:
         return path in self.paths or path in self.files
+
+    def is_writable_dir(self, path: str) -> bool:
+        return path in self.writable_dirs
 
     def disk_probe(self, path: str) -> DiskProbeResult:
         """Rejoue la meme remontee vers l'ancetre que la sonde reelle."""

@@ -631,6 +631,39 @@ class SchedulerPolicy:
 
 
 @dataclass(frozen=True)
+class RecoveryPolicy:
+    """Politique de récupération de mission — N+26. Même discipline que
+    `SchedulerPolicy` : un choix de déploiement reconfigurable, jamais une
+    propriété architecturale. Consommée par `apex.recovery.policy.decide` et
+    `apex.missions.execution.launch_mission` (paramètre `max_attempts`
+    optionnel — omis, le comportement historique à une seule tentative reste
+    inchangé, voir la docstring de `launch_mission`).
+
+    `max_attempts` borne TOUTES les catégories confondues (jamais une boucle
+    infinie, quelle que soit la décision de `RecoveryPolicy.decide`).
+    `resource_exhausted_max_retries` est délibérément SÉPARÉ et plus strict
+    par défaut (1) : retenter avec des limites de ressources IDENTIQUES n'a
+    de chance raisonnable de réussir qu'une seule fois (charge transitoire) —
+    au-delà, la mission est bloquée plutôt que de consommer des ressources
+    en boucle pour un problème structurel."""
+
+    max_attempts: int
+    resource_exhausted_max_retries: int
+
+    @classmethod
+    def parse(cls, raw: dict[str, Any]) -> RecoveryPolicy:
+        max_attempts = int(raw.get("max_attempts", 3))
+        if max_attempts < 1:
+            raise ConfigError("max_attempts doit être >= 1", field="recovery.max_attempts")
+        resource_retries = int(raw.get("resource_exhausted_max_retries", 1))
+        if resource_retries < 0:
+            raise ConfigError(
+                "resource_exhausted_max_retries doit être >= 0", field="recovery.resource_exhausted_max_retries"
+            )
+        return cls(max_attempts=max_attempts, resource_exhausted_max_retries=resource_retries)
+
+
+@dataclass(frozen=True)
 class AutonomousLearningPolicy:
     """Politique de déclenchement automatique d'`apex.metalearner.cycle.
     run_experiment_cycle` (passe « Autonomous Learning Trigger »). Même
@@ -982,6 +1015,7 @@ class ApexConfig:
     sandbox: SandboxDefaults
     gate: GatePolicy
     scheduler: SchedulerPolicy
+    recovery: RecoveryPolicy
     routing: RouterScoringPolicy
     autonomous_learning: AutonomousLearningPolicy
     population: PopulationPolicy

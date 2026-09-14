@@ -295,6 +295,14 @@ gate:
 scheduler:
   max_concurrent_missions: 2
 
+# Politique de récupération de mission (N+26) — apex.recovery.policy.decide.
+# max_attempts borne TOUTES les catégories, quelle que soit la décision ;
+# resource_exhausted_max_retries est plus strict (retenter avec les mêmes
+# limites de ressources n'a de chance raisonnable qu'une fois).
+recovery:
+  max_attempts: 3
+  resource_exhausted_max_retries: 1
+
 # ----------------------------------------------------------------------------
 # Autonomous Learning Trigger (passe « Autonomous Learning Trigger + Scheduler/
 # CLI Execution Path ») — déclenchement automatique d'un cycle

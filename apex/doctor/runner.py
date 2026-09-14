@@ -14,7 +14,7 @@ from typing import Any, Callable, Iterable
 
 from apex.config.loader import load_config
 from apex.doctor.check import CheckContext, CheckResult, Severity
-from apex.doctor.checks import environment, platform, services
+from apex.doctor.checks import environment, platform, sandbox, services
 from apex.errors import ApexError
 from apex.obs.logging import get_logger
 from apex.obs.metrics import REGISTRY
@@ -27,6 +27,12 @@ CheckFunc = Callable[[CheckContext], CheckResult]
 ALL_CHECKS: tuple[tuple[str, CheckFunc], ...] = (
     environment.CHECKS + platform.CHECKS + services.CHECKS
 )
+
+#: `apex doctor --full` uniquement (`apex.cli.main`) — ajoute
+#: `sandbox.CHECKS` (voir sa docstring : sonde EMPIRIQUEMENT le backend
+#: Sandbox réellement sélectionnable, coûteux — jamais dans le diagnostic
+#: rapide par défaut).
+FULL_CHECKS: tuple[tuple[str, CheckFunc], ...] = ALL_CHECKS + sandbox.CHECKS
 
 
 @dataclass(frozen=True)

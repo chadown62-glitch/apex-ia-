@@ -34,10 +34,14 @@ def _cmd_version(args: argparse.Namespace) -> int:
 
 
 def _cmd_doctor(args: argparse.Namespace) -> int:
-    from apex.doctor.runner import build_context, render_json, render_text, run_checks
+    from apex.doctor.runner import ALL_CHECKS, FULL_CHECKS, build_context, render_json, render_text, run_checks
 
     ctx = build_context(config_path=args.config, timeout_s=args.timeout)
-    report = run_checks(ctx)
+    # `--full` (N+26) ajoute `sandbox.CHECKS` (sonde EMPIRIQUE du backend
+    # Sandbox réellement sélectionnable — coûteuse, voir sa docstring) au
+    # diagnostic rapide par défaut. `apex doctor` seul reste INCHANGÉ :
+    # même jeu de checks, même comportement qu'avant cette mission.
+    report = run_checks(ctx, checks=FULL_CHECKS if args.full else ALL_CHECKS)
     print(render_json(report) if args.json else render_text(report, verbose=args.verbose))
     return report.exit_code
 
@@ -565,6 +569,10 @@ def build_parser() -> argparse.ArgumentParser:
     doctor_cmd.add_argument("--json", action="store_true")
     doctor_cmd.add_argument("-v", "--verbose", action="store_true", help="afficher toutes les remédiations")
     doctor_cmd.add_argument("--timeout", type=float, default=5.0, help="timeout par vérification (s)")
+    doctor_cmd.add_argument(
+        "--full", action="store_true",
+        help="ajoute la sonde d'isolation sandbox (coûteuse : namespaces/cgroups/Docker réels)",
+    )
     doctor_cmd.set_defaults(func=_cmd_doctor)
 
     interfaces_cmd = sub.add_parser("interfaces", help="état réel des abstractions et de leur implémentation")
