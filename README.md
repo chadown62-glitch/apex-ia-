@@ -22,6 +22,9 @@ cd ~ && git clone <url> apex && cd apex
 #    puis, depuis Windows : wsl --shutdown
 
 # 3. Secrets et matériel
+#    Chargé automatiquement par `apex` (toute commande) ET par
+#    `docker compose` — les deux voient les mêmes valeurs, aucun export
+#    manuel de variable d'environnement n'est requis.
 cp .env.example .env && $EDITOR .env
 
 # 4. Infrastructure

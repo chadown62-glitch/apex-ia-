@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from typing import Any, Sequence
 
+from apex.config.dotenv import apply_dotenv
 from apex.errors import ApexError
 from apex.interfaces.registry import ABSTRACTIONS, ImplStatus, summary
 from apex.obs.logging import configure, get_logger
@@ -687,6 +689,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Charge `.env` dans `os.environ` AVANT tout `load_config()` (fait par
+    # chaque sous-commande) — cause racine d'un décalage réel diagnostiqué :
+    # sans cet appel, `.env` reste un fichier inerte pour ce process Python
+    # (seul `docker compose` le charge, pour les conteneurs, automatiquement
+    # — voir la docstring d'`apex.config.dotenv`). `os.environ.get(
+    # "APEX_ENV_FILE", ".env")` reste résolu AVANT ce chargement : une valeur
+    # réellement exportée par le shell prime toujours sur le fichier.
+    apply_dotenv(os.environ.get("APEX_ENV_FILE", ".env"))
+
     parser = build_parser()
     args = parser.parse_args(argv)
     configure(args.log_level)

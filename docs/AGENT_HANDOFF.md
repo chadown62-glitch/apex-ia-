@@ -793,3 +793,67 @@ bac à sable (§2), pas par le code. Le jour où Ollama est joignable
 valide le chemin `run_generated_solution` réel, et `run_adaptive_learning_loop`
 peut être rejoué avec un `ModelProvider` réel sans aucune modification de
 code (le double de test et le provider réel implémentent le même contrat).
+
+# APEX — Correction du Doctor : `.env` jamais chargé (N+22)
+
+## 1. Bug réel rapporté
+
+Sur la machine réelle de l'utilisateur (RTX 4060 Ti, 8 Go VRAM), `.env`
+contenait bien `APEX_GPU_VRAM_GB=8` (vérifié directement avec
+`python-dotenv` : confirmé). Mais `./.venv/bin/apex doctor` continuait
+d'afficher `gpu.config_match : VRAM déclarée 24 Go contre 8 Go mesurés` et
+`ollama.models` restait FAIL sur `reasoner:qwen3.6:27b`.
+
+## 2. Cause racine
+
+**Rien dans APEX ne chargeait jamais `.env` dans `os.environ`.**
+`apex.config.loader.substitute_env` résout `${APEX_GPU_VRAM_GB:-24}` contre
+`os.environ` (le VRAI environnement du processus) quand aucun `environ`
+explicite n'est fourni — et aucun appelant (`apex/cli/main.py`) n'appelait
+un chargeur `.env` avant `load_config()`. `docker compose` charge `.env`
+automatiquement pour les CONTENEURS (c'est pourquoi Postgres/Redis/MinIO
+avaient déjà les bons mots de passe) — mais `apex doctor`/`apex gate`/
+`apex serve`/`apex start` sont de simples processus Python, invisibles à ce
+mécanisme. Un `.env` avec les bonnes valeurs n'avait donc structurellement
+AUCUN effet sur ces commandes tant qu'il n'était pas explicitement chargé.
+
+## 3. Correction
+
+`apex/config/dotenv.py` (NOUVEAU) — chargeur `.env` STDLIB PUR (jamais
+`python-dotenv` en dépendance : `pyproject.toml` impose explicitement que
+le noyau reste stdlib pur, « `apex doctor` doit diagnostiquer un
+environnement où rien n'est installé, y compris lui-même »). `parse_dotenv`
+(pur, `KEY=VALUE`, commentaires, guillemets, `export` toléré) +
+`load_dotenv_file` (lecture disque, `None` si absent) + `apply_dotenv`
+(applique dans `os.environ` via `setdefault` — une variable RÉELLEMENT
+exportée par le shell prime TOUJOURS sur `.env`, jamais écrasée).
+
+`apex/cli/main.py::main()` appelle `apply_dotenv(os.environ.get(
+"APEX_ENV_FILE", ".env"))` en tout premier, avant `parser.parse_args` —
+TOUTE commande (`doctor`/`gate`/`serve`/`start`/`config`/...) en bénéficie
+uniformément, un seul point d'entrée, aucune duplication.
+
+## 4. Fichiers modifiés
+
+`apex/config/dotenv.py` (nouveau), `apex/cli/main.py` (+3 lignes :
+import + appel + `import os`), `README.md` (note sur le chargement
+automatique), `tests/test_config_dotenv.py` (nouveau, 16 tests).
+
+## 5. Tests (16, tous PASS)
+
+`TestParseDotenv`/`TestLoadDotenvFile`/`TestApplyDotenv` : le parseur pur
+et ses cas limites (guillemets, commentaires, priorité shell > fichier).
+`TestApplyDotenvReproducesAndFixesTheRealBug` : reproduit EXACTEMENT le
+bug rapporté — sans chargement, `load_config()` retombe sur 24 Go (preuve
+que le bug existe) ; avec le contenu RÉEL du `.env` rapporté, la VRAM
+déclarée devient 8. `TestCliMainLoadsDotenvBeforeAnyCommand` : bout en
+bout RÉEL via `apex.cli.main.main(["config"])` (jamais un appel direct à
+`apply_dotenv`), `APEX_ENV_FILE` pointant vers un fichier temporaire,
+nettoyage explicite de `os.environ` en `tearDown`.
+
+## 6. Limitation
+
+Cette correction ne peut être vérifiée par `apex doctor`/`apex gate` RÉELS
+que sur la machine de l'utilisateur (aucun Docker/Postgres/Ollama réel dans
+ce bac à sable) — voir le rapport livré dans la conversation pour la
+reproduction automatisée qui remplace cette vérification manquante ici.
