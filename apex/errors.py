@@ -285,6 +285,38 @@ class LearningSessionAlreadyRunning(ApexError):
         )
 
 
+class TaskAlreadyRunning(ApexError):
+    """Un `apex.taskloop.loop.run_task_loop` est déjà en cours pour cette
+    clé d'idempotence (`TaskRequest.task_id` par défaut) — un second
+    démarrage n'écrase jamais silencieusement le suivi du premier. Même
+    limite honnête que `CycleAlreadyRunning` : garanti par un registre EN
+    MÉMOIRE, par-processus uniquement (`apex.taskloop.registry.
+    TaskLoopRegistry`) — aucune table dédiée n'existe encore pour une
+    garantie inter-processus (voir la docstring du module `apex.taskloop.
+    loop` pour la limite documentée)."""
+
+    exit_code = 16
+
+    def __init__(self, task_id: str) -> None:
+        self.task_id = task_id
+        super().__init__(f"un TaskLoop est déjà en cours pour la tâche « {task_id} »")
+
+
+class TaskLoopAtCapacity(ApexError):
+    """`apex.taskloop.registry.TaskLoopRegistry.max_concurrent` est déjà
+    atteint — §« Concurrency » de la mission N+27 : « une tâche ne doit
+    jamais monopoliser indéfiniment une ressource », appliqué ici en
+    refusant net un nouveau `TaskLoop` plutôt que de le mettre en file
+    d'attente non bornée (aucune file d'attente n'existe — un appelant
+    refusé décide lui-même s'il réessaie plus tard)."""
+
+    exit_code = 17
+
+    def __init__(self, *, max_concurrent: int) -> None:
+        self.max_concurrent = max_concurrent
+        super().__init__(f"limite de TaskLoop concurrents atteinte ({max_concurrent})")
+
+
 class VisualBackendUnavailable(ApexError):
     """Aucun backend de génération visuelle réel n'est connecté
     (`apex.design.visual_provider.VisualGenerationProvider`, N+17) —

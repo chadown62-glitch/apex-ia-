@@ -1553,25 +1553,29 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "ModelProvider)` dans `tests/test_routing_generation.py`.",
     ),
     Abstraction(
-        "RecoveryPolicy", "décision RETRY/REASSIGN/BLOCK/ESCALATE après un échec de mission", 29, 29,
+        "RecoveryPolicy", "décision RETRY/REASSIGN/BLOCK/ESCALATE après un échec de mission/tâche", 29, 29,
         ImplStatus.STUB, "aucune récupération automatique — mark_failed immédiat (comportement pré-N+26)",
         module="apex.recovery.policy",
         notes="STUB et non IMPLEMENTED délibérément : `apex.recovery.classify."
               "classify_sandbox_outcome` -> `apex.recovery.policy.decide` "
-              "n'est réellement exercé, depuis `apex.missions.execution."
-              "launch_mission` (opt-in via le paramètre `pool`, comportement "
-              "historique inchangé si omis), que pour les catégories "
-              "atteignables par une exécution sandboxée directe "
-              "(SANDBOX_FAILURE/TIMEOUT/CANCELLED/RESOURCE_EXHAUSTED/"
-              "EXECUTION_FAILURE) — `PROVIDER_FAILURE`/`PROVIDER_UNAVAILABLE` "
-              "(déjà couvertes par un mécanisme RÉEL et INDÉPENDANT, "
-              "`apex.routing.generation.generate_with_fallback`, jamais "
-              "dupliqué ici) et `INVALID_CANDIDATE`/`INCORRECT_SOLUTION` "
-              "(exigeraient un Judge attaché à l'exécution d'une Mission, "
-              "qui n'existe pas encore) restent câblées et testées "
-              "exhaustivement au niveau politique (`tests/"
-              "test_recovery_policy.py`) sans jamais être atteintes en "
-              "pratique par ce chemin. Chaque nouvelle tentative RETRY/"
+              "reste opt-in — `apex.missions.execution.launch_mission` "
+              "(paramètre `pool`, comportement historique inchangé si omis) "
+              "n'exerce que SANDBOX_FAILURE/TIMEOUT/CANCELLED/"
+              "RESOURCE_EXHAUSTED/EXECUTION_FAILURE. **N+27** "
+              "(`apex.taskloop.loop.run_task_loop`) exerce RÉELLEMENT, en "
+              "plus, PROVIDER_FAILURE/PROVIDER_UNAVAILABLE (`apex.recovery."
+              "classify_provider_error`, sur un `ModelProviderError` RÉEL) "
+              "et INCORRECT_SOLUTION (un Judge RÉEL — `apex.judge."
+              "get_default_judge_tier` — désormais attaché à l'exécution, "
+              "exactement le « futur appelant » que cette note anticipait) — "
+              "voir `tests/test_taskloop_execution.py::TestReassignment`/"
+              "`TestIncorrectSolutionClassificationIsWired` pour la preuve. "
+              "**Reste non atteinte par preuve** : `INVALID_CANDIDATE` — "
+              "`apex.recovery.classify` ne produit cette catégorie depuis "
+              "AUCUNE preuve réelle aujourd'hui (`ExecutionStatus` n'a "
+              "aucune valeur qui s'y mappe), câblée et testée uniquement au "
+              "niveau politique (`tests/test_recovery_policy.py`), "
+              "honnêtement documenté. Chaque nouvelle tentative RETRY/"
               "REASSIGN spawn un NOUVEAU `Clone` (`AgentRuntime.spawn`), "
               "jamais une reprise — cohérent avec l'invariant déjà tenu par "
               "`apex.scheduler.recovery.RecoveryService`/`AgentRuntime."
@@ -1580,23 +1584,51 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "boucle infinie possible, vérifié par test.",
     ),
     Abstraction(
-        "TaskLoop", "OBJECTIVE -> ... -> COMPLETE/BLOCK, fondations de l'exécution autonome bornée", 29, 29,
-        ImplStatus.STUB, "aucune boucle exécutable — seules les garde-fous et la machine à états existent",
-        module="apex.taskloop.model",
-        notes="STUB et non IMPLEMENTED, ni même DEFINED, DÉLIBÉRÉMENT : "
-              "consigne explicite de la mission N+26 (« NE PAS encore "
-              "transformer APEX en système totalement autonome incontrôlé »). "
-              "Deux pièces RÉELLES et testées existent : la machine à états "
-              "`TaskLoopStage` (`assert_stage_transition_allowed`, même "
-              "patron que `MissionState`/`CloneState`) et `check_stop` "
-              "(fonction PURE, garde-fous obligatoires — annulation/échec "
-              "d'infrastructure/indisponibilité provider priment toujours sur "
-              "un budget de tentatives ou un critère de succès/échec, "
-              "jamais l'inverse). AUCUNE implémentation de "
-              "OBJECTIVE->TASK_GENERATION->PLAN->EXECUTION->TEST->JUDGE "
-              "n'existe : un futur composant devra composer `apex.recovery` "
-              "(réel), `apex.missions.execution` (réel), `apex.judge`/"
-              "`apex.oracles` (réels) — jamais les redécouvrir.",
+        "TaskLoop", "OBJECTIVE -> PLAN -> PROVIDER SELECTION -> GENERATE -> EXECUTE -> TEST -> JUDGE",
+        30, 30,
+        ImplStatus.STUB, "aucune reprise persistée d'une exécution interrompue — voir les notes",
+        module="apex.taskloop.loop",
+        notes="STUB et non IMPLEMENTED délibérément (N+27) : "
+              "`apex.taskloop.loop.run_task_loop` est une boucle RÉELLE et "
+              "bornée — compose `apex.routing.router.select_model` "
+              "(sélection provider), `apex.models.provider.ModelProvider."
+              "generate` (génération), `apex.agents.runtime.AgentRuntime."
+              "spawn`/`execute_in_sandbox` (exécution sandboxée réelle, "
+              "AUCUN contournement), `apex.judge.get_default_judge_tier` "
+              "(Tier0Judge/ExitCodeOracle — jamais câblé nulle part avant "
+              "cette mission), `apex.recovery.decide` (RETRY/REASSIGN/BLOCK/"
+              "ESCALATE, jamais dupliqué) et `apex.metalearner.experience."
+              "build_experience` (chaque tentative persistée). Machine à "
+              "états `TaskLoopStage` (`apex.taskloop.model`, N+26) "
+              "RÉELLEMENT tenue à jour (`_advance_stage`, jamais une simple "
+              "affectation) — `EXECUTION -> ANALYZE` ajoutée de façon "
+              "additive pour router un échec de génération/sandbox vers "
+              "l'analyse sans preuve de TEST/JUDGE, non-régression vérifiée "
+              "(`tests/test_taskloop_foundations.py`, inchangé). "
+              "Garde-fous RÉELLEMENT appliqués : `check_stop` (annulation/"
+              "budget de tentatives/durée), `detect_no_progress` (même "
+              "échec répété, nouveau — N+27), `TaskLimits.max_retries`/"
+              "`max_candidates` (bornes distinctes de `max_attempts`). "
+              "`TaskLoopRegistry` (en mémoire, PAR-PROCESSUS SEULEMENT — "
+              "limite honnête, voir sa docstring) empêche un second "
+              "`run_task_loop` concurrent pour la même tâche. **Limites "
+              "honnêtes, jamais présentées comme résolues** : (1) aucune "
+              "table « TaskRun » persistée — un process tué ne peut pas "
+              "reprendre une exécution interrompue, un nouvel appel est "
+              "toujours une tentative authentiquement nouvelle ; (2) "
+              "`TaskExecutionMode.MANUAL`/`ASSISTED` sont mécaniquement "
+              "IDENTIQUES (les deux forcent une seule tentative) — aucune "
+              "confirmation humaine intermédiaire réelle n'existe encore ; "
+              "(3) `FailureCategory.INVALID_CANDIDATE` reste inatteignable "
+              "par preuve (voir la note `RecoveryPolicy` ci-dessus) ; (4) "
+              "la branche `INCORRECT_SOLUTION` de ce module (sandbox "
+              "RÉUSSIE mais Judge en désaccord) est elle-même inatteignable "
+              "par preuve avec le seul Oracle réel de ce dépôt aujourd'hui "
+              "(`ExitCodeOracle` lie strictement SUCCESS<=>PASS) — testée "
+              "unitairement (`_handle_failure`), jamais fabriquée end-to-end. "
+              "N+28 (`apex.metalearner.recommendation`) reste hors du champ "
+              "d'exécution de ce module — aucun import croisé, vérifié par "
+              "test.",
     ),
     Abstraction(
         "RecommendationSource", "observation/analyse/recommandation issues du learning — jamais une décision", 29, 29,

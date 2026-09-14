@@ -60,11 +60,20 @@ class TaskLoopStage(str, Enum):
 #:     ANALYZE -> STRATEGY_UPDATE -> RETRY | REASSIGN | BLOCK
 #:     RETRY/REASSIGN -> PLAN (une nouvelle tentative repart du plan, jamais
 #:     de l'objectif — l'objectif ne change pas entre deux tentatives)
+#:
+#: `EXECUTION -> ANALYZE` (N+27, `apex.taskloop.loop`) : un échec survenu
+#: AVANT `TEST` (sélection de provider, génération du candidat, ou la
+#: sandbox elle-même — `IsolationUnavailable`) doit pouvoir router vers
+#: l'analyse d'échec SANS avoir atteint `TEST`/`JUDGE`, qui exigeraient une
+#: preuve d'exécution qui n'existe pas encore dans ce cas. Ajout additif —
+#: n'invalide aucune transition déjà testée par `tests/
+#: test_taskloop_foundations.py` (N+26), voir sa suite pour la preuve de
+#: non-régression.
 _STAGE_TRANSITIONS: dict[TaskLoopStage, frozenset[TaskLoopStage]] = {
     TaskLoopStage.OBJECTIVE: frozenset({TaskLoopStage.TASK_GENERATION}),
     TaskLoopStage.TASK_GENERATION: frozenset({TaskLoopStage.PLAN}),
     TaskLoopStage.PLAN: frozenset({TaskLoopStage.EXECUTION}),
-    TaskLoopStage.EXECUTION: frozenset({TaskLoopStage.TEST}),
+    TaskLoopStage.EXECUTION: frozenset({TaskLoopStage.TEST, TaskLoopStage.ANALYZE}),
     TaskLoopStage.TEST: frozenset({TaskLoopStage.JUDGE}),
     TaskLoopStage.JUDGE: frozenset({TaskLoopStage.COMPLETE, TaskLoopStage.ANALYZE}),
     TaskLoopStage.ANALYZE: frozenset({TaskLoopStage.STRATEGY_UPDATE}),

@@ -84,11 +84,23 @@ def classify_sandbox_outcome(
     return category
 
 
+def classify_model_error_category(category: ModelErrorCategory) -> FailureCategory:
+    """Traduit un `ModelErrorCategory` DÉJÀ connu (extrait d'un
+    `ModelProviderError.category` réel, ou reconstruit depuis une preuve
+    structurée équivalente persistée ailleurs — voir `apex.taskloop.loop`,
+    qui appelle cette fonction sur une catégorie relue depuis `EvalRun.facts`,
+    jamais depuis un texte libre) en `FailureCategory`. Extrait de
+    `classify_provider_error` (N+27) pour être réutilisable par un appelant
+    qui n'a pas l'exception d'origine sous la main — SEULE et même table de
+    correspondance, jamais dupliquée."""
+    category_mapped = _MODEL_ERROR_TO_CATEGORY.get(category)
+    if category_mapped is None:  # pragma: no cover - vocabulaire fermé, exhaustif ci-dessus
+        raise ValueError(f"ModelErrorCategory « {category.value} » sans catégorie de recovery connue")
+    return category_mapped
+
+
 def classify_provider_error(exc: ModelProviderError) -> FailureCategory:
     """Classifie l'échec d'UN appel `ModelProvider` — dérivé uniquement de
     `exc.category` (déjà un signal structurel réel, N+18), jamais du texte
     de `exc.detail`."""
-    category = _MODEL_ERROR_TO_CATEGORY.get(exc.category)
-    if category is None:  # pragma: no cover - vocabulaire ModelErrorCategory fermé, exhaustif ci-dessus
-        raise ValueError(f"ModelErrorCategory « {exc.category.value} » sans catégorie de recovery connue")
-    return category
+    return classify_model_error_category(exc.category)

@@ -123,21 +123,56 @@ Chaque tentative est tracée (`mission.started`, `execution.started`,
 `recovery:` de `config.yaml`) borne le nombre de tentatives —
 `max_attempts: 3` par défaut, aucune boucle infinie possible.
 
-## Fondations N+27 (Autonomous Task Loop) — PAS encore une boucle autonome
+## Autonomous Task Loop (N+27) — borné, jamais niveau 3
 
-`apex.taskloop` pose deux garde-fous réels et testés, sans exécuter
-aucune génération/plan/exécution automatique :
+`apex.taskloop.loop.run_task_loop` exécute RÉELLEMENT une `Task` du
+TaskBank (portant un `solution_harness`) :
 
-- la machine à états des étapes (`OBJECTIVE -> TASK_GENERATION -> PLAN ->
-  EXECUTION -> TEST -> JUDGE -> COMPLETE`, avec le chemin d'échec
-  `JUDGE -> ANALYZE -> STRATEGY_UPDATE -> RETRY/REASSIGN/BLOCK`) ;
-- `check_stop` : une fonction pure qui applique les garde-fous
-  obligatoires (nombre max de tentatives, durée maximale, budget de
-  ressources, critères de succès/échec vérifiables par du code, annulation,
-  arrêt sur échec d'infrastructure/indisponibilité provider — ces deux
-  derniers priment toujours).
+```
+OBJECTIVE -> PLAN -> PROVIDER SELECTION -> GENERATE CANDIDATE -> EXECUTE
+    -> TEST -> JUDGE -> COMPLETE (succès)
+                     -> ANALYZE -> STRATEGY_UPDATE -> RETRY/REASSIGN/BLOCK
+```
 
-Aucune boucle autonome n'existe encore dans ce dépôt — c'est délibéré.
+En composant EXCLUSIVEMENT des primitives déjà réelles — jamais une
+réimplémentation :
+
+- `apex.routing.router.select_model` pour la sélection de provider ;
+- `apex.models.provider.ModelProvider.generate` pour la génération ;
+- `apex.agents.runtime.AgentRuntime.spawn`/`execute_in_sandbox` pour
+  l'exécution sandboxée (aucun contournement) ;
+- `apex.judge.get_default_judge_tier()` (Tier0Judge/`ExitCodeOracle`) pour
+  le jugement — **jamais câblé nulle part avant cette mission** ;
+- `apex.recovery.decide` (N+26) pour CHAQUE décision RETRY/REASSIGN/BLOCK/
+  ESCALATE — ce module ne décide jamais lui-même ;
+- `apex.metalearner.experience.build_experience` — chaque tentative jugée
+  produit une `Experience` réelle, exploitable par N+28.
+
+Garde-fous RÉELLEMENT appliqués, jamais contournables : `check_stop`
+(annulation, budget de tentatives, durée maximale — N+26), un nouveau
+`detect_no_progress` (arrêt si la même catégorie d'échec/provider/stratégie
+se répète, avant même d'épuiser le budget de tentatives), et
+`TaskLimits.max_retries`/`max_candidates` (bornes distinctes de
+`max_attempts` — combien de fois retenter le MÊME provider, combien de
+providers distincts réassigner). `TaskLoopRegistry` (en mémoire,
+par-processus) refuse un second `run_task_loop` concurrent pour la même
+tâche (`TaskAlreadyRunning`) et borne le nombre de TaskLoop simultanés
+(`TaskLoopAtCapacity`).
+
+`TaskExecutionMode` (`MANUAL`/`ASSISTED`/`BOUNDED`) est un vocabulaire
+FERMÉ qui n'inclut structurellement AUCUN mode « autonome sans limite » —
+`MANUAL`/`ASSISTED` forcent une seule tentative, seul `BOUNDED` active la
+boucle de récupération.
+
+**Limites honnêtes** : aucune table « TaskRun » persistée — un process tué
+ne reprend jamais une exécution interrompue, un nouvel appel est toujours
+une tentative authentiquement nouvelle. `MANUAL`/`ASSISTED` restent
+mécaniquement identiques (aucune confirmation humaine intermédiaire réelle
+n'existe encore). `FailureCategory.INVALID_CANDIDATE`/`INCORRECT_SOLUTION`
+(ce dernier atteint seulement si sandbox RÉUSSIE mais Judge en désaccord)
+restent inatteignables par preuve avec les mécanismes réels de ce dépôt
+aujourd'hui (voir `apex/interfaces/registry.py`, entrée `TaskLoop`, pour le
+détail exact) — câblées et testées, jamais fabriquées.
 
 ## Frontière Learning (N+28) — observer/recommander, jamais décider
 

@@ -1342,3 +1342,164 @@ produit honnêtement `BLOCKED` (`.env` absent, démon Docker injoignable,
 services non démarrés) — comportement attendu, jamais un READY fabriqué.
 Voir le rapport livré en conversation pour le résultat exact de la suite
 backend complète et les commandes de validation physique.
+
+# N+27 — `apex.taskloop.loop.run_task_loop` (implémentation réelle)
+
+## 1. Contexte
+
+Mission N+27 : construire le véritable moteur d'orchestration de tâche
+borné et observable au-dessus des composants déjà réels (N+25/N+26).
+« N+27 orchestre. N+26 récupère. N+28 recommande. Les composants existants
+exécutent » — appliqué à la lettre : aucune primitive réexécutée, tout
+composé.
+
+**Décision d'architecture** (dérivée du dépôt, pas d'ambiguïté) : le
+TaskLoop opère sur une `apex.tasks.model.Task` du TaskBank (portant un
+`solution_harness`), jamais sur une `apex.missions.model.Mission` — le
+monde Mission exige un palier `REVIEW` humain avant `COMPLETED`,
+incompatible avec un jugement automatique evidence-based ; le monde
+Task/EvalRun/Oracle porte déjà, depuis la Phase 5/N+19, exactement le
+vocabulaire de jugement (`OracleVerdict.PASS/FAIL/ERROR/TIMEOUT/UNKNOWN`)
+qu'un TaskLoop autonome borné doit consommer.
+
+## 2. `apex.taskloop.loop.run_task_loop` — ce qu'il compose, jamais réimplémente
+
+```
+OBJECTIVE -> PLAN -> PROVIDER SELECTION -> GENERATE CANDIDATE -> EXECUTE
+    -> TEST -> JUDGE -> COMPLETE (succès)
+                     -> ANALYZE -> STRATEGY_UPDATE -> RETRY/REASSIGN/BLOCK
+```
+
+- `apex.routing.router.select_model` — sélection de provider, réelle,
+  scorée (N+18), jamais un choix codé en dur.
+- `apex.models.provider.ModelProvider.generate` (via un `provider_factory`
+  injectable, même patron qu'`apex.routing.generation.
+  generate_with_fallback`) — génération du candidat.
+- `apex.evalrunner.generated_solution.build_candidate_command` —
+  substitution du code généré dans le harness (N+19, réutilisée telle
+  quelle).
+- `apex.agents.runtime.AgentRuntime.spawn`/`execute_in_sandbox` —
+  exécution sandboxée réelle. Un nouveau `Clone` est spawné à CHAQUE
+  tentative (RETRY/REASSIGN compris) — jamais une reprise, cohérent avec
+  l'invariant déjà tenu par `RecoveryService`/`recover_orphan`. Un clone
+  dont la génération échoue AVANT la sandbox est explicitement `terminate()`
+  — jamais laissé orphelin en état READY.
+- `apex.judge.get_default_judge_tier()` (Tier0Judge/`ExitCodeOracle`,
+  Phase 9) — **jamais câblé nulle part avant cette mission**, c'est
+  exactement la pièce manquante que N+27 comble.
+- `apex.recovery.decide`/`classify_sandbox_outcome`/`classify_provider_error`
+  (N+26) — SEULE autorité de décision RETRY/REASSIGN/BLOCK/ESCALATE ; ce
+  module l'applique, ne la duplique jamais. `apex.recovery.classify` a reçu
+  un petit refactor additif (`classify_model_error_category`, extrait de
+  `classify_provider_error`, même table, zéro changement de comportement)
+  pour être appelable sans l'exception d'origine.
+- `apex.taskloop.model.check_stop` (préparé par N+26 pour ce module
+  précisément) — garde-fou de durée/budget/annulation, appliqué à CHAQUE
+  itération AVANT de démarrer une tentative (l'off-by-one initial —
+  vérifier avec le numéro de la tentative sur le point de démarrer plutôt
+  que celui déjà complété — a été détecté et corrigé pendant les tests).
+- `apex.metalearner.experience.build_experience`/`ExperienceRepository`
+  (N+20) — chaque tentative jugée persiste une `Experience` réelle.
+
+**Nouveau, ajouté par cette mission** : `apex.taskloop.progress.
+detect_no_progress` (fonction pure sur `apex.recovery.AttemptHistory`,
+DÉJÀ réel — aucun second modèle de tentative) ; `apex.taskloop.registry.
+TaskLoopRegistry` (idempotence en mémoire, même patron qu'`apex.scheduler.
+registry.ExecutionRegistry`) ; `apex.taskloop.request.{TaskRequest,
+TaskLimits, TaskExecutionMode}` ; `apex.taskloop.result.{TaskResult,
+TaskLoopStatus}`.
+
+`apex.taskloop.model._STAGE_TRANSITIONS` a reçu UNE extension additive :
+`EXECUTION -> ANALYZE` (un échec de génération/sandbox, jamais parvenu à
+`TEST`, doit pouvoir router vers l'analyse) — non-régression vérifiée,
+`tests/test_taskloop_foundations.py` (N+26) passe inchangé.
+
+## 3. Pourquoi composition directe plutôt que `EvalRunnerService.run_generated_solution`
+
+`EvalRunnerService.run_generated_solution` (N+19) absorbe
+`ModelProviderError` dans un texte libre (perd la catégorie structurée que
+`classify_provider_error` exige) et ne prend qu'un seul `ModelEndpoint` fixe
+(aucun support de réassignation). Composer directement les mêmes
+primitives qu'il compose lui-même n'est pas une duplication : c'est
+exactement le patron déjà appliqué par `launch_mission`/`EvalRunnerService`/
+`compare_generated_solutions`, chacun composant AgentRuntime/Sandbox/Oracle
+à son propre niveau d'orchestration, jamais l'un par-dessus l'autre.
+
+## 4. Garde-fous et bornes (aucune autonomie non bornée possible)
+
+- `TaskLimits` (4 bornes distinctes) : `max_attempts` (global, alimente
+  `RecoveryPolicy.max_attempts`), `max_retries` (RETRY uniquement),
+  `max_candidates` (combien de providers distincts REASSIGN peut essayer),
+  `max_wall_clock_s`.
+- `detect_no_progress` (nouveau) : si les `patience` dernières tentatives
+  partagent EXACTEMENT la même signature (catégorie/provider/stratégie),
+  arrêt FAILED avant même d'épuiser `max_attempts` — un DURCISSEMENT de la
+  décision de `apex.recovery.decide`, jamais un assouplissement.
+- `TaskExecutionMode` (`MANUAL`/`ASSISTED`/`BOUNDED`) : vocabulaire FERMÉ,
+  AUCUNE valeur « autonomous »/« autonomous_forever » — `MANUAL`/`ASSISTED`
+  forcent mécaniquement `max_attempts=1` (honnêtement identiques
+  aujourd'hui, aucune confirmation humaine intermédiaire réelle
+  n'existant), seul `BOUNDED` active la boucle de récupération.
+- `TaskLoopRegistry` : `TaskAlreadyRunning` (idempotence par `task_id`),
+  `TaskLoopAtCapacity` (`max_concurrent`, défaut 4) — deux nouvelles
+  exceptions dans `apex.errors`.
+
+## 5. Limites honnêtes, jamais présentées comme résolues
+
+- Aucune table « TaskRun » persistée : un process tué ne reprend jamais
+  une exécution interrompue — un nouvel appel est toujours une tentative
+  authentiquement nouvelle. `TaskLoopRegistry` est en mémoire,
+  PAR-PROCESSUS seulement (même limite honnête que `CycleAlreadyRunning`).
+- `FailureCategory.INVALID_CANDIDATE` reste inatteignable par preuve :
+  `apex.recovery.classify` ne mappe aucun `ExecutionStatus` vers cette
+  catégorie aujourd'hui — câblée et testée au niveau politique
+  uniquement, jamais fabriquée.
+- La branche `INCORRECT_SOLUTION` de `run_task_loop` (sandbox RÉUSSIE mais
+  Judge en désaccord) est elle-même inatteignable par preuve avec le seul
+  Oracle réel de ce dépôt (`ExitCodeOracle` lie strictement
+  `ExecutionStatus.SUCCESS <=> OracleVerdict.PASS` — un mauvais candidat
+  fait échouer le harness lui-même, `sys.exit(1)`, jamais `SUCCESS`) —
+  testée UNITAIREMENT (`_handle_failure` appelé directement), jamais
+  fabriquée end-to-end avec un faux Oracle qui mentirait sur ce qui est
+  réellement observable.
+- N+28 (`apex.metalearner.recommendation`) reste hors du champ
+  d'exécution : aucun import croisé avec `apex.taskloop`, vérifié par
+  test (`TestRecommendationBoundary`).
+
+## 6. Registre
+
+`apex/interfaces/registry.py`, entrée `TaskLoop` : `STUB` -> phase 30/30,
+`module="apex.taskloop.loop"` (était `apex.taskloop.model`), notes
+réécrites pour refléter l'implémentation réelle et ses limites exactes
+(§5 ci-dessus). Entrée `RecoveryPolicy` mise à jour : `PROVIDER_FAILURE`/
+`PROVIDER_UNAVAILABLE`/`INCORRECT_SOLUTION` sont désormais réellement
+atteignables via `run_task_loop` (plus seulement testées au niveau
+politique) — `INVALID_CANDIDATE` reste la seule catégorie encore
+inatteignable par preuve.
+
+## 7. Fichiers ajoutés/modifiés
+
+Nouveaux : `apex/taskloop/{request,result,progress,registry,loop}.py`,
+`tests/test_taskloop_execution.py`.
+
+Modifiés : `apex/taskloop/model.py` (transition additive `EXECUTION ->
+ANALYZE`), `apex/taskloop/__init__.py` (exports), `apex/recovery/
+classify.py` (extraction `classify_model_error_category`, comportement
+inchangé), `apex/errors.py` (`TaskAlreadyRunning`, `TaskLoopAtCapacity`),
+`apex/interfaces/registry.py` (entrées `TaskLoop`/`RecoveryPolicy`),
+`docs/DEMARRAGE_VALIDATION.md`.
+
+## 8. Tests
+
+`tests/test_taskloop_execution.py` — intégration RÉELLE (SQLite en
+mémoire + vraie `AgentRuntime` + vraie sandbox namespaced + vrai
+`Tier0Judge`/`ExitCodeOracle` + vrai `apex.recovery.decide` + vrai
+`select_model`), seul le `ModelProvider` est un double (même discipline
+qu'ailleurs dans ce dépôt) : chemin heureux, retry-puis-succès,
+réassignation, épuisement de tentatives, annulation, NO_PROGRESS, sandbox
+indisponible -> BLOCKED, rejet du Judge -> jamais COMPLETED, transition
+invalide, critères d'arrêt, observabilité, Experience, frontière N+28,
+idempotence (concurrence RÉELLE multi-thread, `StaticPool` SQLite),
+sélection de provider, intégration recovery. `tests/
+test_taskloop_foundations.py` (N+26) re-vérifié inchangé après
+l'extension additive de la machine à états.
