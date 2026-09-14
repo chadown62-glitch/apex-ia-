@@ -919,3 +919,74 @@ Vérifié dans ce bac à sable avec de vrais processus/sockets Linux, jamais
 avec le VRAI `dockerd`/`docker-proxy` de l'utilisateur (absent ici) — la
 validation physique reste à faire sur sa machine (commandes exactes dans
 le rapport livré en conversation).
+
+# APEX — Launcher : conteneur healthy mais port jamais publié (N+24)
+
+## 1. Bug réel rapporté (après validation physique de N+23)
+
+`docker compose ps` (sortie RÉELLE, pas `apex doctor`) :
+`apex-postgres` "Up 29 seconds (healthy)" avec une colonne PORTS **VIDE**,
+alors que `apex-redis`/`apex-minio` affichaient correctement
+`127.0.0.1:<port>-><port>/tcp`. Aucun `127.0.0.1:5432` en écoute (`ss`).
+`apex-postgres` : "CREATED 27 minutes ago" mais "Up 29 seconds" — le même
+objet conteneur, jamais recréé, simplement redémarré (`docker start`) à
+chaque exécution du launcher.
+
+## 2. Cause racine
+
+Docker Compose ne recrée un conteneur que si le hash de SA configuration a
+changé depuis sa création. Ce conteneur `apex-postgres` particulier a été
+créé, à un moment antérieur (avant N+23, pendant du débogage manuel), sans
+jamais enregistrer le mapping de port 5432 dans sa configuration réseau
+stockée — pour une raison qui ne peut plus être determinée après coup
+(scénario le plus probable : `docker compose up` interrompu/partiel à un
+moment où le port était bloqué). Depuis, chaque `docker compose up -d
+--wait` réussit en se contentant de `docker start` sur ce même objet
+cassé — jamais un bug de `docker-compose.yml`/`config.yaml` (déjà
+vérifiés corrects en N+21), jamais un docker-proxy orphelin (N+23 : AUCUN
+processus ne tenait le port — rien à réconcilier, le conteneur ne l'a
+jamais demandé). **« healthy » n'est donc jamais une preuve qu'un port
+hôte est publié.**
+
+## 3. Correction
+
+`verify_declared_ports_after_up()` (NOUVEAU, réutilise `apex_declared_ports`/
+`port_is_open` de N+23 tels quels) : après un `docker compose up -d --wait`
+réussi, vérifie RÉELLEMENT (connexion TCP) que chaque port déclaré est en
+écoute. Si non : `docker compose up -d --force-recreate --wait`, UNE SEULE
+tentative (jamais une boucle), puis re-vérification. `--force-recreate`
+remplace l'INSTANCE de conteneur, ne touche JAMAIS un volume nommé — les
+données survivent par construction (c'est la remédiation standard
+`docker compose` pour un conteneur dont la configuration réelle a divergé).
+Automatique (contrairement à `APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS` de N+23) :
+cette opération ne détruit jamais de donnée, à la différence d'un signal
+envoyé à un PID.
+
+## 4. Fichiers modifiés
+
+`scripts/apex-launch.sh` (+1 fonction, +logique dans `compose_up`),
+`tests/test_launcher.py` (5 nouveaux tests + `write_fake_docker` étendu
+pour lier réellement les ports déclarés par défaut — sans ça, les tests
+N+23 existants échouaient : leur faux `docker` ne liait jamais rien de
+réel, ce que cette nouvelle vérification post-up détectait, à raison,
+comme un échec).
+
+## 5. Tests (5 nouveaux + 69 launcher existants, tous PASS)
+
+Avec de VRAIS processus/sockets : port ouvert dès le premier `up` (aucun
+`--force-recreate` tenté) ; conteneur "healthy" mais port jamais lié
+(détecté, `--force-recreate` tenté et réussit) ; port injoignable même
+après `--force-recreate` (échec honnête, EXIT_DOCKER_FAIL, une seule
+tentative jamais une boucle) ; `--force-recreate` lui-même en échec
+(relayé fidèlement) ; coexistence avec N+23 (port déjà ouvert dès le
+départ : aucune action des deux mécanismes). Suite backend complète :
+EXIT=0.
+
+## 6. Limitation
+
+Comme N+23 : vérifié avec de vrais processus/sockets Linux dans ce bac à
+sable, jamais avec le VRAI `dockerd` de l'utilisateur. La validation
+physique reste à faire — voir le rapport livré en conversation pour les
+commandes exactes, notamment `docker compose up -d --force-recreate
+--wait` (déjà proposée en remédiation manuelle si besoin) et confirmer
+que `docker compose ps` affiche enfin `127.0.0.1:5432->5432/tcp`.

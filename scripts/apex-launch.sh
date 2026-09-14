@@ -408,8 +408,46 @@ reconcile_stale_ports() {
     done <<< "$(apex_declared_ports "${project_root}")"
 }
 
+# `docker compose up -d --wait` peut réussir (code 0, healthchecks
+# satisfaits) alors qu'un conteneur EXISTANT — créé par une exécution
+# antérieure — n'a jamais enregistré le mapping de port actuellement
+# déclaré dans `docker-compose.yml` : Compose ne recrée un conteneur que si
+# le hash de SA configuration a changé depuis sa création ; un conteneur
+# resté dans cet état reste indéfiniment « sain » (healthcheck exécuté DANS
+# le réseau Docker, jamais affecté par l'absence de publication côté hôte)
+# sans jamais republier son port. Cas RÉEL diagnostiqué (mission « Debug
+# physique du launcher / postgres healthy mais port 5432 absent », N+24) :
+# `docker compose ps` reportait `apex-postgres` "Up (healthy)" avec une
+# colonne PORTS entièrement VIDE, alors que redis/minio affichaient
+# correctement la leur. `reconcile_stale_ports` (N+23) ne détecte JAMAIS ce
+# cas : aucun processus, orphelin ou non, ne tient le port — le conteneur
+# ne l'a jamais demandé au système d'exploitation.
+#
+# « healthy » n'est donc jamais une preuve qu'un port hôte est publié —
+# seule une connexion TCP réelle (`port_is_open`, déjà réutilisée telle
+# quelle) l'est.
+verify_declared_ports_after_up() {
+    local project_root="$1"
+    local port all_open=true
+    while IFS= read -r port; do
+        [[ -n "${port}" ]] || continue
+        port_is_open "127.0.0.1" "${port}" || all_open=false
+    done <<< "$(apex_declared_ports "${project_root}")"
+    [[ "${all_open}" == "true" ]]
+}
+
 # Démarre l'infrastructure existante. N'exécute jamais `docker compose
-# down`/`rm`/`prune` : seul `up -d --wait` est utilisé, jamais un arrêt.
+# down`/`rm`/`prune` : seul `up -d --wait` est utilisé, jamais un arrêt —
+# à UNE exception près, documentée et bornée : `up -d --force-recreate
+# --wait`, tenté UNE SEULE fois (jamais une boucle) si un port déclaré
+# reste injoignable après un `up` pourtant réussi (voir
+# `verify_declared_ports_after_up`). `--force-recreate` remplace
+# l'INSTANCE de conteneur, jamais un volume nommé (`postgres-data`/
+# `redis-data`/`minio-data`) — les données survivent par construction,
+# c'est la remédiation standard `docker compose` pour un conteneur dont la
+# configuration réelle a divergé. Automatique (contrairement à
+# `APEX_LAUNCHER_RECLAIM_ORPHAN_PORTS`) : cette opération ne détruit jamais
+# de donnée, à la différence d'un signal envoyé à un PID.
 compose_up() {
     local project_root="$1"
 
@@ -452,6 +490,30 @@ compose_up() {
     if (( status != 0 )); then
         log_err "docker compose up a échoué (code ${status}) — voir les lignes ci-dessus."
         return 1
+    fi
+
+    if ! verify_declared_ports_after_up "${project_root}"; then
+        log_warn "docker compose up a réussi (conteneurs sains) mais au moins un port déclaré d'APEX n'est pas réellement en écoute."
+        log_warn "  cause probable : un conteneur créé par une exécution antérieure n'a jamais enregistré ce mapping de port (Compose ne recrée que si sa configuration a changé)."
+        log_warn "  remédiation : docker compose up -d --force-recreate --wait (une seule tentative, aucun volume touché)."
+        local recreate_output
+        local recreate_status=0
+        recreate_output="$(cd -- "${project_root}" && docker compose up -d --force-recreate --wait 2>&1)" || recreate_status=$?
+        if [[ -n "${recreate_output}" ]]; then
+            while IFS= read -r line; do
+                log_info "  docker: ${line}"
+            done <<< "${recreate_output}"
+        fi
+        if (( recreate_status != 0 )); then
+            log_err "docker compose up --force-recreate a échoué (code ${recreate_status}) — voir les lignes ci-dessus."
+            return 1
+        fi
+        if ! verify_declared_ports_after_up "${project_root}"; then
+            log_err "au moins un port déclaré d'APEX reste injoignable même après --force-recreate."
+            log_err "  cause probablement hors de portée de ce launcher (pare-feu, réseau hôte) — diagnostic manuel requis."
+            return 1
+        fi
+        log_info "port(s) réconcilié(s) avec succès après --force-recreate."
     fi
 
     if [[ "${already_running}" == "false" ]]; then

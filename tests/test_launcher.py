@@ -131,6 +131,7 @@ class LauncherFixture:
         compose_up_output: str = "fake: containers started",
         compose_down_exit: int = 0,
         initially_running: bool = False,
+        bind_declared_ports: bool = True,
     ) -> Path:
         """Faux `docker` déterministe, avec un état MUTABLE de « conteneurs
         en cours » (fichier marqueur `self.docker_running_flag`) pour
@@ -138,13 +139,44 @@ class LauncherFixture:
         `compose down` de façon cohérente entre plusieurs invocations
         successives du launcher (nécessaire pour tester l'ownership et
         `stop`) — sans dépendre d'un vrai démon Docker. Journalise chaque
-        invocation (args + cwd) dans `self.docker_calls_log`."""
+        invocation (args + cwd) dans `self.docker_calls_log`.
+
+        `bind_declared_ports=True` (défaut, réaliste — N+24) : un `up`
+        réussi lie RÉELLEMENT chaque port de `docker-compose.yml` (s'il en
+        existe un dans le projet), exactement comme un vrai `docker compose
+        up` le ferait — sans ça, `verify_declared_ports_after_up` (N+24)
+        verrait TOUJOURS ce faux `docker` comme défaillant, quel que soit
+        le scénario testé. Utilise un VRAI `python3` (résolu une fois, ici,
+        jamais celui — potentiellement factice — de `self.bin_dir`)."""
         docker_path = self.bin_dir / "docker"
         if initially_running:
             self.docker_running_flag.write_text("1")
         elif self.docker_running_flag.exists():
             self.docker_running_flag.unlink()
         version_exit = 0 if compose_version_ok else 1
+
+        bind_snippet = ""
+        if bind_declared_ports:
+            real_python3 = shutil.which("python3")
+            assert real_python3 is not None, "python3 réel introuvable — requis pour bind_declared_ports"
+            listener_path = self.root / "_fake_docker_bind_listener.py"
+            if not listener_path.exists():
+                listener_path.write_text(_LISTENER_SCRIPT)
+            # Extraction volontairement dupliquée (pas un appel au vrai
+            # launcher) : ce double doit rester correct même si
+            # `apex_declared_ports` change de forme interne — un simple
+            # grep sur le format `"ip:host:container"` déjà utilisé par
+            # `docker-compose.yml`.
+            bind_snippet = (
+                "  while IFS= read -r _line; do\n"
+                '    if [[ "${_line}" =~ \\"[0-9.]+:([0-9]+):[0-9]+\\" ]]; then\n'
+                f'      "{real_python3}" "{listener_path}" -host-port "${{BASH_REMATCH[1]}}" >/dev/null 2>&1 &\n'
+                "      disown\n"
+                "    fi\n"
+                '  done < "$(pwd)/docker-compose.yml" 2>/dev/null\n'
+                "  sleep 0.3\n"
+            )
+
         docker_path.write_text(
             "#!/usr/bin/env bash\n"
             f'echo "$* (cwd=$(pwd))" >> "{self.docker_calls_log}"\n'
@@ -155,9 +187,11 @@ class LauncherFixture:
             f'  if [[ -f "{self.docker_running_flag}" ]]; then echo "fake-container-id"; fi\n'
             "  exit 0\n"
             "fi\n"
-            'if [[ "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
+            'if [[ "$1 $2 $3 $4 $5" == "compose up -d --force-recreate --wait" || "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
             f'  echo "{compose_up_output}"\n'
-            f'  if [[ {compose_up_exit} -eq 0 ]]; then : > "{self.docker_running_flag}"; fi\n'
+            f'  if [[ {compose_up_exit} -eq 0 ]]; then : > "{self.docker_running_flag}"\n'
+            f"{bind_snippet}"
+            "  fi\n"
             f"  exit {compose_up_exit}\n"
             "fi\n"
             'if [[ "$1 $2" == "compose down" ]]; then\n'
@@ -1215,6 +1249,177 @@ class TestComposeUpStalePortEndToEnd(LauncherTestCase):
         self.assertEqual(result.returncode, 0)
         self.assertNotIn("docker-proxy orphelin", result.stderr)
         self.assertNotIn("service externe", result.stderr)
+
+
+class TestPostUpPortVerification(LauncherTestCase):
+    """N+24 — cas réel diagnostiqué PHYSIQUEMENT : `docker compose up -d
+    --wait` réussit (code 0, conteneurs `healthy`) alors qu'un conteneur
+    EXISTANT (créé par une exécution antérieure, jamais recréé — Compose
+    ne recrée que si le hash de SA configuration a changé) n'a jamais
+    enregistré le port déclaré. `docker compose ps` montrait `apex-postgres`
+    « Up (healthy) » avec une colonne PORTS entièrement VIDE, alors que
+    redis/minio affichaient correctement la leur. `reconcile_stale_ports`
+    (N+23) ne détecte JAMAIS ce cas : aucun processus, orphelin ou non, ne
+    tient le port — le conteneur ne l'a jamais demandé. « healthy » n'est
+    donc jamais une preuve qu'un port hôte est publié."""
+
+    @staticmethod
+    def _write_compose(fx: LauncherFixture, port: int) -> None:
+        (fx.root / "docker-compose.yml").write_text(
+            f'services:\n  fake:\n    ports:\n      - "127.0.0.1:{port}:{port}"\n'
+        )
+
+    @staticmethod
+    def _kill_pid_file(fx: LauncherFixture) -> None:
+        pid_file = fx.root / "_listener.pid"
+        if pid_file.exists():
+            try:
+                pid = int(pid_file.read_text().strip())
+                subprocess.run(["kill", str(pid)], check=False)
+            except (ValueError, OSError):
+                pass
+
+    def _write_two_phase_fake_docker(
+        self, fx: LauncherFixture, port: int, *, bind_on_first_up: bool, bind_on_recreate: bool,
+    ) -> None:
+        """Faux `docker` bespoke (pas `write_fake_docker`, dont le
+        `bind_declared_ports` réaliste masquerait précisément le scénario
+        testé ici) : contrôle indépendamment si le PREMIER `up -d --wait`
+        et si le `--force-recreate` qui pourrait suivre lient réellement
+        le port — exactement les deux inconnues du bug réel rapporté."""
+        real_python3 = shutil.which("python3")
+        assert real_python3 is not None
+        listener_path = fx.root / "_listener.py"
+        listener_path.write_text(_LISTENER_SCRIPT)
+        pid_file = fx.root / "_listener.pid"
+
+        def _bind_snippet() -> str:
+            return (
+                f'  "{real_python3}" "{listener_path}" -host-port {port} >/dev/null 2>&1 &\n'
+                f'  echo $! > "{pid_file}"\n'
+                "  disown\n"
+                "  sleep 0.3\n"
+            )
+
+        docker_path = fx.bin_dir / "docker"
+        docker_path.write_text(
+            "#!/usr/bin/env bash\n"
+            f'echo "$* (cwd=$(pwd))" >> "{fx.docker_calls_log}"\n'
+            'if [[ "$1 $2" == "compose version" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3 $4" == "compose ps --status running" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3 $4 $5" == "compose up -d --force-recreate --wait" ]]; then\n'
+            f'{_bind_snippet() if bind_on_recreate else ""}'
+            '  echo "fake: recreated"\n'
+            "  exit 0\n"
+            "fi\n"
+            'if [[ "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
+            f'{_bind_snippet() if bind_on_first_up else ""}'
+            '  echo "fake: containers started"\n'
+            "  exit 0\n"
+            "fi\n"
+            'echo "unexpected docker invocation: $*" >&2\n'
+            "exit 99\n"
+        )
+        docker_path.chmod(docker_path.stat().st_mode | stat.S_IEXEC)
+
+    def test_a_port_open_after_first_up_no_recreate_attempted(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        self._write_compose(fx, port)
+        self._write_two_phase_fake_docker(fx, port, bind_on_first_up=True, bind_on_recreate=True)
+        try:
+            result = fx.run()
+            self.assertEqual(result.returncode, 0)
+            self.assertNotIn("force-recreate", result.stderr)
+            calls = fx.docker_calls_log.read_text()
+            self.assertNotIn("--force-recreate", calls)
+        finally:
+            self._kill_pid_file(fx)
+
+    def test_b_container_healthy_but_port_never_bound_is_detected_and_recreated(self) -> None:
+        """Le cas RÉEL rapporté : `up -d --wait` réussit (conteneur
+        « healthy ») mais le port n'est jamais réellement en écoute — le
+        launcher doit le détecter, tenter `--force-recreate`, et réussir
+        quand celui-ci publie enfin réellement le port."""
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        self._write_compose(fx, port)
+        self._write_two_phase_fake_docker(fx, port, bind_on_first_up=False, bind_on_recreate=True)
+        try:
+            result = fx.run()
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("n'est pas réellement en écoute", result.stderr)
+            self.assertIn("réconcilié", result.stderr)
+            calls = fx.docker_calls_log.read_text()
+            self.assertEqual(calls.count("compose up -d --wait"), 1)
+            self.assertEqual(calls.count("compose up -d --force-recreate --wait"), 1)
+        finally:
+            self._kill_pid_file(fx)
+
+    def test_c_port_still_unreachable_after_recreate_fails_cleanly_exactly_once(self) -> None:
+        """Si même `--force-recreate` ne publie jamais le port (cause hors
+        de portée de ce launcher), échec honnête — EXIT_DOCKER_FAIL(2),
+        JAMAIS une seconde tentative (pas de boucle)."""
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        self._write_compose(fx, port)
+        self._write_two_phase_fake_docker(fx, port, bind_on_first_up=False, bind_on_recreate=False)
+        try:
+            result = fx.run()
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("reste injoignable même après --force-recreate", result.stderr)
+            calls = fx.docker_calls_log.read_text()
+            self.assertEqual(calls.count("compose up -d --wait"), 1)
+            self.assertEqual(calls.count("compose up -d --force-recreate --wait"), 1)
+        finally:
+            self._kill_pid_file(fx)
+
+    def test_d_force_recreate_itself_failing_is_relayed_honestly(self) -> None:
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        self._write_compose(fx, port)
+        real_python3 = shutil.which("python3")
+        assert real_python3 is not None
+        docker_path = fx.bin_dir / "docker"
+        docker_path.write_text(
+            "#!/usr/bin/env bash\n"
+            f'echo "$* (cwd=$(pwd))" >> "{fx.docker_calls_log}"\n'
+            'if [[ "$1 $2" == "compose version" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3 $4" == "compose ps --status running" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3 $4 $5" == "compose up -d --force-recreate --wait" ]]; then\n'
+            '  echo "Error response from daemon: recreate boom"\n'
+            "  exit 1\n"
+            "fi\n"
+            'if [[ "$1 $2 $3 $4" == "compose up -d --wait" ]]; then\n'
+            '  echo "fake: containers started"\n'
+            "  exit 0\n"
+            "fi\n"
+            "exit 99\n"
+        )
+        docker_path.chmod(docker_path.stat().st_mode | stat.S_IEXEC)
+        result = fx.run()
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("recreate boom", result.stderr)
+        self.assertIn("--force-recreate a échoué", result.stderr)
+
+    def test_e_declared_ports_all_open_from_the_start_requires_no_action(self) -> None:
+        """Coexistence avec N+23 : quand le port est déjà réellement ouvert
+        (rien d'orphelin, rien de mal configuré), ni `reconcile_stale_ports`
+        ni cette nouvelle vérification post-up ne déclenchent quoi que ce
+        soit — comportement inchangé pour le cas normal."""
+        fx = LauncherFixture(self.tmp, with_python3=True)
+        fx.write_env("FOO=bar\n")
+        port = _free_port()
+        self._write_compose(fx, port)
+        fx.write_fake_docker()  # bind_declared_ports=True par défaut (N+24)
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        self.assertNotIn("force-recreate", result.stderr)
+        self.assertNotIn("docker-proxy orphelin", result.stderr)
 
 
 class TestBashSyntax(unittest.TestCase):
