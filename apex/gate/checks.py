@@ -1,4 +1,4 @@
-"""Les 20 vérifications du Hardware & Environment Gate.
+"""Les 22 vérifications du Hardware & Environment Gate.
 
 Trois notes de conception :
 
@@ -57,6 +57,11 @@ class GateContext:
     config: ApexConfig | None
     allow_container_exec: bool = False
     allow_network_probe: bool = False
+    #: Même discipline que les deux ci-dessus (§72) : consentement explicite
+    #: requis avant toute sonde de `apex.desktop` (contrôle réel clavier/
+    #: souris) — GATE-22 reste NOT_TESTED sans lui, jamais une capacité
+    #: mesurée par défaut.
+    allow_desktop_control: bool = False
     timeout_s: float = 20.0
     #: Racine du depot, pour les controles qui lisent un fichier du projet.
     project_root: str = "."
@@ -1089,6 +1094,43 @@ def gate_21_compose_memory(ctx: GateContext) -> GateCheckResult:
                facts=facts)
 
 
+def gate_22_desktop_control(ctx: GateContext) -> GateCheckResult:
+    """Sonde `apex.desktop.pyautogui_backend.PyAutoGuiProvider.detect()` —
+    une capacité RÉELLE mesurée (écran/bibliothèque disponibles), jamais une
+    exécution d'action clavier/souris : ce check ne clique, ne tape et ne
+    fait défiler RIEN, exactement la même discipline que GATE-17 (qui
+    exécute un conteneur sans effet, jamais une commande arbitraire)."""
+    title = "Contrôle clavier/souris (apex.desktop)"
+    facts: dict[str, Any] = {"desktop_control_available": None}
+    if not ctx.allow_desktop_control:
+        return _unknown(
+            "GATE-22", title, "contrôle bureau non autorisé", reason="not_authorized",
+            remediation=(
+                "Relancer avec --allow-desktop-control. Mesure seulement la présence d'un "
+                "écran/backend pyautogui utilisable (apex.desktop.pyautogui_backend.detect()) "
+                "— n'exécute jamais de clic, de frappe ni de défilement réel."
+            ),
+            facts=facts,
+        )
+    from apex.desktop.allowlist import build_policy
+    from apex.desktop.pyautogui_backend import PyAutoGuiProvider
+
+    report = PyAutoGuiProvider(policy=build_policy()).detect()
+    facts["desktop_control_available"] = report.is_available
+    facts.update(report.facts)
+    if report.is_available:
+        return _ok("GATE-22", title, report.detail, facts=facts)
+    return _degraded(
+        "GATE-22", title, report.detail,
+        remediation=(
+            "pip install -e '.[desktop]' (pyautogui) et un écran réel — jamais utilisable "
+            "depuis un conteneur/CI headless. Non bloquant : cette capacité reste PLANNED/STUB "
+            "tant qu'elle n'a pas été validée physiquement sur la machine cible."
+        ),
+        facts=facts,
+    )
+
+
 ALL_GATE_CHECKS: tuple[tuple[str, Callable[[GateContext], GateCheckResult]], ...] = (
     ("GATE-01", gate_01_windows_host),
     ("GATE-02", gate_02_wsl2),
@@ -1111,4 +1153,5 @@ ALL_GATE_CHECKS: tuple[tuple[str, Callable[[GateContext], GateCheckResult]], ...
     ("GATE-19", gate_19_isolation_state),
     ("GATE-20", gate_20_runsc_gonogo),
     ("GATE-21", gate_21_compose_memory),
+    ("GATE-22", gate_22_desktop_control),
 )

@@ -145,6 +145,7 @@ def _cmd_gate(args: argparse.Namespace) -> int:
         exceptions_path=args.exceptions,
         allow_container_exec=args.allow_container_exec,
         allow_network_probe=args.allow_network_probe,
+        allow_desktop_control=args.allow_desktop_control,
         timeout_s=args.timeout,
     )
     written = report.write(args.output or DEFAULT_REPORT_PATH)
@@ -186,6 +187,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         exceptions_path="gate.exceptions.yaml",
         allow_container_exec=getattr(args, "allow_container_exec", False),
         allow_network_probe=getattr(args, "allow_network_probe", False),
+        allow_desktop_control=getattr(args, "allow_desktop_control", False),
         timeout_s=20.0,
     )
     report.write(DEFAULT_REPORT_PATH)
@@ -229,6 +231,7 @@ def _cmd_start(args: argparse.Namespace) -> int:
     gate_kwargs = {
         "allow_container_exec": args.allow_container_exec,
         "allow_network_probe": args.allow_network_probe,
+        "allow_desktop_control": args.allow_desktop_control,
     }
     outcome = run_preflight_and_repair(
         config_path=args.config, dry_run=args.dry_run, timeout_s=args.timeout,
@@ -619,6 +622,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-network-probe", action="store_true",
         help="autoriser une sonde de sortie réseau (GATE-15)",
     )
+    gate_cmd.add_argument(
+        "--allow-desktop-control", action="store_true",
+        help="autoriser la sonde de contrôle clavier/souris (GATE-22) — jamais d'action réelle, "
+             "seulement une mesure de capacité",
+    )
     gate_cmd.set_defaults(func=_cmd_gate)
 
     serve_cmd = sub.add_parser(
@@ -647,6 +655,11 @@ def build_parser() -> argparse.ArgumentParser:
     start_cmd.add_argument(
         "--allow-network-probe", action="store_true",
         help="autoriser une sonde de sortie réseau (GATE-15)",
+    )
+    start_cmd.add_argument(
+        "--allow-desktop-control", action="store_true",
+        help="autoriser la sonde de contrôle clavier/souris (GATE-22) — jamais d'action réelle, "
+             "seulement une mesure de capacité",
     )
     start_cmd.set_defaults(func=_cmd_start)
 

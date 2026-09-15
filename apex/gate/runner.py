@@ -25,6 +25,7 @@ def run_gate(
     exceptions_path: str | Path = DEFAULT_EXCEPTIONS_PATH,
     allow_container_exec: bool = False,
     allow_network_probe: bool = False,
+    allow_desktop_control: bool = False,
     timeout_s: float = 20.0,
 ) -> EnvironmentReport:
     actual_probe = probe or SystemProbe()
@@ -42,6 +43,7 @@ def run_gate(
         config=config,
         allow_container_exec=allow_container_exec,
         allow_network_probe=allow_network_probe,
+        allow_desktop_control=allow_desktop_control,
         timeout_s=timeout_s,
     )
 

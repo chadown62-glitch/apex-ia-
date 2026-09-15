@@ -82,14 +82,17 @@ class TestCliStartAllowFlagsParsing(unittest.TestCase):
         args = parser.parse_args(["start", "--dry-run"])
         self.assertFalse(args.allow_container_exec)
         self.assertFalse(args.allow_network_probe)
+        self.assertFalse(args.allow_desktop_control)
 
     def test_b_flags_are_parsed_to_true_when_passed(self) -> None:
         parser = build_parser()
         args = parser.parse_args(
-            ["start", "--dry-run", "--allow-container-exec", "--allow-network-probe"]
+            ["start", "--dry-run", "--allow-container-exec", "--allow-network-probe",
+             "--allow-desktop-control"]
         )
         self.assertTrue(args.allow_container_exec)
         self.assertTrue(args.allow_network_probe)
+        self.assertTrue(args.allow_desktop_control)
 
     def test_c_apex_gate_default_still_false_without_flags(self) -> None:
         """Non-régression : `apex gate` (déjà existant) garde son propre
@@ -98,6 +101,7 @@ class TestCliStartAllowFlagsParsing(unittest.TestCase):
         args = parser.parse_args(["gate"])
         self.assertFalse(args.allow_container_exec)
         self.assertFalse(args.allow_network_probe)
+        self.assertFalse(args.allow_desktop_control)
 
 
 class TestCliStartPropagatesGateKwargs(unittest.TestCase):

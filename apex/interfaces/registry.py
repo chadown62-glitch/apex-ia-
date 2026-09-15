@@ -1662,6 +1662,33 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "dans ce module — vérifié sur les lignes `import` réelles, "
               "jamais seulement documenté.",
     ),
+    Abstraction(
+        "DesktopAutomationProvider", "contrôle réel du clavier/souris de la machine hôte", 31, 31,
+        ImplStatus.STUB, "aucun — refuse toute action hors allowlist explicite, sans écran réel",
+        module="apex.desktop.provider",
+        notes="STUB et non IMPLEMENTED délibérément (N+29) : `PyAutoGuiProvider` "
+              "est un backend RÉEL (jamais une simulation — `detect()` mesure un "
+              "vrai écran, `execute()` appelle réellement pyautogui), mais "
+              "n'a jamais été validé physiquement (aucun écran accessible "
+              "depuis l'environnement où ce backend a été écrit — "
+              "`CapabilityStatus.UNAVAILABLE_ON_DEV`, jamais `UNSUPPORTED`). "
+              "Frontière de sécurité distincte du sandbox : `apex.sandbox` "
+              "isole du code généré DE la machine hôte, `apex.desktop` agit "
+              "à l'inverse DIRECTEMENT dessus — jamais un raffinement du "
+              "même mécanisme. `apex.desktop.allowlist.is_action_permitted` "
+              "est la SEULE porte (liste BLANCHE, refus par défaut, "
+              "denylist des fenêtres sensibles — mot de passe, élévation "
+              "admin, gestionnaire d'identifiants — toujours prioritaire "
+              "sur une correspondance d'allowlist, jamais contournable "
+              "depuis la config), appliquée par `BaseDesktopAutomationProvider."
+              "execute()` pour TOUT backend, jamais dupliquée par backend. "
+              "Consentement explicite requis (`--allow-desktop-control`, "
+              "GATE-22) — jamais activé par défaut, jamais hérité d'un "
+              "autre `--allow-*`. Aucun appelant de ce dépôt (AgentRuntime, "
+              "MissionEngine, TaskLoop) ne l'invoque encore — c'est un "
+              "point d'entrée autonome (CLI/API future), pas encore câblé "
+              "dans une boucle d'exécution automatique.",
+    ),
 )
 
 

@@ -39,6 +39,7 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "conversations",
         "db",
         "design",
+        "desktop",
         "doctor",
         "gate",
         "interfaces",

@@ -13,6 +13,7 @@ import tempfile
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from apex.config.loader import parse_config
 from apex.gate.checks import (
@@ -27,6 +28,7 @@ from apex.gate.checks import (
     gate_18_gpu_in_container,
     gate_19_isolation_state,
     gate_20_runsc_gonogo,
+    gate_22_desktop_control,
 )
 from apex.gate.contract import Environment, EnvironmentUnknown, load_environment
 from apex.gate.model import DEPENDENCIES, GateCheckResult, GateStatus
@@ -256,6 +258,51 @@ class TestConsentRequiredForSideEffects(unittest.TestCase):
         self.assertTrue(outcome.facts["hardened_profile_ok"])
 
 
+class TestGate22DesktopControl(unittest.TestCase):
+    """`apex.desktop` — même discipline de consentement que GATE-17/18 :
+    NOT_TESTED sans `--allow-desktop-control`, jamais une capacité mesurée
+    par défaut. La sonde réelle (`PyAutoGuiProvider.detect`) est mockée ici
+    — ce test prouve le câblage Gate, pas le comportement de pyautogui
+    lui-même (déjà couvert par `tests/test_desktop_pyautogui_backend.py`)."""
+
+    def test_a_defaults_to_not_tested_without_consent(self) -> None:
+        outcome = gate_22_desktop_control(ctx(healthy_probe()))
+        self.assertIs(outcome.status, GateStatus.UNKNOWN)
+        self.assertEqual(outcome.unknown_reason, "not_authorized")
+
+    def test_b_never_probes_pyautogui_without_consent(self) -> None:
+        with patch("apex.desktop.pyautogui_backend.PyAutoGuiProvider.detect") as fake_detect:
+            gate_22_desktop_control(ctx(healthy_probe()))
+        fake_detect.assert_not_called()
+
+    def test_c_available_capability_is_pass_when_authorized(self) -> None:
+        from apex.desktop.model import AutomationCapabilityReport
+        from apex.obs.capability import CapabilityStatus
+
+        report = AutomationCapabilityReport(
+            status=CapabilityStatus.AVAILABLE, backend="pyautogui", detail="écran 1920x1080 détecté",
+        )
+        with patch("apex.desktop.pyautogui_backend.PyAutoGuiProvider.detect", return_value=report):
+            outcome = gate_22_desktop_control(ctx(healthy_probe(), allow_desktop_control=True))
+        self.assertIs(outcome.status, GateStatus.PASS)
+        self.assertTrue(outcome.facts["desktop_control_available"])
+
+    def test_d_unavailable_capability_is_degraded_never_fail(self) -> None:
+        """Absence d'écran = DEGRADED (non bloquant, cohérent avec le fait
+        que `apex.desktop` reste une capacité PLANNED/STUB, jamais requise
+        pour servir) — jamais FAIL."""
+        from apex.desktop.model import AutomationCapabilityReport
+        from apex.obs.capability import CapabilityStatus
+
+        report = AutomationCapabilityReport(
+            status=CapabilityStatus.UNAVAILABLE_ON_DEV, backend="pyautogui", detail="pas d'écran",
+        )
+        with patch("apex.desktop.pyautogui_backend.PyAutoGuiProvider.detect", return_value=report):
+            outcome = gate_22_desktop_control(ctx(healthy_probe(), allow_desktop_control=True))
+        self.assertIs(outcome.status, GateStatus.DEGRADED)
+        self.assertFalse(outcome.facts["desktop_control_available"])
+
+
 class TestCapabilitiesUnknownVsAbsent(unittest.TestCase):
     def test_untested_capability_is_null_not_false(self) -> None:
         report = make_report(check("GATE-18", GateStatus.UNKNOWN, gpu_in_container=None))
@@ -398,15 +445,15 @@ class TestGateCoverage(unittest.TestCase):
     def test_check_ids_are_contiguous(self) -> None:
         from apex.gate.checks import ALL_GATE_CHECKS
 
-        self.assertEqual(len(ALL_GATE_CHECKS), 21)
+        self.assertEqual(len(ALL_GATE_CHECKS), 22)
         self.assertEqual(
             [c for c, _ in ALL_GATE_CHECKS],
-            [f"GATE-{i:02d}" for i in range(1, 22)],
+            [f"GATE-{i:02d}" for i in range(1, 23)],
         )
 
     def test_gate_never_crashes(self) -> None:
         report = run_gate(probe=FakeProbe(), exceptions_path="/nonexistent")
-        self.assertEqual(len(report.checks), 21)
+        self.assertEqual(len(report.checks), 22)
 
     def test_python_check_is_conclusive_everywhere(self) -> None:
         outcome = gate_05_python(ctx(healthy_probe()))
