@@ -489,6 +489,50 @@ class TestExperience(_TaskLoopTestCase):
         self.assertEqual(eval_run.task_id, self.task.id)
 
 
+class TestEvalRunCapturesStdoutStderr(_TaskLoopTestCase):
+    """Correction d'observabilité (risque identifié pendant le diagnostic
+    physique N+27 bis) : avant cette correction, `_persist_eval_run` ne
+    copiait que `sandbox_result.facts` (cgroup/conteneur, propre au
+    backend sandbox) dans `EvalRun.facts` — jamais `sandbox_result.
+    stdout`/`.stderr`, la seule preuve textuelle disponible pour expliquer
+    un `exit_code` non nul (`FailureCategory.EXECUTION_FAILURE`) après
+    coup, sans ré-exécuter la tentative. Même clé/troncature que
+    `apex.evalrunner.service.EvalRunnerService._candidate_execution_facts`
+    (`facts["candidate_execution"]`), jamais un second format."""
+
+    def test_a_successful_run_persists_the_real_harness_stdout(self) -> None:
+        result = self._run(
+            self._request(limits=TaskLimits(max_attempts=1, max_retries=0, max_candidates=1)),
+            provider_factory=lambda c: _FakeModelProvider(mode="ok", text=_CORRECT_IS_PALINDROME),
+        )
+        self.assertEqual(result.status, TaskLoopStatus.COMPLETED)
+        eval_run = EvalRunRepository(self.factory).get(result.eval_run_ids[0])
+        execution_facts = eval_run.facts["candidate_execution"]
+        # Le harness (`apex.taskgen.solution_tasks`) imprime un JSON réel
+        # `{"total": ..., "failures": []}` sur un succès — preuve que ceci
+        # est bien la sortie RÉELLE du sous-processus, jamais une valeur
+        # fabriquée par ce test.
+        self.assertIn('"failures": []', execution_facts["stdout"])
+        self.assertEqual(execution_facts["stderr"], "")
+        self.assertFalse(execution_facts["stdout_truncated"])
+        self.assertFalse(execution_facts["stderr_truncated"])
+
+    def test_b_a_failed_run_persists_the_real_harness_stderr(self) -> None:
+        result = self._run(
+            self._request(limits=TaskLimits(max_attempts=1, max_retries=0, max_candidates=1)),
+            provider_factory=lambda c: _FakeModelProvider(mode="ok", text="x = 1\n"),  # NameError
+        )
+        self.assertIn(result.status, (TaskLoopStatus.FAILED, TaskLoopStatus.BLOCKED))
+        self.assertEqual(len(result.eval_run_ids), 1)
+        eval_run = EvalRunRepository(self.factory).get(result.eval_run_ids[0])
+        execution_facts = eval_run.facts["candidate_execution"]
+        # `sys.exit(1)` du harness imprime "ECHEC: ..." sur stderr AVANT de
+        # sortir (voir `_HARNESS_TEMPLATE`) — preuve réelle, jamais
+        # fabriquée, que cette tentative a échoué et pourquoi.
+        self.assertIn("ECHEC", execution_facts["stderr"])
+        self.assertIn('"failures"', execution_facts["stdout"])
+
+
 class TestRecommendationBoundary(unittest.TestCase):
     """13/16 : une Recommendation (N+28) ne peut structurellement pas
     déclencher une exécution — le contrat `RecommendationSource` n'a

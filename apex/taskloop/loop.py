@@ -141,6 +141,16 @@ _DEFAULT_GENERATION_TIMEOUT_S = 30.0
 #: stratégie) déclenchent NO_PROGRESS — voir `apex.taskloop.progress`.
 _DEFAULT_NO_PROGRESS_PATIENCE = 2
 
+#: Même valeur, même nom que `apex.evalrunner.service.
+#: _MAX_STORED_CANDIDATE_OUTPUT_CHARS` — même discipline de troncature,
+#: jamais réinventée. Voir `_persist_eval_run` : sans elle,
+#: `EvalRun.facts` ne portait AUCUNE trace de `sandbox_result.stdout`/
+#: `.stderr` (seuls `sandbox_result.facts`, propres au backend sandbox —
+#: cgroup/conteneur —, y étaient copiés), rendant un `exit_code` non nul
+#: (`FailureCategory.EXECUTION_FAILURE`) inexplicable après coup sans
+#: ré-exécuter la tentative.
+_MAX_STORED_CANDIDATE_OUTPUT_CHARS = 20_000
+
 #: `FailureCategory` dont un `RecoveryAction.BLOCK` signale un problème
 #: STRUCTUREL (jamais résolu en réessayant plus tard) -> `TaskLoopStatus.
 #: BLOCKED`, distinct d'un `BLOCK` par simple épuisement de budget (->
@@ -730,10 +740,30 @@ def _persist_eval_run(
         if sandbox_result.elapsed_s.status is DataStatus.REAL
         else None
     )
+    # `sandbox_result.facts` seul (cgroup/conteneur, propre au backend
+    # sandbox) ne porte jamais stdout/stderr — même clé/troncature que
+    # `apex.evalrunner.service.EvalRunnerService._candidate_execution_facts`,
+    # jamais un second format. Fusionné, jamais remplacé : aucune clé
+    # `"candidate_execution"` n'est produite par un backend sandbox
+    # aujourd'hui (`apex/sandbox/linux_namespace.py`/`container.py`
+    # vérifiés) — pas de collision possible.
+    facts = dict(sandbox_result.facts)
+    stdout = sandbox_result.stdout
+    stderr = sandbox_result.stderr
+    facts["candidate_execution"] = {
+        "stdout": stdout[:_MAX_STORED_CANDIDATE_OUTPUT_CHARS],
+        "stdout_truncated": (
+            sandbox_result.stdout_truncated or len(stdout) > _MAX_STORED_CANDIDATE_OUTPUT_CHARS
+        ),
+        "stderr": stderr[:_MAX_STORED_CANDIDATE_OUTPUT_CHARS],
+        "stderr_truncated": (
+            sandbox_result.stderr_truncated or len(stderr) > _MAX_STORED_CANDIDATE_OUTPUT_CHARS
+        ),
+    }
     run = EvalRun(
         id=eval_run_id, task_id=task.id, method=EvalMethod.EXPERIMENTATION, oracle_verdict=oracle_verdict,
         oracle_detail=oracle_detail, exit_code=exit_code, elapsed_s=elapsed_s,
-        facts=dict(sandbox_result.facts), created_by=created_by, clone_id=clone_id,
+        facts=facts, created_by=created_by, clone_id=clone_id,
         sandbox_status=sandbox_result.status, model_id=model_id, experiment_ref=experiment_ref,
         started_at=started_at, completed_at=completed_at,
     )
