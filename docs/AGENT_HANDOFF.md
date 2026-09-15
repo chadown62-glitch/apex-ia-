@@ -1658,3 +1658,167 @@ RÉELLEMENT construite via `build_experience` (le même chemin que
   (40–60 %) sont des heuristiques documentées, pas une preuve
   statistique formelle (pas de test d'hypothèse) — un choix délibéré de
   simplicité déterministe plutôt qu'une pseudo-science non maîtrisée.
+
+---
+
+# N+27 bis — Correction physique du routing (`apex.routing.availability`)
+
+## 1. Contexte et bug diagnostiqué
+
+Tentative E2E réelle par l'utilisateur, sur sa propre machine (hors de ce
+conteneur) : `run_task_loop` a sélectionné `devstral-2:22b-q4_K_M` —
+déclaré dans `config.yaml` mais jamais installé sur son Ollama réel. Le
+TaskLoop a correctement `BLOCKED` (aucun faux succès), mais aucune chaîne
+E2E réelle n'a pu être démontrée.
+
+**Cause racine exacte** (diagnostiquée par l'utilisateur, vérifiée ici en
+lisant le code) : `ModelCandidate.is_available` (`apex/models/registry.py`)
+répond uniquement « un `ModelEndpoint` est-il DÉCLARÉ en config pour ce
+candidat ? » (`self.endpoint is not None`) — jamais « ce endpoint
+répond-il réellement, avec ce modèle réellement chargé ? ».
+`apex.routing.router._passes_filters` consomme ce booléen tel quel : un
+modèle déclaré mais jamais installé reste éligible, est scoré, sélectionné,
+et n'échoue qu'à la génération — trop tard pour un routing initial propre.
+
+## 2. Architecture choisie et pourquoi
+
+**Ni `apex.models.registry` ni `apex.routing.router`** : les deux portent
+un contrat documenté et testé de PURETÉ (`resolve_candidates` : « requêtes
+PURES ... rien de plus », aucune I/O ; `select_model` : non-régression
+stricte testée pour tout appelant existant). Ajouter un appel réseau dans
+l'un ou l'autre romprait ces deux contrats déjà réels et déjà testés.
+
+**Nouveau module `apex/routing/availability.py`** —
+`probe_physical_availability(candidates, *, provider_factory)` :
+- Réutilise TEL QUEL `ModelProvider.detect()` (`apex/models/provider.py`),
+  déjà un contrat réel et borné : `OllamaProvider.detect()` fait un
+  `GET {url}/api/tags` (timeout 2 s par défaut), ne lève jamais, retourne
+  un `ModelCapabilityReport` explicite (`AVAILABLE`/`UNAVAILABLE_ON_DEV`
+  + `detail`/`facts`). Aucune sonde n'est réimplémentée.
+- Déduplique par paire distincte `(endpoint.url, endpoint.served_model)` —
+  au plus UN appel `detect()` par modèle physiquement distinct, jamais une
+  sonde redondante. Plusieurs `ModelCandidate` (rôles différents)
+  partageant le même endpoint physique ne sont sondés qu'une fois.
+- Un candidat sans `ModelEndpoint` déclaré (`is_available` False) n'est
+  JAMAIS sondé — rien de physique à interroger — et passe INCHANGÉ vers
+  `select_model`, qui l'exclut déjà avec sa propre raison auditable
+  (« aucun ModelEndpoint réel déclaré »), jamais perdue.
+- Invoqué depuis `apex.taskloop.loop.run_task_loop` (`_run`, section
+  « PROVIDER SELECTION »), **avant** `select_model` — exactement la
+  couche qui compose déjà des primitives réelles avec des budgets
+  explicites (agent runtime, sandbox, provider.generate, judge), jamais
+  `apex.models.registry`/`apex.routing.router`. Réutilise le paramètre
+  `provider_factory` déjà existant (même fabrique que pour la
+  génération) — aucun second mécanisme de construction de `ModelProvider`,
+  aucun nouveau paramètre public.
+- Résultat entièrement observable : nouvel événement
+  `provider.availability_probe.completed` (`probed_endpoints`,
+  `survivor_count`, `physically_unavailable` avec `model_id`/`backend`/
+  `detail` par candidat exclu).
+
+**Aucun nom de modèle codé en dur** : la sonde ne connaît que les
+`ModelCandidate` que l'appelant lui fournit (résolus depuis `config.yaml`
+en production, injectés en test) — elle est générique à travers
+`ollama`/`openai_compatible`/tout futur `runtime` (contrat abstrait
+`ModelProvider.detect()` uniquement, jamais un backend concret).
+
+## 3. Ce qui n'a PAS été touché
+
+`apex/models/registry.py`, `apex/routing/router.py`,
+`apex/routing/model.py`, `apex/models/ollama.py`,
+`apex/models/openai_compatible.py`, `apex/models/provider.py` : zéro
+modification. Aucun code sandbox/Docker touché. Aucun modèle retiré de la
+config. Aucun ordre de modèle codé en dur.
+
+## 4. Fichiers ajoutés/modifiés
+
+- `apex/routing/availability.py` (nouveau) — `probe_physical_availability`,
+  `PhysicalAvailabilityResult`, `CandidatePhysicalStatus`.
+- `apex/taskloop/loop.py` — import + appel de
+  `probe_physical_availability` avant `select_model` dans `_run`
+  (section PROVIDER SELECTION), nouvel événement
+  `provider.availability_probe.completed`.
+- `tests/test_routing_availability.py` (nouveau, 7 tests) — sonde unitaire
+  isolée : candidat sans endpoint jamais sondé, disponible/indisponible,
+  déduplication par endpoint physique (même endpoint / endpoints
+  distincts), liste vide, généricité multi-runtime.
+- `tests/test_taskloop_execution.py` — `_FakeModelProvider` gagne un
+  paramètre `detect_status`/compteur `detect_calls` (rétrocompatible,
+  défaut `AVAILABLE` — comportement identique à avant cette correction
+  pour tous les tests existants) ; nouvelle classe
+  `TestPhysicalAvailabilityProbe` (3 tests) : candidat physiquement absent
+  jamais tenté (avec/sans alternative), endpoint partagé sondé une seule
+  fois entre deux rôles.
+
+## 5. Tests exécutés et résultats exacts
+
+```
+python -m unittest tests.test_routing_availability tests.test_taskloop_execution \
+  tests.test_taskloop_foundations tests.test_routing_router tests.test_routing_generation \
+  tests.test_models_registry tests.test_recommendation_engine
+# Ran 113 tests in 4.585s — OK (0 échec, 0 erreur)
+```
+
+Décomposition : 7 tests unitaires `apex.routing.availability` (nouveaux),
+49 tests `apex.taskloop` (46 déjà existants + 3 nouveaux
+`TestPhysicalAvailabilityProbe`, tous verts — aucune régression sur les
+16 scénarios originaux N+27, y compris `TestProviderSelectionReuse` qui
+prouve que le cas déjà couvert « candidat sans endpoint » continue de
+fonctionner exactement comme avant), reste : `apex.routing.router`,
+`apex.routing.generation`, `apex.models.registry`,
+`apex.metalearner.recommendation_engine` — tous inchangés, tous verts
+(preuve que ces modules n'ont subi aucune régression malgré leur usage en
+amont/aval de la nouvelle sonde).
+
+Suite complète du dépôt (`python -m unittest discover -s tests`) lancée en
+tâche de fond pendant cette mission — voir le rapport final pour son
+résultat exact (elle ne s'est pas terminée avant la rédaction de cette
+section : honnêteté délibérée plutôt qu'une affirmation anticipée).
+
+## 6. Validation physique réelle — NON exécutée dans cet environnement
+
+**Ollama est injoignable dans ce conteneur sandbox** (vérifié :
+`curl -sS -m 5 http://127.0.0.1:11434/api/tags` → `curl: (7) Failed to
+connect ... Couldn't connect to server`). La chaîne E2E physique complète
+exigée par la mission (TaskLoop → sélection d'un endpoint physiquement
+disponible → OllamaProvider réel → `qwen2.5-coder:7b-instruct` réel →
+génération réelle → sandbox réelle → harness palindrome réel → Judge réel
+→ EvalRun/Experience réels) **n'a pas pu être exécutée ici** — seule
+l'implémentation et sa couverture par tests (unitaires + fake-provider,
+tous verts) sont vérifiées dans cet environnement.
+
+**Commandes pour la validation physique, à exécuter par l'utilisateur sur
+sa propre machine** (avec Ollama réellement lancé et
+`qwen2.5-coder:7b-instruct` réellement installé — voir §7 du rapport final
+pour le détail complet) :
+
+```bash
+curl -sS http://127.0.0.1:11434/api/tags   # confirmer Ollama joignable
+ollama list                                 # confirmer qwen2.5-coder:7b-instruct présent
+python -m apex.cli.main ...                 # ou le script de validation E2E dédié — voir rapport final
+```
+
+## 7. Limites honnêtes, jamais présentées comme résolues
+
+- La sonde physique s'exécute UNE SEULE FOIS par appel `run_task_loop`,
+  au tout début (avant `select_model`) — un modèle qui deviendrait
+  indisponible PENDANT l'exécution (Ollama redémarré, modèle déchargé en
+  cours de route) n'est reconstaté qu'à la prochaine tentative de
+  génération, via le chemin d'erreur déjà existant
+  (`ModelProviderError` → `classify_provider_error` → recovery) — jamais
+  un second mécanisme de re-sonde en boucle.
+- Quand plusieurs `ModelRef` déclarés partagent la même `url` (le cas
+  courant : tous les endpoints Ollama locaux pointent vers
+  `127.0.0.1:11434` dans `config.yaml`), la déduplication se fait par
+  `(url, served_model)`, jamais par `url` seule — chaque modèle distinct
+  déclaré sur ce endpoint déclenche donc son propre `GET /api/tags`
+  (nécessaire : la présence est par modèle, pas par serveur). Une
+  optimisation future pourrait partager UN SEUL `/api/tags` par `url` et
+  vérifier la présence de plusieurs modèles en mémoire à partir de ce
+  résultat unique — délibérément non fait ici, car cela exigerait soit de
+  modifier `OllamaProvider.detect()` (hors périmètre, code déjà réel et
+  testé), soit d'ajouter un second cache de tags concurrent au contrat
+  `ModelProvider` (une seconde source de vérité — rejetée par principe,
+  même discipline que le reste du dépôt).
+- Aucune validation physique réelle n'a été exécutée dans CET
+  environnement (Ollama injoignable ici) — voir §6.

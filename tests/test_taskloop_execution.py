@@ -71,17 +71,28 @@ _WRONG_IS_PALINDROME = "def is_palindrome(s: str) -> bool:\n    return False\n"
 class _FakeModelProvider(ModelProvider):
     """Double fidèle au contrat `ModelProvider` — jamais un vrai modèle.
     `mode` contrôle le comportement : "ok" / "provider_error" / "timeout" /
-    "blocked" (attend `release` — utilisé par le test d'idempotence)."""
+    "blocked" (attend `release` — utilisé par le test d'idempotence).
+    `detect_status` (par défaut `AVAILABLE`, comme avant la correction
+    physique du routing) contrôle ce que rapporte `detect()` — utilisé par
+    `TestPhysicalAvailabilityProbe` pour simuler un candidat déclaré mais
+    physiquement absent, SANS jamais toucher `apex.models.registry`/
+    `apex.routing.router`."""
 
-    def __init__(self, *, mode: str = "ok", text: str = _CORRECT_IS_PALINDROME) -> None:
+    def __init__(
+        self, *, mode: str = "ok", text: str = _CORRECT_IS_PALINDROME,
+        detect_status: CapabilityStatus = CapabilityStatus.AVAILABLE,
+    ) -> None:
         self.mode = mode
         self.text = text
         self.calls = 0
+        self.detect_status = detect_status
+        self.detect_calls = 0
         self.release: threading.Event | None = None
 
     def detect(self) -> ModelCapabilityReport:
+        self.detect_calls += 1
         return ModelCapabilityReport(
-            status=CapabilityStatus.AVAILABLE, backend="fake-test-double",
+            status=self.detect_status, backend="fake-test-double",
             detail="double de test — jamais un vrai backend",
         )
 
@@ -610,3 +621,81 @@ class TestRecoveryIntegration(_TaskLoopTestCase):
         )
         self.assertEqual(decided_events[0]["action"], expected.action.value)
         self.assertEqual(decided_events[0]["category"], expected.category.value)
+
+
+class TestPhysicalAvailabilityProbe(_TaskLoopTestCase):
+    """Correction physique du routing (mission N+27 bis) : un candidat
+    DÉCLARÉ (`endpoint` réel, `is_available` True — le seul signal
+    qu'utilisait `select_model` avant cette correction) mais dont le
+    `ModelProvider.detect()` réel constate l'ABSENCE physique (modèle non
+    installé, backend injoignable) ne doit JAMAIS être tenté — ni compté
+    dans `providers_tried`, ni appeler `generate()` — exactement le bug
+    diagnostiqué sur la machine réelle de l'utilisateur
+    (`devstral-2:22b-q4_K_M` déclaré en config, jamais installé sur son
+    Ollama). `apex.models.registry`/`apex.routing.router` restent
+    inchangés — la preuve, ici, est que `select_model` ne voit MÊME PAS le
+    candidat physiquement mort (`apex.routing.availability.
+    probe_physical_availability` l'exclut avant)."""
+
+    def test_a_declared_but_physically_absent_candidate_is_never_attempted_when_an_alternative_exists(
+        self,
+    ) -> None:
+        ghost = a_candidate(ref=a_ref(family="ghost-model"), endpoint=an_endpoint(served_model="ghost-model"))
+        real = a_candidate(ref=a_ref(family="real-model"), endpoint=an_endpoint(served_model="real-model"))
+        ghost_provider = _FakeModelProvider(detect_status=CapabilityStatus.UNAVAILABLE_ON_DEV)
+        real_provider = _FakeModelProvider(mode="ok", text=_CORRECT_IS_PALINDROME)
+
+        def factory(candidate: ModelCandidate) -> ModelProvider:
+            return ghost_provider if candidate.ref.family == "ghost-model" else real_provider
+
+        result = self._run(
+            self._request(
+                limits=TaskLimits(max_attempts=3, max_retries=3, max_candidates=2, max_wall_clock_s=60.0),
+            ),
+            candidates=(ghost, real), provider_factory=factory,
+        )
+
+        self.assertEqual(result.status, TaskLoopStatus.COMPLETED)
+        self.assertEqual(result.providers_tried, (real.ref.id,))
+        self.assertEqual(ghost_provider.calls, 0)  # generate() jamais appelé
+        self.assertEqual(ghost_provider.detect_calls, 1)  # sondé une seule fois
+        self.assertEqual(real_provider.detect_calls, 1)
+
+        events = [e for e in _events(self.factory) if e.get("task_id") == self.task.id]
+        probe_events = [e for e in events if e.get("kind") == "provider.availability_probe.completed"]
+        self.assertEqual(len(probe_events), 1)
+        self.assertEqual(probe_events[0]["survivor_count"], 1)
+        self.assertEqual(probe_events[0]["probed_endpoints"], 2)
+        self.assertEqual(len(probe_events[0]["physically_unavailable"]), 1)
+        self.assertEqual(probe_events[0]["physically_unavailable"][0]["model_id"], ghost.ref.id)
+
+    def test_all_candidates_physically_absent_blocks_without_any_attempt(self) -> None:
+        ghost_a = a_candidate(ref=a_ref(family="ghost-a"), endpoint=an_endpoint(served_model="ghost-a"))
+        ghost_b = a_candidate(ref=a_ref(family="ghost-b"), endpoint=an_endpoint(served_model="ghost-b"))
+        provider = _FakeModelProvider(detect_status=CapabilityStatus.UNAVAILABLE_ON_DEV)
+
+        result = self._run(
+            self._request(), candidates=(ghost_a, ghost_b), provider_factory=lambda c: provider,
+        )
+
+        self.assertEqual(result.status, TaskLoopStatus.BLOCKED)
+        self.assertEqual(len(result.attempts), 0)
+        self.assertEqual(result.providers_tried, ())
+        self.assertEqual(provider.calls, 0)
+        self.assertEqual(provider.detect_calls, 2)  # deux endpoints distincts, chacun sondé une fois
+
+    def test_a_shared_physical_endpoint_across_two_roles_is_probed_only_once(self) -> None:
+        shared_endpoint = an_endpoint(served_model="shared-model")
+        role_a = a_candidate(role="coder_main", ref=a_ref(family="shared-model"), endpoint=shared_endpoint)
+        role_b = a_candidate(
+            role="reasoner", ref=a_ref(family="shared-model", capability_class="reasoning"),
+            endpoint=shared_endpoint,
+        )
+        provider = _FakeModelProvider(mode="ok", text=_CORRECT_IS_PALINDROME)
+
+        result = self._run(
+            self._request(), candidates=(role_a, role_b), provider_factory=lambda c: provider,
+        )
+
+        self.assertEqual(result.status, TaskLoopStatus.COMPLETED)
+        self.assertEqual(provider.detect_calls, 1)  # même endpoint physique, une seule sonde

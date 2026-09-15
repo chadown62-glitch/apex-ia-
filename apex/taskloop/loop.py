@@ -104,6 +104,7 @@ from apex.recovery import (
     classify_sandbox_outcome,
     decide,
 )
+from apex.routing.availability import probe_physical_availability
 from apex.routing.model import RoutingRequest
 from apex.routing.router import select_model
 from apex.sandbox import ExecutionStatus, ResourceLimits, SandboxProvider, SandboxSpec
@@ -292,10 +293,33 @@ def _run(
     resolved_candidates = (
         candidates if candidates is not None else filter_available(resolve_candidates(load_config()))
     )
+    # Sonde la disponibilité PHYSIQUE (jamais seulement déclarative) avant
+    # tout scoring — voir `apex.routing.availability` pour le diagnostic
+    # exact du bug corrigé ici et pourquoi ni `apex.models.registry` ni
+    # `apex.routing.router` (tous deux documentés purs) ne portent cette
+    # sonde. `provider_factory` est réutilisé tel quel (même fabrique que
+    # pour la génération plus bas) — aucun second mécanisme de construction
+    # de `ModelProvider`.
+    availability = probe_physical_availability(resolved_candidates, provider_factory=provider_factory)
+    emit(
+        "provider.availability_probe.completed",
+        {
+            "probed_endpoints": availability.probed_endpoints,
+            "survivor_count": len(availability.survivors),
+            "physically_unavailable": [
+                {
+                    "model_id": status.candidate.ref.id,
+                    "backend": status.report.backend,
+                    "detail": status.report.detail,
+                }
+                for status in availability.excluded
+            ],
+        },
+    )
     resolved_routing_request = routing_request or RoutingRequest()
-    emit("provider.selection.started", {"candidate_count": len(resolved_candidates)})
+    emit("provider.selection.started", {"candidate_count": len(availability.survivors)})
     routing_decision = select_model(
-        resolved_candidates, resolved_routing_request,
+        availability.survivors, resolved_routing_request,
         external_policy=external_policy, scoring_policy=scoring_policy,
     )
     eligible_candidates = tuple(
