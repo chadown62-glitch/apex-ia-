@@ -1631,22 +1631,36 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "test.",
     ),
     Abstraction(
-        "RecommendationSource", "observation/analyse/recommandation issues du learning — jamais une décision", 29, 29,
+        "RecommendationSource", "observation/analyse/recommandation issues du learning — jamais une décision", 29, 30,
         ImplStatus.STUB, "aucun appelant ne consomme la sortie pour modifier une politique automatiquement",
-        module="apex.metalearner.recommendation",
-        notes="STUB et non IMPLEMENTED délibérément : `recommend_from_"
-              "experience` N'EST PAS un stub au sens fonctionnel — elle "
-              "interroge réellement `apex.metalearner.experience."
-              "ExperienceRepository` (réel depuis N+20) et calcule des "
-              "statistiques réelles (taux de succès, catégorie d'échec "
-              "dominante) — mais AUCUN appelant de ce dépôt ne consomme "
-              "aujourd'hui sa sortie pour modifier `apex.config.schema."
-              "RecoveryPolicy` ni aucune autre politique opérationnelle : "
-              "c'est exactement la frontière posée par cette mission "
-              "(« LEARNING != DECISION AUTHORITY »). Le contrat "
-              "`RecommendationSource` (Protocol) ne définit "
-              "STRUCTURELLEMENT aucune méthode `decide`/`apply`/`enforce` — "
-              "vérifié par test, pas seulement documenté.",
+        module="apex.metalearner.recommendation_engine",
+        notes="STUB et non IMPLEMENTED délibérément : « LEARNING != DECISION "
+              "AUTHORITY » reste la frontière — AUCUN appelant de ce dépôt "
+              "ne consomme la sortie de ce module pour modifier `apex."
+              "config.schema.RecoveryPolicy` ni aucune autre politique "
+              "opérationnelle, ni pour relancer `apex.taskloop.loop."
+              "run_task_loop`. **N+28** (`apex.metalearner."
+              "recommendation_engine.recommend_for_task`) est un moteur "
+              "RÉEL, pas un stub fonctionnel : filtre les `Experience` "
+              "pertinentes en 2 niveaux (`RelevanceTier.EXACT_TASK`/"
+              "`SAME_SPECIALTY` — les deux SEULES dimensions réellement "
+              "persistées, `Experience` ne porte ni objectif ni contexte "
+              "ni mode d'exécution), calcule des statistiques réelles "
+              "(taux de succès, catégorie d'échec dominante, comparaison "
+              "par provider/`model_id`, comparaison par stratégie/"
+              "`strategy_id` — un écart sous 15 points n'est jamais "
+              "présenté comme un signal), et s'ABSTIENT explicitement "
+              "(`AbstentionReason` : tâche inconnue, aucune expérience "
+              "comparable, échantillon trop petit, résultats "
+              "contradictoires) plutôt que de deviner. `RecommendationSource` "
+              "(Protocol, `apex.metalearner.recommendation`) ne définit "
+              "STRUCTURELLEMENT aucune méthode `decide`/`apply`/`enforce`/"
+              "`execute`/`run_task` — `ExperienceRecommendationEngine` "
+              "l'implémente sans y ajouter aucune de ces méthodes, vérifié "
+              "par test. Aucun import d'`apex.taskloop`/`apex.recovery`/"
+              "`apex.sandbox`/`apex.agents.runtime`/`apex.models.provider` "
+              "dans ce module — vérifié sur les lignes `import` réelles, "
+              "jamais seulement documenté.",
     ),
 )
 

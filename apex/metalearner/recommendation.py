@@ -30,8 +30,14 @@ from apex.metalearner.failure_taxonomy import FailureCategory
 class RecommendationConfidence(str, Enum):
     """Reflète UNIQUEMENT la taille de l'échantillon observé — jamais une
     estimation de qualité de la recommandation elle-même (ce serait une
-    seconde opinion non fondée empilée sur la première)."""
+    seconde opinion non fondée empilée sur la première).
 
+    `INSUFFICIENT_DATA` (N+28, `apex.metalearner.recommendation_engine`) —
+    l'échantillon est trop petit (ou inexistant) pour produire quoi que ce
+    soit d'honnête ; distinct de `LOW` (un échantillon petit mais réel,
+    encore utilisable avec prudence)."""
+
+    INSUFFICIENT_DATA = "insufficient_data"
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

@@ -1503,3 +1503,158 @@ idempotence (concurrence RÉELLE multi-thread, `StaticPool` SQLite),
 sélection de provider, intégration recovery. `tests/
 test_taskloop_foundations.py` (N+26) re-vérifié inchangé après
 l'extension additive de la machine à états.
+
+# N+28 — `apex.metalearner.recommendation_engine` (Recommendation Engine réel)
+
+## 1. Contexte
+
+Mission N+28 : transformer les `Experience` réellement produites par le
+TaskLoop (N+27) en recommandation EXPLICABLE pour une nouvelle tâche.
+**N+28 recommande. N+28 ne décide pas. N+28 n'exécute pas** — architecture
+strictement à sens unique : `TaskLoop -> Experience -> N+28 Recommendation
+-> information passive`, jamais l'inverse.
+
+## 2. Ce qui existait déjà (N+26)
+
+`apex/metalearner/recommendation.py` : `Recommendation` (observation/
+analysis/recommendation/confidence/evidence_count/evidence_refs),
+`RecommendationConfidence` (LOW/MEDIUM/HIGH), `RecommendationSource`
+(Protocol sans `decide`/`apply`/`enforce`), `recommend_from_experience`
+(agrégation réelle mono-tâche : taux de succès + catégorie d'échec
+dominante). Contrat LOCKÉ par `tests/test_learning_recommendation.py` —
+**inchangé, zéro régression** : la seule extension apportée à ce fichier
+est un nouveau membre `RecommendationConfidence.INSUFFICIENT_DATA` (ajout
+additif à un `Enum` existant, aucun test n'énumère exhaustivement ses
+membres).
+
+## 3. Ce qui a été implémenté — `apex/metalearner/recommendation_engine.py`
+
+`recommend_for_task(task_id, *, session_factory, min_samples=3) ->
+RecommendationReport` :
+
+1. Résout la tâche cible (`apex.tasks.repository.TaskRepository.get`,
+   réel) — `AbstentionReason.UNKNOWN_TASK` si introuvable.
+2. Pertinence, DEUX niveaux SEULEMENT (les seules dimensions réellement
+   persistées dans `Experience` — voir §4) : `RelevanceTier.EXACT_TASK`
+   (`ExperienceRepository.list_by_task(task_id)`) et `RelevanceTier.
+   SAME_SPECIALTY` (`TaskRepository.list_by_specialty(task.specialty)`,
+   déjà réelle depuis la Phase 12, puis `list_by_task` par tâche
+   trouvée — AUCUNE nouvelle méthode de requête ajoutée à un
+   repository).
+3. `AbstentionReason.NO_COMPARABLE_EXPERIENCE` si rien trouvé,
+   `SAMPLE_TOO_SMALL` si sous `min_samples` (même seuils/paliers de
+   confiance que `recommend_from_experience` : ≥10 HIGH, ≥5 MEDIUM, ≥1
+   LOW, sinon `INSUFFICIENT_DATA`).
+4. Jusqu'à quatre `Recommendation` (réutilisées telles quelles, jamais un
+   second type) : taux de succès global (silencieux si la bande
+   40–60 % — « contradictoire », aucun appel directionnel fiable),
+   catégorie d'échec dominante (`apex.metalearner.failure_taxonomy.
+   FailureCategory`, réutilisée), comparaison par provider (`model_id`),
+   comparaison par stratégie (`strategy_id`) — un groupe de moins de 2
+   tentatives n'entre jamais en comparaison, un écart de moins de 15
+   points n'est jamais présenté comme un signal, une valeur `None`
+   (provider/stratégie non attribué) est comptée séparément, jamais
+   fondue dans un faux groupe.
+5. `AbstentionReason.CONTRADICTORY_RESULTS` si, après tout cela, AUCUNE
+   recommandation n'a pu être produite — « aucune recommandation
+   fiable », jamais une recommandation devinée pour combler le vide.
+
+`ExperienceRecommendationEngine` : implémente `RecommendationSource` tel
+quel (`recommend(*, task_id) -> tuple[Recommendation, ...]`), délègue
+entièrement à `recommend_for_task` — zéro logique dupliquée.
+
+## 4. Pourquoi seulement 2 niveaux de pertinence, pas plus
+
+La mission cite `objectif`/`contraintes`/`mode d'exécution` comme
+dimensions possibles. `apex.metalearner.experience.Experience` (N+20) ne
+persiste AUCUN de ces champs (ce sont des champs de `apex.taskloop.
+request.TaskRequest`, N+27, jamais écrits en base) — seule `apex.tasks.
+model.Task.specialty` est une dimension réellement comparable entre deux
+tâches différentes. Inventer une pertinence sur des champs absents aurait
+été exactement l'erreur que la mission interdit explicitement
+(« n'invente surtout pas »).
+
+## 5. Confiance et seuils
+
+Table UNIQUE, documentée dans le module, jamais deux échelles
+divergentes : `INSUFFICIENT_DATA` (0), `LOW` (1-4), `MEDIUM` (5-9),
+`HIGH` (≥10) — reprend EXACTEMENT les seuils déjà validés par
+`recommend_from_experience` (N+26).
+
+## 6. Abstention
+
+Quatre raisons FERMÉES (`AbstentionReason`), chacune avec un texte
+explicite (`abstention_detail`) citant les chiffres exacts (combien
+d'expériences trouvées, combien manquaient) — jamais un simple tuple vide
+sans justification.
+
+## 7. Explicabilité et traçabilité
+
+Chaque `Recommendation` reste un triplet observation/analysis/
+recommendation SÉPARÉ (patron N+26, réutilisé) ; `evidence_refs` porte
+TOUJOURS les identifiants exacts des `Experience` utilisées —
+`RecommendationReport.exact_task_experience_ids`/
+`same_specialty_experience_ids` exposent la même trace au niveau du
+rapport complet.
+
+## 8. Séparation avec N+27 / sécurité
+
+Aucun import d'`apex.taskloop`/`apex.recovery`/`apex.sandbox`/`apex.
+agents.runtime`/`apex.models.provider`/`apex.models.ollama`/`apex.models.
+openai_compatible` dans `recommendation_engine.py` — vérifié sur les
+lignes `import`/`from` réelles (`TestNoNetworkNoOllamaNoSandboxNoTaskloop
+NoRecovery`). Aucune méthode `decide`/`apply`/`enforce`/`execute`/
+`run_task` exposée nulle part dans le module ni sur
+`ExperienceRecommendationEngine` — vérifié par introspection (`dir()`),
+pas seulement documenté. Le module ne fait QUE lire (`ExperienceRepository.
+list_by_task`, `TaskRepository.get`/`list_by_specialty`) — jamais
+d'écriture, jamais de mutation d'une `Experience` (vérifié par test :
+relire les mêmes `Experience` avant/après un appel produit un snapshot
+identique).
+
+## 9. Registre
+
+`apex/interfaces/registry.py`, entrée `RecommendationSource` : module mis
+à jour vers `apex.metalearner.recommendation_engine`, phase 30, notes
+réécrites pour refléter le moteur réel et sa frontière exacte.
+
+## 10. Fichiers ajoutés/modifiés
+
+Nouveaux : `apex/metalearner/recommendation_engine.py`, `tests/
+test_recommendation_engine.py`.
+
+Modifiés : `apex/metalearner/recommendation.py` (nouveau membre
+`RecommendationConfidence.INSUFFICIENT_DATA`, aucun autre changement),
+`apex/interfaces/registry.py`, `docs/DEMARRAGE_VALIDATION.md`.
+
+## 11. Tests
+
+`tests/test_recommendation_engine.py` — 30 tests, intégration RÉELLE
+(SQLite en mémoire, vraies `Task`/`Experience` persistées via
+`TaskBankService`/`ExperienceRepository`) : aucune expérience, une
+expérience, plusieurs, pertinentes/non pertinentes/mélange, succès
+seuls/échecs seuls/mélange (y compris un cas authentiquement
+« contradictoire » — 3 catégories d'échec distinctes à 1 occurrence
+chacune, aucun signal exploitable), plusieurs providers/stratégies
+(écart significatif ET écart insignifiant), petit/grand échantillon,
+donnée manquante (`model_id=None` jamais traité comme un groupe),
+catégorie d'échec répétée, explicabilité (traçabilité complète vers les
+`Experience`), déterminisme (deux appels identiques -> résultat
+identique), absence de mutation, absence d'imports réseau/Ollama/sandbox/
+taskloop/recovery, absence de méthodes de contrôle, compatibilité avec le
+contrat N+26 (`RecommendationSource`), compatibilité avec une `Experience`
+RÉELLEMENT construite via `build_experience` (le même chemin que
+`apex.taskloop.loop._run`), non-régression de `recommend_from_experience`.
+
+## 12. Limites honnêtes
+
+- Pertinence limitée à `task_id`/`specialty` — aucune comparaison par
+  `objectif`/`contraintes`/`mode d'exécution` tant que ces champs ne sont
+  pas persistés sur `Experience` (voir §4).
+- Aucune notion de coût/latence dans les statistiques — `Experience` ne
+  porte aucun champ de coût réel aujourd'hui (même limite déjà documentée
+  ailleurs dans ce dépôt, `apex.costgain`).
+- Le seuil d'écart significatif (15 points) et la bande « contradictoire »
+  (40–60 %) sont des heuristiques documentées, pas une preuve
+  statistique formelle (pas de test d'hypothèse) — un choix délibéré de
+  simplicité déterministe plutôt qu'une pseudo-science non maîtrisée.

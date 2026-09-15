@@ -174,15 +174,40 @@ restent inatteignables par preuve avec les mécanismes réels de ce dépôt
 aujourd'hui (voir `apex/interfaces/registry.py`, entrée `TaskLoop`, pour le
 détail exact) — câblées et testées, jamais fabriquées.
 
-## Frontière Learning (N+28) — observer/recommander, jamais décider
+## Recommendation Engine (N+28) — recommande, ne décide ni n'exécute jamais
 
-`apex.metalearner.recommendation.recommend_from_experience` agrège
-réellement les `Experience` déjà persistées (taux de succès, catégorie
-d'échec dominante) pour produire des `Recommendation` — texte + preuve.
+`apex.metalearner.recommendation_engine.recommend_for_task(task_id, *,
+session_factory)` compare une tâche cible à l'historique réel des
+`Experience` (produites par le TaskLoop N+27) et retourne un
+`RecommendationReport` :
+
+1. **Pertinence** — deux niveaux réellement calculables (`Experience` ne
+   porte ni objectif ni contexte ni mode d'exécution) : `EXACT_TASK` (même
+   tâche) et `SAME_SPECIALTY` (autre tâche, même spécialité). Tout le reste
+   est exclu, jamais compté.
+2. **Statistiques** — taux de succès, catégorie d'échec dominante,
+   comparaison par provider (`model_id`) et par stratégie (`strategy_id`) —
+   un écart de moins de 15 points n'est jamais présenté comme un signal ;
+   une valeur manquante (`model_id is None`) est comptée séparément,
+   jamais fondue dans un faux groupe « inconnu ».
+3. **Confiance** — `INSUFFICIENT_DATA`/`LOW`/`MEDIUM`/`HIGH`, dérivée
+   UNIQUEMENT de la taille de l'échantillon (≥10 HIGH, ≥5 MEDIUM, ≥1 LOW).
+4. **Abstention explicite** — `AbstentionReason.UNKNOWN_TASK`/
+   `NO_COMPARABLE_EXPERIENCE`/`SAMPLE_TOO_SMALL`/`CONTRADICTORY_RESULTS` :
+   « aucune recommandation fiable » porte toujours une raison précise,
+   jamais un simple résultat vide.
+
 **Rien dans ce dépôt ne consomme cette sortie pour modifier automatiquement
-une politique** (`RecoveryPolicy` comprise) : c'est la frontière que cette
-mission établit, vérifiée par test (le contrat `RecommendationSource` ne
-définit structurellement aucune méthode `decide`).
+une politique, relancer le TaskLoop, choisir un provider à la place de
+`select_model`, ou exécuter quoi que ce soit** — vérifié par test (aucun
+import d'`apex.taskloop`/`apex.recovery`/`apex.sandbox`/`apex.agents.
+runtime`/`apex.models.provider` dans le moteur ; le Protocol
+`RecommendationSource` n'expose structurellement aucune méthode `decide`/
+`apply`/`enforce`/`execute`/`run_task`). `apex.metalearner.recommendation.
+recommend_from_experience` (N+26, inchangée) reste disponible pour une
+analyse mono-tâche plus simple ; le nouveau moteur (N+28) est la voie
+recommandée pour comparer une tâche à l'historique plus large de sa
+spécialité.
 
 ## Limites connues
 
