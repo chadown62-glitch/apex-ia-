@@ -166,6 +166,17 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     l'appel transite par `scripts/apex-launch.sh` — un `apex serve` invoqué
     directement (sans passer par le launcher) doit refuser exactement de la
     même façon. Aucune option n'existe pour sauter cette vérification.
+
+    `allow_container_exec`/`allow_network_probe` : lus sur `args` avec
+    `False` par défaut — jamais activés d'eux-mêmes. `apex serve` invoqué
+    directement ne déclare pas ces attributs (son propre parser ne les
+    expose pas) : `getattr(..., False)` y retombe donc exactement sur le
+    comportement historique. `_cmd_start` réutilise ce même objet `args`
+    pour appeler `_cmd_serve` — les autorisations explicites que
+    l'utilisateur a passées à `apex start` (déjà vérifiées une première
+    fois par `run_gate` via `run_preflight_and_repair`) sont ainsi
+    honorées ICI aussi, au lieu d'être silencieusement retombées à `False`
+    sur ce second appel à Gate.
     """
     from apex.gate.report import DEFAULT_REPORT_PATH
     from apex.gate.runner import run_gate
@@ -173,8 +184,8 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     report = run_gate(
         config_path=args.config,
         exceptions_path="gate.exceptions.yaml",
-        allow_container_exec=False,
-        allow_network_probe=False,
+        allow_container_exec=getattr(args, "allow_container_exec", False),
+        allow_network_probe=getattr(args, "allow_network_probe", False),
         timeout_s=20.0,
     )
     report.write(DEFAULT_REPORT_PATH)
@@ -210,9 +221,18 @@ def _cmd_start(args: argparse.Namespace) -> int:
     from apex.doctor.launcher import StartupStatus, render_text, run_preflight_and_repair
     from apex.doctor.startup_history import DEFAULT_HISTORY_PATH
 
+    # Les mêmes autorisations explicites qu'`apex gate --allow-...` —
+    # jamais activées par défaut (`args.allow_*` reste `False` sans flag,
+    # même discipline que `gate_cmd`). Transmises telles quelles à
+    # `run_gate` via `gate_kwargs` (`run_preflight_and_repair` ne fait que
+    # les relayer, jamais une seconde politique d'autorisation).
+    gate_kwargs = {
+        "allow_container_exec": args.allow_container_exec,
+        "allow_network_probe": args.allow_network_probe,
+    }
     outcome = run_preflight_and_repair(
         config_path=args.config, dry_run=args.dry_run, timeout_s=args.timeout,
-        history_path=DEFAULT_HISTORY_PATH,
+        history_path=DEFAULT_HISTORY_PATH, gate_kwargs=gate_kwargs,
     )
     print(render_text(outcome, verbose=args.verbose))
 
@@ -620,6 +640,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="diagnostiquer et afficher les réparations sans les exécuter, jamais démarrer",
     )
     start_cmd.add_argument("-v", "--verbose", action="store_true")
+    start_cmd.add_argument(
+        "--allow-container-exec", action="store_true",
+        help="autoriser le Gate à démarrer des conteneurs de test (GATE-17, 18, 20)",
+    )
+    start_cmd.add_argument(
+        "--allow-network-probe", action="store_true",
+        help="autoriser une sonde de sortie réseau (GATE-15)",
+    )
     start_cmd.set_defaults(func=_cmd_start)
 
     learn_cmd = sub.add_parser(
