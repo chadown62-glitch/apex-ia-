@@ -95,6 +95,76 @@ check_minio = _service_check("minio")
 check_ollama = _service_check("ollama")
 
 
+def check_postgres_auth(ctx: CheckContext) -> CheckResult:
+    """Authentification RÉELLE contre Postgres — `service.postgres` ne fait
+    qu'un `tcp_open`, jamais une connexion authentifiée : un conteneur
+    joignable mais dont le rôle applicatif a un mot de passe désynchronisé
+    de `POSTGRES_PASSWORD` (.env) passait donc pour PASS ici alors que
+    chaque requête SQL réelle du serveur API échouait (cas réel diagnostiqué :
+    le volume Postgres ne réapplique JAMAIS `POSTGRES_PASSWORD` après sa toute
+    première initialisation — changer `.env` ensuite ne resynchronise rien).
+
+    `skip` si les extras `db` (sqlalchemy/psycopg) ne sont pas installés, ou
+    si `service.postgres` lui-même serait `SKIP`/injoignable — cette
+    vérification n'a de sens qu'en complément d'une connexion TCP déjà
+    établie, jamais en doublon de son diagnostic."""
+    name = "service.postgres.auth"
+    if ctx.config is None:
+        return result(name, CATEGORY_SVC, Severity.SKIP, "configuration non chargée")
+    endpoint = ctx.config.services.get("postgres")
+    if endpoint is None:
+        return result(name, CATEGORY_SVC, Severity.SKIP, "service non déclaré")
+    try:
+        import psycopg
+
+        from apex.db.engine import database_url_from_config
+    except ImportError:
+        return result(name, CATEGORY_SVC, Severity.SKIP, "extras « db » non installés")
+
+    from apex.errors import ConfigError
+
+    try:
+        url = database_url_from_config(ctx.config)
+    except ConfigError as exc:
+        return result(name, CATEGORY_SVC, Severity.SKIP, str(exc))
+    dsn = url.replace("postgresql+psycopg://", "postgresql://", 1)
+
+    try:
+        # `connect_timeout` de psycopg/libpq est un entier de secondes (pas
+        # de fraction) — jamais `ctx.timeout_s` (float) transmis tel quel.
+        with psycopg.connect(dsn, connect_timeout=max(1, round(ctx.timeout_s))) as conn, conn.cursor() as cur:
+            cur.execute("SELECT 1")
+    except psycopg.OperationalError as exc:
+        detail = str(exc).strip()
+        if "password authentication failed" in detail:
+            return result(
+                name, CATEGORY_SVC, Severity.FAIL,
+                "authentification Postgres échouée — le mot de passe réel du "
+                "rôle ne correspond plus à POSTGRES_PASSWORD (.env)",
+                remediation=(
+                    "Cause connue : le volume Postgres retient le mot de passe "
+                    "de sa toute première initialisation ; changer "
+                    "POSTGRES_PASSWORD dans .env après coup ne le "
+                    "resynchronise jamais. Réparation sûre : ALTER ROLE "
+                    "exécuté depuis l'intérieur du conteneur (authentification "
+                    "locale de confiance, jamais via le mot de passe cassé "
+                    "lui-même) — ne touche à aucune donnée."
+                ),
+                exc_type=exc.__class__.__name__,
+            )
+        return result(
+            name, CATEGORY_SVC, Severity.WARN,
+            f"connexion authentifiée impossible : {detail[:200]}",
+            exc_type=exc.__class__.__name__,
+        )
+    except Exception as exc:  # sonde best-effort — jamais bloquant hors ce cas précis
+        return result(
+            name, CATEGORY_SVC, Severity.WARN,
+            f"vérification impossible : {exc.__class__.__name__}: {exc}"[:200],
+        )
+    return result(name, CATEGORY_SVC, Severity.PASS, "authentification Postgres réelle réussie (SELECT 1)")
+
+
 def _reference_is_hardware_compatible(endpoints: list[ModelEndpoint], config: ApexConfig) -> bool | None:
     """Le matériel local ACTIF a-t-il assez de VRAM pour l'un de ces endpoints ?
 
@@ -253,6 +323,7 @@ CHECKS = (
     ("config.external", check_external_policy),
     ("interfaces.integrity", check_interfaces_integrity),
     ("service.postgres", check_postgres),
+    ("service.postgres.auth", check_postgres_auth),
     ("service.redis", check_redis),
     ("service.minio", check_minio),
     ("service.ollama", check_ollama),

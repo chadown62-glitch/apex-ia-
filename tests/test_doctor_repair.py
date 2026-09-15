@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import subprocess
 import unittest
+from unittest.mock import patch
 
 from apex.doctor.check import CheckResult, Severity
 from apex.doctor.repair import (
@@ -114,6 +115,55 @@ class TestClassify(unittest.TestCase):
         plan = classify(a_result(name="service.postgres", remediation="autre chose"))
         self.assertIs(plan.action, RepairAction.MANUAL_REQUIRED)
 
+    def test_l_postgres_auth_mismatch_is_safe_auto_fix_with_password_never_in_command(self) -> None:
+        """Cas réel diagnostiqué : mot de passe du rôle désynchronisé de
+        `.env`. `SAFE_AUTO_FIX` (déterministe, réversible, aucune donnée
+        touchée), mais le mot de passe ne doit JAMAIS apparaître dans
+        `plan.command` (visible en `--dry-run`/`ps`) — seulement dans
+        `plan.stdin`, jamais affiché."""
+        with patch.dict(
+            "os.environ",
+            {"POSTGRES_USER": "apex", "POSTGRES_PASSWORD": "s3cret'pw", "POSTGRES_DB": "apex"},
+        ):
+            plan = classify(
+                a_result(
+                    name="service.postgres.auth", severity=Severity.FAIL,
+                    message="authentification Postgres échouée — le mot de passe réel du rôle "
+                            "ne correspond plus à POSTGRES_PASSWORD (.env)",
+                    remediation="ALTER ROLE ...", facts={},
+                )
+            )
+        self.assertIs(plan.action, RepairAction.SAFE_AUTO_FIX)
+        self.assertEqual(
+            plan.command,
+            ("docker", "compose", "exec", "-T", "postgres", "psql", "-U", "apex", "-d", "apex"),
+        )
+        self.assertNotIn("s3cret", " ".join(plan.command))
+        self.assertIsNotNone(plan.stdin)
+        assert plan.stdin is not None
+        self.assertIn("ALTER ROLE", plan.stdin)
+        # apostrophe échappée en SQL standard (doublée), jamais tronquée/perdue
+        self.assertIn("s3cret''pw", plan.stdin)
+
+    def test_m_postgres_auth_without_a_matching_message_is_manual(self) -> None:
+        plan = classify(
+            a_result(name="service.postgres.auth", severity=Severity.WARN, message="autre chose", facts={})
+        )
+        self.assertIs(plan.action, RepairAction.MANUAL_REQUIRED)
+
+    def test_n_postgres_auth_without_env_password_falls_back_to_manual(self) -> None:
+        with patch.dict("os.environ", {}, clear=False):
+            import os
+
+            os.environ.pop("POSTGRES_PASSWORD", None)
+            plan = classify(
+                a_result(
+                    name="service.postgres.auth", severity=Severity.FAIL,
+                    message="authentification Postgres échouée", facts={},
+                )
+            )
+        self.assertIs(plan.action, RepairAction.MANUAL_REQUIRED)
+
 
 class TestApplyRepairs(unittest.TestCase):
     def test_a_dry_run_never_calls_the_runner(self) -> None:
@@ -172,6 +222,47 @@ class TestApplyRepairs(unittest.TestCase):
         self.assertTrue(outcomes[0].attempted)
         self.assertFalse(outcomes[0].succeeded)
         self.assertIn("TimeoutExpired", outcomes[0].detail)
+
+    def test_f_postgres_auth_repair_passes_the_password_only_via_stdin(self) -> None:
+        received: dict = {}
+
+        def fake_runner(argv, *, timeout_s, stdin=None):
+            received["argv"] = argv
+            received["stdin"] = stdin
+            return subprocess.CompletedProcess(argv, 0, "ALTER ROLE", "")
+
+        with patch.dict(
+            "os.environ",
+            {"POSTGRES_USER": "apex", "POSTGRES_PASSWORD": "s3cret", "POSTGRES_DB": "apex"},
+        ):
+            plans = plan_repairs((
+                a_result(
+                    name="service.postgres.auth", severity=Severity.FAIL,
+                    message="authentification Postgres échouée", facts={},
+                ),
+            ))
+            outcomes = apply_repairs(plans, dry_run=False, runner=fake_runner)
+        self.assertNotIn("s3cret", " ".join(received["argv"]))
+        self.assertIn("s3cret", received["stdin"])
+        self.assertTrue(outcomes[0].succeeded)
+
+    def test_g_dry_run_message_for_postgres_auth_never_prints_the_password(self) -> None:
+        """`--dry-run` affiche `plan.command` (jamais sensible) — `stdin`
+        n'apparaît nulle part dans le message produit."""
+        with patch.dict(
+            "os.environ",
+            {"POSTGRES_USER": "apex", "POSTGRES_PASSWORD": "s3cret", "POSTGRES_DB": "apex"},
+        ):
+            plans = plan_repairs((
+                a_result(
+                    name="service.postgres.auth", severity=Severity.FAIL,
+                    message="authentification Postgres échouée", facts={},
+                ),
+            ))
+            outcomes = apply_repairs(plans, dry_run=True, runner=lambda *a, **k: (_ for _ in ()).throw(
+                AssertionError("jamais appelé en dry-run")
+            ))
+        self.assertNotIn("s3cret", outcomes[0].detail)
 
 
 if __name__ == "__main__":

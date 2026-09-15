@@ -25,6 +25,7 @@ appeler ce runner."""
 
 from __future__ import annotations
 
+import os
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
@@ -51,13 +52,24 @@ class RepairAction(str, Enum):
 
 
 class CommandRunner(Protocol):
-    def __call__(self, argv: tuple[str, ...], *, timeout_s: float) -> subprocess.CompletedProcess: ...
+    def __call__(
+        self, argv: tuple[str, ...], *, timeout_s: float, stdin: str | None = None
+    ) -> subprocess.CompletedProcess: ...
 
 
-def real_command_runner(argv: tuple[str, ...], *, timeout_s: float) -> subprocess.CompletedProcess:
+def real_command_runner(
+    argv: tuple[str, ...], *, timeout_s: float, stdin: str | None = None
+) -> subprocess.CompletedProcess:
     """Le SEUL point du module qui touche réellement le système — jamais
-    appelé quand `dry_run=True` (voir `apply_repairs`)."""
-    return subprocess.run(list(argv), capture_output=True, text=True, timeout=timeout_s)
+    appelé quand `dry_run=True` (voir `apply_repairs`).
+
+    `stdin` existe pour une seule raison : permettre à une réparation de
+    transmettre une donnée sensible (ex. un mot de passe, voir
+    `_repair_postgres_auth`) sans jamais l'écrire dans `argv` — un `argv`
+    apparaît potentiellement dans la liste des processus du système
+    (`ps`/`/proc/<pid>/cmdline`) et dans le message `--dry-run` (§72 : un
+    secret ne doit jamais transiter par un endroit aussi visible)."""
+    return subprocess.run(list(argv), input=stdin, capture_output=True, text=True, timeout=timeout_s)
 
 
 @dataclass(frozen=True)
@@ -67,6 +79,11 @@ class RepairPlan:
     reason: str
     #: Argv RÉEL qui serait exécuté — `None` sauf pour `SAFE_AUTO_FIX`.
     command: tuple[str, ...] | None = None
+    #: Entrée standard transmise au process — `None` pour toute réparation
+    #: qui n'en a pas besoin (la grande majorité). Jamais affiché en
+    #: `--dry-run` (contrairement à `command`) : c'est précisément pourquoi
+    #: une donnée sensible transite par ici plutôt que par `argv`.
+    stdin: str | None = None
 
 
 @dataclass(frozen=True)
@@ -83,14 +100,20 @@ class RepairOutcome:
 #: réparation connue pour cet état précis du check — reste MANUAL_REQUIRED/
 #: RETRY_ONLY). Ajouter une entrée ici est le SEUL moyen d'activer un
 #: `SAFE_AUTO_FIX` — jamais une règle générique par gravité.
-def _repair_docker_present(result: CheckResult) -> tuple[str, ...] | None:
+#: Chaque règle retourne soit `None` (pas de réparation connue pour cet état
+#: précis), soit `(argv, stdin)` — `stdin` est `None` pour toute réparation
+#: qui n'a besoin que d'arguments non sensibles.
+RepairCommand = tuple[tuple[str, ...], str | None]
+
+
+def _repair_docker_present(result: CheckResult) -> RepairCommand | None:
     # `docker.present` FAIL avec docker installé mais le démon injoignable
     # (`apex.doctor.checks.platform.check_docker`, message exact "démon
     # Docker injoignable") — démarrer le service est déterministe et
     # réversible (`service docker stop` existe symétriquement), jamais une
     # réparation destructrice.
     if "démon Docker injoignable" in result.message:
-        return ("service", "docker", "start")
+        return ("service", "docker", "start"), None
     return None
 
 
@@ -105,7 +128,7 @@ def _repair_docker_present(result: CheckResult) -> tuple[str, ...] | None:
 _COMPOSE_SERVICE_CHECKS = frozenset({"service.postgres", "service.redis", "service.minio", "service.ollama"})
 
 
-def _repair_compose_service(result: CheckResult) -> tuple[str, ...] | None:
+def _repair_compose_service(result: CheckResult) -> RepairCommand | None:
     if result.remediation != "docker compose up -d":
         return None
     host = result.facts.get("host")
@@ -113,10 +136,10 @@ def _repair_compose_service(result: CheckResult) -> tuple[str, ...] | None:
     if not isinstance(host, str) or not isinstance(port, int):
         return None
     service_name = result.name.removeprefix("service.")
-    return ("docker", "compose", "up", "-d", service_name)
+    return ("docker", "compose", "up", "-d", service_name), None
 
 
-def _repair_missing_data_root(result: CheckResult) -> tuple[str, ...] | None:
+def _repair_missing_data_root(result: CheckResult) -> RepairCommand | None:
     # `fs.data_root` WARN avec `exists=False` (apex.doctor.checks.
     # environment.check_data_root, N+26) : créer le répertoire est sûr et
     # explicitement autorisé par la mission (« création de répertoires
@@ -125,13 +148,46 @@ def _repair_missing_data_root(result: CheckResult) -> tuple[str, ...] | None:
     if result.facts.get("exists") is False:
         path = result.facts.get("path")
         if isinstance(path, str) and path:
-            return ("mkdir", "-p", path)
+            return ("mkdir", "-p", path), None
     return None
+
+
+def _repair_postgres_auth(result: CheckResult) -> RepairCommand | None:
+    """`service.postgres.auth` FAIL (`apex.doctor.checks.services.
+    check_postgres_auth`) : le rôle applicatif a un mot de passe réel
+    différent de `POSTGRES_PASSWORD` (.env) — cas réel diagnostiqué, le
+    volume Postgres ne resynchronise jamais son mot de passe après sa
+    première initialisation. `ALTER ROLE ... PASSWORD` est déterministe,
+    réversible (peut être réappliqué sans effet une fois déjà correct) et ne
+    touche à aucune donnée applicative — un `SAFE_AUTO_FIX` légitime.
+
+    Exécuté via `docker compose exec` (authentification locale de confiance
+    À L'INTÉRIEUR du conteneur, jamais via le mot de passe cassé lui-même —
+    on ne PEUT structurellement pas se connecter depuis l'extérieur avec un
+    mot de passe qu'on sait faux). Le nouveau mot de passe transite
+    exclusivement par `stdin` (jamais `argv` — voir `real_command_runner`).
+    """
+    if "authentification Postgres échouée" not in result.message:
+        return None
+    user = os.environ.get("POSTGRES_USER", "apex")
+    password = os.environ.get("POSTGRES_PASSWORD")
+    db = os.environ.get("POSTGRES_DB", "apex")
+    if not password:
+        return None
+    # Échappement SQL standard d'un littéral chaîne (doubler les apostrophes)
+    # — `stdin` n'est jamais interprété par un shell (voir
+    # `real_command_runner` : pas de `shell=True`), donc ce n'est PAS une
+    # défense contre une injection shell (structurellement impossible ici),
+    # seulement contre une apostrophe qui casserait la syntaxe SQL elle-même.
+    escaped = password.replace("'", "''")
+    stdin = f"ALTER ROLE {user} WITH PASSWORD '{escaped}';\n"
+    return ("docker", "compose", "exec", "-T", "postgres", "psql", "-U", user, "-d", db), stdin
 
 
 _SAFE_REPAIR_RULES: dict[str, Any] = {
     "docker.present": _repair_docker_present,
     "fs.data_root": _repair_missing_data_root,
+    "service.postgres.auth": _repair_postgres_auth,
     **{name: _repair_compose_service for name in _COMPOSE_SERVICE_CHECKS},
 }
 
@@ -167,11 +223,12 @@ def classify(result: CheckResult) -> RepairPlan:
         )
     rule = _SAFE_REPAIR_RULES.get(result.name)
     if rule is not None:
-        command = rule(result)
-        if command is not None:
+        repair_command = rule(result)
+        if repair_command is not None:
+            command, stdin = repair_command
             return RepairPlan(
                 check_name=result.name, action=RepairAction.SAFE_AUTO_FIX,
-                reason=result.message, command=command,
+                reason=result.message, command=command, stdin=stdin,
             )
     return RepairPlan(
         check_name=result.name, action=RepairAction.MANUAL_REQUIRED,
@@ -212,7 +269,11 @@ def apply_repairs(
             continue
         assert plan.command is not None
         try:
-            completed = runner(plan.command, timeout_s=timeout_s)
+            completed = (
+                runner(plan.command, timeout_s=timeout_s)
+                if plan.stdin is None
+                else runner(plan.command, timeout_s=timeout_s, stdin=plan.stdin)
+            )
         except Exception as exc:  # une réparation qui échoue ne bloque jamais le launcher
             outcomes.append(
                 RepairOutcome(
