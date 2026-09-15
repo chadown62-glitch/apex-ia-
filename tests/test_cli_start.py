@@ -214,5 +214,33 @@ class TestCliServeDirectInvocationUnaffected(unittest.TestCase):
         self.assertEqual(code, 1)
 
 
+class TestCliServeReachesUvicornRun(unittest.TestCase):
+    """Régression : `_cmd_serve` n'avait jamais été exercé jusqu'à
+    `uvicorn.run` par aucun test existant (chaque test précédent arrêtait
+    la trajectoire à un refus Gate) — un vrai `apex start
+    --allow-container-exec --allow-network-probe` physique a révélé que
+    `log.info("... %s:%d", args.host, args.port)` plantait avec
+    `TypeError: BoundLogger.info() takes 2 positional arguments but 4 were
+    given` (`apex.obs.logging.BoundLogger.info` n'accepte que des champs
+    structurés `**fields`, jamais d'arguments positionnels `%s`/`%d` façon
+    `logging.Logger` stdlib). Ce test autorise Gate des DEUX côtés (mock),
+    simule `create_app`/`uvicorn.run` (jamais un vrai serveur HTTP dans la
+    suite de tests) et exerce donc réellement la ligne fautive."""
+
+    def setUp(self) -> None:
+        self._write_patch = patch.object(EnvironmentReport, "write", lambda self, path=None: None)
+        self._write_patch.start()
+        self.addCleanup(self._write_patch.stop)
+
+    def test_serve_reaches_uvicorn_run_without_raising(self) -> None:
+        with patch("apex.gate.runner.run_gate", side_effect=lambda **k: _fake_report(authorized=True)), \
+             patch("apex.api.app.create_app") as fake_create_app, \
+             patch("uvicorn.run") as fake_uvicorn_run:
+            code, _ = _run(["serve"])
+        self.assertEqual(code, 0)
+        fake_create_app.assert_called_once()
+        fake_uvicorn_run.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -206,7 +206,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
     from apex.api.app import create_app
 
-    log.info("démarrage d'APEX (apex serve) sur %s:%d", args.host, args.port)
+    log.info("démarrage d'APEX (apex serve)", host=args.host, port=args.port)
     uvicorn.run(create_app(), host=args.host, port=args.port, log_level=(args.log_level or "info").lower())
     return 0
 
