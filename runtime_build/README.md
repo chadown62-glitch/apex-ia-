@@ -7,8 +7,8 @@ copie filtrée du dépôt destinée à être distribuée séparément (le futur
 
 ## Fichiers
 
-- `selection.py` — source unique de vérité : `RUNTIME_PACKAGES` (26
-  sous-paquets/fichiers de `apex/`), `RESEARCH_PACKAGES` (15 sous-paquets
+- `selection.py` — source unique de vérité : `RUNTIME_PACKAGES` (27
+  sous-paquets/fichiers de `apex/`), `RESEARCH_PACKAGES` (16 sous-paquets
   exclus), et `verify_partition_matches_repo()` qui échoue si un nouveau
   sous-paquet de `apex/` est ajouté sans être classé ici.
 - `build.py` — construit l'artefact : `git archive <commit>` (jamais une

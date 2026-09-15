@@ -49,6 +49,7 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "operator",
         "policy",
         "projects",
+        "recovery",
         "routing",
         "sandbox",
         "scheduler",
@@ -83,6 +84,7 @@ RESEARCH_PACKAGES: frozenset[str] = frozenset(
         "skills",
         "stattest",
         "taskgen",
+        "taskloop",
         "tasks",
         "weakness",
     }
