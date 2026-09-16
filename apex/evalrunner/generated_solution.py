@@ -19,11 +19,42 @@ sortie que `apex.oracles.exit_code.ExitCodeOracle` juge, exactement comme un
 script déterministe existant. Cette substitution reste une simple
 concaténation de texte AVANT le fork/exec réel — jamais une exécution du
 code candidat dans CE processus (aucun `eval()`/`exec()` Python, aucune
-interprétation avant le sandbox)."""
+interprétation avant le sandbox).
+
+Avant substitution, `extract_candidate_code()` isole le code d'un bloc
+markdown ``` si le modèle en a produit un (constat réel : un modèle qui
+répond ``` ```python\n...\n``` ``` malgré la consigne du prompt de ne
+renvoyer que du code produisait, avant ce correctif, un `SyntaxError`
+immédiat sur les balises elles-mêmes — indiscernable, côté
+`ExitCodeOracle`, d'un vrai échec de solution). `GenerationResult.text`
+brut reste par ailleurs persisté tel quel dans `EvalRun.facts` — seule la
+commande RÉELLEMENT exécutée passe par cette extraction."""
 
 from __future__ import annotations
 
+import re
+
 CANDIDATE_CODE_MARKER = "# APEX_CANDIDATE_CODE_HERE"
+
+#: Un seul bloc ``` ... ``` (avec ou sans identifiant de langage, ex.
+#: ```python) — le cas empiriquement observé et non ambigu. Aucune
+#: heuristique de nettoyage de prose au-delà de ça : trop de faux positifs
+#: possibles sur du code valide qui ressemblerait, par ses commentaires, à
+#: du texte explicatif.
+_FENCE_PATTERN = re.compile(r"```[ \t]*[a-zA-Z0-9_+\-]*[ \t]*\r?\n(.*?)```", re.DOTALL)
+
+
+def extract_candidate_code(text: str) -> str:
+    """Isole le contenu du premier bloc markdown ``` de `text`, s'il en
+    existe un ; retourne `text` INCHANGÉ sinon (jamais de suppression de
+    texte hors bloc quand aucune balise n'est présente — un modèle qui
+    répond du code brut sans balises n'est jamais altéré par cette
+    fonction)."""
+    match = _FENCE_PATTERN.search(text)
+    if match is None:
+        return text
+    return match.group(1)
+
 
 #: Commande de contrat pour une `Task` portant `solution_harness` — jamais
 #: réellement exécutée (`run_generated_solution` construit la vraie commande
@@ -41,7 +72,8 @@ class MissingCandidateMarkerError(ValueError):
 
 
 def build_candidate_command(*, solution_harness: str, candidate_code: str) -> tuple[str, ...]:
-    """Substitue `CANDIDATE_CODE_MARKER` par `candidate_code` dans
+    """Substitue `CANDIDATE_CODE_MARKER` par `candidate_code` (après
+    `extract_candidate_code()`, voir docstring du module) dans
     `solution_harness` et retourne l'argv réel à exécuter. Lève
     `MissingCandidateMarkerError` si le marqueur est absent — jamais un
     script partiellement construit exécuté quand même."""
@@ -49,5 +81,5 @@ def build_candidate_command(*, solution_harness: str, candidate_code: str) -> tu
         raise MissingCandidateMarkerError(
             f"« solution_harness » ne contient pas le marqueur « {CANDIDATE_CODE_MARKER} »"
         )
-    script = solution_harness.replace(CANDIDATE_CODE_MARKER, candidate_code, 1)
+    script = solution_harness.replace(CANDIDATE_CODE_MARKER, extract_candidate_code(candidate_code), 1)
     return ("python3", "-c", script)

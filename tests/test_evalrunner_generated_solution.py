@@ -30,6 +30,7 @@ from apex.evalrunner.generated_solution import (
     CANDIDATE_CODE_MARKER,
     MissingCandidateMarkerError,
     build_candidate_command,
+    extract_candidate_code,
 )
 from apex.evalrunner.model import EvalMethod
 from apex.evalrunner.service import EvalRunnerService
@@ -152,6 +153,19 @@ class TestBuildCandidateCommand(unittest.TestCase):
         result = subprocess.run(command, capture_output=True, text=True, timeout=10)
         self.assertNotEqual(result.returncode, 0)
 
+    def test_f_a_markdown_fenced_solution_against_the_real_harness_now_exits_zero(self) -> None:
+        """Le cas précisément diagnostiqué par l'audit : reproduit ici avec
+        un VRAI sous-processus python3 — avant le correctif, les balises
+        ``` produisaient un `SyntaxError` immédiat, indiscernable d'un vrai
+        échec de solution côté `ExitCodeOracle`."""
+        import subprocess
+
+        spec = build_palindrome_task_spec()
+        fenced = f"```python\n{_CORRECT_IS_PALINDROME}```"
+        command = build_candidate_command(solution_harness=spec.solution_harness, candidate_code=fenced)
+        result = subprocess.run(command, capture_output=True, text=True, timeout=10)
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+
     def test_e_a_solution_missing_the_function_fails_with_a_real_nameerror(self) -> None:
         import subprocess
 
@@ -164,6 +178,32 @@ class TestBuildCandidateCommand(unittest.TestCase):
         # Le harness capture l'exception PAR cas (jamais un crash brut) et la
         # journalise dans le JSON de sortie — c'est là qu'on la vérifie.
         self.assertIn("NameError", result.stdout)
+
+
+class TestExtractCandidateCode(unittest.TestCase):
+    """Correctif diagnostiqué par l'audit : un modèle qui enveloppe sa
+    réponse dans un bloc markdown produisait, avant ce correctif, un
+    `SyntaxError` immédiat sur les balises elles-mêmes — indiscernable,
+    côté `ExitCodeOracle`, d'un vrai échec de solution."""
+
+    def test_a_fenced_block_with_language_tag_is_isolated(self) -> None:
+        text = f"```python\n{_CORRECT_IS_PALINDROME}```"
+        self.assertEqual(extract_candidate_code(text), _CORRECT_IS_PALINDROME)
+
+    def test_b_fenced_block_without_language_tag_is_isolated(self) -> None:
+        text = f"```\n{_CORRECT_IS_PALINDROME}```"
+        self.assertEqual(extract_candidate_code(text), _CORRECT_IS_PALINDROME)
+
+    def test_c_explanatory_text_around_a_fenced_block_is_discarded(self) -> None:
+        text = f"Voici la solution :\n```python\n{_CORRECT_IS_PALINDROME}```\nJ'espère que ça aide !"
+        self.assertEqual(extract_candidate_code(text), _CORRECT_IS_PALINDROME)
+
+    def test_d_text_without_any_fence_is_returned_unchanged(self) -> None:
+        self.assertEqual(extract_candidate_code(_CORRECT_IS_PALINDROME), _CORRECT_IS_PALINDROME)
+
+    def test_e_only_the_first_fenced_block_is_used(self) -> None:
+        text = f"```python\n{_CORRECT_IS_PALINDROME}```\n\nautre bloc :\n```\n{_WRONG_IS_PALINDROME}```"
+        self.assertEqual(extract_candidate_code(text), _CORRECT_IS_PALINDROME)
 
 
 class TestResolveGenerationTemperature(unittest.TestCase):
