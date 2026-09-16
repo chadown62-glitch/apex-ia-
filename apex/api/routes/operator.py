@@ -220,6 +220,22 @@ def get_design_result(design_id: str) -> DataEnvelope[DesignPackageOut]:
     return DataEnvelope(status="real", data=_to_design_package_out(package))
 
 
+@router.get("/designs", response_model=DataEnvelope[list[DesignPackageOut]])
+def list_recent_designs(limit: int = 100) -> DataEnvelope[list[DesignPackageOut]]:
+    """`DesignService.list_recent` existe depuis N+17 mais n'était atteignable
+    par aucune route jusqu'ici — sans elle, une conception soumise puis
+    quittée de l'écran devenait introuvable sans connaître son `design_id`."""
+    try:
+        from apex.api.dependencies import get_operator_service
+
+        limit = max(1, min(limit, 500))
+        packages = get_operator_service().list_recent_designs(limit=limit)
+        data = [_to_design_package_out(p) for p in packages]
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=data)
+
+
 @router.get("/operations", response_model=DataEnvelope[list[EventOut]])
 def get_recent_operations(limit: int = 100) -> DataEnvelope[list[EventOut]]:
     try:

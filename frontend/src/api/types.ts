@@ -666,3 +666,128 @@ export interface EvolutionGeneration {
    * reste observable ici, jamais silencieuse. */
   failures: string[];
 }
+
+// -- design engine (N+17, apex.design) ------------------------------------
+// Miroir de apex/api/schemas.py::DesignPackageOut et ses sous-objets.
+// `DesignPipelineState`/`DesignStep`/`DesignStepState` restent des `string`
+// ici plutôt que des unions littérales : le backend (apex.design.states)
+// est la seule source de vérité fermée, ce fichier n'en duplique jamais
+// l'énumération exacte pour ne jamais désynchroniser silencieusement.
+
+export interface DesignRequest {
+  id: string;
+  text: string;
+  requested_by: string;
+  created_at: string;
+}
+
+export interface DesignStepRecord {
+  step: string;
+  state: string;
+  input_summary: string;
+  output_summary: string;
+  provenance: string;
+  logs: string[];
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  duration_s: number | null;
+}
+
+export interface DesignBrief {
+  design_id: string;
+  summary: string;
+  goals: string[];
+  constraints: string[];
+  audience: string;
+  style_keywords: string[];
+  source_request: string;
+  provenance: string;
+}
+
+export interface ResearchResult {
+  source: string;
+  title: string;
+  url: string | null;
+  excerpt: string;
+  relevance: number;
+  timestamp: string;
+  provenance: string;
+}
+
+export interface DesignConcept {
+  id: string;
+  design_id: string;
+  version: number;
+  title: string;
+  narrative: string;
+  key_elements: string[];
+  based_on_research: number[];
+  provenance: string;
+}
+
+export interface VisualPrompt {
+  id: string;
+  concept_id: string;
+  variant: number;
+  subject: string;
+  environment: string;
+  composition: string;
+  architecture_design: string;
+  materials: string;
+  colors: string;
+  light: string;
+  camera: string;
+  style: string;
+  constraints: string;
+  elements_to_avoid: string;
+  rendered: string;
+}
+
+/** `state`: "completed" (succès réel) | "unavailable" (aucun backend visuel
+ * connecté — le cas systématique dans ce dépôt) | "failed" (backend
+ * présent mais l'appel a échoué). Jamais un 4e état fabriqué côté client. */
+export interface VisualResult {
+  id: string;
+  prompt_id: string;
+  state: string;
+  provider: string;
+  detail: string;
+  artifact_content_hash: string | null;
+}
+
+export interface DesignArtifactRef {
+  content_hash: string;
+  kind: string;
+  created_at: string;
+}
+
+export interface DesignValidation {
+  design_id: string;
+  passed: boolean;
+  checks: string[];
+  failures: string[];
+  validated_at: string;
+}
+
+export interface DesignPackage {
+  design_id: string;
+  request: DesignRequest;
+  state: string;
+  steps: DesignStepRecord[];
+  brief: DesignBrief | null;
+  research: ResearchResult[];
+  concepts: DesignConcept[];
+  visual_prompts: VisualPrompt[];
+  visual_results: VisualResult[];
+  validation: DesignValidation | null;
+  artifacts: DesignArtifactRef[];
+  error: string | null;
+  created_at: string;
+  completed_at: string | null;
+  ready: boolean;
+}
+
+export interface DesignSubmitInput {
+  request: string;
+}

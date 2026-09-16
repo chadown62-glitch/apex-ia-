@@ -319,6 +319,13 @@ class OperatorService:
     def get_design_result(self, design_id: str) -> DesignPackage | None:
         return self._require_design_service().get_result(design_id)
 
+    def list_recent_designs(self, limit: int = 100) -> tuple[DesignPackage, ...]:
+        """Projette `DesignService.list_recent` — la liste (déjà réelle,
+        `apex.design.service.DesignService`) était jusqu'ici inatteignable
+        depuis l'extérieur d'`OperatorService` : aucune route API ni aucun
+        appelant ne l'exposait, malgré son existence depuis N+17."""
+        return self._require_design_service().list_recent(limit=limit)
+
     def get_recent_operations(self, limit: int = 100) -> list[Any]:
         """Projette `events` (`apex.db.repositories.EventRepository.recent`,
         déjà la source de vérité de tout ce que Mission/Scheduler/Operator

@@ -27,6 +27,7 @@ _GET_PATHS = (
     "/api/v1/operator/operations",
     "/api/v1/operator/designs/x",
     "/api/v1/operator/designs/x/result",
+    "/api/v1/operator/designs",
 )
 _POST_PATHS = (
     "/api/v1/operator/start",
@@ -131,6 +132,11 @@ class TestOperatorRoutesWithoutDatabase(unittest.TestCase):
 
     def test_get_unknown_design_degrades_to_unknown_never_a_500(self) -> None:
         response = self.client.get("/api/v1/operator/designs/does-not-exist")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "unknown")
+
+    def test_list_recent_designs_degrades_to_unknown_never_a_500(self) -> None:
+        response = self.client.get("/api/v1/operator/designs")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "unknown")
 
@@ -301,6 +307,12 @@ class TestOperatorRoutesWithRealDatabase(unittest.TestCase):
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.json()["data"]["design_id"], design_id)
         self.assertTrue(result.json()["data"]["ready"])
+
+        # ListRecentDesigns (Operator) — la conception soumise y apparaît,
+        # sans avoir à connaître son design_id à l'avance.
+        recent = self.client.get("/api/v1/operator/designs")
+        self.assertEqual(recent.status_code, 200)
+        self.assertIn(design_id, [p["design_id"] for p in recent.json()["data"]])
 
         # Visible dans les opérations récentes — même journal `events` que le
         # reste de l'Operator, jamais un second canal.

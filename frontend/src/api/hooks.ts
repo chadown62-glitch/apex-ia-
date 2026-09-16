@@ -33,6 +33,7 @@ import {
   getLearningHistory,
   getLearningStatus,
   getMission,
+  getDesignStatus,
   getPopulation,
   getRegistry,
   getSelfModel,
@@ -52,12 +53,15 @@ import {
   listMissions,
   listProjects,
   listProviders,
+  listRecentDesigns,
   listTasks,
   rejectMission,
   renameConversation,
+  resumeDesign,
   runMissionViaAgent,
   sendMessage,
   startLearningCycle,
+  submitDesign,
   updateConfiguredAgent,
   validateMission,
 } from "./endpoints";
@@ -67,6 +71,7 @@ import type {
   ConfiguredAgentCreateInput,
   ConfiguredAgentUpdateInput,
   ConversationCreateInput,
+  DesignSubmitInput,
   ExperimentCycleCreateInput,
   LearningCycleStartInput,
   MissionCreateInput,
@@ -180,6 +185,44 @@ export function useLaunchMission() {
     onSuccess: (_, missionId) => {
       queryClient.invalidateQueries({ queryKey: ["missions"] });
       queryClient.invalidateQueries({ queryKey: ["missions", missionId] });
+    },
+  });
+}
+
+// -- design engine (N+17, /operator/designs) -------------------------------
+// Exécution SYNCHRONE côté backend (apex.design.service.DesignService) :
+// `submitDesign`/`resumeDesign` renvoient le `DesignPackage` COMPLET, déjà
+// `ready`, dans la même réponse HTTP — pas de polling nécessaire pendant
+// l'exécution. `useDesign`/`useRecentDesigns` servent à RELIRE une
+// conception (navigation, historique), pas à observer une progression.
+
+export function useRecentDesigns() {
+  return usePolling(["designs"], listRecentDesigns, REFRESH_MS);
+}
+
+export function useDesign(designId: string | undefined) {
+  return useQuery({
+    queryKey: ["designs", designId],
+    queryFn: () => getDesignStatus(designId as string),
+    enabled: Boolean(designId),
+  });
+}
+
+export function useSubmitDesign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: DesignSubmitInput) => submitDesign(input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["designs"] }),
+  });
+}
+
+export function useResumeDesign() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (designId: string) => resumeDesign(designId),
+    onSuccess: (_, designId) => {
+      queryClient.invalidateQueries({ queryKey: ["designs"] });
+      queryClient.invalidateQueries({ queryKey: ["designs", designId] });
     },
   });
 }

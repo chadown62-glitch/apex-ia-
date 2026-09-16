@@ -22,6 +22,8 @@ import type {
   Conversation,
   ConversationCreateInput,
   DataEnvelope,
+  DesignPackage,
+  DesignSubmitInput,
   EvalRun,
   EvolutionGeneration,
   ExperimentCycle,
@@ -104,6 +106,26 @@ export function rejectMission(missionId: string, reason?: string): Promise<DataE
 
 export function launchMission(missionId: string): Promise<DataEnvelope<Mission>> {
   return fetchEnvelope<Mission>(`/missions/${encodeURIComponent(missionId)}/launch`, { method: "POST" });
+}
+
+// -- design engine (N+17, /operator/designs) ------------------------------------
+
+export function submitDesign(input: DesignSubmitInput): Promise<DataEnvelope<DesignPackage>> {
+  return fetchEnvelope<DesignPackage>("/operator/designs", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function resumeDesign(designId: string): Promise<DataEnvelope<DesignPackage>> {
+  return fetchEnvelope<DesignPackage>(`/operator/designs/${encodeURIComponent(designId)}/resume`, {
+    method: "POST",
+  });
+}
+
+export function getDesignStatus(designId: string): Promise<DataEnvelope<DesignPackage>> {
+  return fetchEnvelope<DesignPackage>(`/operator/designs/${encodeURIComponent(designId)}`);
+}
+
+export function listRecentDesigns(): Promise<DataEnvelope<DesignPackage[]>> {
+  return fetchEnvelope<DesignPackage[]>("/operator/designs");
 }
 
 // -- projects ------------------------------------------------------------------

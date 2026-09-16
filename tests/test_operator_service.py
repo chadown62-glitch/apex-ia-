@@ -460,6 +460,23 @@ class TestDesignIntegration(_OperatorTestCase):
         package = self.operator.submit_design("Une bibliothèque communautaire")
         self.assertEqual(package.state.value, "completed")
 
+    def test_list_recent_designs_reflects_real_submissions_newest_first(self) -> None:
+        self.operator.start()
+        first = self.operator.submit_design("Un kiosque à musique")
+        second = self.operator.submit_design("Une passerelle piétonne")
+        recent = self.operator.list_recent_designs()
+        self.assertEqual([p.design_id for p in recent[:2]], [second.design_id, first.design_id])
+
+    def test_list_recent_designs_without_design_service_raises_operator_not_ready(self) -> None:
+        operator = OperatorService(
+            self.factory, scheduler=self.scheduler, mission_service=self.mission_service,
+            tick_interval_s=self.tick_interval_s,
+        )
+        operator.start()
+        with self.assertRaises(OperatorNotReady):
+            operator.list_recent_designs()
+        operator.shutdown(wait=True)
+
 
 if __name__ == "__main__":
     unittest.main()
