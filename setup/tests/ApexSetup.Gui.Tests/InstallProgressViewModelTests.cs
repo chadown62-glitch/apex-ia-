@@ -211,5 +211,7 @@ public class InstallProgressViewModelTests : IDisposable
         public Task<RecoverResponse> RecoverAsync(string destination, CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<ValidateResponse> ValidateAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
         public Task<StatusResponse> StatusAsync(string destination, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<ApexSetup.Core.RuntimeAdapter.RuntimeCallResult<ApexSetup.Core.Contracts.RuntimeDoctorResult>> GetDoctorDetailAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public Task<ApexSetup.Core.RuntimeAdapter.RuntimeCallResult<ApexSetup.Core.Contracts.RuntimeGateResult>> GetGateDetailAsync(CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }

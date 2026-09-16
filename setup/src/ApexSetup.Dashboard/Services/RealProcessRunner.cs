@@ -1,0 +1,148 @@
+using System.Diagnostics;
+using System.Text;
+
+namespace ApexSetup.Dashboard.Services;
+
+/// <summary>
+/// Implémentation réelle — <c>[SupportedOSPlatform("windows")]</c> non
+/// appliqué délibérément (contrairement à <c>WindowsTaskDialogNotifier</c>
+/// côté Launcher) : la construction/le lancement de <see cref="Process"/>
+/// avec <c>UseShellExecute=false</c> et <c>ArgumentList</c> est une API
+/// .NET portable, exercée par les tests de CE dépôt sous Linux (seul
+/// <c>wsl.exe</c> lui-même n'existe que sous Windows — jamais supposé
+/// présent ici, voir <see cref="ProcessRunResult.NotStarted"/> sur
+/// <see cref="Win32Exception"/>).
+/// </summary>
+public sealed class RealProcessRunner : IProcessRunner
+{
+    public async Task<ProcessRunResult> RunAsync(
+        string executable, IReadOnlyList<string> arguments, TimeSpan timeout, CancellationToken cancellationToken = default)
+    {
+        using var process = BuildProcess(executable, arguments, redirect: true);
+        var stdout = new StringBuilder();
+        var stderr = new StringBuilder();
+        process.OutputDataReceived += (_, e) => { if (e.Data is not null) stdout.AppendLine(e.Data); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data is not null) stderr.AppendLine(e.Data); };
+
+        try
+        {
+            if (!process.Start())
+            {
+                return ProcessRunResult.NotStarted("Process.Start a retourné false");
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Cas réel le plus fréquent ici : `wsl.exe` absent du PATH
+            // (WSL2 non installé) — jamais une exception non gérée qui
+            // remonterait jusqu'à l'UI.
+            return ProcessRunResult.NotStarted(ex.Message);
+        }
+
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(timeout);
+        bool timedOut = false;
+        try
+        {
+            await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            timedOut = true;
+            TryKill(process);
+        }
+
+        if (timedOut)
+        {
+            return new ProcessRunResult { Started = true, TimedOut = true, Stdout = stdout.ToString(), Stderr = stderr.ToString() };
+        }
+
+        return new ProcessRunResult
+        {
+            Started = true, ExitCode = process.ExitCode, Stdout = stdout.ToString(), Stderr = stderr.ToString(),
+        };
+    }
+
+    public ITrackedProcess? Start(string executable, IReadOnlyList<string> arguments)
+    {
+        var process = BuildProcess(executable, arguments, redirect: false);
+        try
+        {
+            if (!process.Start())
+            {
+                process.Dispose();
+                return null;
+            }
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            process.Dispose();
+            return null;
+        }
+        return new RealTrackedProcess(process);
+    }
+
+    private static Process BuildProcess(string executable, IReadOnlyList<string> arguments, bool redirect)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            UseShellExecute = false,
+            RedirectStandardOutput = redirect,
+            RedirectStandardError = redirect,
+            CreateNoWindow = true,
+        };
+        foreach (var arg in arguments)
+        {
+            startInfo.ArgumentList.Add(arg);
+        }
+        return new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Déjà sorti entre le test et l'appel — pas une erreur.
+        }
+    }
+
+    private sealed class RealTrackedProcess(Process process) : ITrackedProcess
+    {
+        public bool HasExited => process.HasExited;
+        public int? ExitCode => process.HasExited ? process.ExitCode : null;
+
+        public void Kill()
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
+        public Task WaitForExitAsync(CancellationToken cancellationToken = default) =>
+            process.WaitForExitAsync(cancellationToken);
+
+        public ValueTask DisposeAsync()
+        {
+            process.Dispose();
+            return ValueTask.CompletedTask;
+        }
+    }
+}

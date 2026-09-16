@@ -487,6 +487,16 @@ public sealed class SetupApplicationService(
     }
 
     // -------------------------------------------------------------
+    // détail Doctor/Gate (pass-through, voir docstring de l'interface)
+    // -------------------------------------------------------------
+
+    public Task<RuntimeCallResult<RuntimeDoctorResult>> GetDoctorDetailAsync(CancellationToken cancellationToken = default) =>
+        runtimeAdapter.GetDoctorAsync(cancellationToken);
+
+    public Task<RuntimeCallResult<RuntimeGateResult>> GetGateDetailAsync(CancellationToken cancellationToken = default) =>
+        runtimeAdapter.GetGateAsync(cancellationToken);
+
+    // -------------------------------------------------------------
     // Internes partagés
     // -------------------------------------------------------------
 

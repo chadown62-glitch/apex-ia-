@@ -1,5 +1,7 @@
 using ApexSetup.Application.Contracts;
 using ApexSetup.Application.Requests;
+using ApexSetup.Core.Contracts;
+using ApexSetup.Core.RuntimeAdapter;
 
 namespace ApexSetup.Application;
 
@@ -36,4 +38,22 @@ public interface ISetupApplicationService
 
     /// <summary>Lecture pure de l'état transactionnel courant — aucun effet secondaire durable.</summary>
     Task<StatusResponse> StatusAsync(string destination, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Détail COMPLET d'<c>apex doctor --json</c> (tous les <c>results[]</c>,
+    /// pas seulement le résumé agrégé que <see cref="ValidateAsync"/>
+    /// expose via <see cref="Contracts.DoctorSummary"/>). Ajouté pour
+    /// qu'un futur consommateur (tableau de bord par composant : WSL,
+    /// Docker, PostgreSQL, Redis, MinIO, Ollama, GPU) puisse lire l'état
+    /// RÉEL de chaque check individuel sans qu'aucun appelant ne
+    /// réinterprète ou ne recalcule le diagnostic — un pur passe-plat vers
+    /// <c>RuntimeAdapter.GetDoctorAsync</c>, déjà appelé par
+    /// <see cref="ValidateAsync"/> pour construire son résumé. Aucune
+    /// nouvelle logique de diagnostic : la même mesure, simplement non
+    /// tronquée.
+    /// </summary>
+    Task<RuntimeCallResult<RuntimeDoctorResult>> GetDoctorDetailAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Symétrique de <see cref="GetDoctorDetailAsync"/> pour <c>apex gate --json</c> — le détail complet des <c>checks[]</c>, jamais recalculé.</summary>
+    Task<RuntimeCallResult<RuntimeGateResult>> GetGateDetailAsync(CancellationToken cancellationToken = default);
 }

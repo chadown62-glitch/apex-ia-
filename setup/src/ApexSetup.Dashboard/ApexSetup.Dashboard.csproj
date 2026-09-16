@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- N+30 : nom EXACT demandé par la mission — l'utilisateur double-clique
+         sur "APEX.exe", jamais "apex-setup-dashboard.exe". -->
+    <AssemblyName>APEX</AssemblyName>
+    <RootNamespace>ApexSetup.Dashboard</RootNamespace>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Même choix, même justification qu'ApexSetup.Gui (voir son .csproj
+         et docs/GUI_ARCHITECTURE.md) : Avalonia est le SEUL framework .NET
+         GUI qui compile ET s'exécute (Avalonia.Headless) dans cet
+         environnement Linux, tout en produisant un exécutable Windows natif
+         réel une fois publié win-x64 — déjà vérifié par ApexSetup.Gui/
+         packaging/publish.sh. Introduire un second framework GUI (WPF,
+         WinUI3) pour ce second projet aurait recréé exactement le problème
+         que ApexSetup.Gui a déjà résolu, sans aucun bénéfice. -->
+    <PackageReference Include="Avalonia" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Même frontière que ApexSetup.Gui/ApexSetup.Launcher : jamais de
+         référence à ApexSetup.Core directement (voir setup/docs/
+         LAUNCHER_ARCHITECTURE.md, « Frontière — réutilisation, jamais de
+         duplication »). Le détail Doctor/Gate nécessaire au tableau de
+         statut par composant passe par les deux méthodes ajoutées à
+         ISetupApplicationService (GetDoctorDetailAsync/GetGateDetailAsync)
+         plutôt que de contourner cette frontière. -->
+    <ProjectReference Include="..\ApexSetup.Application\ApexSetup.Application.csproj" />
+  </ItemGroup>
+
+</Project>
