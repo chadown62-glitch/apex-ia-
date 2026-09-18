@@ -144,6 +144,70 @@ class TestTokenResolution(unittest.TestCase):
         self.assertNotEqual(token_a, token_b)
 
 
+class TestTokenCreatedEagerlyAtStartup(unittest.TestCase):
+    """Régression du bootstrap découvert lors de la validation physique du
+    Dashboard Windows (`ApexSetup.Dashboard.Services.ApiHealthChecker`) :
+    ce dernier lit `.apex/api-token` via WSL AVANT de faire la moindre
+    requête HTTP (pour ne jamais sonder l'API sans jeton) — si ce fichier
+    n'existe qu'après la première requête (ancien comportement, jeton
+    résolu uniquement par la dépendance `require_api_token`), un
+    contrôleur externe qui doit le LIRE avant de pouvoir faire cette
+    première requête ne peut jamais la déclencher : blocage réel jusqu'au
+    timeout, alors que l'API tourne parfaitement. `apex.api.app._lifespan`
+    crée désormais le jeton avant que le serveur ASGI n'accepte des
+    connexions (voir sa docstring) — prouvé ici en n'envoyant AUCUNE
+    requête, seulement en entrant le context manager `TestClient` (ce qui
+    exécute le lifespan `startup`, garanti par le protocole ASGI avant
+    toute connexion acceptée)."""
+
+    def setUp(self) -> None:
+        self._tmpdir = tempfile.TemporaryDirectory()
+        self._token_file = Path(self._tmpdir.name) / "api-token"
+        self._patch = mock.patch.object(auth, "TOKEN_FILE", self._token_file)
+        self._patch.start()
+        self._env_saved = os.environ.pop("APEX_API_TOKEN", None)
+
+    def tearDown(self) -> None:
+        self._patch.stop()
+        self._tmpdir.cleanup()
+        if self._env_saved is not None:
+            os.environ["APEX_API_TOKEN"] = self._env_saved
+
+    def test_token_file_exists_after_lifespan_startup_before_any_request(self) -> None:
+        self.assertFalse(self._token_file.exists())
+        with TestClient(create_app()):
+            # Aucune requête envoyée ici — seul `__enter__` a exécuté le
+            # lifespan `startup`. Si le jeton n'existe qu'après ce bloc,
+            # c'est la régression exacte que ce test doit détecter.
+            self.assertTrue(self._token_file.is_file())
+
+    def test_the_pre_created_token_is_the_one_that_actually_authenticates(self) -> None:
+        """Le jeton créé par le lifespan n'est pas un artefact séparé — la
+        toute première requête, avant même de le lire côté appelant,
+        s'authentifie déjà avec exactement cette valeur persistée."""
+        with TestClient(create_app()) as client:
+            token = self._token_file.read_text(encoding="utf-8").strip()
+            response = client.get(
+                "/api/v1/health", headers={"Authorization": f"Bearer {token}"}
+            )
+            self.assertEqual(response.status_code, 200)
+
+    def test_an_unwritable_token_directory_never_prevents_the_app_from_starting(self) -> None:
+        """Même discipline que le scheduler autonome voisin (voir docstring
+        de `_lifespan`) : une panne à CE stade ne doit jamais empêcher le
+        serveur de démarrer — `require_api_token` reste le point qui échoue
+        bruyamment (500) à la première requête réelle, jamais ce lifespan."""
+        with tempfile.TemporaryDirectory() as tmp:
+            blocking_file = Path(tmp) / "blocked"
+            blocking_file.write_text("not a directory")
+            bad_token_file = blocking_file / "api-token"
+            with mock.patch.object(auth, "TOKEN_FILE", bad_token_file):
+                # Ne doit lever aucune exception — la seule assertion utile
+                # ici est que ce bloc `with` s'exécute jusqu'au bout.
+                with TestClient(create_app()):
+                    pass
+
+
 class TestConstantTimeComparison(unittest.TestCase):
     """`require_api_token` doit comparer via `secrets.compare_digest`,
     jamais `==` — vérifié en lisant le module (le comportement de timing

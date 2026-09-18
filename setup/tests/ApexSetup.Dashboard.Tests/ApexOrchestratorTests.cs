@@ -273,6 +273,45 @@ public class ApexOrchestratorTests
     }
 
     [Fact]
+    public async Task StartAsync_succeeds_on_a_true_first_launch_even_though_the_API_token_does_not_exist_yet()
+    {
+        // Preuve de bout en bout du scénario "premier lancement" (jamais couvert avant
+        // cette régression) : contrairement aux autres tests StartAsync, celui-ci utilise
+        // le VRAI ApiHealthChecker (pas un SequencedHealthChecker fabriqué) contre un VRAI
+        // serveur HTTP local — .apex/api-token n'existe pas encore aux deux premiers
+        // sondages (backend tout juste lancé), puis apparaît, exactement le comportement
+        // désormais garanti côté serveur par apex.api.app._lifespan (créé avant que le
+        // serveur n'accepte des connexions). StartAsync doit réussir SANS aucune
+        // intervention humaine, dans le délai borné normal — jamais un TimedOutWaitingForApi
+        // alors que le backend est en réalité prêt.
+        await using var apiServer = new LocalHttpTestServer(ctx =>
+        {
+            ctx.Response.StatusCode = 200;
+            ctx.Response.Close();
+            return Task.CompletedTask;
+        });
+        var apiPort = new Uri(apiServer.BaseUrl).Port;
+        var tokenCallCount = 0;
+        var runner = new FakeProcessRunner().WithRunResponse("api-token", () =>
+        {
+            tokenCallCount++;
+            return tokenCallCount <= 2
+                ? new ProcessRunResult { Started = true, ExitCode = 1, Stderr = "cat: .apex/api-token: No such file or directory" }
+                : new ProcessRunResult { Started = true, ExitCode = 0, Stdout = "real-token\n" };
+        });
+        var realApiChecker = new ApiHealthChecker(runner, new HttpClient());
+        var settings = AConfiguredSettings() with { ApiHost = "127.0.0.1", ApiPort = apiPort };
+        var orchestrator = BuildOrchestrator(
+            runner, new FakeWslProbe(), new FakeRuntimeStatusService(), realApiChecker,
+            new SequencedHealthChecker([], RunningPanel), new FakeBrowserLauncher(), new InMemoryLogSink());
+
+        var outcome = await orchestrator.StartAsync(settings);
+
+        Assert.Equal(OrchestratorOutcome.Success, outcome);
+        Assert.True(tokenCallCount > 2, "doit avoir effectivement re-sondé après les échecs initiaux, jamais abandonné");
+    }
+
+    [Fact]
     public async Task StartAsync_refuses_a_second_launch_while_a_backend_is_already_tracked_never_spawning_a_zombie_process()
     {
         // Régression du BUG RÉEL (finalisation APEX.exe 1/2, voir ApexOrchestrator.StartAsync) :

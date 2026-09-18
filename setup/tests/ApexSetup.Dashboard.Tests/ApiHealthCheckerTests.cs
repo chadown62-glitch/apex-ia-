@@ -52,15 +52,93 @@ public class ApiHealthCheckerTests
     }
 
     [Fact]
-    public async Task Reports_Unknown_when_the_token_file_cannot_be_read_the_API_probably_never_started()
+    public async Task Reports_Unknown_with_a_calm_message_when_the_token_file_does_not_exist_yet()
     {
-        var runner = new FakeProcessRunner().WithRunResponse("api-token", new ProcessRunResult { Started = true, ExitCode = 1, Stderr = "No such file" });
+        // Régression du bootstrap découvert en validation physique : `.apex/api-token`
+        // n'existe pas encore juste après le lancement du backend — un état ATTENDU
+        // (voir apex.api.app._lifespan, qui le crée avant d'accepter des connexions),
+        // jamais un signal d'échec. Le message ne doit jamais laisser croire que l'API
+        // "n'a probablement jamais démarré" dans ce cas précis.
+        var runner = new FakeProcessRunner().WithRunResponse(
+            "api-token", new ProcessRunResult { Started = true, ExitCode = 1, Stderr = "cat: .apex/api-token: No such file or directory" });
         var checker = new ApiHealthChecker(runner, new HttpClient());
         var settings = new DashboardSettings { ProjectPathWsl = "/home/user/apex" };
 
         var state = await checker.CheckAsync(settings);
 
         Assert.Equal(ComponentStatus.Unknown, state.Status);
+        Assert.Contains("pas encore créé", state.Detail);
+        Assert.DoesNotContain("jamais démarré", state.Detail);
+    }
+
+    [Fact]
+    public async Task Reports_Unknown_with_a_distinct_diagnostic_when_the_token_file_read_genuinely_fails()
+    {
+        // Différent du cas précédent : ici le fichier EXISTE probablement mais la
+        // lecture échoue pour une autre raison (permissions, ...) — un diagnostic
+        // différent, jamais confondu avec le cas "pas encore créé" ci-dessus.
+        var runner = new FakeProcessRunner().WithRunResponse(
+            "api-token", new ProcessRunResult { Started = true, ExitCode = 1, Stderr = "cat: .apex/api-token: Permission denied" });
+        var checker = new ApiHealthChecker(runner, new HttpClient());
+        var settings = new DashboardSettings { ProjectPathWsl = "/home/user/apex" };
+
+        var state = await checker.CheckAsync(settings);
+
+        Assert.Equal(ComponentStatus.Unknown, state.Status);
+        Assert.Contains("permissions", state.Detail);
+        Assert.DoesNotContain("pas encore créé", state.Detail);
+    }
+
+    [Fact]
+    public async Task Never_includes_any_token_looking_value_in_a_failure_diagnostic()
+    {
+        // Cas 6 (sécurité) : même si Stdout contenait accidentellement un fragment de
+        // jeton (ex. lecture partielle), le message affiché à l'écran ne doit jamais
+        // le reprendre — ici prouvé pour la voie d'échec, la seule où un contenu de
+        // Stdout imprévu pourrait fuiter si le code le recopiait par erreur.
+        const string suspiciousStdoutFragment = "leaked-token-fragment-should-never-appear";
+        var runner = new FakeProcessRunner().WithRunResponse(
+            "api-token", new ProcessRunResult { Started = true, ExitCode = 1, Stdout = suspiciousStdoutFragment, Stderr = "Permission denied" });
+        var checker = new ApiHealthChecker(runner, new HttpClient());
+        var settings = new DashboardSettings { ProjectPathWsl = "/home/user/apex" };
+
+        var state = await checker.CheckAsync(settings);
+
+        Assert.DoesNotContain(suspiciousStdoutFragment, state.Detail);
+    }
+
+    [Fact]
+    public async Task Recovers_to_Running_once_the_token_file_appears_after_initially_being_absent()
+    {
+        // Preuve directe du scénario "premier lancement" : le jeton n'existe pas encore
+        // au premier sondage (backend tout juste lancé, apex.api.app._lifespan n'a pas
+        // encore écrit .apex/api-token), puis apparaît — la même instance de checker,
+        // interrogée à nouveau (exactement ce que fait ApexOrchestrator.PollUntilAsync),
+        // doit détecter la transition sans aucune intervention humaine.
+        await using var server = new LocalHttpTestServer(ctx =>
+        {
+            ctx.Response.StatusCode = 200;
+            ctx.Response.Close();
+            return Task.CompletedTask;
+        });
+        var port = new Uri(server.BaseUrl).Port;
+        var callCount = 0;
+        var runner = new FakeProcessRunner().WithRunResponse("api-token", () =>
+        {
+            callCount++;
+            return callCount == 1
+                ? new ProcessRunResult { Started = true, ExitCode = 1, Stderr = "cat: .apex/api-token: No such file or directory" }
+                : new ProcessRunResult { Started = true, ExitCode = 0, Stdout = "real-token\n" };
+        });
+        var checker = new ApiHealthChecker(runner, new HttpClient());
+        var settings = new DashboardSettings { ProjectPathWsl = "/home/user/apex", ApiHost = "127.0.0.1", ApiPort = port };
+
+        var first = await checker.CheckAsync(settings);
+        var second = await checker.CheckAsync(settings);
+
+        Assert.Equal(ComponentStatus.Unknown, first.Status);
+        Assert.Contains("pas encore créé", first.Detail);
+        Assert.Equal(ComponentStatus.Running, second.Status);
     }
 
     [Fact]

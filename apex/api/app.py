@@ -130,8 +130,38 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     route existante, qui dégrade en `status="unknown"` plutôt que de
     planter) — construire `get_learning_scheduler()` touche `load_config()`
     et `get_session_factory()`, qui peuvent légitimement échouer avant
-    qu'aucune configuration DB ne soit fournie."""
+    qu'aucune configuration DB ne soit fournie.
+
+    Initialise aussi le jeton d'authentification (`get_or_create_api_token`)
+    AVANT que le serveur ASGI ne commence à accepter des connexions — le
+    protocole ASGI garantit que ce lifespan `startup` se termine avant que
+    l'hôte (Uvicorn) n'ouvre le socket d'écoute. Sans cela, `.apex/api-token`
+    n'était créé qu'à la toute première requête HTTP reçue (dépendance
+    FastAPI `require_api_token`, exécutée par requête) — un contrôleur
+    externe qui doit lire ce fichier AVANT de pouvoir faire sa toute première
+    requête authentifiée (ex. le health check du Dashboard Windows,
+    `ApexSetup.Dashboard.Services.ApiHealthChecker`, qui lit le jeton via
+    `wsl.exe -- cat .apex/api-token` avant toute requête HTTP, précisément
+    pour ne jamais sonder sans authentification) n'avait alors aucun moyen
+    de déclencher cette création — un vrai blocage au tout premier
+    démarrage, jamais rencontré jusqu'ici car, comme la note ci-dessus le
+    documente, aucun code de ce dépôt ne lançait réellement le serveur ASGI
+    avant `apex serve` (N+15). Comportement d'authentification lui-même
+    STRICTEMENT inchangé (même fonction, mêmes garanties, voir
+    `apex.api.auth`) — seul le MOMENT de l'appel change. `OSError` avalée
+    ici exactement comme pour le scheduler ci-dessous : un répertoire
+    `.apex/` non inscriptible ne doit jamais empêcher l'API de démarrer ;
+    `require_api_token` retentera cette même création à la première requête
+    et échouera alors bruyamment (500, jamais un contournement silencieux —
+    voir `TestConfigurationFailure` dans `tests/test_api_auth.py`, inchangé
+    par cet ajout)."""
+    from apex.api.auth import get_or_create_api_token
     from apex.api.dependencies import get_learning_scheduler
+
+    try:
+        get_or_create_api_token()
+    except OSError:
+        pass
 
     scheduler_service = None
     try:
