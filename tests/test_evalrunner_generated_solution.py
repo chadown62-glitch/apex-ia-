@@ -568,12 +568,29 @@ class TestResultContract(unittest.TestCase):
     def test_g_the_project_tree_is_not_visible_from_the_sandbox(self) -> None:
         """Juge externe (cycle 2) : les sources du dépôt, qui définissent les
         cas cachés, étaient lisibles depuis le sandbox NAMESPACED."""
-        from apex.sandbox.linux_namespace import _PROJECT_ROOT
+        from apex.sandbox.linux_namespace import _PROJECT_ROOT, project_root_to_mask
 
+        self.assertEqual(project_root_to_mask(), os.path.realpath(_PROJECT_ROOT))
         code = f"import os\nprint('VISIBLE', os.listdir({_PROJECT_ROOT!r}))\n" + _CORRECT_IS_PALINDROME
         run, _ = self._run(code)
         self.assertIn("VISIBLE []", run.facts["candidate_execution"]["stdout"])
         self.assertIs(run.oracle_verdict, OracleVerdict.PASS)
+
+    def test_g2_masking_never_targets_tmp_or_system_directories(self) -> None:
+        """Défaut trouvé en mesurant le cycle 3 : un dépôt sous /tmp (déjà
+        masqué par le tmpfs) faisait échouer TOUTE exécution sandboxée ; un
+        paquet installé aurait masqué le répertoire de l'interpréteur."""
+        import tempfile
+
+        from apex.sandbox.linux_namespace import _PROJECT_ROOT, project_root_to_mask
+
+        with tempfile.TemporaryDirectory() as tmp:
+            os.makedirs(os.path.join(tmp, "apex"))
+            open(os.path.join(tmp, "pyproject.toml"), "w").close()
+            self.assertIsNone(project_root_to_mask(tmp))
+        self.assertIsNone(project_root_to_mask("/usr/lib/python3"))
+        self.assertIsNone(project_root_to_mask("/"))
+        self.assertIsNone(project_root_to_mask(os.path.join(_PROJECT_ROOT, "docs")))
 
     def test_h_hidden_cases_reject_plausible_wrong_algorithms(self) -> None:
         wrong = {

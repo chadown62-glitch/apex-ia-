@@ -41,6 +41,25 @@ from apex.sandbox.result import SandboxResult
 
 # Racine du dépôt APEX, masquée dans le sandbox (sources et fichiers locaux jamais lisibles).
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+#: Remplacé par un tmpfs dans le sandbox (voir `_build_argv`) — comparaison de chemins seulement.
+_SANDBOX_TMP = "/tmp"  # noqa: S108
+_SYSTEM_PREFIXES = ("/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc", "/opt", "/proc", "/sys", "/dev")
+
+
+def project_root_to_mask(root: str = _PROJECT_ROOT) -> str | None:
+    """Seule une copie SOURCE du dépôt (pyproject.toml + apex/) est masquée ;
+    sous /tmp elle l'est déjà par le tmpfs, et un répertoire système (paquet
+    installé) ne l'est jamais — l'interpréteur y vit."""
+    real = os.path.realpath(root)
+    if real in ("/", _SANDBOX_TMP) or real.startswith(_SANDBOX_TMP + "/"):
+        return None
+    if any(real == prefix or real.startswith(prefix + "/") for prefix in _SYSTEM_PREFIXES):
+        return None
+    has_project_file = os.path.isfile(os.path.join(real, "pyproject.toml"))
+    is_checkout = has_project_file and os.path.isdir(os.path.join(real, "apex"))
+    if not is_checkout:
+        return None
+    return real
 
 #: Cap de capture stdout/stderr — une mission diagnostique ne produit pas de
 #: volume important ; au-delà, tronquer plutôt que de laisser le processus
@@ -236,6 +255,10 @@ class LinuxNamespaceSandbox(SandboxProvider):
             f"echo $$ > {shlex.quote(path)}/cgroup.procs 2>/dev/null || true"
             for path in cgroup_paths.values()
         )
+        masked = project_root_to_mask()
+        mask_line = ""
+        if masked is not None:
+            mask_line = f"mount -t tmpfs -o size=1m,mode=0555 tmpfs {shlex.quote(masked)}\n"
         script = (
             f"{cgroup_self_assign}\n"
             "set -e\n"
@@ -243,7 +266,7 @@ class LinuxNamespaceSandbox(SandboxProvider):
             f"mount -t tmpfs -o size={spec.limits.disk_mb}m tmpfs /tmp\n"
             "mkdir -p /tmp/work\n"
             "chmod 1777 /tmp/work\n"
-            f"mount -t tmpfs -o size=1m,mode=0555 tmpfs {shlex.quote(_PROJECT_ROOT)}\n"
+            f"{mask_line}"
             "mount -o remount,ro,bind /\n"
             "cd /tmp/work\n"
             f"ulimit -t {cpu_seconds} -v {address_space_kb} -u {spec.limits.pids_limit} -f {file_size_kb}\n"
