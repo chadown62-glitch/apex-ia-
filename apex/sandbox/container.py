@@ -70,6 +70,8 @@ _DEFAULT_IMAGE = "python:3.12-slim"
 _PROBE_TIMEOUT_S = 30.0
 _INSPECT_TIMEOUT_S = 10.0
 _MAX_CAPTURE_BYTES = 64 * 1024
+#: Code de sortie du CLI `docker run` quand l'erreur vient du démon lui-même (conteneur non créé).
+_DOCKER_DAEMON_ERROR = 125
 #: uid/gid non privilégié — le même que `setpriv --reuid=65534` dans
 #: `linux_namespace.py` (nobody) : identité cohérente entre les deux
 #: backends, jamais un choix arbitraire différent par backend.
@@ -291,11 +293,16 @@ class ContainerSandbox(SandboxProvider):
             self._force_remove(name)
 
         if creation_error is not None:
-            return self._creation_failure_result(spec, report, creation_error)
+            raise self._never_started(f"le client docker n'a pas pu démarrer : {creation_error}")
 
         assert proc is not None
         stdout = stdout_bytes.decode("utf-8", errors="replace")
         stderr = stderr_bytes.decode("utf-8", errors="replace")
+        # Code 125 sans conteneur inspectable : le démon a refusé de créer le conteneur (image
+        # absente, erreur du démon). Le candidat n'a jamais tourné — jamais un échec du candidat.
+        if state is None and proc.returncode == _DOCKER_DAEMON_ERROR and not timed_out:
+            tail = stderr.strip().splitlines()[-1] if stderr.strip() else "aucun détail"
+            raise self._never_started(f"docker run a échoué avant le démarrage du conteneur : {tail}")
         stdout_truncated = len(stdout) > _MAX_CAPTURE_BYTES
         stderr_truncated = len(stderr) > _MAX_CAPTURE_BYTES
         stdout = stdout[:_MAX_CAPTURE_BYTES]
@@ -331,17 +338,11 @@ class ContainerSandbox(SandboxProvider):
             facts={"container_name": name, "isolation_detail": report.detail, "image": self._image},
         )
 
-    def _creation_failure_result(
-        self, spec: SandboxSpec, report: SandboxCapabilityReport, error: str,
-    ) -> SandboxResult:
-        return SandboxResult(
-            mission_id=spec.mission_id, clone_id=spec.clone_id,
-            status=ExecutionStatus.PERMISSION_DENIED, isolation_level=report.level,
-            exit_code=Measurement.unknown(), signal=Measurement.unknown(),
-            elapsed_s=Measurement.real(0.0), cpu_time_s=Measurement.unknown(),
-            memory_peak_mb=Measurement.unknown(), pids_peak=Measurement.unknown(),
-            stdout="", stderr="", stdout_truncated=False, stderr_truncated=False,
-            error_detail=f"création du conteneur impossible : {error}",
+    def _never_started(self, detail: str) -> IsolationUnavailable:
+        return IsolationUnavailable(
+            f"exécution de mission en sandbox (ContainerSandbox) — {detail}",
+            required="un conteneur réellement démarré",
+            available="aucun conteneur créé",
         )
 
     # -- construction de la commande isolée ------------------------------

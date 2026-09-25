@@ -134,6 +134,7 @@ class _FakeDockerRuntime:
         self.stderr = stderr
         self.exit_code = exit_code
         self.oom_killed = False
+        self.create_container = True
         self.hang = hang
         self._kill_events: dict[str, threading.Event] = {}
 
@@ -147,7 +148,8 @@ class _FakeDockerRuntime:
         state = _FakeContainerState()
         state.exit_code = self.exit_code
         state.oom_killed = self.oom_killed
-        self.containers[name] = state
+        if self.create_container:
+            self.containers[name] = state
         return _FakePopen(
             state=state, stdout=self.stdout, stderr=self.stderr, hang=self.hang, kill_event=self._event_for(name),
         )
@@ -358,14 +360,33 @@ class TestExecuteClassification(unittest.TestCase):
         self.assertIs(result.status, ExecutionStatus.OOM_KILLED)
 
     def test_creation_failure_when_docker_binary_cannot_start(self) -> None:
+        """Aucun conteneur n'a tourné : une indisponibilité du sandbox, jamais
+        un résultat d'exécution imputable au candidat (PERMISSION_DENIED était
+        classé comme un refus de politique CAUSÉ par le candidat)."""
         p1 = patch("apex.sandbox.container.subprocess.Popen", side_effect=OSError("docker: command not found"))
         # `docker rm -f` (filet de sécurité, voir TestCleanup) est quand même
         # tenté même si Popen n'a jamais démarré — doit rester un no-op sûr.
         p2 = patch("apex.sandbox.container.subprocess.run", return_value=_completed(1, "", "no such container"))
+        with p1, p2, self.assertRaises(IsolationUnavailable) as caught:
+            self.sandbox.execute(_spec())
+        self.assertIn("docker: command not found", str(caught.exception))
+
+    def test_daemon_refusing_to_create_the_container_is_an_unavailable_sandbox(self) -> None:
+        stderr = "Unable to find image\ndocker: pull access denied\n"
+        runtime = _FakeDockerRuntime(stderr=stderr, exit_code=125)
+        runtime.create_container = False
+        p1, p2 = _patched(runtime)
+        with p1, p2, self.assertRaises(IsolationUnavailable) as caught:
+            self.sandbox.execute(_spec())
+        self.assertIn("pull access denied", str(caught.exception))
+
+    def test_a_workload_exiting_125_inside_a_real_container_stays_a_candidate_failure(self) -> None:
+        runtime = _FakeDockerRuntime(exit_code=125)
+        p1, p2 = _patched(runtime)
         with p1, p2:
             result = self.sandbox.execute(_spec())
-        self.assertIs(result.status, ExecutionStatus.PERMISSION_DENIED)
-        self.assertIn("docker: command not found", result.error_detail)
+        self.assertIs(result.status, ExecutionStatus.FAILED)
+        self.assertEqual(result.exit_code.value, 125)
 
 
 class TestExecuteTimeout(unittest.TestCase):
@@ -472,7 +493,8 @@ class TestCleanup(unittest.TestCase):
     def test_removal_is_attempted_even_when_docker_run_itself_failed_to_start(self) -> None:
         with patch("apex.sandbox.container.subprocess.Popen", side_effect=OSError("no docker")):
             with patch("apex.sandbox.container.subprocess.run", return_value=_completed(0, "", "")) as run_mock:
-                self.sandbox.execute(_spec())
+                with self.assertRaises(IsolationUnavailable):
+                    self.sandbox.execute(_spec())
         rm_calls = [c for c in run_mock.call_args_list if c.args and c.args[0][:2] == ["docker", "rm"]]
         self.assertEqual(len(rm_calls), 1, "le filet de sécurité docker rm -f doit s'exécuter même sans conteneur créé")
 
