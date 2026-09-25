@@ -333,6 +333,47 @@ class TestStopCriteria(_AdaptiveLoopFixture):
             )
 
 
+class TestRunIsolation(_AdaptiveLoopFixture):
+    """Défaut confirmé par le Continuous Improvement Engine (cycle 1) :
+    sans `experiment_ref`, la G1 d'une exécution dérivait de la meilleure
+    G0 de TOUTES les exécutions de la tâche, alors que sa trace affirmait
+    dériver de sa propre G0."""
+
+    def _run(self, provider, *, max_generations, experiment_ref=None):
+        config = AdaptiveLoopConfig(max_generations=max_generations, target_fitness=None, no_improvement_patience=None)
+        initial = [CandidateStrategy(label="g0-mut0", genome_content={"generation": {"temperature": 0.7}})]
+        return run_adaptive_learning_loop(
+            self.evalrunner, self.runtime, self.experience_repo, task_id=self.task.id,
+            endpoint=self.endpoint, pool=a_pool(), initial_strategies=initial, config=config,
+            provider=provider, experiment_ref=experiment_ref,
+        )
+
+    def test_a_second_run_decides_from_its_own_g0_not_from_an_earlier_success(self) -> None:
+        first = self._run(_FakeModelProvider(response_by_temperature={0.7: _CORRECT_IS_PALINDROME}), max_generations=1)
+        provider_b = _FakeModelProvider(
+            response_by_temperature={0.7: _WRONG_IS_PALINDROME, 1.1: _CORRECT_IS_PALINDROME, 0.35: _WRONG_IS_PALINDROME}
+        )
+        second = self._run(provider_b, max_generations=2)
+
+        self.assertEqual(round(provider_b.received_requests[1].temperature, 6), 1.1)
+        gen0, gen1 = second.generations
+        self.assertIs(gen0.best_experience.failure_category, FailureCategory.INCORRECT_SOLUTION)
+        self.assertIn("incorrecte", gen1.mutation_description)
+        self.assertIs(gen1.best_experience.failure_category, FailureCategory.SUCCESS)
+        self.assertEqual(gen1.best_experience.parent_experience_id, gen0.best_experience.id)
+        self.assertIsNotNone(first.experiment_ref)
+        self.assertNotEqual(first.experiment_ref, second.experiment_ref)
+
+    def test_b_every_experience_of_a_run_carries_its_experiment_ref(self) -> None:
+        result = self._run(_FakeModelProvider(response_by_temperature={}), max_generations=2)
+        refs = {e.experiment_ref for g in result.generations for e in g.experiences}
+        self.assertEqual(refs, {result.experiment_ref})
+
+    def test_c_an_explicit_experiment_ref_is_kept(self) -> None:
+        result = self._run(_FakeModelProvider(response_by_temperature={}), max_generations=1, experiment_ref="exp-42")
+        self.assertEqual(result.experiment_ref, "exp-42")
+
+
 class TestSandboxBoundary(_AdaptiveLoopFixture):
     def test_a_a_candidate_that_tries_to_crash_the_host_process_stays_sandboxed(self) -> None:
         """Un candidat hostile (tentative d'affecter le processus hôte)

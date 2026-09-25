@@ -574,6 +574,49 @@ def _cmd_learning_cancel(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_solve(args: argparse.Namespace) -> int:
+    """Boucle adaptative G0 -> G1 -> ... sur une tâche à `solution_harness`
+    (`apex.metalearner.solution_loop_runner`) — code réellement généré,
+    exécuté dans le sandbox, jugé, mémorisé ; la décision de chaque
+    génération dérive de l'expérience de la précédente."""
+    import json
+
+    from apex.api.dependencies import get_session_factory
+    from apex.config.loader import load_config
+    from apex.metalearner.solution_loop_runner import (
+        SolutionLoopRequest,
+        SolutionLoopUnavailable,
+        run_solution_loop,
+        summarize,
+    )
+
+    request = SolutionLoopRequest(
+        task_id=args.task_id, role=args.role, generations=args.generations, candidates=args.candidates,
+        base_temperature=args.base_temperature,
+        target_fitness=None if args.no_target else args.target_fitness,
+        experiment_ref=args.experiment_ref,
+    )
+    try:
+        result = run_solution_loop(get_session_factory(), load_config(args.config), request)
+    except (SolutionLoopUnavailable, LookupError, ValueError) as exc:
+        print(f"erreur : {exc}", file=sys.stderr)
+        return 1
+    except Exception as exc:
+        print(f"erreur : {exc.__class__.__name__}: {exc}", file=sys.stderr)
+        return 1
+
+    summary = summarize(result)
+    if args.json:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+    else:
+        print(f"expérience : {summary['experiment_ref']} — arrêt : {summary['stop_reason']}")
+        for generation in summary["generations"]:
+            print(f"G{generation['generation']} meilleur={generation['best_fitness']:.3f} "
+                  f"({generation['best_category']}) — {generation['decision']}")
+        print(f"meilleur : G{summary['best_generation']} verdict={summary['best_verdict']}")
+    return 0 if summary["best_verdict"] == "pass" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="apex",
@@ -733,6 +776,20 @@ def build_parser() -> argparse.ArgumentParser:
     learning_cancel_cmd.add_argument("session_id")
     learning_cancel_cmd.add_argument("--json", action="store_true")
     learning_cancel_cmd.set_defaults(func=_cmd_learning_cancel)
+
+    solve_cmd = sub.add_parser(
+        "solve", help="boucle adaptative générer -> exécuter (sandbox) -> juger -> apprendre sur une tâche",
+    )
+    solve_cmd.add_argument("task_id", help="tâche portant un solution_harness")
+    solve_cmd.add_argument("--role", default="coder_main", help="rôle modèle de config.yaml")
+    solve_cmd.add_argument("--generations", type=int, default=3)
+    solve_cmd.add_argument("--candidates", type=int, default=2)
+    solve_cmd.add_argument("--base-temperature", type=float, default=0.7)
+    solve_cmd.add_argument("--target-fitness", type=float, default=1.0)
+    solve_cmd.add_argument("--no-target", action="store_true", help="aller jusqu'à --generations")
+    solve_cmd.add_argument("--experiment-ref", default=None)
+    solve_cmd.add_argument("--json", action="store_true")
+    solve_cmd.set_defaults(func=_cmd_solve)
 
     return parser
 

@@ -34,6 +34,7 @@ leviers de génération câblés au Genome à ce jour
 from __future__ import annotations
 
 import time
+import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -259,6 +260,10 @@ def run_adaptive_learning_loop(
     prise (ordre séquentiel strict, jamais parallèle entre générations)."""
     if not initial_strategies:
         raise ValueError("« initial_strategies » ne peut pas être vide")
+
+    # Sans identifiant propre, la G1 lirait la meilleure G0 de TOUTES les exécutions de la tâche.
+    if experiment_ref is None:
+        experiment_ref = f"adaptive-loop:{uuid.uuid4()}"
 
     start = time.monotonic()
     strategies = tuple(initial_strategies)
