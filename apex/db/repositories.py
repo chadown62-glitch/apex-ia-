@@ -606,6 +606,7 @@ class ExperienceRepository:
         mutation_description: str | None = None,
         improvement_delta: float | None = None,
         experiment_ref: str | None = None,
+        success_evidence: str | None = None,
     ) -> ExperienceRow:
         row = ExperienceRow(
             id=id, task_id=task_id, eval_run_id=eval_run_id, candidate_id=candidate_id,
@@ -615,7 +616,8 @@ class ExperienceRepository:
             fitness=fitness, failure_category=failure_category,
             parent_experience_id=parent_experience_id, parent_generation=parent_generation,
             mutation_description=mutation_description, improvement_delta=improvement_delta,
-            experiment_ref=experiment_ref, created_by=created_by, created_at=created_at,
+            experiment_ref=experiment_ref, success_evidence=success_evidence,
+            created_by=created_by, created_at=created_at,
         )
         self._session.add(row)
         self._session.flush()

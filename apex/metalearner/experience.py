@@ -19,6 +19,7 @@ import hashlib
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from apex.evalrunner.model import EvalRun
@@ -32,6 +33,25 @@ if TYPE_CHECKING:
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class SuccessEvidence(StrEnum):
+    """Force de la preuve portée par une expérience réussie. Une seule
+    exécution qui passe est OBSERVED, jamais une preuve de référence : seul
+    CONFIRMED (même verdict sur ré-exécution du même code, `RobustnessJudge`)
+    autorise la boucle à exploiter la stratégie. REFUTED : une ré-exécution
+    du même code a donné un autre verdict. NOT_APPLICABLE : pas un succès."""
+
+    NOT_APPLICABLE = "not_applicable"
+    OBSERVED = "observed"
+    CONFIRMED = "confirmed"
+    REFUTED = "refuted"
+
+
+def _default_evidence(category: FailureCategory) -> SuccessEvidence:
+    if category is FailureCategory.SUCCESS:
+        return SuccessEvidence.OBSERVED
+    return SuccessEvidence.NOT_APPLICABLE
 
 
 def _fingerprint(eval_run: EvalRun) -> str | None:
@@ -72,6 +92,21 @@ class Experience:
     improvement_delta: float | None = None
     experiment_ref: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
+    success_evidence: SuccessEvidence | None = None
+
+    def __post_init__(self) -> None:
+        if self.success_evidence is None:
+            object.__setattr__(self, "success_evidence", _default_evidence(self.failure_category))
+        is_success = self.failure_category is FailureCategory.SUCCESS
+        if is_success == (self.success_evidence is SuccessEvidence.NOT_APPLICABLE):
+            raise ValueError(
+                f"success_evidence={self.success_evidence} incompatible avec "
+                f"failure_category={self.failure_category.value}"
+            )
+
+    @property
+    def confirmed_success(self) -> bool:
+        return self.success_evidence is SuccessEvidence.CONFIRMED
 
     @classmethod
     def from_row(cls, row: "ExperienceRow") -> Experience:
@@ -85,6 +120,8 @@ class Experience:
             parent_experience_id=row.parent_experience_id, parent_generation=row.parent_generation,
             mutation_description=row.mutation_description, improvement_delta=row.improvement_delta,
             experiment_ref=row.experiment_ref, created_by=row.created_by, created_at=row.created_at,
+            # NULL (ligne antérieure à la colonne) : jamais promue, relue comme simplement observée.
+            success_evidence=SuccessEvidence(row.success_evidence) if row.success_evidence else None,
         )
 
 
@@ -100,6 +137,7 @@ def build_experience(
     parent_generation: int | None = None,
     mutation_description: str | None = None,
     improvement_delta: float | None = None,
+    success_evidence: SuccessEvidence | None = None,
 ) -> Experience:
     """Construit une `Experience` à partir d'un `EvalRun` et d'un
     `FitnessResult` DÉJÀ réels (jamais recalculés ici — cette fonction est
@@ -117,7 +155,7 @@ def build_experience(
         failure_category=classify_failure(eval_run), parent_experience_id=parent_experience_id,
         parent_generation=parent_generation, mutation_description=mutation_description,
         improvement_delta=improvement_delta, experiment_ref=eval_run.experiment_ref,
-        created_by=created_by, created_at=_utcnow(),
+        created_by=created_by, created_at=_utcnow(), success_evidence=success_evidence,
     )
 
 
@@ -147,6 +185,7 @@ class ExperienceRepository:
                 parent_generation=experience.parent_generation,
                 mutation_description=experience.mutation_description,
                 improvement_delta=experience.improvement_delta, experiment_ref=experience.experiment_ref,
+                success_evidence=(experience.success_evidence or SuccessEvidence.NOT_APPLICABLE).value,
                 created_by=experience.created_by, created_at=experience.created_at,
             )
 

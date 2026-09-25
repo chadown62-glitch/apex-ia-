@@ -298,7 +298,10 @@ def _overall_success_recommendation(
         if partial_count else f"{exact_count} sur la tâche exacte"
     )
     return Recommendation(
-        observation=f"{successes}/{total} tentative(s) pertinente(s) ont réussi ({scope})",
+        observation=(
+            f"{successes}/{total} tentative(s) pertinente(s) ont réussi ({scope}), dont "
+            f"{sum(1 for e in experiences if e.confirmed_success)} confirmée(s) par ré-exécution"
+        ),
         analysis=f"taux de succès observé : {rate:.0%} (échantillon : {total} tentative(s))",
         recommendation=(
             "aucune action recommandée — taux de succès déjà élevé sur l'échantillon observé"

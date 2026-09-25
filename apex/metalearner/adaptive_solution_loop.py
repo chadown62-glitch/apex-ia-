@@ -44,7 +44,7 @@ from apex.config.schema import ComputePool, ModelEndpoint
 from apex.evalrunner.model import EvalMethod
 from apex.evalrunner.service import EvalRunnerService
 from apex.genome.clone_config import resolve_generation_temperature
-from apex.metalearner.experience import Experience, ExperienceRepository, build_experience
+from apex.metalearner.experience import Experience, ExperienceRepository, SuccessEvidence, build_experience
 from apex.metalearner.failure_taxonomy import FailureCategory
 from apex.metalearner.generated_solution_cycle import (
     CandidateComparison,
@@ -117,12 +117,25 @@ def _mutate_from_experience(best: Experience) -> tuple[float, str | None, str]:
     carried_suffix = (best.generation_config.get("generation") or {}).get("prompt_suffix")
     carried_suffix = carried_suffix if isinstance(carried_suffix, str) else None
 
-    if best.failure_category is FailureCategory.SUCCESS:
+    if best.success_evidence is SuccessEvidence.CONFIRMED:
         return (
             _clamp_temperature(base_temp * 0.5),
             carried_suffix,
-            "génération précédente : SUCCÈS — température réduite pour stabiliser "
-            "une stratégie déjà gagnante (exploitation, pas exploration)",
+            "génération précédente : SUCCÈS CONFIRMÉ par ré-exécution — température réduite pour "
+            "stabiliser une stratégie déjà gagnante (exploitation, pas exploration)",
+        )
+    if best.success_evidence is SuccessEvidence.OBSERVED:
+        return (
+            base_temp, carried_suffix,
+            "génération précédente : succès OBSERVÉ une seule fois, non confirmé — aucune "
+            "exploitation, stratégie inchangée, nouvelle tentative",
+        )
+    if best.success_evidence is SuccessEvidence.REFUTED:
+        return (
+            _clamp_temperature(base_temp + 0.4),
+            _INCORRECT_SOLUTION_HINT,
+            "génération précédente : succès RÉFUTÉ (le même code a donné un autre verdict à la "
+            "ré-exécution) — traité comme une réponse incorrecte : exploration élargie",
         )
     if best.failure_category is FailureCategory.INCORRECT_SOLUTION:
         return (
@@ -198,7 +211,11 @@ def decide_next_strategies(
             "stratégie de repli inchangée (jamais une amélioration fabriquée)",
         )
 
-    best = max(prior_experiences, key=lambda experience: experience.fitness)
+    # Référence : un succès confirmé avant tout, un succès réfuté en dernier, puis la fitness.
+    best = max(
+        prior_experiences,
+        key=lambda e: (e.confirmed_success, e.success_evidence is not SuccessEvidence.REFUTED, e.fitness),
+    )
     new_temperature, new_suffix, description = _mutate_from_experience(best)
     strategies = _spread_strategies(
         generation_number=prior_generation_number + 1, base_temperature=new_temperature,
@@ -309,6 +326,19 @@ def run_adaptive_learning_loop(
             requested_by=requested_by, clone_subject=clone_subject,
         )
 
+        champion = comparison.best
+        assert champion is not None  # `compare_generated_solutions` exige au moins un candidat
+        champion_index = comparison.candidates.index(champion)
+        # Confirmer AVANT de persister : l'expérience écrite porte la force réelle de sa preuve.
+        confirmation: ChampionConfirmation | None = None
+        if config.confirmation_runs > 0 and champion.eval_run.oracle_verdict is OracleVerdict.PASS:
+            confirmation = confirm_by_reexecution(
+                evalrunner, agent_runtime, task_id=task_id, endpoint=endpoint, pool=pool, outcome=champion,
+                strategy=strategies[champion_index], runs=config.confirmation_runs,
+                method=method, experiment_ref=experiment_ref, limits=limits, requested_by=requested_by,
+                clone_subject=clone_subject,
+            )
+
         parent = generations[-1].best_experience if generations else None
         # `improvement_delta` (§ mission) reste une mesure DE GÉNÉRATION
         # (fitness de CE candidat - meilleur fitness connu avant cette
@@ -319,7 +349,9 @@ def run_adaptive_learning_loop(
         prior_running_best = running_best_fitness if generations else None
 
         experiences: list[Experience] = []
-        for outcome, strategy in zip(comparison.candidates, strategies, strict=True):
+        for index, (outcome, strategy) in enumerate(zip(comparison.candidates, strategies, strict=True)):
+            is_confirmed_champion = confirmation is not None and index == champion_index
+            evidence = confirmation.success_evidence if is_confirmed_champion else None
             experience = build_experience(
                 outcome.eval_run, outcome.fitness, strategy_id=strategy.label,
                 generation_number=generation_number, generation_config=strategy.genome_content or {},
@@ -330,21 +362,12 @@ def run_adaptive_learning_loop(
                 improvement_delta=(
                     outcome.fitness.value - prior_running_best if prior_running_best is not None else None
                 ),
+                success_evidence=evidence,
             )
             experience_repo.create(experience)
             experiences.append(experience)
 
         best_experience = max(experiences, key=lambda experience: experience.fitness)
-        champion = comparison.best
-        assert champion is not None  # `compare_generated_solutions` exige au moins un candidat
-        confirmation: ChampionConfirmation | None = None
-        if config.confirmation_runs > 0 and champion.eval_run.oracle_verdict is OracleVerdict.PASS:
-            confirmation = confirm_by_reexecution(
-                evalrunner, agent_runtime, task_id=task_id, endpoint=endpoint, pool=pool, outcome=champion,
-                strategy=strategies[comparison.candidates.index(champion)], runs=config.confirmation_runs,
-                method=method, experiment_ref=experiment_ref, limits=limits, requested_by=requested_by,
-                clone_subject=clone_subject,
-            )
         # Un champion non reproductible vaut sa PIRE exécution, jamais sa meilleure.
         score = best_experience.fitness
         if confirmation is not None and not confirmation.confirmed:

@@ -598,6 +598,8 @@ class ExperienceRow(Base):
     mutation_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     improvement_delta: Mapped[float | None] = mapped_column(Float, nullable=True)
     experiment_ref: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
+    #: `apex.metalearner.experience.SuccessEvidence` ; NULL sur les lignes antérieures à la colonne.
+    success_evidence: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_by: Mapped[str] = mapped_column(String(16), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
@@ -624,6 +626,7 @@ class ExperienceRow(Base):
             "mutation_description": self.mutation_description,
             "improvement_delta": self.improvement_delta,
             "experiment_ref": self.experiment_ref,
+            "success_evidence": self.success_evidence,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat(),
         }

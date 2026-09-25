@@ -23,6 +23,7 @@ from apex.agents.runtime import AgentRuntime
 from apex.config.schema import ComputePool, ModelEndpoint
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.service import EvalRunnerService
+from apex.metalearner.experience import SuccessEvidence
 from apex.metalearner.population_fitness import FitnessResult, compute_fitness
 from apex.models.model import GenerationRequest, GenerationResult, ModelCapabilityReport
 from apex.models.provider import ModelProvider
@@ -152,12 +153,25 @@ class ChampionConfirmation:
     """`confirmed` : le verdict du candidat retenu s'est reproduit sur chaque
     ré-exécution (`RobustnessJudge`, inchangé). `worst_fitness` : la pire
     fitness observée sur toutes ses exécutions — l'estimation honnête d'un
-    candidat non reproductible."""
+    candidat non reproductible. `refuted` : une ré-exécution a donné un AUTRE
+    verdict (REJECT) — distinct d'une confirmation seulement impossible
+    (infrastructure, code non rejouable), qui laisse le succès observé."""
 
     confirmed: bool
     reason: str
     eval_run_ids: tuple[str, ...]
     worst_fitness: float
+    refuted: bool = False
+
+    def __post_init__(self) -> None:
+        if self.confirmed and self.refuted:
+            raise ValueError("une confirmation ne peut pas être à la fois confirmée et réfutée")
+
+    @property
+    def success_evidence(self) -> SuccessEvidence:
+        if self.confirmed:
+            return SuccessEvidence.CONFIRMED
+        return SuccessEvidence.REFUTED if self.refuted else SuccessEvidence.OBSERVED
 
 
 def confirm_by_reexecution(
@@ -211,7 +225,8 @@ def confirm_by_reexecution(
         )
         if verdict.decision is not JudgeDecision.PASS:
             return ChampionConfirmation(
-                confirmed=False, reason=verdict.rationale, eval_run_ids=tuple(run_ids), worst_fitness=worst
+                confirmed=False, reason=verdict.rationale, eval_run_ids=tuple(run_ids), worst_fitness=worst,
+                refuted=verdict.decision is JudgeDecision.REJECT,
             )
     return ChampionConfirmation(
         confirmed=True, reason=f"verdict reproduit sur {runs} ré-exécution(s) du même code",

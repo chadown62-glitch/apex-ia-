@@ -29,7 +29,7 @@ from apex.metalearner.adaptive_solution_loop import (
     decide_next_strategies,
     run_adaptive_learning_loop,
 )
-from apex.metalearner.experience import Experience, ExperienceRepository, build_experience
+from apex.metalearner.experience import Experience, ExperienceRepository, SuccessEvidence, build_experience
 from apex.metalearner.failure_taxonomy import FailureCategory
 from apex.metalearner.generated_solution_cycle import CandidateStrategy
 from apex.metalearner.population_fitness import FitnessResult
@@ -209,20 +209,26 @@ class TestG0ToG1RealDependency(_AdaptiveLoopFixture):
         self.assertNotEqual(with_experience, without_experience)
 
 
-class TestDecideNextStrategies(_AdaptiveLoopFixture):
-    def _persist(self, *, failure_category_text: str, temperature: float, fitness: float) -> Experience:
+class _PersistedExperienceFixture(_AdaptiveLoopFixture):
+    def _persist(
+        self, *, failure_category_text: str, temperature: float, fitness: float,
+        evidence: SuccessEvidence | None = None,
+    ) -> Experience:
         from apex.oracles.model import OracleVerdict as OV
 
         verdict = OV.PASS if failure_category_text == "success" else OV.FAIL
         experience = Experience(
-            id=f"exp-{failure_category_text}-{temperature}", task_id=self.task.id, eval_run_id="run-x",
-            candidate_id="run-x", strategy_id="g0-mut0", generation_number=0,
+            id=f"exp-{failure_category_text}-{temperature}-{evidence}", task_id=self.task.id,
+            eval_run_id="run-x", candidate_id="run-x", strategy_id="g0-mut0", generation_number=0,
             generation_config={"generation": {"temperature": temperature}}, oracle_verdict=verdict,
             fitness=fitness, failure_category=FailureCategory(failure_category_text), created_by="core",
+            success_evidence=evidence,
         )
         self.experience_repo.create(experience)
         return experience
 
+
+class TestDecideNextStrategies(_PersistedExperienceFixture):
     def test_a_no_prior_experience_returns_base_strategies_unchanged(self) -> None:
         base = [CandidateStrategy(label="g0-mut0", genome_content={"generation": {"temperature": 0.7}})]
         strategies, description = decide_next_strategies(
@@ -231,8 +237,11 @@ class TestDecideNextStrategies(_AdaptiveLoopFixture):
         self.assertEqual(strategies, tuple(base))
         self.assertIn("aucune expérience", description)
 
-    def test_b_success_reduces_temperature(self) -> None:
-        self._persist(failure_category_text="success", temperature=0.8, fitness=1.2)
+    def test_b_confirmed_success_reduces_temperature(self) -> None:
+        self._persist(
+            failure_category_text="success", temperature=0.8, fitness=1.2,
+            evidence=SuccessEvidence.CONFIRMED,
+        )
         base = [CandidateStrategy(label="g0-mut0", genome_content={"generation": {"temperature": 0.8}})]
         strategies, description = decide_next_strategies(
             self.experience_repo, task_id=self.task.id, prior_generation_number=0, base_strategies=base,
@@ -280,6 +289,117 @@ class TestDecideNextStrategies(_AdaptiveLoopFixture):
         )
         temperatures = {s.genome_content["generation"]["temperature"] for s in strategies}
         self.assertEqual(len(temperatures), 3)
+
+
+class TestSuccessEvidence(_PersistedExperienceFixture):
+    """SUCCÈS observé != SUCCÈS confirmé : une réussite unique ou réfutée ne
+    doit jamais être exploitée comme une stratégie gagnante."""
+
+    def _decide(self, temperature: float):
+        genome = {"generation": {"temperature": temperature}}
+        base = [CandidateStrategy(label="g0-mut0", genome_content=genome)]
+        return decide_next_strategies(
+            self.experience_repo, task_id=self.task.id, prior_generation_number=0, base_strategies=base,
+        )
+
+    def test_a_an_observed_success_is_not_exploited(self) -> None:
+        self._persist(failure_category_text="success", temperature=0.8, fitness=1.2)
+        strategies, description = self._decide(0.8)
+        self.assertEqual(strategies[0].genome_content["generation"]["temperature"], 0.8)
+        self.assertIn("non confirmé", description)
+
+    def test_b_a_refuted_success_is_treated_as_an_incorrect_answer(self) -> None:
+        self._persist(
+            failure_category_text="success", temperature=0.8, fitness=1.2, evidence=SuccessEvidence.REFUTED
+        )
+        strategies, description = self._decide(0.8)
+        self.assertAlmostEqual(strategies[0].genome_content["generation"]["temperature"], 1.2)
+        self.assertIn("cas limites", strategies[0].genome_content["generation"]["prompt_suffix"])
+        self.assertIn("RÉFUTÉ", description)
+
+    def test_c_a_confirmed_success_outranks_a_fitter_unconfirmed_one(self) -> None:
+        self._persist(failure_category_text="success", temperature=0.4, fitness=1.3)
+        self._persist(
+            failure_category_text="success", temperature=0.8, fitness=1.1,
+            evidence=SuccessEvidence.CONFIRMED,
+        )
+        strategies, description = self._decide(0.8)
+        self.assertAlmostEqual(strategies[0].genome_content["generation"]["temperature"], 0.4)
+        self.assertIn("CONFIRMÉ", description)
+
+    def test_d_a_legacy_row_without_evidence_is_read_as_observed_never_confirmed(self) -> None:
+        experience = self._persist(failure_category_text="success", temperature=0.8, fitness=1.2)
+        with session_scope(self.factory) as session:
+            session.get(ExperienceRow, experience.id).success_evidence = None
+        reread = self.experience_repo.get(experience.id)
+        self.assertIs(reread.success_evidence, SuccessEvidence.OBSERVED)
+        self.assertFalse(reread.confirmed_success)
+
+    def test_e_evidence_must_match_the_category(self) -> None:
+        with self.assertRaises(ValueError):
+            self._persist(
+                failure_category_text="incorrect_solution", temperature=0.5, fitness=-0.1,
+                evidence=SuccessEvidence.CONFIRMED,
+            )
+        with self.assertRaises(ValueError):
+            self._persist(
+                failure_category_text="success", temperature=0.5, fitness=1.0,
+                evidence=SuccessEvidence.NOT_APPLICABLE,
+            )
+
+
+class TestLuckySuccessDoesNotContaminateLearning(_AdaptiveLoopFixture):
+    """Chaîne réelle : G0 réussit une fois, la ré-exécution du même code
+    échoue. AVANT : l'expérience G0 était un SUCCESS exploité par G1
+    (température 0.7 -> 0.35). APRÈS : elle est persistée REFUTED et G1
+    explore (0.7 -> 1.1)."""
+
+    def _run(self, *, diverging: bool, confirmation_runs: int = 1):
+        from unittest.mock import patch
+
+        from apex.metalearner import generated_solution_cycle
+
+        class _Diverging(generated_solution_cycle.ReplayProvider):
+            def __init__(self, text, *, original_model_id):
+                super().__init__(_WRONG_IS_PALINDROME, original_model_id=original_model_id)
+
+        provider = _FakeModelProvider(response_by_temperature={0.7: _CORRECT_IS_PALINDROME})
+        config = AdaptiveLoopConfig(
+            max_generations=2, target_fitness=None, no_improvement_patience=None,
+            confirmation_runs=confirmation_runs,
+        )
+        initial = [CandidateStrategy(label="g0-mut0", genome_content={"generation": {"temperature": 0.7}})]
+        replay = _Diverging if diverging else generated_solution_cycle.ReplayProvider
+        with patch.object(generated_solution_cycle, "ReplayProvider", replay):
+            result = run_adaptive_learning_loop(
+                self.evalrunner, self.runtime, self.experience_repo, task_id=self.task.id,
+                endpoint=self.endpoint, pool=a_pool(), initial_strategies=initial, config=config,
+                provider=provider,
+            )
+        return result, provider
+
+    def _g1_temperature(self, provider) -> float:
+        return round(provider.received_requests[1].temperature, 6)
+
+    def test_a_a_refuted_lucky_success_is_persisted_as_refuted_and_not_exploited(self) -> None:
+        result, provider = self._run(diverging=True)
+        g0 = self.experience_repo.get(result.generations[0].best_experience.id)
+        self.assertIs(g0.failure_category, FailureCategory.SUCCESS)
+        self.assertIs(g0.success_evidence, SuccessEvidence.REFUTED)
+        self.assertEqual(self._g1_temperature(provider), 1.1)
+        self.assertIn("RÉFUTÉ", result.generations[1].mutation_description)
+
+    def test_b_a_confirmed_success_is_persisted_as_confirmed_and_exploited(self) -> None:
+        result, provider = self._run(diverging=False)
+        g0 = self.experience_repo.get(result.generations[0].best_experience.id)
+        self.assertIs(g0.success_evidence, SuccessEvidence.CONFIRMED)
+        self.assertEqual(self._g1_temperature(provider), 0.35)
+
+    def test_c_without_confirmation_a_success_stays_observed_and_is_not_exploited(self) -> None:
+        result, provider = self._run(diverging=False, confirmation_runs=0)
+        g0 = self.experience_repo.get(result.generations[0].best_experience.id)
+        self.assertIs(g0.success_evidence, SuccessEvidence.OBSERVED)
+        self.assertEqual(self._g1_temperature(provider), 0.7)
 
 
 class TestStopCriteria(_AdaptiveLoopFixture):
