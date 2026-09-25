@@ -82,7 +82,7 @@ from typing import Any
 from apex.agents.runtime import AgentRuntime
 from apex.config.schema import ComputePool, ExternalPolicy, RouterScoringPolicy
 from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
-from apex.evalrunner.generated_solution import build_candidate_command
+from apex.evalrunner.generated_solution import build_candidate_command, ensure_candidate_marker
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
 from apex.judge.provider import get_default_judge_tier
@@ -94,6 +94,7 @@ from apex.models.provider import get_default_provider as get_default_model_provi
 from apex.models.registry import ModelCandidate, filter_available, resolve_candidates
 from apex.obs.status import DataStatus
 from apex.oracles.model import OracleVerdict
+from apex.oracles.result_contract import declares_result_contract, read_published_results
 from apex.policy.model import Subject
 from apex.recovery import (
     AttemptHistory,
@@ -158,6 +159,24 @@ _MAX_STORED_CANDIDATE_OUTPUT_CHARS = 20_000
 _STRUCTURAL_BLOCK_CATEGORIES = frozenset(
     {FailureCategory.SANDBOX_FAILURE, FailureCategory.PROVIDER_UNAVAILABLE}
 )
+
+
+def _judged_failure_category(task: Any, stdout: str) -> FailureCategory:
+    """Sandbox terminée normalement mais solution non acceptée par le Judge.
+    Sous le contrat de résultat (`apex.oracles.result_contract`), le script
+    ne sort plus en erreur sur une mauvaise réponse : la cause se lit dans
+    les résultats publiés — aucun résultat ou contrat violé -> candidat
+    invalide ; exception levée par le candidat -> échec d'exécution (même
+    catégorie qu'avant le contrat) ; résultats bien formés mais faux ->
+    INCORRECT_SOLUTION."""
+    if not declares_result_contract(task):
+        return FailureCategory.INCORRECT_SOLUTION
+    published = read_published_results(stdout)
+    if published.results is None:
+        return FailureCategory.INVALID_CANDIDATE
+    if any(isinstance(r, dict) and "error" in r for r in published.results):
+        return FailureCategory.EXECUTION_FAILURE
+    return FailureCategory.INCORRECT_SOLUTION
 
 
 def _advance_stage(current: TaskLoopStage, target: TaskLoopStage) -> TaskLoopStage:
@@ -234,6 +253,7 @@ def run_task_loop(
             f"la tâche « {request.task_id} » ne porte pas de « solution_harness » — "
             "run_task_loop() exige une tâche de ce genre (voir apex.taskloop.request.TaskRequest)"
         )
+    ensure_candidate_marker(task.solution_harness)
 
     trace_id = str(uuid.uuid4())
     # `is None`, JAMAIS `registry or default_registry()` : `TaskLoopRegistry`
@@ -579,12 +599,7 @@ def _run(
         if sandbox_result.status is not ExecutionStatus.SUCCESS:
             category = classify_sandbox_outcome(result=sandbox_result)
         else:
-            # La sandbox a réellement réussi, mais le Judge a jugé la
-            # solution incorrecte — exactement le cas que N+26 avait câblé
-            # et testé au niveau politique en attendant « un futur appelant
-            # qui produirait cette catégorie » (voir `apex.recovery.model.
-            # FailureCategory.INCORRECT_SOLUTION`) : c'est ce module.
-            category = FailureCategory.INCORRECT_SOLUTION
+            category = _judged_failure_category(task, sandbox_result.stdout)
         failure_text = (
             verdict.oracle_result.detail or sandbox_result.error_detail or sandbox_result.status.value
         )

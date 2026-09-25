@@ -175,7 +175,7 @@ class _TaskLoopTestCase(unittest.TestCase):
         spec = build_palindrome_task_spec()
         self.task = TaskBankService(self.factory).create(
             split=TaskSplit.TRAIN, specialty="research", title=spec.title, description=spec.description,
-            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness,
+            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness, expected_answer=spec.expected_answer,
         )
 
     def _request(self, **overrides) -> TaskRequest:
@@ -508,16 +508,21 @@ class TestEvalRunCapturesStdoutStderr(_TaskLoopTestCase):
         self.assertEqual(result.status, TaskLoopStatus.COMPLETED)
         eval_run = EvalRunRepository(self.factory).get(result.eval_run_ids[0])
         execution_facts = eval_run.facts["candidate_execution"]
-        # Le harness (`apex.taskgen.solution_tasks`) imprime un JSON réel
-        # `{"total": ..., "failures": []}` sur un succès — preuve que ceci
-        # est bien la sortie RÉELLE du sous-processus, jamais une valeur
-        # fabriquée par ce test.
-        self.assertIn('"failures": []', execution_facts["stdout"])
+        # Le harness (`apex.taskgen.solution_tasks`) publie les sorties
+        # RÉELLEMENT calculées par le candidat (contrat de résultat) —
+        # jamais une valeur fabriquée par ce test.
+        import json
+
+        from apex.oracles.result_contract import read_published_results
+        from apex.taskgen.solution_tasks import build_palindrome_task_spec
+
+        published = read_published_results(execution_facts["stdout"])
+        self.assertEqual(published.results, json.loads(build_palindrome_task_spec().expected_answer))
         self.assertEqual(execution_facts["stderr"], "")
         self.assertFalse(execution_facts["stdout_truncated"])
         self.assertFalse(execution_facts["stderr_truncated"])
 
-    def test_b_a_failed_run_persists_the_real_harness_stderr(self) -> None:
+    def test_b_a_failed_run_persists_the_real_harness_output(self) -> None:
         result = self._run(
             self._request(limits=TaskLimits(max_attempts=1, max_retries=0, max_candidates=1)),
             provider_factory=lambda c: _FakeModelProvider(mode="ok", text="x = 1\n"),  # NameError
@@ -526,11 +531,12 @@ class TestEvalRunCapturesStdoutStderr(_TaskLoopTestCase):
         self.assertEqual(len(result.eval_run_ids), 1)
         eval_run = EvalRunRepository(self.factory).get(result.eval_run_ids[0])
         execution_facts = eval_run.facts["candidate_execution"]
-        # `sys.exit(1)` du harness imprime "ECHEC: ..." sur stderr AVANT de
-        # sortir (voir `_HARNESS_TEMPLATE`) — preuve réelle, jamais
-        # fabriquée, que cette tentative a échoué et pourquoi.
-        self.assertIn("ECHEC", execution_facts["stderr"])
-        self.assertIn('"failures"', execution_facts["stdout"])
+        # Le harness capture l'exception levée par le candidat sur CHAQUE
+        # cas et la publie — preuve réelle, jamais fabriquée, de l'échec et
+        # de sa cause ; le verdict, lui, est décidé hors sandbox.
+        self.assertIn("APEX_RESULT:", execution_facts["stdout"])
+        self.assertIn("NameError", execution_facts["stdout"])
+        self.assertEqual(eval_run.oracle_verdict.value, "fail")
 
 
 class TestRecommendationBoundary(unittest.TestCase):

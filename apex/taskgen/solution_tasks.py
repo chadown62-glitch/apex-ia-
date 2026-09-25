@@ -11,14 +11,19 @@ discipline que `apex.taskgen.model.GeneratedTaskSpec`, une proposition en
 mémoire) : `description` (montrée au modèle, JAMAIS les tests), et
 `solution_harness` (JAMAIS montré au modèle — porte le marqueur de
 substitution `apex.evalrunner.generated_solution.CANDIDATE_CODE_MARKER` puis
-des tests cachés qui font échouer le script — `sys.exit(1)` — si la fonction
-générée est incorrecte ou absente)."""
+les ENTRÉES des cas cachés, dont il publie les sorties réelles selon le
+contrat de `apex.oracles.result_contract`), et `expected_answer` (les
+sorties attendues, liste JSON, qui ne quittent jamais l'hôte : le verdict
+est calculé hors sandbox, le candidat ne peut ni les lire ni décider de son
+propre verdict par un code de sortie)."""
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from apex.evalrunner.generated_solution import CANDIDATE_CODE_MARKER, PLACEHOLDER_COMMAND
+from apex.oracles.result_contract import RESULT_LINE_PREFIX
 
 _DESCRIPTION = (
     "Écris une fonction Python nommée exactement `is_palindrome` qui prend un "
@@ -41,28 +46,30 @@ _HIDDEN_TEST_CASES: tuple[tuple[str, bool], ...] = (
     ("", True),
     ("a", True),
     ("AbBa", True),
+    # Discriminent des algorithmes faux qui passaient les six cas ci-dessus
+    # (constat du juge externe) : comparaison des seules extrémités,
+    # suppression des espaces/ponctuation (interdite par l'énoncé).
+    ("abca", False),
+    ("abcXba", False),
+    ("ab a", False),
+    ("nurses run", False),
+    ("No lemon, no melon", False),
+    ("aB ba", True),
 )
 
 _HARNESS_TEMPLATE = """\
 {marker}
 
-import json, sys
+import json as _apex_json
 
-_CASES = {cases!r}
-_failures = []
-for _s, _expected in _CASES:
+_APEX_INPUTS = {inputs!r}
+_apex_results = []
+for _apex_input in _APEX_INPUTS:
     try:
-        _actual = is_palindrome(_s)
-    except Exception as exc:
-        _failures.append({{"input": _s, "error": repr(exc)}})
-        continue
-    if _actual != _expected:
-        _failures.append({{"input": _s, "expected": _expected, "actual": _actual}})
-
-print(json.dumps({{"total": len(_CASES), "failures": _failures}}))
-if _failures:
-    print("ECHEC: " + str(len(_failures)) + " cas sur " + str(len(_CASES)) + " ont echoue", file=sys.stderr)
-    sys.exit(1)
+        _apex_results.append(is_palindrome(_apex_input))
+    except Exception as _apex_exc:
+        _apex_results.append({{"error": repr(_apex_exc)}})
+print({prefix!r} + _apex_json.dumps({{"results": _apex_results}}, default=repr))
 """
 
 
@@ -76,14 +83,18 @@ class SolutionTaskSpec:
     description: str
     command: tuple[str, ...]
     solution_harness: str
+    expected_answer: str
 
 
 def build_palindrome_task_spec() -> SolutionTaskSpec:
-    cases = tuple((s, expected) for s, expected in _HIDDEN_TEST_CASES)
-    harness = _HARNESS_TEMPLATE.format(marker=CANDIDATE_CODE_MARKER, cases=list(cases))
+    inputs = [s for s, _ in _HIDDEN_TEST_CASES]
+    harness = _HARNESS_TEMPLATE.format(
+        marker=CANDIDATE_CODE_MARKER, inputs=inputs, prefix=RESULT_LINE_PREFIX
+    )
     return SolutionTaskSpec(
         title="Solution générée — is_palindrome",
         description=_DESCRIPTION,
         command=PLACEHOLDER_COMMAND,
         solution_harness=harness,
+        expected_answer=json.dumps([expected for _, expected in _HIDDEN_TEST_CASES]),
     )

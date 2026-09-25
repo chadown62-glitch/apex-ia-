@@ -27,10 +27,11 @@ class OracleProvider(ABC):
 
 
 def get_default_oracle() -> OracleProvider:
-    """Seul point de construction utilisé par de futurs consommateurs —
-    c'est ICI, et seulement ici, qu'un oracle différent serait choisi une
-    fois réellement implémenté. Aujourd'hui : `ExitCodeOracle`, le seul
-    oracle réel."""
+    """Seul point de construction utilisé par les consommateurs (EvalRunner,
+    `Tier0Judge` donc TaskLoop). `ResultContractOracle` n'agit que sur les
+    tâches qui déclarent le contrat de résultat ; toutes les autres gardent
+    exactement le jugement d'`ExitCodeOracle`."""
     from apex.oracles.exit_code import ExitCodeOracle
+    from apex.oracles.result_contract import ResultContractOracle
 
-    return ExitCodeOracle()
+    return ResultContractOracle(ExitCodeOracle())

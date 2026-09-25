@@ -120,7 +120,7 @@ class _AdaptiveLoopFixture(unittest.TestCase):
         spec = build_palindrome_task_spec()
         self.task = self.task_service.create(
             split=TaskSplit.TRAIN, specialty="research", title=spec.title, description=spec.description,
-            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness,
+            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness, expected_answer=spec.expected_answer,
         )
 
 

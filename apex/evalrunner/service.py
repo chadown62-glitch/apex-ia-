@@ -35,7 +35,11 @@ from typing import Any
 from apex.agents.runtime import AgentRuntime
 from apex.config.schema import ModelEndpoint
 from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceeded
-from apex.evalrunner.generated_solution import MissingCandidateMarkerError, build_candidate_command
+from apex.evalrunner.generated_solution import (
+    MissingCandidateMarkerError,
+    build_candidate_command,
+    ensure_candidate_marker,
+)
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
 from apex.genome import clone_config
@@ -323,6 +327,8 @@ class EvalRunnerService:
                 f"la tâche « {task_id} » ne porte pas de « solution_harness » — "
                 "run_generated_solution() exige une tâche de ce genre"
             )
+
+        ensure_candidate_marker(task.solution_harness)
 
         clone = self._get_clone(clone_id)
         if clone is None:

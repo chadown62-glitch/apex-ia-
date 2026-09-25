@@ -59,6 +59,7 @@ from enum import Enum
 
 from apex.evalrunner.model import EvalRun
 from apex.oracles.model import OracleVerdict
+from apex.oracles.result_contract import CONTRACT_VIOLATION, RESULT_LINE_PREFIX, read_published_results
 from apex.sandbox.model import ExecutionStatus
 
 #: Préfixe littéral posé par `EvalRunnerService.run_generated_solution` sur
@@ -113,6 +114,26 @@ def _harness_summary(eval_run: EvalRun) -> dict | None:
     return parsed
 
 
+def _contract_category(eval_run: EvalRun) -> FailureCategory | None:
+    """Harness au contrat de résultat (`apex.oracles.result_contract`) :
+    `None` si le stdout ne porte aucune ligne de contrat (ancien format,
+    lu par `_harness_summary`). Contrat violé ou exception levée par le
+    candidat -> INVALID_CANDIDATE ; résultats publiés mais faux ->
+    INCORRECT_SOLUTION."""
+    if (eval_run.oracle_detail or "").startswith(CONTRACT_VIOLATION):
+        return FailureCategory.INVALID_CANDIDATE
+    candidate_execution = eval_run.facts.get("candidate_execution")
+    stdout = candidate_execution.get("stdout") if isinstance(candidate_execution, dict) else None
+    if not isinstance(stdout, str) or RESULT_LINE_PREFIX not in stdout:
+        return None
+    published = read_published_results(stdout)
+    if published.results is None:
+        return FailureCategory.INVALID_CANDIDATE
+    if any(isinstance(r, dict) and "error" in r for r in published.results):
+        return FailureCategory.INVALID_CANDIDATE
+    return FailureCategory.INCORRECT_SOLUTION
+
+
 def classify_failure(eval_run: EvalRun) -> FailureCategory:
     """Classification PURE — aucun accès DB, aucune inférence au-delà des
     champs déjà réellement persistés sur `eval_run`. Toujours une valeur
@@ -143,6 +164,9 @@ def classify_failure(eval_run: EvalRun) -> FailureCategory:
         return FailureCategory.POLICY_SECURITY_REJECTION
 
     if eval_run.oracle_verdict is OracleVerdict.FAIL:
+        contract = _contract_category(eval_run)
+        if contract is not None:
+            return contract
         summary = _harness_summary(eval_run)
         if summary is None:
             # Le script n'a jamais produit son résumé JSON — preuve d'un

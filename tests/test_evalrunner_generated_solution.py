@@ -15,6 +15,7 @@ jamais un faux PASS d'intégration."""
 
 from __future__ import annotations
 
+import json
 import os
 import socket
 import unittest
@@ -41,6 +42,7 @@ from apex.models.provider import ModelProvider
 from apex.obs.capability import CapabilityStatus
 from apex.obs.status import Measurement
 from apex.oracles.model import OracleVerdict
+from apex.oracles.result_contract import compare_results, read_published_results
 from apex.policy.model import Subject
 from apex.tasks.model import TaskSplit
 from apex.tasks.service import TaskBankService
@@ -142,8 +144,10 @@ class TestBuildCandidateCommand(unittest.TestCase):
         )
         result = subprocess.run(command, capture_output=True, text=True, timeout=10)
         self.assertEqual(result.returncode, 0, msg=result.stderr)
+        published = read_published_results(result.stdout)
+        self.assertTrue(compare_results(published.results, json.loads(spec.expected_answer))[0])
 
-    def test_d_a_wrong_solution_against_the_real_palindrome_harness_exits_nonzero(self) -> None:
+    def test_d_a_wrong_solution_publishes_results_that_differ_from_the_hidden_expected_values(self) -> None:
         import subprocess
 
         spec = build_palindrome_task_spec()
@@ -151,7 +155,11 @@ class TestBuildCandidateCommand(unittest.TestCase):
             solution_harness=spec.solution_harness, candidate_code=_WRONG_IS_PALINDROME,
         )
         result = subprocess.run(command, capture_output=True, text=True, timeout=10)
-        self.assertNotEqual(result.returncode, 0)
+        published = read_published_results(result.stdout)
+        self.assertIsNone(published.problem)
+        ok, detail = compare_results(published.results, json.loads(spec.expected_answer))
+        self.assertFalse(ok)
+        self.assertIn("cas incorrects", detail)
 
     def test_f_a_markdown_fenced_solution_against_the_real_harness_now_exits_zero(self) -> None:
         """Le cas précisément diagnostiqué par l'audit : reproduit ici avec
@@ -174,10 +182,13 @@ class TestBuildCandidateCommand(unittest.TestCase):
             solution_harness=spec.solution_harness, candidate_code=_BROKEN_CODE_MISSING_FUNCTION,
         )
         result = subprocess.run(command, capture_output=True, text=True, timeout=10)
-        self.assertNotEqual(result.returncode, 0)
         # Le harness capture l'exception PAR cas (jamais un crash brut) et la
-        # journalise dans le JSON de sortie — c'est là qu'on la vérifie.
+        # publie dans le résultat — c'est là qu'on la vérifie.
         self.assertIn("NameError", result.stdout)
+        published = read_published_results(result.stdout)
+        ok, detail = compare_results(published.results, json.loads(spec.expected_answer))
+        self.assertFalse(ok)
+        self.assertIn("exception", detail)
 
 
 class TestExtractCandidateCode(unittest.TestCase):
@@ -241,7 +252,7 @@ class TestRunGeneratedSolution(unittest.TestCase):
         spec = build_palindrome_task_spec()
         return self.task_service.create(
             split=TaskSplit.TRAIN, specialty="research", title=spec.title, description=spec.description,
-            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness,
+            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness, expected_answer=spec.expected_answer,
         )
 
     # -- 1/2/3 : chemin heureux, correct de bout en bout ---------------------
@@ -259,7 +270,10 @@ class TestRunGeneratedSolution(unittest.TestCase):
         self.assertEqual(run.clone_id, self.clone.clone_id)
         self.assertIsNotNone(run.sandbox_status)
 
-    def test_b_a_wrong_generated_solution_executes_and_fails_judged_by_real_exit_code(self) -> None:
+    def test_b_a_wrong_generated_solution_runs_to_completion_and_is_failed_outside_the_sandbox(self) -> None:
+        """Contrat de résultat : le script termine normalement (code 0) —
+        le verdict FAIL est décidé hors sandbox, par comparaison aux valeurs
+        attendues, jamais par le code de sortie que le candidat contrôle."""
         provider = _FakeModelProvider(response_text=_WRONG_IS_PALINDROME)
         task = self._a_solution_task()
         run = self.evalrunner.run_generated_solution(
@@ -267,7 +281,8 @@ class TestRunGeneratedSolution(unittest.TestCase):
             method=EvalMethod.EXPERIMENTATION, provider=provider,
         )
         self.assertIs(run.oracle_verdict, OracleVerdict.FAIL)
-        self.assertNotEqual(run.exit_code, 0)
+        self.assertEqual(run.exit_code, 0)
+        self.assertIn("cas incorrects", run.oracle_detail)
         self.assertEqual(run.model_id, provider.model_used)
 
     def test_c_both_model_id_and_sandbox_status_are_persisted_together(self) -> None:
@@ -380,7 +395,7 @@ class TestCompareGeneratedSolutions(unittest.TestCase):
         spec = build_palindrome_task_spec()
         self.task = self.task_service.create(
             split=TaskSplit.TRAIN, specialty="research", title=spec.title, description=spec.description,
-            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness,
+            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness, expected_answer=spec.expected_answer,
         )
 
     def test_a_the_configured_number_of_candidates_is_exactly_what_runs(self) -> None:
@@ -461,7 +476,7 @@ class TestRealOllamaGeneratedSolution(unittest.TestCase):
         spec = build_palindrome_task_spec()
         task = task_service.create(
             split=TaskSplit.TRAIN, specialty="research", title=spec.title, description=spec.description,
-            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness,
+            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness, expected_answer=spec.expected_answer,
         )
         run = evalrunner.run_generated_solution(
             task_id=task.id, clone_id=clone.clone_id, endpoint=endpoint, method=EvalMethod.EXPERIMENTATION,
@@ -469,6 +484,132 @@ class TestRealOllamaGeneratedSolution(unittest.TestCase):
         self.assertIsNotNone(run.model_id)
         self.assertIsNotNone(run.sandbox_status)
         self.assertIn(run.oracle_verdict, (OracleVerdict.PASS, OracleVerdict.FAIL, OracleVerdict.ERROR))
+
+
+
+class TestResultContract(unittest.TestCase):
+    """Défaut CRITIQUE confirmé par le Continuous Improvement Engine
+    (cycle 2) : juger au code de sortie laissait un candidat obtenir PASS
+    sans résoudre la tâche. Sandbox RÉEL, oracle par défaut réel."""
+
+    def setUp(self) -> None:
+        engine = create_engine("sqlite:///:memory:", future=True)
+        Base.metadata.create_all(engine)
+        self.factory = build_session_factory(engine)
+        self.runtime = AgentRuntime(self.factory)
+        self.tasks = TaskBankService(self.factory)
+        self.evalrunner = EvalRunnerService(self.factory, agent_runtime=self.runtime)
+        self.endpoint = ModelEndpoint(
+            pool_id="local", runtime="ollama", url="http://127.0.0.1:11434",
+            served_model="qwen2.5-coder:7b-instruct", max_context=8192,
+        )
+        self.spec = build_palindrome_task_spec()
+        self.task = self._task()
+
+    def _task(self, *, harness: str | None = None, expected: str | None = "default"):
+        return self.tasks.create(
+            split=TaskSplit.TRAIN, specialty="research", title="t", description=self.spec.description,
+            command=self.spec.command, created_by=Subject.HUMAN,
+            solution_harness=harness or self.spec.solution_harness,
+            expected_answer=self.spec.expected_answer if expected == "default" else expected,
+        )
+
+    def _run(self, code: str, task=None):
+        clone = self.runtime.spawn(
+            Subject.RESEARCH, pool=ComputePool(
+                pool_id="local", location=PoolLocation.LOCAL, trust_level=TrustLevel.TRUSTED,
+                capabilities=(Capability.CPU_EVAL,),
+            ), genome_ref="sha256:x", spawned_by=Subject.CORE,
+        )
+        provider = _FakeModelProvider(response_text=code)
+        run = self.evalrunner.run_generated_solution(
+            task_id=(task or self.task).id, clone_id=clone.clone_id, endpoint=self.endpoint,
+            method=EvalMethod.EXPERIMENTATION, provider=provider,
+        )
+        return run, provider
+
+    def test_a_candidates_that_do_not_solve_the_task_never_pass(self) -> None:
+        cheats = {
+            "sys_exit0": "import sys\nsys.exit(0)\n",
+            "os_exit0": "import os\nos._exit(0)\n",
+            "neutered_exit": "import sys\nsys.exit = lambda *a, **k: None\ndef is_palindrome(s):\n    return False\n",
+            "forged_legacy_summary": "import json, os\nprint(json.dumps({'total': 6, 'failures': []}))\nos._exit(0)\n",
+            "forged_contract_line": "print('APEX_RESULT:' + '{\"results\": []}')\ndef is_palindrome(s):\n    return True\n",
+            "ints_instead_of_bools": "def is_palindrome(s):\n    c = s.lower()\n    return int(c == c[::-1])\n",
+        }
+        for label, code in cheats.items():
+            with self.subTest(candidate=label):
+                run, _ = self._run(code)
+                self.assertIsNot(run.oracle_verdict, OracleVerdict.PASS, run.oracle_detail)
+
+    def test_b_a_correct_candidate_passes_with_a_host_side_comparison(self) -> None:
+        run, _ = self._run(_CORRECT_IS_PALINDROME)
+        self.assertIs(run.oracle_verdict, OracleVerdict.PASS)
+        self.assertIn("hors sandbox", run.oracle_detail)
+
+    def test_c_expected_values_never_enter_the_sandboxed_script(self) -> None:
+        self.assertNotIn(self.spec.expected_answer, self.spec.solution_harness)
+        self.assertNotIn("True", self.spec.solution_harness)
+        self.assertNotIn("False", self.spec.solution_harness)
+
+    def test_d_a_contract_without_expected_values_is_an_error_never_a_pass(self) -> None:
+        run, _ = self._run(_CORRECT_IS_PALINDROME, task=self._task(expected=None))
+        self.assertIs(run.oracle_verdict, OracleVerdict.ERROR)
+
+    def test_e_a_legacy_exit_code_harness_keeps_its_semantics(self) -> None:
+        legacy = (
+            "# APEX_CANDIDATE_CODE_HERE\n"
+            "import sys\nsys.exit(0 if is_palindrome('abba') and not is_palindrome('ab') else 1)\n"
+        )
+        task = self._task(harness=legacy, expected=None)
+        self.assertIs(self._run(_CORRECT_IS_PALINDROME, task=task)[0].oracle_verdict, OracleVerdict.PASS)
+        self.assertIs(self._run(_WRONG_IS_PALINDROME, task=task)[0].oracle_verdict, OracleVerdict.FAIL)
+
+    def test_g_the_project_tree_is_not_visible_from_the_sandbox(self) -> None:
+        """Juge externe (cycle 2) : les sources du dépôt, qui définissent les
+        cas cachés, étaient lisibles depuis le sandbox NAMESPACED."""
+        from apex.sandbox.linux_namespace import _PROJECT_ROOT
+
+        code = f"import os\nprint('VISIBLE', os.listdir({_PROJECT_ROOT!r}))\n" + _CORRECT_IS_PALINDROME
+        run, _ = self._run(code)
+        self.assertIn("VISIBLE []", run.facts["candidate_execution"]["stdout"])
+        self.assertIs(run.oracle_verdict, OracleVerdict.PASS)
+
+    def test_h_hidden_cases_reject_plausible_wrong_algorithms(self) -> None:
+        wrong = {
+            "extremites": "def is_palindrome(s):\n    return s[:1].lower() == s[-1:].lower()\n",
+            "constante": "def is_palindrome(s):\n    return s != 'hello'\n",
+            "sans_ponctuation": (
+                "def is_palindrome(s):\n    t = ''.join(c for c in s.lower() if c.isalnum())\n"
+                "    return t == t[::-1]\n"
+            ),
+        }
+        for label, code in wrong.items():
+            with self.subTest(candidate=label):
+                self.assertIs(self._run(code)[0].oracle_verdict, OracleVerdict.FAIL)
+
+    def test_i_a_contract_violation_is_classified_as_an_invalid_candidate(self) -> None:
+        from apex.metalearner.failure_taxonomy import FailureCategory, classify_failure
+
+        run, _ = self._run("import json, sys\nprint(json.dumps({'total': 6, 'failures': []}))\nsys.exit(0)\n")
+        self.assertIs(run.oracle_verdict, OracleVerdict.FAIL)
+        self.assertIs(classify_failure(run), FailureCategory.INVALID_CANDIDATE)
+
+    def test_f_a_malformed_task_is_refused_before_any_model_call(self) -> None:
+        task = self._task(harness="print('pas de marqueur')\n", expected=None)
+        provider = _FakeModelProvider(response_text=_CORRECT_IS_PALINDROME)
+        clone = self.runtime.spawn(
+            Subject.RESEARCH, pool=ComputePool(
+                pool_id="local", location=PoolLocation.LOCAL, trust_level=TrustLevel.TRUSTED,
+                capabilities=(Capability.CPU_EVAL,),
+            ), genome_ref="sha256:x", spawned_by=Subject.CORE,
+        )
+        with self.assertRaises(MissingCandidateMarkerError):
+            self.evalrunner.run_generated_solution(
+                task_id=task.id, clone_id=clone.clone_id, endpoint=self.endpoint,
+                method=EvalMethod.EXPERIMENTATION, provider=provider,
+            )
+        self.assertEqual(provider.received_requests, [])
 
 
 if __name__ == "__main__":

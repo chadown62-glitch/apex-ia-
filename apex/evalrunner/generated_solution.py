@@ -71,15 +71,21 @@ class MissingCandidateMarkerError(ValueError):
     de génération pour une tâche qui échouerait de toute façon)."""
 
 
+def ensure_candidate_marker(solution_harness: str) -> None:
+    """À appeler AVANT toute génération : une tâche mal formée ne doit
+    jamais consommer un appel modèle."""
+    if CANDIDATE_CODE_MARKER not in solution_harness:
+        raise MissingCandidateMarkerError(
+            f"« solution_harness » ne contient pas le marqueur « {CANDIDATE_CODE_MARKER} »"
+        )
+
+
 def build_candidate_command(*, solution_harness: str, candidate_code: str) -> tuple[str, ...]:
     """Substitue `CANDIDATE_CODE_MARKER` par `candidate_code` (après
     `extract_candidate_code()`, voir docstring du module) dans
     `solution_harness` et retourne l'argv réel à exécuter. Lève
     `MissingCandidateMarkerError` si le marqueur est absent — jamais un
     script partiellement construit exécuté quand même."""
-    if CANDIDATE_CODE_MARKER not in solution_harness:
-        raise MissingCandidateMarkerError(
-            f"« solution_harness » ne contient pas le marqueur « {CANDIDATE_CODE_MARKER} »"
-        )
+    ensure_candidate_marker(solution_harness)
     script = solution_harness.replace(CANDIDATE_CODE_MARKER, extract_candidate_code(candidate_code), 1)
     return ("python3", "-c", script)

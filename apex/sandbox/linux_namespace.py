@@ -39,6 +39,9 @@ from apex.sandbox.model import (
 from apex.sandbox.provider import SandboxProvider
 from apex.sandbox.result import SandboxResult
 
+# Racine du dépôt APEX, masquée dans le sandbox (sources et fichiers locaux jamais lisibles).
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 #: Cap de capture stdout/stderr — une mission diagnostique ne produit pas de
 #: volume important ; au-delà, tronquer plutôt que de laisser le processus
 #: parent accumuler une sortie non bornée (limite documentée : `communicate()`
@@ -240,6 +243,7 @@ class LinuxNamespaceSandbox(SandboxProvider):
             f"mount -t tmpfs -o size={spec.limits.disk_mb}m tmpfs /tmp\n"
             "mkdir -p /tmp/work\n"
             "chmod 1777 /tmp/work\n"
+            f"mount -t tmpfs -o size=1m,mode=0555 tmpfs {shlex.quote(_PROJECT_ROOT)}\n"
             "mount -o remount,ro,bind /\n"
             "cd /tmp/work\n"
             f"ulimit -t {cpu_seconds} -v {address_space_kb} -u {spec.limits.pids_limit} -f {file_size_kb}\n"
