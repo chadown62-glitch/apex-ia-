@@ -24,7 +24,10 @@ from apex.config.schema import ComputePool, ModelEndpoint
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.service import EvalRunnerService
 from apex.metalearner.population_fitness import FitnessResult, compute_fitness
+from apex.models.model import GenerationRequest, GenerationResult, ModelCapabilityReport
 from apex.models.provider import ModelProvider
+from apex.obs.capability import CapabilityStatus
+from apex.obs.status import Measurement
 from apex.policy.model import Subject
 from apex.sandbox.model import ResourceLimits
 
@@ -121,3 +124,96 @@ def compare_generated_solutions(
         task_id=task_id, experiment_ref=experiment_ref, candidates=tuple(outcomes), best=best,
     )
 
+
+
+class ReplayProvider(ModelProvider):
+    """Rejoue EXACTEMENT un code déjà généré : une ré-exécution du même
+    candidat, jamais une nouvelle génération (`model_used` le dit)."""
+
+    def __init__(self, text: str, *, original_model_id: str | None) -> None:
+        self._text = text
+        self._model_used = f"replay:{original_model_id or 'unknown'}"
+
+    def detect(self) -> ModelCapabilityReport:
+        return ModelCapabilityReport(
+            status=CapabilityStatus.AVAILABLE, backend="replay", detail="rejoue un code déjà généré"
+        )
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        return GenerationResult(
+            text=self._text, model_used=self._model_used, tokens_prompt=Measurement.unknown(),
+            tokens_completion=Measurement.unknown(), finish_reason="replay", elapsed_s=0.0,
+            facts={"replay": True},
+        )
+
+
+@dataclass(frozen=True)
+class ChampionConfirmation:
+    """`confirmed` : le verdict du candidat retenu s'est reproduit sur chaque
+    ré-exécution (`RobustnessJudge`, inchangé). `worst_fitness` : la pire
+    fitness observée sur toutes ses exécutions — l'estimation honnête d'un
+    candidat non reproductible."""
+
+    confirmed: bool
+    reason: str
+    eval_run_ids: tuple[str, ...]
+    worst_fitness: float
+
+
+def confirm_by_reexecution(
+    evalrunner: EvalRunnerService,
+    agent_runtime: AgentRuntime,
+    *,
+    task_id: str,
+    endpoint: ModelEndpoint,
+    pool: ComputePool,
+    outcome: CandidateOutcome,
+    strategy: CandidateStrategy,
+    runs: int,
+    method: EvalMethod = EvalMethod.EXPERIMENTATION,
+    experiment_ref: str | None = None,
+    limits: ResourceLimits | None = None,
+    requested_by: Subject = Subject.CORE,
+    clone_subject: Subject = Subject.RESEARCH,
+) -> ChampionConfirmation:
+    from apex.metalearner.judge_model import JudgeDecision
+    from apex.metalearner.judges import JudgeInput, RobustnessJudge
+
+    response = outcome.eval_run.facts.get("model_response")
+    text = response.get("text") if isinstance(response, dict) else None
+    if not isinstance(text, str) or (isinstance(response, dict) and response.get("truncated")):
+        return ChampionConfirmation(
+            confirmed=False, reason="code du candidat non rejouable (réponse absente ou tronquée)",
+            eval_run_ids=(), worst_fitness=outcome.fitness.value,
+        )
+    resolved_limits = _resolve_limits(strategy.genome_content, limits=limits)
+    judge = RobustnessJudge()
+    worst = outcome.fitness.value
+    run_ids: list[str] = []
+    for index in range(runs):
+        clone = agent_runtime.spawn(
+            clone_subject, pool=pool, genome_ref=f"generated-solution:{strategy.label}:confirm{index}",
+            spawned_by=requested_by,
+        )
+        repeat = evalrunner.run_generated_solution(
+            task_id=task_id, clone_id=clone.clone_id, endpoint=endpoint, method=method,
+            provider=ReplayProvider(text, original_model_id=outcome.eval_run.model_id),
+            experiment_ref=experiment_ref, limits=limits, genome_content=strategy.genome_content,
+            requested_by=requested_by,
+        )
+        run_ids.append(repeat.id)
+        worst = min(worst, compute_fitness(repeat, limits=resolved_limits).value)
+        verdict = judge.evaluate(
+            JudgeInput(
+                eval_run=outcome.eval_run, limits=resolved_limits,
+                candidate_fitness_components=outcome.fitness.components, repeated_eval_run=repeat,
+            )
+        )
+        if verdict.decision is not JudgeDecision.PASS:
+            return ChampionConfirmation(
+                confirmed=False, reason=verdict.rationale, eval_run_ids=tuple(run_ids), worst_fitness=worst
+            )
+    return ChampionConfirmation(
+        confirmed=True, reason=f"verdict reproduit sur {runs} ré-exécution(s) du même code",
+        eval_run_ids=tuple(run_ids), worst_fitness=worst,
+    )

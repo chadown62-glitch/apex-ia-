@@ -107,12 +107,16 @@ def summarize(result: AdaptiveLoopResult) -> dict[str, Any]:
         "best_generation": result.best_overall_generation,
         "best_fitness": best.fitness.value,
         "best_verdict": best.eval_run.oracle_verdict.value,
+        "best_confirmed": result.best_overall_confirmed,
         "generations": [
             {
                 "generation": g.generation_number,
                 "best_fitness": g.best_experience.fitness,
                 "best_category": g.best_experience.failure_category.value,
                 "decision": g.mutation_description,
+                "champion_confirmed": (
+                    None if g.champion_confirmation is None else g.champion_confirmation.confirmed
+                ),
                 "candidates": [
                     {
                         "strategy": c.strategy_label,

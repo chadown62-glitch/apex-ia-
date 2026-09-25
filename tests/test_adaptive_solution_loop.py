@@ -374,6 +374,70 @@ class TestRunIsolation(_AdaptiveLoopFixture):
         self.assertEqual(result.experiment_ref, "exp-42")
 
 
+class TestChampionConfirmation(_AdaptiveLoopFixture):
+    """Défaut confirmé par le Continuous Improvement Engine (cycle 3) : la
+    cible était déclarée atteinte sur UNE exécution — un candidat non
+    déterministe qui réussissait par chance devenait le champion. Le même
+    code est désormais ré-exécuté et jugé par `RobustnessJudge`."""
+
+    def _run(self, provider, *, confirmation_runs=2, max_generations=1):
+        config = AdaptiveLoopConfig(
+            max_generations=max_generations, target_fitness=1.0, no_improvement_patience=None,
+            confirmation_runs=confirmation_runs,
+        )
+        initial = [CandidateStrategy(label="g0-mut0", genome_content={"generation": {"temperature": 0.7}})]
+        return run_adaptive_learning_loop(
+            self.evalrunner, self.runtime, self.experience_repo, task_id=self.task.id,
+            endpoint=self.endpoint, pool=a_pool(), initial_strategies=initial, config=config, provider=provider,
+        )
+
+    def _executions(self) -> int:
+        from apex.db.models import EvalRunRow
+
+        with session_scope(self.factory) as session:
+            return session.query(EvalRunRow).filter(EvalRunRow.task_id == self.task.id).count()
+
+    def test_a_a_reproducible_champion_is_confirmed_by_re_executions_of_the_same_code(self) -> None:
+        result = self._run(_FakeModelProvider(response_by_temperature={0.7: _CORRECT_IS_PALINDROME}))
+        self.assertEqual(result.stop_reason, "target_fitness_reached")
+        self.assertTrue(result.best_overall_confirmed)
+        confirmation = result.generations[0].champion_confirmation
+        self.assertEqual(len(confirmation.eval_run_ids), 2)
+        self.assertEqual(self._executions(), 3)
+
+    def test_b_a_non_reproducible_verdict_never_reaches_the_target(self) -> None:
+        from unittest.mock import patch
+
+        from apex.metalearner import generated_solution_cycle
+
+        class _Diverging(generated_solution_cycle.ReplayProvider):
+            def __init__(self, text, *, original_model_id):
+                super().__init__(_WRONG_IS_PALINDROME, original_model_id=original_model_id)
+
+        with patch.object(generated_solution_cycle, "ReplayProvider", _Diverging):
+            result = self._run(_FakeModelProvider(response_by_temperature={0.7: _CORRECT_IS_PALINDROME}))
+        self.assertNotEqual(result.stop_reason, "target_fitness_reached")
+        self.assertIs(result.best_overall_confirmed, False)
+        confirmation = result.generations[0].champion_confirmation
+        self.assertFalse(confirmation.confirmed)
+        self.assertLess(confirmation.worst_fitness, result.generations[0].best_experience.fitness)
+        self.assertIn("non-reproductible", confirmation.reason)
+
+    def test_c_confirmation_can_be_disabled_explicitly(self) -> None:
+        result = self._run(_FakeModelProvider(response_by_temperature={0.7: _CORRECT_IS_PALINDROME}), confirmation_runs=0)
+        self.assertEqual(result.stop_reason, "target_fitness_reached")
+        self.assertIsNone(result.best_overall_confirmed)
+        self.assertEqual(self._executions(), 1)
+
+    def test_d_a_failed_champion_is_never_re_executed(self) -> None:
+        self._run(_FakeModelProvider(response_by_temperature={}))
+        self.assertEqual(self._executions(), 1)
+
+    def test_e_negative_confirmation_runs_are_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            AdaptiveLoopConfig(confirmation_runs=-1)
+
+
 class TestSandboxBoundary(_AdaptiveLoopFixture):
     def test_a_a_candidate_that_tries_to_crash_the_host_process_stays_sandboxed(self) -> None:
         """Un candidat hostile (tentative d'affecter le processus hôte)

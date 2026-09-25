@@ -46,8 +46,16 @@ from apex.evalrunner.service import EvalRunnerService
 from apex.genome.clone_config import resolve_generation_temperature
 from apex.metalearner.experience import Experience, ExperienceRepository, build_experience
 from apex.metalearner.failure_taxonomy import FailureCategory
-from apex.metalearner.generated_solution_cycle import CandidateComparison, CandidateOutcome, CandidateStrategy, compare_generated_solutions
+from apex.metalearner.generated_solution_cycle import (
+    CandidateComparison,
+    CandidateOutcome,
+    CandidateStrategy,
+    ChampionConfirmation,
+    compare_generated_solutions,
+    confirm_by_reexecution,
+)
 from apex.models.provider import ModelProvider
+from apex.oracles.model import OracleVerdict
 from apex.policy.model import Subject
 from apex.sandbox.model import ResourceLimits
 
@@ -210,10 +218,15 @@ class AdaptiveLoopConfig:
     target_fitness: float | None = None
     no_improvement_patience: int | None = 2
     time_budget_s: float | None = None
+    #: Ré-exécutions du MÊME code avant de croire un champion qui a réussi
+    #: (`RobustnessJudge`) ; 0 désactive explicitement la confirmation.
+    confirmation_runs: int = 2
 
     def __post_init__(self) -> None:
         if self.max_generations < 1:
             raise ValueError("« max_generations » doit être >= 1")
+        if self.confirmation_runs < 0:
+            raise ValueError("« confirmation_runs » doit être >= 0")
 
 
 @dataclass(frozen=True)
@@ -223,6 +236,7 @@ class GenerationRecord:
     experiences: tuple[Experience, ...]
     best_experience: Experience
     mutation_description: str
+    champion_confirmation: ChampionConfirmation | None = None
 
 
 @dataclass(frozen=True)
@@ -233,6 +247,7 @@ class AdaptiveLoopResult:
     stop_reason: str
     best_overall: CandidateOutcome
     best_overall_generation: int
+    best_overall_confirmed: bool | None = None
 
 
 def run_adaptive_learning_loop(
@@ -270,6 +285,8 @@ def run_adaptive_learning_loop(
     generations: list[GenerationRecord] = []
     best_overall: CandidateOutcome | None = None
     best_overall_generation = -1
+    best_overall_score = float("-inf")
+    best_overall_confirmed: bool | None = None
     running_best_fitness = float("-inf")
     generations_without_improvement = 0
     stop_reason = "max_generations_reached"
@@ -318,24 +335,42 @@ def run_adaptive_learning_loop(
             experiences.append(experience)
 
         best_experience = max(experiences, key=lambda experience: experience.fitness)
+        champion = comparison.best
+        assert champion is not None  # `compare_generated_solutions` exige au moins un candidat
+        confirmation: ChampionConfirmation | None = None
+        if config.confirmation_runs > 0 and champion.eval_run.oracle_verdict is OracleVerdict.PASS:
+            confirmation = confirm_by_reexecution(
+                evalrunner, agent_runtime, task_id=task_id, endpoint=endpoint, pool=pool, outcome=champion,
+                strategy=strategies[comparison.candidates.index(champion)], runs=config.confirmation_runs,
+                method=method, experiment_ref=experiment_ref, limits=limits, requested_by=requested_by,
+                clone_subject=clone_subject,
+            )
+        # Un champion non reproductible vaut sa PIRE exécution, jamais sa meilleure.
+        score = best_experience.fitness
+        if confirmation is not None and not confirmation.confirmed:
+            score = min(score, confirmation.worst_fitness)
         generations.append(
             GenerationRecord(
                 generation_number=generation_number, comparison=comparison, experiences=tuple(experiences),
                 best_experience=best_experience, mutation_description=mutation_description,
+                champion_confirmation=confirmation,
             )
         )
 
-        if best_overall is None or comparison.best.fitness.value > best_overall.fitness.value:
-            best_overall = comparison.best
+        if best_overall is None or score > best_overall_score:
+            best_overall = champion
             best_overall_generation = generation_number
+            best_overall_score = score
+            best_overall_confirmed = None if confirmation is None else confirmation.confirmed
 
-        if best_experience.fitness > running_best_fitness:
+        if score > running_best_fitness:
             generations_without_improvement = 0
         else:
             generations_without_improvement += 1
-        running_best_fitness = max(running_best_fitness, best_experience.fitness)
+        running_best_fitness = max(running_best_fitness, score)
 
-        if config.target_fitness is not None and best_experience.fitness >= config.target_fitness:
+        confirmed_or_unneeded = confirmation is None or confirmation.confirmed
+        if config.target_fitness is not None and score >= config.target_fitness and confirmed_or_unneeded:
             stop_reason = "target_fitness_reached"
             break
         if generation_number + 1 >= config.max_generations:
@@ -355,4 +390,5 @@ def run_adaptive_learning_loop(
     return AdaptiveLoopResult(
         task_id=task_id, experiment_ref=experiment_ref, generations=tuple(generations),
         stop_reason=stop_reason, best_overall=best_overall, best_overall_generation=best_overall_generation,
+        best_overall_confirmed=best_overall_confirmed,
     )

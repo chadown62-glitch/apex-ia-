@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -108,7 +109,7 @@ FLAKY_CODE = (
     "    return c == c[::-1]\n"
 )
 
-FLAKY_TRIALS = 16
+FLAKY_TRIALS = int(os.environ.get("APEX_CI_FLAKY_TRIALS", "16"))
 
 
 SPEC = CapabilitySpec(
@@ -455,7 +456,10 @@ class GeneratedSolutionLoopAdapter:
                 "learning_gain": _learning_samples(_Env),
                 "flaky_acceptance": _flaky_samples(_Env),
             },
-            notes=(f"sandbox : {detail}", "modèle : double scripté (aucun Ollama joignable)"),
+            notes=(
+                f"sandbox : {detail}", "modèle : double scripté (aucun Ollama joignable)",
+                f"flaky_trials={FLAKY_TRIALS}",
+            ),
         )
 
 
