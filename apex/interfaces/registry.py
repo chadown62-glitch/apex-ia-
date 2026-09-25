@@ -530,10 +530,17 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "ERROR (échec d'infrastructure — OOM/limite ressource/réseau "
               "refusé/permission refusée, jamais confondu avec un FAIL de "
               "correction), UNKNOWN (annulation, ou statut non reconnu — "
-              "jamais un verdict deviné). Aucun oracle par comparaison de "
-              "sortie attendue, aucun jugement par `ModelProvider` — le "
-              "contrat prend déjà `task` en paramètre pour ne pas avoir à "
-              "changer de signature le jour où un tel oracle existera.",
+              "jamais un verdict deviné). Aucun jugement par `ModelProvider`.\n\n"
+              "Cycle 2 du Continuous Improvement Engine : juger une solution "
+              "générée par le seul code de sortie laissait le candidat décider "
+              "de son verdict (`sys.exit(0)` avant les tests -> PASS). "
+              "`apex.oracles.result_contract.ResultContractOracle` (oracle par "
+              "défaut, `get_default_oracle`) enveloppe `ExitCodeOracle` : pour "
+              "une tâche qui déclare le contrat, le harness publie les sorties "
+              "calculées et la comparaison avec `Task.expected_answer` se fait "
+              "HORS sandbox ; toute autre tâche garde le jugement par code de "
+              "sortie. Reste STUB : un seul format de sortie (liste JSON), "
+              "comparaison d'égalité stricte uniquement.",
     ),
     Abstraction(
         "EvalRunner", "exécution appariée, seeds, budgets", 5, 5,
@@ -1389,7 +1396,11 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "produire cette passe — la dépendance G0->G1 est prouvée sur "
               "l'ARCHITECTURE réelle (sandbox/oracle/fitness/persistance "
               "réels), jamais sur un modèle réellement servi. Ce qui reste "
-              "PLANNED : sélection de MODÈLE comme leviers de stratégie "
+              "PLANNED (état après les cycles 1 et 3 du Continuous Improvement "
+              "Engine : chaque exécution a son propre `experiment_ref`, la "
+              "commande `apex solve` en est l'appelant de production, et le "
+              "champion d'une génération n'est retenu qu'après ré-exécution "
+              "jugée par `RobustnessJudge`) : sélection de MODÈLE comme leviers de stratégie "
               "(seuls température/prompt_suffix existent) ; agrégation "
               "`model-aware` inter-tâches (chaque `Experience` porte déjà "
               "`model_id` réel, mais aucune vue globale par modèle n'est "
@@ -1688,6 +1699,26 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "MissionEngine, TaskLoop) ne l'invoque encore — c'est un "
               "point d'entrée autonome (CLI/API future), pas encore câblé "
               "dans une boucle d'exécution automatique.",
+    ),
+    Abstraction(
+        "ContinuousImprovementEngine",
+        "mesurer, réfuter, corriger et re-mesurer une capacité APEX (baseline -> cycle -> verdict)",
+        32, 32,
+        ImplStatus.STUB, "comparaison manuelle de résultats de tests",
+        module="apex.improvement.engine",
+        notes="STUB et non IMPLEMENTED délibérément : une seule capacité est "
+              "branchée (`generated_solution`, `apex.improvement.capabilities`). "
+              "Le moteur ne modifie jamais de code : il mesure deux fois "
+              "(reproductibilité), compare métrique par métrique (`StatTest` "
+              "pour les métriques stochastiques), fait juger par des sondes de "
+              "réfutation agrégées par `GauntletRunner.run_stage`, ré-exécute "
+              "chaque réfutation (debugger : PROBABLE/CONFIRMED/REJECTED) et "
+              "consigne le tout dans un ledger JSON Lines append-only. "
+              "`author_id == judge_id` est refusé avant toute mesure. Limites : "
+              "modèle scripté (aucun Ollama joignable là où les cycles ont été "
+              "mesurés), `ContainerSandbox` non exercé, sondes et correctifs "
+              "écrits par le même agent (sauf la revue adverse du cycle 2). "
+              "Voir docs/CONTINUOUS_IMPROVEMENT.md.",
     ),
 )
 
