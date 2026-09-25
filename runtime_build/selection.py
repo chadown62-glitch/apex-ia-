@@ -78,6 +78,7 @@ RESEARCH_PACKAGES: frozenset[str] = frozenset(
         "evalrunner",
         "genome",
         "hypothesis",
+        "improvement",
         "judge",
         "metalearner",
         "oracles",
