@@ -20,7 +20,7 @@ from sqlalchemy.orm import sessionmaker
 
 from apex.config.loader import parse_config
 from apex.config.schema import PoolLocation, TrustLevel
-from apex.db.engine import build_session_factory, database_url_from_config, session_scope
+from apex.db.engine import build_session_factory, database_url_for_role, database_url_from_config, session_scope
 from apex.db.event_sink import DatabaseEventSink
 from apex.db.models import AuditLogRow, Base, ComputePoolRow, EventRow
 from apex.db.repositories import AuditLogRepository, ComputePoolRepository, EventRepository
@@ -172,6 +172,72 @@ class TestDatabaseUrlFromConfig(unittest.TestCase):
         cfg = parse_config(config_dict(**{"services": {}}))
         with self.assertRaises(ConfigError):
             database_url_from_config(cfg, environ={"POSTGRES_PASSWORD": "x"})
+
+    def test_password_with_uri_reserved_characters_round_trips_correctly(self) -> None:
+        """Écart réel diagnostiqué : `POSTGRES_PASSWORD`/`POSTGRES_USER`
+        viennent de l'environnement (jamais de config.yaml), donc peuvent
+        contenir n'importe quel caractère — y compris des caractères
+        réservés d'URI (`@ : / ? # %`, espace). Sans encodage, un mot de
+        passe contenant `/` déplace la frontière userinfo/host du DSN
+        (reproduit : `psycopg` tente alors de résoudre le mot de passe
+        lui-même comme nom d'hôte) ; un mot de passe contenant `@` ou `%`
+        ou une espace casse le parsing de façon différente mais tout aussi
+        réelle. `psycopg.conninfo.conninfo_to_dict` (le même parseur que
+        celui utilisé par `psycopg.connect`) doit reconstruire EXACTEMENT
+        le secret d'origine, jamais une valeur tronquée ou décalée."""
+        from psycopg.conninfo import conninfo_to_dict
+
+        for password in (
+            "has/a/slash",
+            "has@an@at",
+            "has%a%percent",
+            "has a space",
+            "has#a#hash",
+            "has?a?question",
+        ):
+            with self.subTest(password=password):
+                url = database_url_from_config(
+                    self.cfg,
+                    environ={"POSTGRES_PASSWORD": password, "POSTGRES_USER": "apex", "POSTGRES_DB": "apex"},
+                )
+                dsn = url.replace("postgresql+psycopg://", "postgresql://", 1)
+                parsed = conninfo_to_dict(dsn)
+                self.assertEqual(parsed["user"], "apex")
+                self.assertEqual(parsed["password"], password)
+                self.assertEqual(parsed["host"], "127.0.0.1")
+                self.assertEqual(parsed["dbname"], "apex")
+
+
+class TestDatabaseUrlForRole(unittest.TestCase):
+    """`database_url_for_role` construit le même type de DSN que
+    `database_url_from_config`, pour un rôle applicatif restreint — sujette
+    à exactement le même bug d'encodage (voir `TestDatabaseUrlFromConfig.
+    test_password_with_uri_reserved_characters_round_trips_correctly`)."""
+
+    def setUp(self) -> None:
+        self.cfg = parse_config(config_dict())
+
+    def test_unknown_role_is_a_config_error(self) -> None:
+        with self.assertRaises(ConfigError):
+            database_url_for_role("not_a_real_role", self.cfg, environ={})
+
+    def test_missing_role_password_is_a_config_error(self) -> None:
+        with self.assertRaises(ConfigError):
+            database_url_for_role("apex_core", self.cfg, environ={})
+
+    def test_password_with_uri_reserved_characters_round_trips_correctly(self) -> None:
+        from psycopg.conninfo import conninfo_to_dict
+
+        for password in ("has/a/slash", "has@an@at", "has%a%percent", "has a space"):
+            with self.subTest(password=password):
+                url = database_url_for_role(
+                    "apex_core", self.cfg,
+                    environ={"APEX_DB_CORE_PASSWORD": password, "POSTGRES_DB": "apex"},
+                )
+                dsn = url.replace("postgresql+psycopg://", "postgresql://", 1)
+                parsed = conninfo_to_dict(dsn)
+                self.assertEqual(parsed["user"], "apex_core")
+                self.assertEqual(parsed["password"], password)
 
 
 class TestEventSinkImportableWithoutSqlalchemy(unittest.TestCase):

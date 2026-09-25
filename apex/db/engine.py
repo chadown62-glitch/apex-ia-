@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
+from urllib.parse import quote
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -52,7 +53,10 @@ def database_url_for_role(
             f"variable d'environnement « {password_var} » non définie", field="services.postgres"
         )
     db = env.get(_ENV_DB, "apex")
-    return f"postgresql+psycopg://{role}:{password}@{endpoint.host}:{endpoint.port}/{db}"
+    return (
+        f"postgresql+psycopg://{quote(role, safe='')}:{quote(password, safe='')}"
+        f"@{endpoint.host}:{endpoint.port}/{quote(db, safe='')}"
+    )
 
 
 def database_url_from_config(config: ApexConfig, *, environ: dict[str, str] | None = None) -> str:
@@ -75,7 +79,18 @@ def database_url_from_config(config: ApexConfig, *, environ: dict[str, str] | No
         )
     user = env.get(_ENV_USER, "apex")
     db = env.get(_ENV_DB, "apex")
-    return f"postgresql+psycopg://{user}:{password}@{endpoint.host}:{endpoint.port}/{db}"
+    # `user`/`password`/`db` proviennent de l'environnement (jamais de
+    # config.yaml, voir docstring du module) et peuvent donc contenir des
+    # caractères réservés d'URI (`@ : / ? # %`, espace, ...) — sans
+    # `quote(..., safe="")`, un secret réel contenant l'un de ces caractères
+    # casse le parsing du DSN par psycopg/libpq (userinfo/host confondus) et
+    # produit un rejet d'authentification alors que le secret est correct
+    # (bug réel reproduit : mot de passe avec « / » -> "failed to resolve
+    # host" ; avec « @ » ou « % » ou une espace -> connexion refusée).
+    return (
+        f"postgresql+psycopg://{quote(user, safe='')}:{quote(password, safe='')}"
+        f"@{endpoint.host}:{endpoint.port}/{quote(db, safe='')}"
+    )
 
 
 def build_engine(url: str, *, echo: bool = False) -> Engine:
