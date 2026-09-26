@@ -289,6 +289,15 @@ def test_judge_tolerances_are_per_metric() -> None:
         NeuralJudge(primary="heldout").judge(base, much_worse)
 
 
+def test_task_scores_are_averaged_per_function_not_weighted_by_executions() -> None:
+    # n_bytes porte le nombre d'exécutions d'une fonction : il ne doit pas peser dans son score.
+    scores = (DocScore("solved_first", 0.0, 1.0, 3, 3), DocScore("failed", 1.0, 0.0, 9, 3))
+    cap = EvalReport("cap", "fp", "m", scores, METRIC)
+    assert cap.value == 0.5 and math.isnan(cap.bits_per_byte)
+    text = EvalReport("txt", "fp", "m", (DocScore("a", 2.0, 0.5, 1, 1), DocScore("b", 4.0, 0.5, 3, 1)), BPB)
+    assert text.value == text.bits_per_byte == 3.5  # le BPB, lui, reste pondéré par les octets
+
+
 def test_judge_primary_is_the_preregistered_acceptance_target_only() -> None:
     from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
     from apex.neural.loop.judge import IndependentJudge
