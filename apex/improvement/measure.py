@@ -14,7 +14,12 @@ Règles (jamais un « tests verts = amélioré ») :
 
 Agrégation (même esprit que le véto de `apex.metalearner.gauntlet`) : UNE
 métrique REGRESSED suffit à rendre la version REGRESSED, quelles que
-soient les autres."""
+soient les autres.
+
+Comparabilité, vérifiée AVANT toute métrique : deux snapshots dont la
+définition du benchmark diffère (ou n'est pas enregistrée), ou mesurés dans
+des environnements différents (sandbox, modèle...), ne mesurent pas la même
+chose — toutes les métriques sont alors INCONCLUSIVE."""
 
 from __future__ import annotations
 
@@ -151,6 +156,24 @@ def aggregate(comparisons: tuple[MetricComparison, ...]) -> tuple[ImprovementVer
     return ImprovementVerdict.UNCHANGED, "aucune métrique ne change de façon mesurable"
 
 
+def comparability_problem(before: BenchmarkSnapshot, after: BenchmarkSnapshot) -> str | None:
+    if before.definition_digest is None or after.definition_digest is None:
+        return "définition du benchmark non enregistrée sur un des snapshots"
+    if before.definition_digest != after.definition_digest:
+        return (
+            "définition du benchmark modifiée entre avant et après "
+            f"({before.definition_digest[:12]} -> {after.definition_digest[:12]})"
+        )
+    differences = sorted(
+        f"{key}: {before.environment.get(key)!r} -> {after.environment.get(key)!r}"
+        for key in set(before.environment) | set(after.environment)
+        if before.environment.get(key) != after.environment.get(key)
+    )
+    if differences:
+        return "environnements incompatibles (" + "; ".join(differences) + ")"
+    return None
+
+
 def compare_snapshots(
     spec: CapabilitySpec,
     before: BenchmarkSnapshot,
@@ -160,6 +183,20 @@ def compare_snapshots(
 ) -> tuple[ImprovementVerdict, str, tuple[MetricComparison, ...]]:
     if before.capability_id != spec.capability_id or after.capability_id != spec.capability_id:
         raise ValueError("snapshots d'une autre capacité — comparaison refusée")
+    problem = comparability_problem(before, after)
+    if problem is not None:
+        incomparable = tuple(
+            MetricComparison(
+                metric=m.name,
+                verdict=ImprovementVerdict.INCONCLUSIVE,
+                before_mean=before.mean(m.name),
+                after_mean=after.mean(m.name),
+                delta=None,
+                reason=f"non comparable : {problem}",
+            )
+            for m in spec.metrics
+        )
+        return ImprovementVerdict.INCONCLUSIVE, f"non comparable : {problem}", incomparable
     tester = stat_test or StatTest()
     comparisons = tuple(compare_metric(m, before, after, stat_test=tester) for m in spec.metrics)
     verdict, reason = aggregate(comparisons)

@@ -24,10 +24,20 @@ stricte (véto) déjà réelle de `apex.metalearner.gauntlet.GauntletRunner`."""
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+
+#: Seule valeur de `BenchmarkSnapshot.measured_by` acceptée comme mesure : posée par
+#: `ContinuousImprovementEngine.measure` (deux mesures, reproductibilité constatée).
+ENGINE_MEASUREMENT = "engine:measured-twice"
+
+
+def _sha256_json(value: Any) -> str:
+    return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
 def utcnow() -> datetime:
@@ -122,6 +132,21 @@ class CapabilitySpec:
                 return metric
         raise KeyError(f"métrique « {name} » non déclarée pour « {self.capability_id} »")
 
+    def definition_digest(self, benchmark_fingerprint: str) -> str:
+        """Empreinte de CE QUI EST MESURÉ : métriques (sens, nature, seuil)
+        et contenu du benchmark fourni par l'adaptateur (corpus, nombre
+        d'essais...). Deux snapshots d'empreintes différentes ne mesurent
+        pas la même chose et ne sont jamais comparés."""
+        return _sha256_json(
+            {
+                "capability_id": self.capability_id,
+                "metrics": [
+                    [m.name, m.kind.value, m.higher_is_better, m.min_samples] for m in self.metrics
+                ],
+                "benchmark": benchmark_fingerprint,
+            }
+        )
+
 
 @dataclass(frozen=True)
 class BenchmarkSnapshot:
@@ -140,6 +165,13 @@ class BenchmarkSnapshot:
     reproducible: bool | None = None
     notes: tuple[str, ...] = ()
     measured_at: datetime = field(default_factory=utcnow)
+    #: `CapabilitySpec.definition_digest` au moment de la mesure.
+    definition_digest: str | None = None
+    #: Conditions qui changent le sens d'une mesure (sandbox, modèle, ...) :
+    #: deux snapshots d'environnements différents ne sont jamais comparés.
+    environment: dict[str, str] = field(default_factory=dict)
+    #: `ENGINE_MEASUREMENT` si et seulement si le moteur a produit ce snapshot.
+    measured_by: str | None = None
 
     def mean(self, metric: str) -> float | None:
         values = self.samples.get(metric)
@@ -156,7 +188,13 @@ class BenchmarkSnapshot:
             "reproducible": self.reproducible,
             "notes": list(self.notes),
             "measured_at": self.measured_at.isoformat(),
+            "definition_digest": self.definition_digest,
+            "environment": dict(self.environment),
+            "measured_by": self.measured_by,
         }
+
+    def digest(self) -> str:
+        return _sha256_json(self.to_dict())
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BenchmarkSnapshot:
@@ -168,6 +206,9 @@ class BenchmarkSnapshot:
             reproducible=data.get("reproducible"),
             notes=tuple(data.get("notes", ())),
             measured_at=datetime.fromisoformat(data["measured_at"]),
+            definition_digest=data.get("definition_digest"),
+            environment={str(k): str(v) for k, v in (data.get("environment") or {}).items()},
+            measured_by=data.get("measured_by"),
         )
 
 
@@ -306,6 +347,8 @@ class CycleRecord:
     evidence: tuple[Evidence, ...]
     started_at: datetime
     duration_s: float
+    #: Qui a jugé et depuis quelle définition (processus, révision épinglée, empreinte).
+    judge_provenance: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -335,4 +378,5 @@ class CycleRecord:
             "evidence": [e.to_dict() for e in self.evidence],
             "started_at": self.started_at.isoformat(),
             "duration_s": self.duration_s,
+            "judge_provenance": dict(self.judge_provenance),
         }

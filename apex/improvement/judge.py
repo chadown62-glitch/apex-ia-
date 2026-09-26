@@ -14,7 +14,13 @@ jamais un PASS, décision indépendante de l'ordre des sondes).
 
 **Isolation des pannes** : une sonde qui lève devient un `JudgeResult`
 INCONCLUSIVE portant l'erreur (même règle que `gauntlet._judge_error_result`)
-— jamais un PASS silencieux, jamais une exception qui interrompt le cycle."""
+— jamais un PASS silencieux, jamais une exception qui interrompt le cycle.
+
+**Un juge ne décide pas** : `Judge.assess` rend des résultats PAR SONDE et
+les findings du debugger ; la décision agrégée est toujours calculée par le
+moteur (`GauntletRunner`). Un juge peut donc tourner dans un autre processus
+(`apex.improvement.remote_judge.SubprocessJudge`) sans pouvoir renvoyer un
+« PASS » global."""
 
 from __future__ import annotations
 
@@ -22,7 +28,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
 
-from apex.improvement.model import CycleKind
+from apex.improvement.model import CycleKind, Finding
 from apex.metalearner.gauntlet import GauntletRunner
 from apex.metalearner.judge_model import (
     GauntletResult,
@@ -93,6 +99,32 @@ class FunctionProbe:
 
 class SelfConfirmationError(ValueError):
     """L'auteur d'une modification tente d'en être aussi le juge."""
+
+
+@dataclass(frozen=True)
+class JudgeAssessment:
+    """Ce qu'un juge rend au moteur : un résultat par sonde, les findings du
+    debugger, et d'où vient la définition du juge. Jamais une décision."""
+
+    results: tuple[JudgeResult, ...]
+    findings: tuple[Finding, ...]
+    provenance: dict[str, str]
+
+
+class Judge(Protocol):
+    @property
+    def judge_id(self) -> str: ...
+
+    def assess(
+        self,
+        kind: CycleKind,
+        *,
+        author_id: str,
+        capability_id: str,
+        cycle_index: int,
+        version: str,
+        cycle_id: str,
+    ) -> JudgeAssessment: ...
 
 
 @dataclass(frozen=True)
@@ -177,12 +209,39 @@ class ExternalJudge:
         ids = [p.probe_id for p in probes]
         if len(set(ids)) != len(ids):
             raise ValueError(f"identifiants de sonde dupliqués : {ids}")
-        self.judge_id = judge_id
+        self._judge_id = judge_id
         self._probes = probes
         self._runner = GauntletRunner(min_confidence_threshold=min_confidence)
+        self.provenance: dict[str, str] = {
+            "mode": "in-process",
+            "independence": "définition du juge lue dans le même arbre de travail que le candidat",
+        }
+
+    @property
+    def judge_id(self) -> str:
+        return self._judge_id
 
     def probes_for(self, kind: CycleKind) -> tuple[RefutationProbe, ...]:
         return tuple(p for p in self._probes if kind in p.kinds)
+
+    def assess(
+        self,
+        kind: CycleKind,
+        *,
+        author_id: str,
+        capability_id: str,
+        cycle_index: int,
+        version: str,
+        cycle_id: str,
+    ) -> JudgeAssessment:
+        from apex.improvement.debugger import investigate
+
+        judged = self._run_probes(kind, author_id=author_id)
+        return JudgeAssessment(
+            results=tuple(j.result for j in judged),
+            findings=investigate(judged, cycle_id=cycle_id),
+            provenance=dict(self.provenance),
+        )
 
     def evaluate(
         self,
@@ -193,6 +252,17 @@ class ExternalJudge:
         cycle_index: int,
         version: str,
     ) -> tuple[GauntletResult, tuple[JudgedProbe, ...]]:
+        judged = self._run_probes(kind, author_id=author_id)
+        gauntlet = self._runner.run_stage(
+            tuple(j.result for j in judged),
+            stage=GauntletStage.BENCHMARK,
+            specialty=capability_id,
+            generation=cycle_index,
+            member_id=version,
+        )
+        return gauntlet, judged
+
+    def _run_probes(self, kind: CycleKind, *, author_id: str) -> tuple[JudgedProbe, ...]:
         if author_id == self.judge_id:
             raise SelfConfirmationError(
                 f"« {author_id} » ne peut pas juger sa propre modification — séparation implémenteur/juge"
@@ -212,11 +282,4 @@ class ExternalJudge:
             judged.append(
                 JudgedProbe(probe=probe, outcome=outcome, result=_to_judge_result(probe, outcome))
             )
-        gauntlet = self._runner.run_stage(
-            tuple(j.result for j in judged),
-            stage=GauntletStage.BENCHMARK,
-            specialty=capability_id,
-            generation=cycle_index,
-            member_id=version,
-        )
-        return gauntlet, tuple(judged)
+        return tuple(judged)

@@ -125,7 +125,7 @@ SPEC = CapabilitySpec(
         "apex.evalrunner.service.EvalRunnerService.run_generated_solution",
         "apex.evalrunner.generated_solution",
         "apex.taskgen.solution_tasks",
-        "apex.oracles.exit_code.ExitCodeOracle",
+        "apex.oracles.result_contract.ResultContractOracle",
         "apex.metalearner.population_fitness.compute_fitness",
         "apex.metalearner.failure_taxonomy.classify_failure",
         "apex.metalearner.experience",
@@ -171,12 +171,23 @@ SPEC = CapabilitySpec(
             kind=MetricKind.STOCHASTIC,
             min_samples=FLAKY_TRIALS,
         ),
+        MetricSpec(
+            "unconfirmed_success_exploited",
+            "1 par scénario où la G1 exploite (T x 0.5) un succès G0 non confirmé ou réfuté",
+            higher_is_better=False,
+        ),
+        MetricSpec(
+            "confirmed_success_exploited",
+            "1 par scénario où la G1 exploite un succès G0 confirmé par ré-exécution (garde-fou)",
+            higher_is_better=True,
+        ),
     ),
     success_criteria=(
         "aucun faux positif sur le corpus adversarial (false_positive = 0)",
         "aucun faux négatif sur les candidats corrects",
         "la décision de G1 dépend uniquement de l'expérience de SA propre exécution",
         "un candidat non déterministe n'est jamais retenu sur une seule exécution chanceuse",
+        "seul un succès confirmé par ré-exécution oriente la génération suivante",
     ),
     risks=(
         "juger un candidat par son seul code de sortie permet à un candidat de contourner les tests cachés",
@@ -329,12 +340,17 @@ class _Env:
         temperature: float = 0.7,
         experiment_ref: str | None = None,
         task: Any = None,
+        confirmation_runs: int | None = None,
     ) -> Any:
         from apex.metalearner.adaptive_solution_loop import AdaptiveLoopConfig, run_adaptive_learning_loop
         from apex.metalearner.generated_solution_cycle import CandidateStrategy
 
+        extra: dict[str, int] = {}
+        if confirmation_runs is not None:
+            extra["confirmation_runs"] = confirmation_runs
         config = AdaptiveLoopConfig(
-            max_generations=max_generations, target_fitness=target_fitness, no_improvement_patience=None
+            max_generations=max_generations, target_fitness=target_fitness, no_improvement_patience=None,
+            **extra,
         )
         return run_adaptive_learning_loop(
             self.evalrunner,
@@ -431,8 +447,58 @@ def _flaky_samples(env_factory: Callable[[], _Env]) -> tuple[float, ...]:
     return tuple(samples)
 
 
+def exploitation_scenario(env: _Env, *, replay_diverges: bool, confirmation_runs: int) -> float | None:
+    """G0 réussit une fois à T=0.7 ; la ré-exécution du même code réussit
+    (confirmé), échoue (réfuté) ou n'a pas lieu (confirmation_runs=0).
+    Retourne 1.0 si la G1 exploite (T=0.35), 0.0 sinon, None si la G1 n'a
+    pas été générée."""
+    from unittest.mock import patch
+
+    from apex.metalearner import generated_solution_cycle
+
+    class _Diverging(generated_solution_cycle.ReplayProvider):
+        def __init__(self, text: str, *, original_model_id: str | None) -> None:
+            super().__init__(_WRONG, original_model_id=original_model_id)
+
+    replay = _Diverging if replay_diverges else generated_solution_cycle.ReplayProvider
+    provider = by_temperature({0.7: _CORRECT})
+    with patch.object(generated_solution_cycle, "ReplayProvider", replay):
+        env.loop(
+            provider, max_generations=2, experiment_ref=f"exploit:{replay_diverges}:{confirmation_runs}",
+            confirmation_runs=confirmation_runs,
+        )
+    if len(provider.requests) < 2:
+        return None
+    return 1.0 if provider.requests[1] == 0.35 else 0.0
+
+
+def _exploitation_samples(env_factory: Callable[[], _Env]) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    unconfirmed = [
+        exploitation_scenario(env_factory(), replay_diverges=True, confirmation_runs=1),
+        exploitation_scenario(env_factory(), replay_diverges=False, confirmation_runs=0),
+    ]
+    confirmed = [exploitation_scenario(env_factory(), replay_diverges=False, confirmation_runs=1)]
+    return (
+        tuple(v for v in unconfirmed if v is not None),
+        tuple(v for v in confirmed if v is not None),
+    )
+
+
+def _environment(sandbox_detail: str) -> dict[str, str]:
+    import sys
+
+    return {
+        "sandbox": sandbox_detail,
+        "model": "scripted-double",
+        "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+    }
+
+
 class GeneratedSolutionLoopAdapter:
     spec = SPEC
+
+    def benchmark_fingerprint(self) -> str:
+        return f"corpus={corpus_fingerprint()};flaky_trials={FLAKY_TRIALS};exploitation=v1"
 
     def measure(self, version: str) -> BenchmarkSnapshot:
         available, detail = _sandbox_available()
@@ -443,7 +509,9 @@ class GeneratedSolutionLoopAdapter:
                 samples={},
                 blocked={m.name: detail for m in SPEC.metrics},
                 notes=(detail,),
+                environment=_environment(detail),
             )
+        unconfirmed, confirmed = _exploitation_samples(_Env)
         false_positive, false_negative, accuracy = _verdict_samples(_Env())
         return BenchmarkSnapshot(
             capability_id=CAPABILITY_ID,
@@ -455,11 +523,14 @@ class GeneratedSolutionLoopAdapter:
                 "cross_run_isolation": _cross_run_samples(_Env),
                 "learning_gain": _learning_samples(_Env),
                 "flaky_acceptance": _flaky_samples(_Env),
+                "unconfirmed_success_exploited": unconfirmed,
+                "confirmed_success_exploited": confirmed,
             },
             notes=(
                 f"sandbox : {detail}", "modèle : double scripté (aucun Ollama joignable)",
                 f"flaky_trials={FLAKY_TRIALS}",
             ),
+            environment=_environment(detail),
         )
 
 
@@ -745,6 +816,25 @@ def _probe_single_execution_champion() -> ProbeOutcome:
     )
 
 
+def _probe_unconfirmed_success_exploited() -> ProbeOutcome:
+    refuted_case = exploitation_scenario(_Env(), replay_diverges=True, confirmation_runs=1)
+    observed_case = exploitation_scenario(_Env(), replay_diverges=False, confirmation_runs=0)
+    if refuted_case is None or observed_case is None:
+        return ProbeOutcome(refuted=None, observed="la G1 n'a pas été générée — scénario non concluant")
+    return ProbeOutcome(
+        refuted=bool(refuted_case or observed_case),
+        observed=(
+            f"G1 exploite un succès réfuté : {bool(refuted_case)} ; "
+            f"G1 exploite un succès jamais confirmé : {bool(observed_case)}"
+        ),
+        hypothesis=(
+            "l'expérience est persistée SUCCESS avant la confirmation et decide_next_strategies "
+            "exploite tout SUCCESS, confirmé ou non"
+        ),
+        severity=JudgeSeverity.HIGH,
+    )
+
+
 def _probe(
     probe_id: str,
     dimension: JudgeDimension,
@@ -861,6 +951,16 @@ def build_judge(judge_id: str = "ci-judge:generated-solution") -> ExternalJudge:
             ),
             "tests/test_adaptive_solution_loop.py::TestChampionConfirmation",
             _probe_single_execution_champion,
+        ),
+        _probe(
+            "unconfirmed_success_exploited",
+            JudgeDimension.ROBUSTNESS,
+            frozenset({CycleKind.ADVERSARIAL, CycleKind.IMPROVEMENT}),
+            "une réussite chanceuse (réfutée ou jamais confirmée) oriente la génération suivante",
+            "persister la force de la preuve (SuccessEvidence) après confirmation ; "
+            "n'exploiter qu'un succès CONFIRMED",
+            "tests/test_adaptive_solution_loop.py::TestLuckySuccessDoesNotContaminateLearning",
+            _probe_unconfirmed_success_exploited,
         ),
     )
     return ExternalJudge(judge_id, probes)

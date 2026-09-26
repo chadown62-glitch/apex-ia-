@@ -62,6 +62,7 @@ def snap(
         samples={k: tuple(v) for k, v in samples.items()},
         blocked=blocked or {},
         reproducible=reproducible,
+        definition_digest="toy-benchmark-v1",
     )
 
 
@@ -214,6 +215,9 @@ class _ToyAdapter:
         self.spec = a_spec(ACC)
         self._samples = itertools.cycle(sequence)
 
+    def benchmark_fingerprint(self) -> str:
+        return "toy-benchmark-v1"
+
     def measure(self, version: str) -> BenchmarkSnapshot:
         return BenchmarkSnapshot(capability_id="toy", version=version, samples={"acc": next(self._samples)})
 
@@ -239,8 +243,8 @@ class TestEngine(unittest.TestCase):
         self.assertTrue(any("NON reproductible" in n for n in snapshot.notes))
 
     def test_measured_gain_with_passing_judge_is_improved(self) -> None:
-        engine = self.engine(_ToyAdapter([(1.0,)]), probe("a", not_refuted()))
-        before = snap("v0", acc=(0.0,))
+        engine = self.engine(_ToyAdapter([(0.0,), (0.0,), (1.0,), (1.0,)]), probe("a", not_refuted()))
+        before = engine.measure("v0")
         record = engine.run_cycle(
             kind=CycleKind.FUNCTIONALITY,
             cycle_index=1,
@@ -255,11 +259,13 @@ class TestEngine(unittest.TestCase):
         self.assertFalse(record.claim_contradicted)
 
     def test_judge_veto_turns_measured_gain_into_failed_and_contradicts_claim(self) -> None:
-        engine = self.engine(_ToyAdapter([(1.0,)]), probe("sec", refuted(JudgeSeverity.CRITICAL)))
+        engine = self.engine(
+            _ToyAdapter([(0.0,), (0.0,), (1.0,), (1.0,)]), probe("sec", refuted(JudgeSeverity.CRITICAL))
+        )
         record = engine.run_cycle(
             kind=CycleKind.ADVERSARIAL,
             cycle_index=2,
-            before=snap("v0", acc=(0.0,)),
+            before=engine.measure("v0"),
             version_after="v1",
             hypothesis="h",
             changes=(),
@@ -272,11 +278,11 @@ class TestEngine(unittest.TestCase):
         self.assertIs(record.findings[0].status, HypothesisStatus.CONFIRMED)
 
     def test_measured_regression_wins_over_passing_judge(self) -> None:
-        engine = self.engine(_ToyAdapter([(0.0,)]), probe("a", not_refuted()))
+        engine = self.engine(_ToyAdapter([(1.0,), (1.0,), (0.0,), (0.0,)]), probe("a", not_refuted()))
         record = engine.run_cycle(
             kind=CycleKind.IMPROVEMENT,
             cycle_index=3,
-            before=snap("v0", acc=(1.0,)),
+            before=engine.measure("v0"),
             version_after="v1",
             hypothesis="h",
             changes=(),
@@ -290,7 +296,7 @@ class TestEngine(unittest.TestCase):
         record = engine.run_cycle(
             kind=CycleKind.IMPROVEMENT,
             cycle_index=3,
-            before=snap("v0", acc=(1.0,)),
+            before=engine.measure("v0"),
             version_after="v1",
             hypothesis="h",
             changes=(),
@@ -308,7 +314,7 @@ class TestEngine(unittest.TestCase):
         record = engine.run_cycle(
             kind=CycleKind.FUNCTIONALITY,
             cycle_index=1,
-            before=snap("v0", acc=(1.0,)),
+            before=engine.measure("v0"),
             version_after="v1",
             hypothesis="h",
             changes=(),
