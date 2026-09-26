@@ -80,3 +80,66 @@ niveau :
 
 Le moteur d'entraînement ne dépend de PyTorch que derrière ses propres
 abstractions (`TrainingEngine`, `OptimizerSpec`, `SchedulerSpec`).
+
+## 3. Knowledge Acquisition Agent (`apex/knowledge/`)
+
+Pipeline réel, une trace `StageRecord` par étape (`KnowledgeItem.history`) :
+
+    discovery -> acquisition -> license -> extraction -> normalization -> language
+    -> relevance -> quality -> evidence -> dedup -> contradiction -> injection
+    -> structuring -> provenance -> curation -> KnowledgeStore
+
+| Élément | Implémentation | Limite honnête |
+|---|---|---|
+| Découverte | `LocalDirectoryDiscovery`, `PythonDocsDiscovery` (docstrings stdlib, PSF-2.0), `StaticDiscovery`, `ResearchDiscovery` (réutilise `ResearchProvider`) | `NullResearchProvider` est le seul backend : aucune découverte web réelle |
+| Acquisition | `FileAcquirer`, `PythonDocsAcquirer`, `HttpAcquirer` (robots.txt respecté, 401/402/403/451 refusés sans relance ni identifiant, taille bornée) | Politique réseau du bac à sable : Internet général inaccessible ; HTTP testé sur un serveur local réel |
+| Licences | `classify_license` : FREE / COMPATIBLE / UNKNOWN / RESTRICTED ; RESTRICTED testé en premier | Heuristique sur l'indication fournie, pas une analyse juridique ; en doute : UNKNOWN |
+| Métadonnées seules | licence UNKNOWN (REVIEW) ou RESTRICTED (REJECT) : `text=None`, empreinte + provenance conservées | — |
+| Qualité | score explicite (longueur, lettres, lignes uniques, diversité lexicale, longueur de mot) | Heuristique ; ne mesure ni l'exactitude ni la profondeur |
+| Injection | 16 motifs EN/FR ; texte HTML masqué (CSS, `hidden`) écarté ; QUARANTINE / UNSAFE prioritaire sur tout | Motifs connus seulement ; faux positif réel : `docs/DEVELOPMENT_HANDOFF.md` est mis en quarantaine pour une commande `curl … \| sh` légitime (conservateur, voulu) |
+| Doublons | exact (texte normalisé) + MinHash 64 permutations, seuil 0.8 | — |
+| Contradictions | même sujet/objet à négation opposée, ou même sujet numérique à valeur différente -> REVIEW | Volontairement conservateur : rate les contradictions paraphrasées |
+| Multimodal | métadonnées PNG/GIF/JPEG réelles ; OCR, description, diagrammes, vidéo : `BLOCKED` | Aucun moteur OCR/vision/transcription dans l'environnement ; rien n'est inventé |
+| Store | JSONL en ajout seul, chaîné par empreintes ; modification/suppression détectées | — |
+| Exports | `to_training_candidates` (ACCEPT + HIGH/MEDIUM + licence OK + provenance complète, fragments par paragraphes) ; `to_memory_records` (RAG : toujours `external_provenance`, jamais VERIFIED) | — |
+
+Règle de curation (`curate`), par priorité : injection -> QUARANTINE ; accès
+refusé, licence restrictive, pas de texte, provenance incomplète -> REJECT ;
+doublon -> REJECT/DUPLICATE ; hors sujet, langue, qualité -> REJECT/LOW_VALUE ;
+licence inconnue, contradiction, intégrité non établie -> REVIEW ; sinon
+ACCEPT. Seul un élément ACCEPT alimente les index de doublons et de
+contradictions : un contenu rejeté ne peut ni masquer un doublon ni fabriquer
+une contradiction.
+
+Mesure réelle sur les sources locales (12 modules stdlib + 16 documents
+`docs/*.md`, licence `apex-own`) : 28 sources -> 26 ACCEPT, 1 REJECT
+(`bisect` : docstrings trop peu de mots-outils pour identifier la langue),
+1 QUARANTINE (faux positif ci-dessus) ; 241 fragments d'entraînement.
+
+## 4. Dataset (`apex/neural/dataset.py`)
+
+TRAINING CANDIDATE -> TRAINING DATASET. Un candidat invalide (provenance,
+empreinte incohérente, licence, qualité) fait ÉCHOUER la construction
+(`ProvenanceError`) : jamais d'exclusion silencieuse. Dédoublonnage avant
+découpage ; découpage déterministe PAR SOURCE (tous les fragments d'un
+document dans le même split) ; contrôle de fuite PAR DOCUMENT de test
+(8-grammes) et par source (`LeakageError`) ; empreinte SHA-256 du jeu.
+
+Défauts trouvés par les tests de cette étape, et corrigés :
+
+- contrôle de fuite initialement GLOBAL : quelques documents de test copiés
+  intégralement dans le train étaient dilués sous le seuil par les documents
+  sains. Désormais par document (test de régression dédié) ;
+- extraction HTML : la fermeture d'un bloc masqué n'était jamais détectée
+  (tout le texte suivant disparaissait) et l'attribut `hidden` sans valeur
+  était ignoré. Réécrit avec une pile de balises ;
+- qualité : un texte de 4 mots obtenait exactement le seuil (0.5) et un texte
+  entièrement répétitif 0.6 : tous deux acceptés. Pénalités rendues
+  décisives + diversité lexicale.
+
+Contrôles de mutation (script hors dépôt, sources restaurées après chaque
+mutant) : 17 mutants sur les garanties ci-dessus (porte de provenance,
+dédoublonnage, fuite, source partagée, injection, empoisonnement des index,
+doublon, contradiction, texte conservé malgré la licence, licence inconnue
+promue, chaîne du store, porte d'export, mémoire marquée VERIFIED,
+robots.txt, paywall, texte masqué, texte court) : 17/17 détectés.
