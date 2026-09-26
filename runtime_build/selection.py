@@ -73,6 +73,7 @@ RUNTIME_FILES: frozenset[str] = frozenset({"__init__.py", "errors.py", "version.
 RESEARCH_PACKAGES: frozenset[str] = frozenset(
     {
         "calibration",
+        "capabilities",
         "costgain",
         "curriculum",
         "evalrunner",
