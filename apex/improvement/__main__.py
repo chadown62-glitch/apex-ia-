@@ -74,6 +74,11 @@ CAPABILITIES: dict[str, CapabilityEntry] = {
         adapter_class="KnowledgeCurationAdapter",
         judge_id="ci-judge:knowledge-curation",
     ),
+    "native_learning": CapabilityEntry(
+        module="apex.improvement.capabilities.native_learning",
+        adapter_class="NativeLearningAdapter",
+        judge_id="ci-judge:native-learning",
+    ),
 }
 
 
