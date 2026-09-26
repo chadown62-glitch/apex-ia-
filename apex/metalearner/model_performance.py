@@ -15,11 +15,15 @@ son endpoint — exactement, jamais par préfixe) :
 
 Les exécutions rejouées pour confirmation (`model_id = "replay:..."`) ne
 correspondent à aucun endpoint : jamais comptées comme des tentatives
-indépendantes."""
+indépendantes.
+
+Un échec de GÉNÉRATION n'a pas de `model_id` (aucun modèle n'a répondu) :
+il est rattaché au modèle DEMANDÉ (`requested_models`, lu dans les faits de
+l'EvalRun) — sans quoi un modèle injoignable ne serait jamais écarté."""
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 
 from apex.metalearner.experience import Experience, SuccessEvidence
 from apex.metalearner.failure_taxonomy import FailureCategory
@@ -44,12 +48,25 @@ def _outcome(experience: Experience) -> bool | None:
 
 
 def performance_from_experiences(
-    experiences: Iterable[Experience], candidates: Sequence[ModelCandidate]
+    experiences: Iterable[Experience],
+    candidates: Sequence[ModelCandidate],
+    *,
+    requested_models: Mapping[str, str] | None = None,
 ) -> dict[str, ModelPerformanceStats]:
+    """`requested_models` : identifiant d'expérience -> modèle demandé, pour
+    les échecs de génération sans `model_id`."""
     by_served = {c.endpoint.served_model: c.ref.id for c in candidates if c.endpoint is not None}
+    requested = requested_models or {}
     outcomes: dict[str, list[tuple[bool, Experience]]] = {ref_id: [] for ref_id in by_served.values()}
+    seen: set[str] = set()
     for experience in experiences:
-        ref_id = by_served.get(experience.model_id or "")
+        if experience.id in seen:
+            continue
+        seen.add(experience.id)
+        model = experience.model_id
+        if model is None and experience.failure_category is FailureCategory.GENERATION_FAILURE:
+            model = requested.get(experience.id)
+        ref_id = by_served.get(model or "")
         outcome = _outcome(experience)
         if ref_id is not None and outcome is not None:
             outcomes[ref_id].append((outcome, experience))

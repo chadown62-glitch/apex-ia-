@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from apex.config.schema import ApexConfig, ComputePool, ModelEndpoint, PoolLocation, PoolStatus
+from apex.evalrunner.repository import EvalRunRepository
 from apex.metalearner.adaptive_solution_loop import (
     AdaptiveLoopConfig,
     AdaptiveLoopResult,
@@ -56,8 +57,23 @@ def resolve_endpoint(config: ApexConfig, role: str) -> ModelEndpoint:
     raise SolutionLoopUnavailable(f"aucun endpoint déclaré pour le rôle « {role} »")
 
 
+def _requested_models(experiences: list[Any], eval_runs: EvalRunRepository | None) -> dict[str, str]:
+    if eval_runs is None:
+        return {}
+    requested: dict[str, str] = {}
+    for experience in experiences:
+        run = eval_runs.get(experience.eval_run_id)
+        model = run.facts.get("requested_model") if run is not None else None
+        if isinstance(model, str):
+            requested[experience.id] = model
+    return requested
+
+
 def choose_endpoint(
-    config: ApexConfig, role: str, experiences: ExperienceRepository
+    config: ApexConfig,
+    role: str,
+    experiences: ExperienceRepository,
+    eval_runs: EvalRunRepository | None = None,
 ) -> tuple[ModelEndpoint, RoutingDecision]:
     """Candidats du rôle munis d'un endpoint, classés par le routeur avec le
     signal de performance des expériences jugées de ces modèles."""
@@ -67,7 +83,11 @@ def choose_endpoint(
     if not candidates:
         raise SolutionLoopUnavailable(f"aucun endpoint déclaré pour le rôle « {role} »")
     served = [c.endpoint.served_model for c in candidates if c.endpoint is not None]
-    performance = performance_from_experiences(experiences.list_by_model_ids(served), candidates)
+    unattributed = experiences.list_unattributed_generation_failures()
+    requested = _requested_models(unattributed, eval_runs)
+    performance = performance_from_experiences(
+        [*experiences.list_by_model_ids(served), *unattributed], candidates, requested_models=requested
+    )
     decision = select_model(
         candidates, RoutingRequest(), performance=performance, scoring_policy=config.routing
     )
@@ -112,7 +132,7 @@ def run_solution_loop(
 
     runtime = AgentRuntime(session_factory)
     experiences = ExperienceRepository(session_factory)
-    endpoint, _ = choose_endpoint(config, request.role, experiences)
+    endpoint, _ = choose_endpoint(config, request.role, experiences, EvalRunRepository(session_factory))
     return run_adaptive_learning_loop(
         EvalRunnerService(session_factory, agent_runtime=runtime),
         runtime,

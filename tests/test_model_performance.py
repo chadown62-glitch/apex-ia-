@@ -143,3 +143,37 @@ class TestChooseEndpoint(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDeadModelAttribution(unittest.TestCase):
+    def test_a_generation_failure_counts_against_the_requested_model_only_when_known(self) -> None:
+        candidates = filter_by_role(resolve_candidates(config()), "coder_main")
+        alpha = next(c.ref.id for c in candidates if c.endpoint and c.endpoint.served_model == ALPHA)
+        failure = experience(None, FailureCategory.GENERATION_FAILURE)
+        self.assertEqual(performance_from_experiences([failure], candidates), {})
+        stats = performance_from_experiences([failure], candidates, requested_models={failure.id: ALPHA})
+        self.assertEqual(
+            (stats[alpha].failure_count, stats[alpha].failure_reasons), (1, {"generation_failure": 1})
+        )
+
+    def test_the_evalrunner_records_the_requested_model_when_generation_fails(self) -> None:
+        import apex.improvement.capabilities.model_routing as mr
+
+        mr._Backend.behaviour = {}
+        env = mr._Env()
+        env.history(ALPHA, mr.DEAD, runs=1)
+        from apex.db.engine import session_scope
+        from apex.db.models import EvalRunRow
+
+        with session_scope(env.factory) as session:
+            facts = [row.facts for row in session.query(EvalRunRow).all()]
+        self.assertTrue(facts)
+        self.assertEqual({f.get("requested_model") for f in facts}, {ALPHA})
+
+    def test_a_dead_reference_is_abandoned_for_an_untried_model_through_apex_solve(self) -> None:
+        import apex.improvement.capabilities.model_routing as mr
+
+        mr._Backend.behaviour = {}
+        env = mr._Env()
+        env.history(ALPHA, mr.DEAD)
+        self.assertEqual(env.decide(), BETA)

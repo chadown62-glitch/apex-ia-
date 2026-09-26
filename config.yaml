@@ -395,6 +395,8 @@ routing:
   # Règle de succession de Laplace : 1 succès isolé ne surclasse plus un
   # dossier de 9 succès sur 10 (voir RouterScoringPolicy).
   reliability_prior_strength: 2.0
+  # Un modèle en échec passe sous un modèle jamais essayé (voir RouterScoringPolicy).
+  reliability_relative_to_prior: true
 
 # ----------------------------------------------------------------------------
 # Services d'infrastructure locaux

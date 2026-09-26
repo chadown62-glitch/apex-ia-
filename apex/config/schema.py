@@ -961,6 +961,12 @@ class RouterScoringPolicy:
       (1/1 = 100 %) surclasse un dossier de 9 succès sur 10 ; le lissage
       tient compte de la taille de l'échantillon. N'ajoute jamais de
       contribution à un candidat SANS historique.
+    - `reliability_relative_to_prior` (défaut `False`) : la contribution
+      devient `poids * (estimation - 0.5)` — positive si le modèle fait
+      mieux qu'un a priori non informé, NÉGATIVE s'il fait moins bien. Sans
+      cela, un modèle qui échoue toujours (contribution 0) vaut un modèle
+      jamais essayé (aucune contribution) et reste choisi par l'ordre de la
+      configuration.
 
     Les poids fondés sur l'historique (`reliability_weight`/
     `latency_weight`/`capacity_risk_weight`) ne changent AUCUNE décision de
@@ -977,6 +983,7 @@ class RouterScoringPolicy:
     latency_weight: float = 0.2
     capacity_risk_weight: float = 0.4
     reliability_prior_strength: float = 0.0
+    reliability_relative_to_prior: bool = False
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> RouterScoringPolicy:
@@ -1009,7 +1016,13 @@ class RouterScoringPolicy:
                 )
             if value < 0:
                 raise ConfigError(f"{field_name} doit être >= 0", field=f"routing.{field_name}")
-        return cls(**values)
+        relative = raw.get("reliability_relative_to_prior", defaults.reliability_relative_to_prior)
+        if not isinstance(relative, bool):
+            raise ConfigError(
+                "reliability_relative_to_prior doit être un booléen",
+                field="routing.reliability_relative_to_prior",
+            )
+        return cls(**values, reliability_relative_to_prior=relative)
 
 
 @dataclass(frozen=True)

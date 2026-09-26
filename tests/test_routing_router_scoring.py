@@ -304,3 +304,30 @@ class TestReliabilitySmoothing(unittest.TestCase):
         )
         reliability = _reliability(decision)
         self.assertEqual((reliability.value, reliability.status), (0.0, DataStatus.UNKNOWN))
+
+
+class TestReliabilityRelativeToPrior(unittest.TestCase):
+    """Un modèle qui échoue ne doit pas valoir un modèle jamais essayé."""
+
+    def setUp(self) -> None:
+        self.failing = a_candidate(ref=a_ref(family="alpha", version="1"))
+        self.untried = a_candidate(ref=a_ref(family="beta", version="1"))
+        failing_id = self.failing.ref.id
+        self.performance = {failing_id: real_perf(failing_id, usage_count=2, success_count=0)}
+
+    def choose(self, policy: RouterScoringPolicy):
+        return select_model(
+            [self.failing, self.untried], RoutingRequest(), performance=self.performance,
+            scoring_policy=policy,
+        ).selected
+
+    def test_by_default_a_failing_model_ties_with_an_untried_one_and_config_order_wins(self) -> None:
+        self.assertEqual(self.choose(RouterScoringPolicy(reliability_prior_strength=2.0)), self.failing)
+
+    def test_relative_to_prior_a_failing_model_ranks_below_an_untried_one(self) -> None:
+        policy = RouterScoringPolicy(reliability_prior_strength=2.0, reliability_relative_to_prior=True)
+        self.assertEqual(self.choose(policy), self.untried)
+        decision = select_model(
+            [self.failing], RoutingRequest(), performance=self.performance, scoring_policy=policy
+        )
+        self.assertAlmostEqual(_reliability(decision).value, 0.3 * ((0 + 1) / (2 + 2) - 0.5))

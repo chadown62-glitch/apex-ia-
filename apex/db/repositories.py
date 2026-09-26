@@ -635,6 +635,15 @@ class ExperienceRepository:
         )
         return list(self._session.scalars(stmt))
 
+    def list_unattributed_generation_failures(self, limit: int = 500) -> list[ExperienceRow]:
+        stmt = (
+            select(ExperienceRow)
+            .where(ExperienceRow.model_id.is_(None), ExperienceRow.failure_category == "generation_failure")
+            .order_by(ExperienceRow.created_at.desc(), ExperienceRow.id)
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
     def list_by_model_ids(self, model_ids: list[str], limit: int = 500) -> list[ExperienceRow]:
         if not model_ids:
             return []

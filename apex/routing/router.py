@@ -111,10 +111,13 @@ def _score_breakdown(
         if prior:
             estimate = (performance.success_count + prior / 2) / (performance.usage_count + prior)
         smoothing = f", estimation lissée {estimate:.0%} (a priori {prior:g} obs.)" if prior else ""
+        relative = policy.reliability_relative_to_prior
+        if relative:
+            smoothing += ", relative à l'a priori 50 %"
         contributions.append(
             ScoreContribution(
                 name="historical_reliability",
-                value=policy.reliability_weight * estimate,
+                value=policy.reliability_weight * (estimate - 0.5 if relative else estimate),
                 status=DataStatus.REAL,
                 reason=(
                     f"taux de succès observé {rate:.0%} sur {performance.usage_count} "

@@ -361,7 +361,9 @@ class EvalRunnerService:
                 id=eval_run_id, task_id=task.id, clone_id=clone.clone_id, method=method,
                 oracle_verdict=OracleVerdict.ERROR, oracle_detail=f"génération impossible : {exc}",
                 sandbox_status=None, exit_code=None, elapsed_s=None, model_id=None,
-                facts={}, created_by=requested_by.value, seed=seed, dataset_ref=task.dataset_ref,
+                # model_id reste None (aucun modèle n'a répondu) ; le modèle DEMANDÉ reste attribuable.
+                facts={"requested_model": endpoint.served_model}, created_by=requested_by.value,
+                seed=seed, dataset_ref=task.dataset_ref,
                 experiment_ref=experiment_ref, started_at=started_at, completed_at=_utcnow(),
             )
             self._repo.create(run)

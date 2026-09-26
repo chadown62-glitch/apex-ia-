@@ -205,6 +205,14 @@ class ExperienceRepository:
             rows = _DbExperienceRepository(session).list_by_task(task_id, limit=limit)
             return [Experience.from_row(row) for row in rows]
 
+    def list_unattributed_generation_failures(self, limit: int = 500) -> list[Experience]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ExperienceRepository as _DbExperienceRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbExperienceRepository(session).list_unattributed_generation_failures(limit=limit)
+            return [Experience.from_row(row) for row in rows]
+
     def list_by_model_ids(self, model_ids: list[str], limit: int = 500) -> list[Experience]:
         from apex.db.engine import session_scope
         from apex.db.repositories import ExperienceRepository as _DbExperienceRepository
