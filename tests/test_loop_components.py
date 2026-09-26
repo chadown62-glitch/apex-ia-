@@ -259,6 +259,24 @@ def test_failure_analysis_establishes_only_what_is_measured() -> None:
     assert forgetting.status == "established" and forgetting.attribution == "single_modification"
     assert forgetting.regressed_suites == ["heldout:stdlib"] and forgetting.reusable
     assert forgetting.to_dict()["interpretation_label"] == "INFERRED"
+    assert forgetting.interpretation is not None and "mélange" in forgetting.interpretation
+    # Même compromis mesuré, mais la seule modification est le taux d'apprentissage : la lecture
+    # ne doit pas invoquer un mécanisme de mélange de données (défaut trouvé sur l'exécution réelle).
+    lr_only = analyze_judgement(
+        plan(replace(REF, lr=5e-4)),
+        _judged(
+            "reject",
+            [
+                _comp("heldout", 4.0, 4.0, -0.01, 0.01, "not_significant"),
+                _comp("heldout:apex_docs", 5.0, 4.9, 0.01, 0.03, "significant"),
+                _comp("heldout:stdlib", 3.0, 3.1, -0.2, -0.05, "significant"),
+                _comp("validation", 4.0, 4.0, -0.01, 0.01, "not_significant"),
+            ],
+        ),
+    )
+    assert lr_only is not None and lr_only.cause is FailureCause.PROTECTED_REGRESSION
+    assert lr_only.interpretation is not None
+    assert "mélange" not in lr_only.interpretation and "« lr » (0.001 -> 0.0005)" in lr_only.interpretation
     flat = analyze_judgement(
         p,
         _judged(

@@ -77,6 +77,13 @@ def test_loop_invariants_on_a_real_run(completed_run: tuple[LoopController, dict
             assert plan["parent_experiment_id"] in records
     fingerprints = [r.plan["fingerprint"] for r in records.values()]
     assert len(fingerprints) == len(set(fingerprints))  # jamais deux fois la même expérience
+    for cycle in ctrl.journal.loop_events("cycle_completed"):
+        selection = cycle["selection"]  # sélection du meilleur : seule une version promue est retenue
+        promoted_here = [r["experiment_id"] for r in cycle["comparison"] if r["promoted"]]
+        if promoted_here:
+            assert selection["selected"] == promoted_here[-1]
+        else:
+            assert selection["selected"] != (selection["best_rejected"] or {}).get("experiment_id")
     assert int(summary["steps_used"]) <= LIMITS.max_total_steps  # type: ignore[call-overload]
     assert ctrl.journal.entries()  # chaîne vérifiée à la lecture
 

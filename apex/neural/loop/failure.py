@@ -93,6 +93,22 @@ def _attribution(plan: ExperimentPlan) -> tuple[str, list[dict[str, Any]]]:
     return ("single_modification" if len(mods) == 1 else "confounded"), mods
 
 
+def _interpret_tradeoff(mods: list[dict[str, Any]], regressed: list[str]) -> str:
+    """Lecture plausible (INFERRED) d'un compromis cible/suites protégées,
+    formulée à partir de la modification RÉELLEMENT faite — jamais d'un
+    mécanisme propre à une autre modification."""
+    mod = mods[0]
+    if mod["field"] == "mix":
+        return (
+            f"le mélange de données {mod['from']} -> {mod['to']} a déplacé la capacité du modèle vers la "
+            f"cible au détriment des suites {regressed} (oubli des données moins présentes)"
+        )
+    return (
+        f"la modification « {mod['field']} » ({mod['from']} -> {mod['to']}) améliore la cible mais "
+        f"dégrade les suites {regressed} ; le mécanisme n'est pas établi par la mesure"
+    )
+
+
 def _fmt(comp: dict[str, Any]) -> str:
     low, high = comp["bpb_gain_ci"]
     return (
@@ -168,10 +184,7 @@ def analyze_judgement(
             mods,
             refuted="partie « sans dégrader les suites protégées » de l'hypothèse",
             reusable=reusable,
-            interpretation=(
-                "le nouveau mélange de données a déplacé la capacité du modèle vers la cible au détriment "
-                f"des suites {regressed} (oubli des données moins présentes)"
-            )
+            interpretation=_interpret_tradeoff(mods, regressed)
             if attribution == "single_modification" and gain_significant(target_comp)
             else None,
             regressed_suites=regressed,

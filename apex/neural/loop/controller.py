@@ -215,7 +215,13 @@ class LoopController:
             if self._stop_requested():
                 break
         comparison = self._compare(ids)
-        self.journal.loop("cycle_completed", cycle=cycle, experiments=ids, comparison=comparison)
+        self.journal.loop(
+            "cycle_completed",
+            cycle=cycle,
+            experiments=ids,
+            comparison=comparison,
+            selection=self._select(comparison),
+        )
         if not ids:
             if obs.weaknesses:
                 raise _LoopStop(
@@ -553,6 +559,32 @@ class LoopController:
                 }
             )
         return rows
+
+    def _select(self, rows: list[dict[str, Any]]) -> dict[str, Any]:
+        """Sélection du meilleur à l'issue du cycle : seule une version promue
+        (ACCEPT du Judge puis comparaison du registre) peut être retenue ;
+        sinon le champion est conservé. Le meilleur candidat REJETÉ est cité
+        à titre d'information, jamais retenu."""
+        current = self.registry.current()
+        promoted = [r for r in rows if r["promoted"]]
+        measured = [r for r in rows if r["target_bpb"] is not None and not r["promoted"]]
+        best_rejected = min(measured, key=lambda r: r["target_bpb"]) if measured else None
+        return {
+            "selected": promoted[-1]["experiment_id"]
+            if promoted
+            else (current["name"] if current else None),
+            "reason": "promu (ACCEPT du Judge, confirmé par le registre)"
+            if promoted
+            else "aucun candidat accepté : champion conservé",
+            "best_rejected": {
+                "experiment_id": best_rejected["experiment_id"],
+                "target": best_rejected["target"],  # les cibles peuvent différer d'une ligne à l'autre
+                "target_bpb": best_rejected["target_bpb"],
+                "cause": best_rejected["cause"],
+            }
+            if best_rejected
+            else None,
+        }
 
     def summary(self) -> dict[str, Any]:
         records = self.journal.experiments()
