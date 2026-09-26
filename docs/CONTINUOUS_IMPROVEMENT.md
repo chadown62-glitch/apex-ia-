@@ -64,14 +64,37 @@ donnent UNCHANGED.
 
 ## Séparation implémenteur / juge
 
-- `ImplementerClaim(author_id, summary, claimed_verdict)` est enregistrée,
-  jamais crue ; `claim_contradicted` est vrai si le verdict la contredit.
+Qui fait quoi dans un cycle :
+
+| Élément | Produit par | Ce que l'implémenteur ne peut pas faire |
+|---|---|---|
+| Version candidate | l'implémenteur (code + libellé de version) | — |
+| Métriques | `CapabilitySpec` de l'adaptateur | changer leur définition entre avant et après : l'empreinte (`definition_digest`) diffère -> INCONCLUSIVE |
+| Mesures | `ContinuousImprovementEngine.measure` (deux fois) | fournir un snapshot : `run_cycle` exige un snapshot mesuré par le moteur ET présent dans le ledger |
+| Résultats de sondes | le juge (`Judge.assess`) | — |
+| Décision du juge | le moteur, via `GauntletRunner.run_stage` | un juge ne rend que des résultats par sonde, jamais un PASS global |
+| Verdict IMPROVED/... | `combine_verdict` (métriques + juge) | son affirmation (`ImplementerClaim`) est enregistrée, jamais crue |
+| Ledger | le moteur | le modifier sans que `verify` le signale (sauf recalcul complet de la chaîne, voir limites) |
+
 - `author_id == judge_id` lève `SelfConfirmationError` avant toute mesure.
-- Les sondes de la première capacité ont été committées avec la baseline
-  (`b7cccf1`), avant tout correctif.
-- Limite : sondes et correctifs ont été écrits par le même agent. Pour le
+- `SubprocessJudge` exécute le juge dans un autre processus ; avec
+  `--judge-ref R`, la définition du juge est lue à la révision git R : le
+  changement jugé ne peut pas réécrire ses propres sondes. La provenance
+  consignée ne contient que des faits vérifiés (empreinte de la définition,
+  R ancêtre de HEAD ou non, définition différente de l'arbre de travail).
+- Limite : sondes et correctifs restent écrits par le même agent. Pour le
   cycle 2, un agent indépendant (sans accès en écriture) a été chargé de
   réfuter le correctif ; il y est parvenu, voir plus bas.
+
+## Invariants (tests/test_improvement_invariants.py)
+
+Le moteur refuse ou ne convertit jamais en IMPROVED/PASS : une amélioration
+sans mesure, une simple affirmation de l'implémenteur, un juge en panne, une
+métrique non reproductible, un succès non confirmé utilisé comme confirmé
+(sonde de la capacité), une baseline absente, deux environnements
+incompatibles, un benchmark redéfini, une régression masquée par un gain
+ailleurs, un INCONCLUSIVE. Chaque garde a été retirée une à une pour
+vérifier que le test correspondant échoue.
 
 ## Utilisation
 
@@ -83,6 +106,9 @@ python -m apex.improvement judge   --capability generated_solution --version v0 
 python -m apex.improvement cycle   --capability generated_solution --kind adversarial --index 1 \
     --before v0 --version v1 --author me --claim improved --hypothesis "..." --change "..." --test "..." --ledger $L
 python -m apex.improvement report  --capability generated_solution --ledger $L
+python -m apex.improvement verify  --capability generated_solution --ledger $L
+# juge dans un processus séparé, définition figée au commit de la baseline :
+python -m apex.improvement cycle ... --judge-ref <commit-baseline>
 ```
 
 Ajouter une capacité : écrire un adaptateur (`spec` + `measure(version)`)
@@ -110,6 +136,15 @@ capacité d'APEX à juger et à apprendre, pas la qualité d'un modèle.
 | learning_gain | 0.50 | 0.50 | 0.50 | 0.50 |
 | flaky_acceptance (64 essais) | — | — | 0.45 | **0.08** |
 
+Cycle 4 (même benchmark étendu, 16 essais flaky) :
+
+| Métrique | Avant (`277edb4`) | Après (`f58b7f3`) |
+|---|---|---|
+| unconfirmed_success_exploited | 1.00 | **0.00** |
+| confirmed_success_exploited (garde-fou) | 1.00 | 1.00 |
+| flaky_acceptance | 0.06 | 0.19 (non significatif, IC 95 % [-0.13, 0.38]) |
+| autres métriques | inchangées | inchangées |
+
 - **Cycle 1 (functionality)** : la G1 d'une exécution lisait les
   expériences de toutes les exécutions de la tâche (trace de provenance
   fausse) ; la boucle n'avait aucun appelant hors tests. Correctifs :
@@ -131,20 +166,44 @@ capacité d'APEX à juger et à apprendre, pas la qualité d'un modèle.
   a été trouvé (sandbox inutilisable si le dépôt est sous /tmp ou installé
   comme paquet) et corrigé.
 
+- **Cycle 4 (improvement)** : une expérience issue d'une exécution
+  chanceuse restait SUCCESS et la génération suivante l'exploitait. Correctif
+  (`d1c86f1`) : `SuccessEvidence` (OBSERVED / CONFIRMED / REFUTED)
+  persistée après confirmation ; seul CONFIRMED est exploité. Le juge sur le
+  code d'avant : REJECT, défaut CONFIRMÉ par ré-exécution. Cycle : IMPROVED,
+  juge en processus séparé. **Erreur consignée** : la provenance de ce cycle
+  dit « sondes lues à la révision f58b7f3, antérieure au candidat » — c'est
+  faux (f58b7f3 est postérieur au correctif `d1c86f1`, et la sonde a été
+  écrite après lui par le même agent). Le texte était codé en dur ; corrigé
+  dans `012fdc1`/`08c4100`, l'entrée reste (ledger append-only).
+
 Le ledger contient aussi un snapshot `cycle2@7cf3abd:flaky64` **invalide**
 (le premier des deux) : mesuré depuis un worktree sous /tmp, il a révélé ce
 défaut. Il n'a servi à aucune comparaison.
 
+## Validations d'environnement
+
+- **ContainerSandbox : TESTÉ** (démon Docker démarré dans le bac à sable,
+  image `python:3.12-slim`) — `tests/test_container_generated_solution.py` :
+  solution valide, fausse, sortie anticipée, dépôt hôte et secrets
+  invisibles, timeout, limite mémoire, conteneur impossible à créer puis
+  reprise, boucle adaptative complète. A révélé un défaut (conteneur jamais
+  démarré classé comme faute du candidat), corrigé dans `fa7374e`.
+  Ce n'est pas une validation de la machine utilisateur.
+- **Modèle réel : UNVERIFIED — REAL_MODEL.** La politique réseau de
+  l'environnement refuse ollama.com, registry.ollama.ai et huggingface.co
+  (403 du proxy) : ni Ollama ni un modèle ne peuvent être installés ici.
+
 ## Limites
 
-- Aucun modèle réel n'a été exercé (Ollama absent) : `learning_gain` porte
-  sur un modèle scripté ; un gain d'apprentissage avec un vrai modèle est
-  UNVERIFIED.
-- Le sandbox `ContainerSandbox` (celui sélectionné sur une machine WSL2 sans
-  namespaces complets) n'a pas été exercé ici : Docker absent.
-- Une expérience issue d'une exécution chanceuse garde la catégorie SUCCESS
-  et reste lue par `decide_next_strategies` ; seule la décision d'arrêt et
-  le choix du meilleur candidat tiennent compte de la confirmation.
+- Aucun modèle réel n'a été exercé : `learning_gain` porte sur un modèle
+  scripté ; un gain d'apprentissage avec un vrai modèle est UNVERIFIED.
+- Le chaînage du ledger détecte une modification naïve ; quelqu'un qui peut
+  écrire le fichier peut recalculer toute la chaîne — l'ancrage externe est
+  l'historique git.
+- `tests/test_sandbox_detect.py` affirme qu'aucun démon Docker n'est
+  joignable « sur cette machine » : ces deux tests échouent sur toute
+  machine où Docker tourne (dont celle de l'utilisateur).
 - Douze cas cachés booléens : un candidat qui devine au hasard passe avec
   une probabilité 2^-12 ; aucun jeu de tests « held-out » séparé n'existe
   encore pour cette tâche.
