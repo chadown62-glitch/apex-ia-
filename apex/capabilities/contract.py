@@ -112,7 +112,9 @@ def _significant_loss(c: dict[str, Any]) -> bool:
     return bool(c.get("verdict") == "significant" and c["bpb_gain_ci"][1] < 0)
 
 
-def classify_learning(contract: CapabilityContract, comparisons: list[dict[str, Any]]) -> dict[str, Any]:
+def classify_learning(
+    contract: CapabilityContract, comparisons: list[dict[str, Any]], *, saw_task_solutions: bool
+) -> dict[str, Any]:
     """MÉMORISATION / GÉNÉRALISATION / TRANSFERT, établis par les comparaisons
     appariées du Judge (jamais déclarés) :
 
@@ -120,7 +122,11 @@ def classify_learning(contract: CapabilityContract, comparisons: list[dict[str, 
     - TRANSFER : gain significatif sur une famille jamais vue à l'entraînement ;
     - MEMORIZATION : gain significatif sur les tâches VUES, sans gain held-out ou nettement
       supérieur à lui (intervalles disjoints) : une part du gain ne se transfère pas ;
-    - NONE : aucun gain significatif ; les régressions significatives sont listées à part."""
+    - NONE : aucun gain significatif ; les régressions significatives sont listées à part.
+
+    `saw_task_solutions` : l'entraînement VÉRIFIÉ contenait-il des solutions de tâches train ?
+    Sans elles, la suite train n'est qu'un autre ensemble de fonctions non vues : un gain
+    n'y est pas de la mémorisation (il est consigné dans les preuves, sans étiquette)."""
     comps = {c["suite"]: c for c in comparisons}
     kinds: list[str] = []
     evidence: list[str] = []
@@ -144,12 +150,18 @@ def classify_learning(contract: CapabilityContract, comparisons: list[dict[str, 
         memo is not None and heldout is not None and memo["bpb_gain_ci"][0] > heldout["bpb_gain_ci"][1]
     )
     if memo is not None and _significant_gain(memo) and ("GENERALIZATION" not in kinds or exceeds_heldout):
-        kinds.append("MEMORIZATION")
+        if saw_task_solutions:
+            kinds.append("MEMORIZATION")
+        else:
+            evidence.append(
+                "gain sur la suite train sans ses solutions à l'entraînement : pas de la mémorisation"
+            )
         note(contract.memorization_suite or "")
     regressions = sorted(s for s in contract.suites if s in comps and _significant_loss(comps[s]))
     return {
         "kinds": kinds or ["NONE"],
         "evidence": evidence,
         "regressions": regressions,
+        "saw_task_solutions": saw_task_solutions,
         "status": "ESTABLISHED",  # bootstrap apparié par fonction, sur les mesures du Judge
     }

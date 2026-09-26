@@ -135,6 +135,15 @@ class IndependentJudge:
         second = measure(load(), self.world)
         return first, _same_scores(first, second), first_model, details
 
+    def _task_solution_ids(self) -> set[str]:
+        # Documents des domaines « train seulement » (solutions des tâches train). Comparés aux
+        # documents d'entraînement VÉRIFIÉS par le rejeu, jamais à la recette déclarée.
+        return {
+            c.candidate_id
+            for c in self.world.dataset.splits[Split.TRAIN]
+            if self.world.domain_of(c.source_id) in self.world.spec.train_only_domains
+        }
+
     def primary_for(self, plan: ExperimentPlan | None) -> str:
         """Suite principale : la cible PRÉ-ENREGISTRÉE du plan si le monde la
         déclare suite d'acceptation (held-out d'une capacité), sinon le
@@ -311,7 +320,11 @@ class IndependentJudge:
             task_changes=_task_changes(baseline_details, candidate_details),
             candidate_details=candidate_details,
             learning={
-                name: classify_learning(cap.contract, [c.to_dict() for c in verdict.comparisons])
+                name: classify_learning(
+                    cap.contract,
+                    [c.to_dict() for c in verdict.comparisons],
+                    saw_task_solutions=bool(self._task_solution_ids() & set(training_candidate_ids)),
+                )
                 for name, (cap, _) in self.world.capabilities.items()
             },
         )

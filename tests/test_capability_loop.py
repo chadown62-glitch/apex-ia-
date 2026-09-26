@@ -70,6 +70,9 @@ def test_capability_weakness_becomes_the_target_of_the_loop(run: LoopController)
     # mémorisation / généralisation / transfert : calculés par le Judge sur ses propres mesures
     learning = result["learning"]["code_repair"]
     assert learning["status"] == "ESTABLISHED" and learning["kinds"]
+    bootstrap_learning = (bootstrap.payload("judged") or {})["result"]["learning"]["code_repair"]
+    assert bootstrap_learning["saw_task_solutions"] is False  # mélange « code » seul
+    assert "MEMORIZATION" not in bootstrap_learning["kinds"]
     held_gain = comparisons[TARGET]["bpb_gain_ci"]
     assert ("GENERALIZATION" in learning["kinds"]) == (
         comparisons[TARGET]["verdict"] == "significant" and held_gain[0] > 0
@@ -145,6 +148,7 @@ def test_directed_experiment_goes_through_the_independent_judge(run: LoopControl
     result = (record.payload("judged") or {})["result"]
     assert result["primary"] == TARGET and result["judge_id"]
     learning = result["learning"]["code_repair"]
+    assert learning["saw_task_solutions"] is True  # établi sur les documents rejoués, pas la recette
     comparisons = {c["suite"]: c for c in result["comparisons"]}
     train = comparisons[suite_name("train")]
     if "MEMORIZATION" in learning["kinds"]:

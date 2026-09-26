@@ -387,25 +387,39 @@ def test_learning_is_classified_from_significant_paired_gains_only() -> None:
     assert contract.memorization_suite == train and contract.transfer_suites == (transfer,)
 
     memo = classify_learning(
-        contract, [_comparison(train, 0.1, 0.3), _comparison(held, -0.05, 0.02, "no_difference")]
+        contract,
+        [_comparison(train, 0.1, 0.3), _comparison(held, -0.05, 0.02, "no_difference")],
+        saw_task_solutions=True,
     )
     assert memo["kinds"] == ["MEMORIZATION"] and memo["evidence"][0].startswith(train)
 
-    general = classify_learning(contract, [_comparison(train, 0.1, 0.3), _comparison(held, 0.02, 0.1)])
+    general = classify_learning(
+        contract, [_comparison(train, 0.1, 0.3), _comparison(held, 0.02, 0.1)], saw_task_solutions=True
+    )
     assert general["kinds"] == ["GENERALIZATION"]  # un gain held-out n'est pas de la mémorisation
 
     # Constat réel (E2E) : train 0,838 -> 0,032 et held-out 0,852 -> 0,749 : les deux à la fois.
-    mixed = classify_learning(contract, [_comparison(train, 0.71, 0.89), _comparison(held, 0.02, 0.18)])
+    mixed = classify_learning(
+        contract, [_comparison(train, 0.71, 0.89), _comparison(held, 0.02, 0.18)], saw_task_solutions=True
+    )
     assert mixed["kinds"] == ["GENERALIZATION", "MEMORIZATION"]
 
-    both = classify_learning(contract, [_comparison(held, 0.02, 0.1), _comparison(transfer, 0.01, 0.2)])
+    both = classify_learning(
+        contract, [_comparison(held, 0.02, 0.1), _comparison(transfer, 0.01, 0.2)], saw_task_solutions=True
+    )
     assert both["kinds"] == ["GENERALIZATION", "TRANSFER"]
 
     # un intervalle qui contient zéro n'est jamais un apprentissage, même avec un verdict mal formé
-    noise = classify_learning(contract, [_comparison(held, -0.01, 0.1), _comparison(train, 0.0, 0.2)])
+    noise = classify_learning(
+        contract, [_comparison(held, -0.01, 0.1), _comparison(train, 0.0, 0.2)], saw_task_solutions=True
+    )
     assert noise["kinds"] == ["NONE"] and noise["evidence"] == []
 
-    worse = classify_learning(contract, [_comparison(held, -0.2, -0.05)])
+    # Constat réel (E2E) : gain train significatif SANS solutions de tâches à l'entraînement.
+    unseen = classify_learning(contract, [_comparison(train, 0.01, 0.16)], saw_task_solutions=False)
+    assert unseen["kinds"] == ["NONE"] and "pas de la mémorisation" in unseen["evidence"][0]
+
+    worse = classify_learning(contract, [_comparison(held, -0.2, -0.05)], saw_task_solutions=True)
     assert worse["kinds"] == ["NONE"] and worse["regressions"] == [held]
 
 
