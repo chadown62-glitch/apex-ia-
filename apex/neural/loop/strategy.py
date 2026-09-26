@@ -238,7 +238,8 @@ class StrategyPolicy:
             if trained and trained <= regressed:
                 # Même les domaines ENTRAÎNÉS régressent : ce n'est pas un oubli par manque de
                 # diversité (augmenter leur part n'a pas de sens). Lecture INFERRED : échantillon
-                # trop petit ou pas trop grand. Une modification à la fois : plus de données, puis lr.
+                # trop petit ou pas d'apprentissage trop grand. Une modification à la fois : plus de
+                # données, puis lr.
                 facts = f"domaines entraînés {sorted(trained)} eux-mêmes dégradés"
                 tokens = parent.tokens * 2
                 if tokens <= self.max_tokens:
