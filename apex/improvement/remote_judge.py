@@ -199,5 +199,6 @@ class SubprocessJudge:
         return JudgeAssessment(
             results=assessment.results,
             findings=assessment.findings,
-            provenance={**assessment.provenance, **provenance},
+            # La provenance déclarée par le worker (juge in-process) ne décrit pas l'épinglage.
+            provenance=provenance,
         )
