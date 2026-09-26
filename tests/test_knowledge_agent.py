@@ -560,3 +560,33 @@ def test_stored_text_drops_meaningless_invisibles_but_keeps_zwnj() -> None:
     persian = chr(0x0645) + chr(0x06CC) + zwnj + chr(0x062E) + chr(0x0648)
     assert filters.normalize(persian) == persian
     assert filters.canonical(chr(0xFF21) + zwsp + chr(0xFF22)) == "AB"
+
+
+# Cycle CI 2 (knowledge_curation) : clauses de licence mal écrites -------------
+
+
+@pytest.mark.parametrize(
+    "hint",
+    [
+        "CC BY NC 4.0",
+        "cc_by_nd",
+        "Creative Commons Attribution No Derivatives",
+        "Creative Commons Attribution-NonCommercial-ShareAlike",
+        "Tous droits réservés",
+        "Pas d'utilisation commerciale",
+    ],
+)
+def test_restrictive_clauses_are_found_whatever_the_spelling(hint: str) -> None:
+    assert classify_license(hint).status is LicenseStatus.RESTRICTED
+
+
+def test_tokenization_does_not_invent_restrictions() -> None:
+    for hint, status in (
+        ("CC-BY-4.0", LicenseStatus.COMPATIBLE),
+        ("BSD-3-Clause", LicenseStatus.COMPATIBLE),
+        ("public-domain", LicenseStatus.FREE),
+        ("Unlicense", LicenseStatus.FREE),
+        ("GPL-3.0", LicenseStatus.UNKNOWN),
+        ("standard terms and conditions", LicenseStatus.UNKNOWN),
+    ):
+        assert classify_license(hint).status is status, hint

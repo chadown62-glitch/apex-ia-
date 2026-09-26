@@ -13,21 +13,34 @@ l'entraînement ; sinon seules les métadonnées et la provenance sont gardées.
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from apex.knowledge.model import LicenseInfo, LicenseStatus
 
-_FREE = ("cc0", "public domain", "public-domain", "unlicense", "domaine public")
-_RESTRICTED = (
-    "all rights reserved",
-    "tous droits réservés",
-    "proprietary",
-    "propriétaire",
-    "-nc",
-    "-nd",
-    "noncommercial",
-    "non-commercial",
-    "noderivatives",
+#: Clauses restrictives, cherchées sur la forme TOKENISÉE de l'indication
+#: (minuscules, sans accents, ponctuation -> espaces) : « CC-BY-NC »,
+#: « CC BY NC » et « cc_by_nc » sont la même licence.
+_RESTRICTED_TOKENS = frozenset(
+    {"nc", "nd", "noncommercial", "noderivatives", "noderivs", "proprietary", "proprietaire"}
 )
+_RESTRICTED_PHRASES = (
+    "all rights reserved",
+    "tous droits reserves",
+    "non commercial",
+    "no derivatives",
+    "no derivative",
+    "no derivs",
+    "pas d utilisation commerciale",
+    "pas de modification",
+)
+_FREE_PHRASES = ("cc0", "public domain", "unlicense", "domaine public")
+
+
+def _tokens(text: str) -> str:
+    stripped = "".join(c for c in unicodedata.normalize("NFKD", text) if not unicodedata.combining(c))
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", stripped.lower()).split())
+
+
 _COMPATIBLE = (
     ("mit", r"\bmit\b"),
     ("bsd", r"\bbsd\b"),
@@ -45,12 +58,17 @@ def classify_license(hint: str | None) -> LicenseInfo:
     if not hint or not hint.strip():
         return LicenseInfo(LicenseStatus.UNKNOWN, None, "aucune information de licence")
     text = hint.strip().lower()
-    for marker in _RESTRICTED:
-        if marker in text:
-            return LicenseInfo(LicenseStatus.RESTRICTED, hint.strip(), f"clause restrictive « {marker} »")
-    for marker in _FREE:
-        if marker in text:
-            return LicenseInfo(LicenseStatus.FREE, hint.strip(), f"marqueur « {marker} »")
+    tokens = _tokens(hint)
+    padded = f" {tokens} "
+    for token in tokens.split():
+        if token in _RESTRICTED_TOKENS:
+            return LicenseInfo(LicenseStatus.RESTRICTED, hint.strip(), f"clause restrictive « {token} »")
+    for phrase in _RESTRICTED_PHRASES:
+        if f" {phrase} " in padded:
+            return LicenseInfo(LicenseStatus.RESTRICTED, hint.strip(), f"clause restrictive « {phrase} »")
+    for phrase in _FREE_PHRASES:
+        if f" {phrase} " in padded:
+            return LicenseInfo(LicenseStatus.FREE, hint.strip(), f"marqueur « {phrase} »")
     for identifier, pattern in _COMPATIBLE:
         if re.search(pattern, text):
             return LicenseInfo(LicenseStatus.COMPATIBLE, identifier, f"licence reconnue « {identifier} »")
