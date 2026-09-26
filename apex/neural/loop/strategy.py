@@ -9,8 +9,12 @@ Point de départ :
   plus bas).
 
 Règles d'adaptation (cause ÉTABLIE du dernier échec -> UNE modification) :
-- PROTECTED_REGRESSION -> augmenter la part des domaines dégradés dans le
-  mélange au palier suivant (`protect_levels`) — contrainte de diversité ;
+- un domaine ENTRAÎNÉ régresse et l'entraînement a relu son échantillon plus de
+  `max_passes` fois (fait mesuré : jetons vus / jetons tirés) -> doubler les
+  données tirées d'abord (sur-apprentissage : INFERRED) ;
+- PROTECTED_REGRESSION -> si tous les domaines entraînés régressent : plus de
+  données, puis taux d'apprentissage divisé par deux ; sinon augmenter la part
+  des domaines dégradés au palier suivant (`protect_levels`) ;
 - NO_SIGNIFICANT_EFFECT / NO_CHANGE -> doubler le budget de pas (dans le budget) ;
 - TARGET_REGRESSION / DIVERGED -> diviser le taux d'apprentissage par deux ;
 - UNKNOWN / TIMEOUT -> rejouer le même plan, au plus `max_retries` fois ;
@@ -98,6 +102,8 @@ class StrategyPolicy:
     max_steps: int = 800
     max_tokens: int = 240_000
     min_lr: float = 1e-5
+    #: Au-delà, un entraînement qui relit son échantillon est présumé sur-apprendre.
+    max_passes: float = 4.0
     max_retries: int = 1
 
     def reference(self, obs: Observation, world: World) -> Recipe:
@@ -230,45 +236,63 @@ class StrategyPolicy:
                 )
             ]
         out: list[StrategyDecision] = []
+        regressed = {d for d in (world.suite_domain(s) for s in analysis.get("regressed_suites", [])) if d}
+        # Un domaine sans suite d'évaluation (ex. solutions des tâches train) ne peut pas régresser :
+        # il ne compte pas parmi les domaines entraînés à comparer aux domaines dégradés.
+        evaluated = {world.suite_domain(s) for s in world.suite_names}
+        trained = {d for d, w in parent.mix.items() if w > 0 and d in evaluated}
+        seen = (last.payload("executed") or {}).get("tokens_seen") or 0
+        passes = seen / parent.tokens if parent.tokens else 0.0
+        overfit = (
+            cause in (FailureCause.PROTECTED_REGRESSION.value, FailureCause.TARGET_REGRESSION.value)
+            and bool(trained & regressed)
+            and passes > self.max_passes
+        )
+
+        def more_data(facts: str) -> None:
+            tokens = parent.tokens * 2
+            if tokens <= self.max_tokens:
+                change = f"doubler les données tirées ({parent.tokens} -> {tokens} tokens), même mélange"
+                out.append(
+                    StrategyDecision(
+                        MORE_DATA,
+                        self.hypothesis(world, weakness, MORE_DATA, change),
+                        replace(parent, tokens=tokens),
+                        parent,
+                        last.experiment_id,
+                        [*base, facts, "INFERRED : sur-apprentissage d'un échantillon trop petit"],
+                    )
+                )
+
+        def lower_lr(facts: str) -> None:
+            lr = parent.lr / 2
+            if lr >= self.min_lr:
+                change = f"diviser le taux d'apprentissage par deux ({parent.lr} -> {lr})"
+                out.append(
+                    StrategyDecision(
+                        LOWER_LR,
+                        self.hypothesis(world, weakness, LOWER_LR, change),
+                        replace(parent, lr=lr),
+                        parent,
+                        last.experiment_id,
+                        [*base, facts],
+                    )
+                )
+
+        if overfit:
+            more_data(
+                f"ESTABLISHED : {seen} jetons vus pour {parent.tokens} tirés ({passes:.1f} passages, "
+                f"seuil {self.max_passes}) ; domaines entraînés dégradés {sorted(trained & regressed)}"
+            )
         if cause == FailureCause.PROTECTED_REGRESSION.value:
-            regressed = {
-                d for d in (world.suite_domain(s) for s in analysis.get("regressed_suites", [])) if d
-            }
-            trained = {d for d, w in parent.mix.items() if w > 0}
             if trained and trained <= regressed:
                 # Même les domaines ENTRAÎNÉS régressent : ce n'est pas un oubli par manque de
-                # diversité (augmenter leur part n'a pas de sens). Lecture INFERRED : échantillon
-                # trop petit ou pas d'apprentissage trop grand. Une modification à la fois : plus de
-                # données, puis lr.
+                # diversité (augmenter leur part n'a pas de sens). Une modification à la fois :
+                # plus de données, puis lr.
                 facts = f"domaines entraînés {sorted(trained)} eux-mêmes dégradés"
-                tokens = parent.tokens * 2
-                if tokens <= self.max_tokens:
-                    change = (
-                        f"doubler les données tirées ({parent.tokens} -> {tokens} tokens), même mélange"
-                    )
-                    out.append(
-                        StrategyDecision(
-                            MORE_DATA,
-                            self.hypothesis(world, weakness, MORE_DATA, change),
-                            replace(parent, tokens=tokens),
-                            parent,
-                            last.experiment_id,
-                            [*base, facts, "INFERRED : sur-apprentissage d'un échantillon trop petit"],
-                        )
-                    )
-                lr = parent.lr / 2
-                if lr >= self.min_lr:
-                    change = f"diviser le taux d'apprentissage par deux ({parent.lr} -> {lr})"
-                    out.append(
-                        StrategyDecision(
-                            LOWER_LR,
-                            self.hypothesis(world, weakness, LOWER_LR, change),
-                            replace(parent, lr=lr),
-                            parent,
-                            last.experiment_id,
-                            [*base, facts, "INFERRED : pas d'apprentissage trop grand pour un affinage"],
-                        )
-                    )
+                if not overfit:
+                    more_data(facts)
+                lower_lr(f"{facts} ; INFERRED : pas d'apprentissage trop grand pour un affinage")
             if regressed:
                 current = domain_share(parent.mix, regressed)
                 for level in self.protect_levels:
@@ -309,19 +333,7 @@ class StrategyPolicy:
                     )
                 )
         elif cause in (FailureCause.TARGET_REGRESSION.value, FailureCause.DIVERGED.value):
-            lr = parent.lr / 2
-            if lr >= self.min_lr:
-                change = f"diviser le taux d'apprentissage par deux ({parent.lr} -> {lr})"
-                out.append(
-                    StrategyDecision(
-                        LOWER_LR,
-                        self.hypothesis(world, weakness, LOWER_LR, change),
-                        replace(parent, lr=lr),
-                        parent,
-                        last.experiment_id,
-                        [*base, "la cible se dégradait ou l'entraînement divergeait : pas plus petit"],
-                    )
-                )
+            lower_lr("la cible se dégradait ou l'entraînement divergeait : pas plus petit")
         return out
 
     def _first_attempts(

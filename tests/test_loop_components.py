@@ -352,8 +352,11 @@ def _record(
     cause: str | None,
     promoted: bool = False,
     regressed: list[str] | None = None,
+    tokens_seen: int | None = None,
 ) -> None:
     journal.experiment(p.experiment_id, "planned", plan=p.to_dict())
+    if tokens_seen is not None:
+        journal.experiment(p.experiment_id, "executed", tokens_seen=tokens_seen)
     journal.experiment(
         p.experiment_id,
         "analyzed",
@@ -507,3 +510,34 @@ def test_policy_adapts_when_even_the_trained_domain_regresses(tmp_path: Path) ->
         {"field": "tokens", "from": 10_000, "to": 20_000}
     ]
     assert any("INFERRED" in line for line in second.rationale)
+
+
+def test_policy_adds_data_first_when_the_sample_was_reread_many_times(tmp_path: Path) -> None:
+    """Constat du run réel P2 : 819 200 jetons vus pour 60 000 tirés (13,7 passages) ; la cible
+    régressait et la politique ne proposait que de baisser le taux d'apprentissage."""
+    world = support.world()
+    obs = _observation(world)
+    policy = StrategyPolicy(finetune_steps=100, finetune_tokens=10_000, max_steps=400, max_tokens=40_000)
+
+    def after(tokens_seen: int, cause: str) -> StrategyDecision:
+        journal = ExperimentJournal(tmp_path / f"{tokens_seen}-{cause}.jsonl")
+        first = policy.decide(obs, world, journal, exhausted=set())
+        assert first is not None and first.baseline_recipe is not None
+        plan = ExperimentPlan(
+            world.fingerprint,
+            {"name": "c", "artifact": obs.champion.artifact},  # type: ignore[union-attr]
+            first.baseline_recipe,
+            first.recipe,
+            first.hypothesis,
+            Budget(400, 40_000, 60.0),
+        )
+        _record(journal, plan, cause, regressed=["heldout:apex_docs"], tokens_seen=tokens_seen)
+        decision = policy.decide(obs, world, journal, exhausted=set())
+        assert decision is not None
+        return decision
+
+    reread = after(137_000, "target_regression")  # 13,7 passages sur 10 000 jetons
+    assert reread.strategy == "more_data" and reread.recipe.tokens == 20_000
+    assert any(line.startswith("ESTABLISHED : 137000 jetons vus") for line in reread.rationale)
+    assert after(20_000, "target_regression").strategy == "lower_lr"  # 2 passages : pas de sur-lecture
+    assert after(137_000, "protected_regression").strategy == "more_data"

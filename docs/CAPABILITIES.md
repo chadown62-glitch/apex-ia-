@@ -224,6 +224,12 @@ Coût de réparation (plus bas = mieux ; IC 95 % du gain par bootstrap apparié 
 | exp-7963d440f401 | target_only code, cible `cap:code_repair:heldout` | 2,4425 ✗ | **0,8189 ✓ [0,037 ; 0,165]**, 10 -> 18 résolus | **0,8194 ✓** | 0,8095 ✓ | **REJECT** (BPB held-out / stdlib / validation régressent significativement) |
 | exp-3c4f314d3bc0 | protect_domains stdlib 25 % | 2,5073 ✗ | 0,8765 (n.s.) | 0,8542 | 0,8444 | **REJECT** (tous les domaines, même entraînés, régressent) -> cible épuisée |
 | exp-d73943865e0d | protect_domains, cible `heldout:stdlib`, rejeu 12,5 % code + **12,5 % solutions train** | 2,7028 ✗ | **0,8025 ✓ [0,037 ; 0,202]**, 10 -> 20 résolus | 0,9028 (n.s.) | **0,0222 ✓ [0,797 ; 0,940]** | **REJECT** (cible stdlib dégradée) |
+| exp-997941c0e6cd | lower_lr (1e-3 -> 5e-4) | 2,5758 ✗ | **0,7778 ✓**, 10 -> 21 résolus | 0,8750 (n.s.) | 0,0698 ✓ | **REJECT** (cible stdlib dégradée) |
+| exp-8d46d0a58a55 | lower_lr (5e-4 -> 2,5e-4) | 2,4975 ✗ | **0,7654 ✓ [0,086 ; 0,222]**, 10 -> 22 résolus | 0,8542 (n.s.) | 0,2159 ✓ | **REJECT** (cible stdlib dégradée) ; arrêt : plafond de 7 expériences |
+
+Coût mesuré (run 1, 4 cœurs CPU) : entraînement de 200 pas + mesure déclarée ≈ 100 s ; Judge (rejeu bit à
+bit + re-mesure des deux modèles, 864 exécutions sandbox de candidats par modèle) ≈ 300 s ; le Judge coûte
+environ 3 fois l'entraînement.
 
 Lecture (REAL EVIDENCE, mesures du Judge) :
 - **l'apprentissage de la réparation est réel et généralise** : entraîné sur du code source (jamais sur les
@@ -236,3 +242,13 @@ Lecture (REAL EVIDENCE, mesures du Judge) :
 - **aucune de ces améliorations n'a été promue** : chacune dégradait significativement la modélisation du
   texte (suites protégées). Le Judge refuse d'échanger une compétence contre une autre ; c'est le
   comportement voulu, et c'est aussi la limite actuelle d'un modèle de 0,7 M paramètres.
+
+**Défaut réel trouvé par ce run (cycle 3) et corrigé** : les affinages tiraient 60 000 jetons mais en lisaient
+819 200 (200 pas) : **13,7 passages** sur le même échantillon, d'où la régression des domaines ENTRAÎNÉS
+eux-mêmes. La politique ne proposait pourtant que de baisser le taux d'apprentissage, pour deux raisons :
+`more_data` n'était envisagé que pour une régression PROTÉGÉE (pas pour une régression de la cible), et il
+exigeait que tous les domaines entraînés régressent, ce qui est impossible quand le mélange contient
+`code_tasks` (domaine sans suite d'évaluation). Correction (`strategy.py`) : le nombre de passages
+(jetons vus / jetons tirés, fait ÉTABLI du journal) au-delà de `max_passes` = 4 avec un domaine entraîné
+dégradé déclenche d'abord `more_data` ; les domaines sans suite ne comptent plus. Test :
+`test_policy_adds_data_first_when_the_sample_was_reread_many_times` ; deux mutants dédiés.
