@@ -1745,6 +1745,36 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "toute la chaîne (ancrage externe : git). "
               "Voir docs/CONTINUOUS_IMPROVEMENT.md.",
     ),
+    Abstraction(
+        "KnowledgeAcquisitionAgent",
+        "trouver, vérifier, nettoyer, structurer et tracer des connaissances externes "
+        "(acquisition -> curation ACCEPT/REJECT/QUARANTINE/REVIEW -> store)",
+        33, 33,
+        ImplStatus.STUB, "aucune acquisition : le dataset n'est construit qu'à partir de candidats fournis",
+        module="apex.knowledge.pipeline",
+        notes="STUB et non IMPLEMENTED délibérément : pipeline réel et observable "
+              "(une trace par étape), licences, injection, doublons MinHash, "
+              "contradictions, store chaîné, exports vers l'entraînement et la "
+              "mémoire — mais filtres heuristiques, aucune découverte web réelle "
+              "(`NullResearchProvider` seul backend, politique réseau), OCR/vision/"
+              "vidéo BLOCKED. Sources réellement exercées : docstrings de la "
+              "bibliothèque standard Python (PSF-2.0) et documentation du dépôt. "
+              "Le modèle natif (`apex.neural.model`) et son moteur d'entraînement "
+              "(`apex.neural.training`) ne sont PAS déclarés ici : ils exigent "
+              "l'extra optionnel `neural` (PyTorch) et ce registre doit rester "
+              "vrai sur une machine qui ne l'installe pas. Voir docs/NATIVE_INTELLIGENCE.md.",
+    ),
+    Abstraction(
+        "TrainingDatasetBuilder",
+        "candidats -> dataset train / validation / held-out, porte de provenance, fuite, empreinte",
+        33, 33,
+        ImplStatus.STUB, "aucun entraînement : sans dataset valide, rien n'est entraîné",
+        module="apex.neural.dataset",
+        notes="STUB : découpage par source, dédoublonnage exact, contrôle de fuite "
+              "par document (8-grammes) et par source, décontamination explicite et "
+              "tracée ; pas encore de quasi-doublons inter-splits au-delà des "
+              "8-grammes ni de pondération de diversité. Sans dépendance PyTorch.",
+    ),
 )
 
 

@@ -116,6 +116,11 @@ class ByteBPETokenizer:
             ids.append(self.eos_id)
         return ids
 
+    def token_bytes(self, token_id: int) -> bytes:
+        """Octets représentés par un token (vide pour un token spécial) —
+        base des mesures en bits par octet, indépendantes du tokenizer."""
+        return b"" if token_id in self._special.values() else self._bytes[token_id]
+
     def decode(self, ids: Iterable[int]) -> str:
         special_ids = set(self._special.values())
         data = b"".join(self._bytes[i] for i in ids if i not in special_ids)

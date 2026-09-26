@@ -14,6 +14,8 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
+_ITEM_NAMESPACE = uuid.UUID("5b0e8a3c-6f1d-4c1e-9a57-a9e3c0d4b2f1")
+
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
@@ -184,7 +186,11 @@ class KnowledgeItem:
 
     @classmethod
     def new(cls, text: str | None, provenance: Provenance) -> KnowledgeItem:
-        return cls(item_id=str(uuid.uuid4()), stage=Stage.RAW, text=text, provenance=provenance)
+        """Identifiant adressé par le contenu : même source et mêmes octets ->
+        même identifiant d'une exécution à l'autre (benchmarks comparables)."""
+        key = f"{provenance.source_id}|{provenance.source_hash or 'unacquired'}"
+        item_id = str(uuid.uuid5(_ITEM_NAMESPACE, key))
+        return cls(item_id=item_id, stage=Stage.RAW, text=text, provenance=provenance)
 
     def record(self, stage: str, outcome: str, detail: str, **metrics: float) -> KnowledgeItem:
         return replace(self, history=(*self.history, StageRecord(stage, outcome, detail, dict(metrics))))

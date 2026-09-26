@@ -69,6 +69,11 @@ CAPABILITIES: dict[str, CapabilityEntry] = {
         adapter_class="ModelRoutingAdapter",
         judge_id="ci-judge:model-routing",
     ),
+    "knowledge_curation": CapabilityEntry(
+        module="apex.improvement.capabilities.knowledge_curation",
+        adapter_class="KnowledgeCurationAdapter",
+        judge_id="ci-judge:knowledge-curation",
+    ),
 }
 
 

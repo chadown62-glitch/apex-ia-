@@ -93,6 +93,7 @@ class TrainingDataset:
     dropped_duplicates: tuple[str, ...] = ()
     leakage_ratio: float = 0.0
     manifest: dict[str, list[str]] = field(default_factory=dict)
+    decontaminated: tuple[str, ...] = ()
 
     def texts(self, split: Split) -> list[str]:
         return [c.text for c in self.splits[split]]
@@ -140,7 +141,13 @@ def build_dataset(
     test_ratio: float = 0.1,
     salt: str = "apex",
     max_overlap: float = 0.1,
+    decontaminate: bool = False,
 ) -> TrainingDataset:
+    """`decontaminate=False` (défaut) : toute fuite vers le held-out lève
+    `LeakageError`. `decontaminate=True` : les fragments train/validation qui
+    partagent des n-grammes avec un document de test fuyant sont RETIRÉS (le
+    test reste intact, donc représentatif) et listés dans `decontaminated` ;
+    le contrôle de fuite est ensuite refait et reste bloquant."""
     for candidate in candidates:
         problems = candidate.problems()
         if problems:
@@ -169,6 +176,22 @@ def build_dataset(
     assignment.update(dict.fromkeys(sources[n_test : n_test + n_val], Split.VALIDATION))
     assignment.update(dict.fromkeys(sources[n_test + n_val :], Split.TRAIN))
     splits = {split: tuple(c for c in unique if assignment[c.source_id] is split) for split in Split}
+    removed: list[str] = []
+    if decontaminate:
+        train_side = [c for s in (Split.TRAIN, Split.VALIDATION) for c in splits[s]]
+        grams = {c.candidate_id: _ngrams(c.text, 8) for c in train_side}
+        union: set[tuple[str, ...]] = set().union(*grams.values())
+        for test_candidate in splits[Split.TEST]:
+            test_grams = _ngrams(test_candidate.text, 8)
+            shared = test_grams & union
+            if test_grams and len(shared) / len(test_grams) > max_overlap:
+                removed.extend(cid for cid, g in grams.items() if g & shared and cid not in removed)
+        if removed:
+            gone = set(removed)
+            splits = {
+                split: tuple(c for c in cs if c.candidate_id not in gone) if split is not Split.TEST else cs
+                for split, cs in splits.items()
+            }
     digest = hashlib.sha256(
         json.dumps(
             [[split.value, c.candidate_id, c.content_hash] for split in Split for c in splits[split]],
@@ -176,6 +199,6 @@ def build_dataset(
         ).encode()
     ).hexdigest()
     manifest = {split.value: sorted({c.source_id for c in splits[split]}) for split in Split}
-    dataset = TrainingDataset(splits, "sha256:" + digest, tuple(dropped), 0.0, manifest)
+    dataset = TrainingDataset(splits, "sha256:" + digest, tuple(dropped), 0.0, manifest, tuple(removed))
     ratio = verify_no_leakage(dataset, max_overlap=max_overlap)
-    return TrainingDataset(splits, dataset.fingerprint, tuple(dropped), ratio, manifest)
+    return TrainingDataset(splits, dataset.fingerprint, tuple(dropped), ratio, manifest, tuple(removed))

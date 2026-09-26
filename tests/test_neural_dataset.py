@@ -164,3 +164,27 @@ def test_overlap_ratio_values() -> None:
 def test_too_few_sources_is_an_error_not_a_silent_empty_split() -> None:
     with pytest.raises(ProvenanceError, match="trop peu"):
         build_dataset([candidate(0), candidate(1)])
+
+
+def test_decontamination_removes_contaminating_train_fragments_and_keeps_test_intact() -> None:
+    items = corpus(20, 3)
+    strict = build_dataset(items)
+    victim = strict.splits[Split.TEST][0]
+    # Une autre source (côté train) recopie le document de test : cas réel
+    # observé (docstrings de gzip.open et lzma.open quasi identiques).
+    copier = candidate(0, 0, candidate_id="copier", source_id="src-copier", text=victim.text + " copied")
+    source_split = {
+        s: {c.source_id for c in cs}
+        for s, cs in build_dataset([*items, copier], max_overlap=1.01, decontaminate=False).splits.items()
+    }
+    assert "src-copier" not in source_split[Split.TEST]
+    with pytest.raises(LeakageError):
+        build_dataset([*items, copier])
+    cleaned = build_dataset([*items, copier], decontaminate=True)
+    assert cleaned.decontaminated == ("copier",)
+    assert [c.candidate_id for c in cleaned.splits[Split.TEST]] == [
+        c.candidate_id for c in build_dataset([*items, copier], max_overlap=1.01).splits[Split.TEST]
+    ]
+    assert all(c.candidate_id != "copier" for s in Split for c in cleaned.splits[s])
+    assert cleaned.leakage_ratio <= 0.1
+    assert build_dataset(items, decontaminate=True).decontaminated == ()
