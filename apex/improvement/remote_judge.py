@@ -116,6 +116,20 @@ class SubprocessJudge:
     def judge_id(self) -> str:
         return self._judge_id
 
+    def _pinning_facts(self, pinned_source: str) -> dict[str, str]:
+        """Faits vérifiés, jamais une affirmation d'antériorité non contrôlée."""
+        working = self._repo_root / self._module_path
+        differs = not working.exists() or working.read_text(encoding="utf-8") != pinned_source
+        ancestor = subprocess.run(  # noqa: S603 - argv en liste, référence déjà validée
+            ["git", "merge-base", "--is-ancestor", self._judge_ref or "", "HEAD"],  # noqa: S607
+            cwd=self._repo_root, capture_output=True, check=False,
+        )
+        relation = {0: "oui", 1: "non"}.get(ancestor.returncode, "inconnu")
+        return {
+            "judge_ref_is_ancestor_of_head": relation,
+            "judge_definition_differs_from_working_tree": "oui" if differs else "non",
+        }
+
     def assess(
         self,
         kind: CycleKind,
@@ -126,15 +140,9 @@ class SubprocessJudge:
         version: str,
         cycle_id: str,
     ) -> JudgeAssessment:
-        provenance = {
-            "mode": "subprocess",
-            "judge_ref": self._judge_ref or "arbre de travail",
-            "independence": (
-                f"sondes lues à la révision {self._judge_ref}, antérieure au candidat"
-                if self._judge_ref
-                else "processus séparé, mais sondes lues dans l'arbre de travail du candidat"
-            ),
-        }
+        provenance = {"mode": "subprocess", "judge_ref": self._judge_ref or "arbre de travail"}
+        if self._judge_ref is None:
+            provenance["independence"] = "processus séparé ; sondes de l'arbre de travail du candidat"
         command = [
             self._python,
             "-m",
@@ -166,6 +174,7 @@ class SubprocessJudge:
                 module_file = Path(tmp) / "pinned_judge.py"
                 module_file.write_text(source, encoding="utf-8")
                 provenance["judge_source_sha256"] = hashlib.sha256(source.encode("utf-8")).hexdigest()
+                provenance.update(self._pinning_facts(source))
                 command += ["--judge-module", str(module_file)]
             try:
                 completed = subprocess.run(  # noqa: S603 - argv en liste, aucun shell

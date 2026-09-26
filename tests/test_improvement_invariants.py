@@ -388,6 +388,9 @@ class TestSubprocessJudge(_Fixture):
         import hashlib
 
         self.assertEqual(provenance["judge_source_sha256"], hashlib.sha256(source.encode()).hexdigest())
+        self.assertEqual(provenance["judge_definition_differs_from_working_tree"], "oui")
+        self.assertEqual(provenance["judge_ref_is_ancestor_of_head"], "oui")
+        self.assertNotIn("independence", provenance)
 
     def test_an_option_like_judge_ref_is_refused(self) -> None:
         assessment = self._assess(self._judge(sys.executable, judge_ref="--output=/tmp/x"))
