@@ -76,6 +76,16 @@ SPEC = CapabilitySpec(
         MetricSpec(
             "abandons_failing_for_untried", "référence en échec, autre jamais essayé -> l'autre", True
         ),
+        MetricSpec(
+            "strong_record_beats_single_success",
+            "9 succès confirmés sur 10 contre 1 succès isolé -> le modèle au dossier solide",
+            True,
+        ),
+        MetricSpec(
+            "dead_reference_abandoned",
+            "référence injoignable, autre modèle jamais essayé -> l'autre",
+            True,
+        ),
     ),
     success_criteria=(
         "une expérience jugée change le choix du modèle suivant",
@@ -313,6 +323,16 @@ def _alpha_wrong_beta_untried(env: _Env) -> None:
     env.history(ALPHA, WRONG)
 
 
+def _alpha_strong_record_beta_single_success(env: _Env) -> None:
+    env.history(ALPHA, CORRECT, runs=9)
+    env.history(ALPHA, WRONG, runs=1)
+    env.history(BETA, CORRECT, runs=1)
+
+
+def _alpha_dead_beta_untried(env: _Env) -> None:
+    env.history(ALPHA, DEAD)
+
+
 SCENARIOS: dict[str, tuple[Callable[[_Env], None], str]] = {
     "picks_proven_model": (_alpha_wrong_beta_correct, BETA),
     "keeps_proven_reference": (_alpha_correct_beta_wrong, ALPHA),
@@ -321,6 +341,8 @@ SCENARIOS: dict[str, tuple[Callable[[_Env], None], str]] = {
     "infra_not_blamed_on_model": (_alpha_infra_outages, ALPHA),
     "unconfirmed_success_not_credited": (_alpha_lucky_beta_correct, BETA),
     "abandons_failing_for_untried": (_alpha_wrong_beta_untried, BETA),
+    "strong_record_beats_single_success": (_alpha_strong_record_beta_single_success, ALPHA),
+    "dead_reference_abandoned": (_alpha_dead_beta_untried, BETA),
 }
 
 
@@ -477,6 +499,27 @@ def build_judge(judge_id: str = "ci-judge:model-routing") -> ExternalJudge:
                 _scenario_probe(
                     "abandons_failing_for_untried",
                     "un taux de succès nul vaut autant qu'une absence de données",
+                ),
+            ),
+            _probe(
+                "strong_record_beats_single_success",
+                frozenset({_A}),
+                "un succès isolé l'emporte sur un dossier de 9 succès confirmés sur 10",
+                "tenir compte de la taille de l'échantillon (estimation lissée)",
+                _scenario_probe(
+                    "strong_record_beats_single_success",
+                    "le taux brut 1/1 = 100 % surclasse 9/10 = 90 % : un seul succès détourne le routage",
+                ),
+            ),
+            _probe(
+                "dead_reference_abandoned",
+                frozenset({_I}),
+                "une référence injoignable reste appelée tant qu'aucun autre modèle n'a d'historique",
+                "attribuer l'échec de génération au modèle demandé ; classer un modèle en échec sous un "
+                "modèle jamais essayé",
+                _scenario_probe(
+                    "dead_reference_abandoned",
+                    "échec de génération sans model_id, et 0 % d'échec vaut autant qu'aucune donnée",
                 ),
             ),
         ),
