@@ -635,6 +635,17 @@ class ExperienceRepository:
         )
         return list(self._session.scalars(stmt))
 
+    def list_by_model_ids(self, model_ids: list[str], limit: int = 500) -> list[ExperienceRow]:
+        if not model_ids:
+            return []
+        stmt = (
+            select(ExperienceRow)
+            .where(ExperienceRow.model_id.in_(model_ids))
+            .order_by(ExperienceRow.created_at.desc(), ExperienceRow.id)
+            .limit(limit)
+        )
+        return list(self._session.scalars(stmt))
+
     def list_by_task_and_generation(
         self, task_id: str, generation_number: int, *, experiment_ref: str | None = None, limit: int = 200
     ) -> list[ExperienceRow]:

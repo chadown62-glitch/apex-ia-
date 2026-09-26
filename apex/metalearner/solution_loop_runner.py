@@ -3,9 +3,13 @@ aucun appelant hors tests — boucle dormante, constaté par le Continuous
 Improvement Engine).
 
 Compose UNIQUEMENT des services existants : `AgentRuntime`,
-`EvalRunnerService`, `ExperienceRepository`, la résolution rôle -> endpoint
-de `apex.models.registry`, et le pool local ACTIVE de la configuration.
-Aucune logique d'évaluation ni d'apprentissage n'est ajoutée ici."""
+`EvalRunnerService`, `ExperienceRepository`, la résolution rôle -> candidats
+de `apex.models.registry`, le routeur `apex.routing.router.select_model` et
+le pool local ACTIVE de la configuration.
+
+Le modèle est choisi par le routeur à partir des `Experience` jugées des
+exécutions précédentes (`apex.metalearner.model_performance`) : sans
+historique, le candidat de référence de la configuration reste choisi."""
 
 from __future__ import annotations
 
@@ -18,9 +22,13 @@ from apex.metalearner.adaptive_solution_loop import (
     AdaptiveLoopResult,
     run_adaptive_learning_loop,
 )
+from apex.metalearner.experience import ExperienceRepository
 from apex.metalearner.generated_solution_cycle import CandidateStrategy
+from apex.metalearner.model_performance import performance_from_experiences
 from apex.models.provider import ModelProvider
 from apex.models.registry import filter_by_role, resolve_candidates
+from apex.routing.model import RoutingDecision, RoutingRequest
+from apex.routing.router import select_model
 
 
 class SolutionLoopUnavailable(RuntimeError):
@@ -46,6 +54,24 @@ def resolve_endpoint(config: ApexConfig, role: str) -> ModelEndpoint:
         if candidate.endpoint is not None:
             return candidate.endpoint
     raise SolutionLoopUnavailable(f"aucun endpoint déclaré pour le rôle « {role} »")
+
+
+def choose_endpoint(
+    config: ApexConfig, role: str, experiences: ExperienceRepository
+) -> tuple[ModelEndpoint, RoutingDecision]:
+    """Candidats du rôle munis d'un endpoint, classés par le routeur avec le
+    signal de performance des expériences jugées de ces modèles."""
+    candidates = tuple(c for c in filter_by_role(resolve_candidates(config), role) if c.endpoint is not None)
+    if not candidates:
+        raise SolutionLoopUnavailable(f"aucun endpoint déclaré pour le rôle « {role} »")
+    served = [c.endpoint.served_model for c in candidates if c.endpoint is not None]
+    performance = performance_from_experiences(experiences.list_by_model_ids(served), candidates)
+    decision = select_model(
+        candidates, RoutingRequest(), performance=performance, scoring_policy=config.routing
+    )
+    if decision.selected is None or decision.selected.endpoint is None:
+        raise SolutionLoopUnavailable(f"aucun candidat éligible pour le rôle « {role} » : {decision.reason}")
+    return decision.selected.endpoint, decision
 
 
 def resolve_local_pool(config: ApexConfig) -> ComputePool:
@@ -79,15 +105,16 @@ def run_solution_loop(
 ) -> AdaptiveLoopResult:
     from apex.agents.runtime import AgentRuntime
     from apex.evalrunner.service import EvalRunnerService
-    from apex.metalearner.experience import ExperienceRepository
 
     runtime = AgentRuntime(session_factory)
+    experiences = ExperienceRepository(session_factory)
+    endpoint, _ = choose_endpoint(config, request.role, experiences)
     return run_adaptive_learning_loop(
         EvalRunnerService(session_factory, agent_runtime=runtime),
         runtime,
-        ExperienceRepository(session_factory),
+        experiences,
         task_id=request.task_id,
-        endpoint=resolve_endpoint(config, request.role),
+        endpoint=endpoint,
         pool=resolve_local_pool(config),
         initial_strategies=initial_strategies(request.base_temperature, request.candidates),
         config=AdaptiveLoopConfig(

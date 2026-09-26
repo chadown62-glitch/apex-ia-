@@ -205,6 +205,14 @@ class ExperienceRepository:
             rows = _DbExperienceRepository(session).list_by_task(task_id, limit=limit)
             return [Experience.from_row(row) for row in rows]
 
+    def list_by_model_ids(self, model_ids: list[str], limit: int = 500) -> list[Experience]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ExperienceRepository as _DbExperienceRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbExperienceRepository(session).list_by_model_ids(model_ids, limit=limit)
+            return [Experience.from_row(row) for row in rows]
+
     def list_by_task_and_generation(
         self, task_id: str, generation_number: int, *, experiment_ref: str | None = None, limit: int = 200
     ) -> list[Experience]:
