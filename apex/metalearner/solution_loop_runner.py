@@ -61,7 +61,9 @@ def choose_endpoint(
 ) -> tuple[ModelEndpoint, RoutingDecision]:
     """Candidats du rôle munis d'un endpoint, classés par le routeur avec le
     signal de performance des expériences jugées de ces modèles."""
-    candidates = tuple(c for c in filter_by_role(resolve_candidates(config), role) if c.endpoint is not None)
+    candidates = tuple(
+        c for c in filter_by_role(resolve_candidates(config), role) if c.endpoint is not None
+    )
     if not candidates:
         raise SolutionLoopUnavailable(f"aucun endpoint déclaré pour le rôle « {role} »")
     served = [c.endpoint.served_model for c in candidates if c.endpoint is not None]
@@ -70,7 +72,9 @@ def choose_endpoint(
         candidates, RoutingRequest(), performance=performance, scoring_policy=config.routing
     )
     if decision.selected is None or decision.selected.endpoint is None:
-        raise SolutionLoopUnavailable(f"aucun candidat éligible pour le rôle « {role} » : {decision.reason}")
+        raise SolutionLoopUnavailable(
+            f"aucun candidat éligible pour le rôle « {role} » : {decision.reason}"
+        )
     return decision.selected.endpoint, decision
 
 
