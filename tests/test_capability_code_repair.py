@@ -247,7 +247,9 @@ def test_world_freezes_the_capability_and_decontaminates_training(tmp_path: Path
     suite = next(iter(data["capabilities"]["code_repair"]["suites"].values()))
     suite["instances"][0]["expected"][0] = "'forged'"
     path.write_text(json.dumps(data))
-    with pytest.raises(WorldIntegrityError):
+    # Détecté par le benchmark LUI-MÊME (empreintes de suite), pas seulement par l'empreinte du
+    # monde : un attaquant qui réécrit aussi le champ « fingerprint » du monde reste arrêté.
+    with pytest.raises(WorldIntegrityError, match="benchmark de capacité altéré"):
         World.load(path)
 
 
