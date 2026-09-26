@@ -171,3 +171,25 @@ def test_benchmark_refuses_repeated_documents() -> None:
     with pytest.raises(ValueError, match="textes"):
         Benchmark("h", (("a", "one text"), ("b", "One  text")))
     assert len(Benchmark("h", (("a", "one text"), ("b", "other text"))).documents) == 2
+
+
+def test_a_positive_but_noisy_gain_is_never_accepted() -> None:
+    """Moyenne du gain positive, mais intervalle de confiance contenant 0."""
+    noisy = [v + (-0.30 if i % 2 else 0.29) for i, v in enumerate(BASE)]
+    assert sum(BASE) / len(BASE) > sum(noisy) / len(noisy)  # le candidat est « meilleur » en moyenne
+    verdict = NeuralJudge(primary="heldout").judge({"heldout": report(BASE)}, {"heldout": report(noisy)})
+    assert verdict.decision is JudgeDecision.INCONCLUSIVE
+
+
+def test_guard_tolerance_applies_even_without_significance() -> None:
+    """Régression de garde non significative (bruitée) mais au-delà de la
+    tolérance : refusée quand même."""
+    judge = NeuralJudge(primary="heldout", max_guard_regression_bpb=0.01)
+    noisy_loss = [v + (0.60 if i % 2 else -0.50) for i, v in enumerate(BASE)]  # +0.05 en moyenne
+    baseline = {"heldout": report(BASE), "guard": report(BASE, "guard")}
+    candidate = {"heldout": report([v - 1.0 for v in BASE]), "guard": report(noisy_loss, "guard")}
+    verdict = judge.judge(baseline, candidate)
+    guard = next(c for c in verdict.comparisons if c.suite == "guard")
+    assert guard.improvement.verdict.value == "not_significant"
+    assert verdict.decision is JudgeDecision.REJECT
+    assert any("tolérance" in r for r in verdict.reasons)
