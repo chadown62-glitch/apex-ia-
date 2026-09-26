@@ -99,12 +99,22 @@ def checkpoint_info(path: str | Path) -> CheckpointInfo:
 
 
 def load_checkpoint(
-    path: str | Path, *, batcher: TokenBatcher | None = None, pad_id: int | None = None
+    path: str | Path,
+    *,
+    batcher: TokenBatcher | None = None,
+    pad_id: int | None = None,
+    dataset_fingerprint: str | None = None,
 ) -> tuple[TrainingEngine, ByteBPETokenizer, CheckpointInfo]:
     """Reconstruit le moteur (modèle, optimiseur, scheduler) et, si fourni,
     restaure l'échantillonneur de lots : la suite de l'entraînement est celle
-    qu'aurait produite une exécution ininterrompue."""
+    qu'aurait produite une exécution ininterrompue. Avec `dataset_fingerprint`,
+    une reprise sur un autre dataset que celui du checkpoint est refusée."""
     payload = _read(path)
+    if dataset_fingerprint is not None and payload["dataset_fingerprint"] != dataset_fingerprint:
+        raise ValueError(
+            f"checkpoint entraîné sur le dataset {payload['dataset_fingerprint']}, "
+            f"reprise demandée sur {dataset_fingerprint} : refusée"
+        )
     model = ApexLM(ModelConfig.from_dict(payload["model_config"]))
     engine = TrainingEngine(model, TrainingConfig.from_dict(payload["training_config"]), pad_id=pad_id)
     engine.load_state_dict(payload["engine"])

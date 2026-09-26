@@ -336,7 +336,7 @@ def run_experiment(
     corrupt = torch.tensor(train_tokens)[
         torch.randperm(len(train_tokens), generator=torch.Generator().manual_seed(1))
     ]
-    engine_v1, _, info_v1 = load_checkpoint(out_dir / "v1.pt")
+    engine_v1, _, info_v1 = load_checkpoint(out_dir / "v1.pt", dataset_fingerprint=dataset.fingerprint)
     corrupt_batcher = TokenBatcher(
         corrupt.tolist(), window=config.context_length, batch_size=config.batch_size, seed=config.seed + 1
     )

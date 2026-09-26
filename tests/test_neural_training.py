@@ -226,3 +226,48 @@ class TestCheckpoints(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Cycle CI 3 (native_learning) : reprise sur un autre dataset -------------------
+
+
+@SKIP
+class TestResumeDatasetGuard(unittest.TestCase):
+    def test_resume_on_another_dataset_is_refused(self) -> None:
+        import tempfile
+        from pathlib import Path
+
+        from apex.neural.checkpoint import load_checkpoint, save_checkpoint
+        from apex.neural.config import ModelConfig, TrainingConfig
+        from apex.neural.model import ApexLM
+        from apex.neural.tokenizer import ByteBPETokenizer
+        from apex.neural.training import TrainingEngine
+
+        tokenizer = ByteBPETokenizer.train(["some training text for the guard"], 270)
+        model = ApexLM(
+            ModelConfig(
+                vocab_size=tokenizer.vocab_size,
+                hidden_size=16,
+                num_layers=1,
+                num_heads=2,
+                intermediate_size=32,
+                context_length=8,
+            )
+        )
+        engine = TrainingEngine(model, TrainingConfig(max_steps=1, batch_size=1))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "c.pt"
+            save_checkpoint(
+                path,
+                engine,
+                tokenizer=tokenizer,
+                batcher=None,
+                dataset_fingerprint="sha256:aaa",
+                dataset_provenance={},
+                dataset_tokens=1,
+            )
+            with self.assertRaisesRegex(ValueError, "refusée"):
+                load_checkpoint(path, dataset_fingerprint="sha256:bbb")
+            _, _, info = load_checkpoint(path, dataset_fingerprint="sha256:aaa")
+            self.assertEqual(info.dataset_fingerprint, "sha256:aaa")
+            load_checkpoint(path)  # sans attente déclarée : comportement inchangé
