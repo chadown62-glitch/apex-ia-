@@ -195,6 +195,7 @@ def fresh_eval(args: argparse.Namespace) -> int:
     """Tâches écrites APRÈS le gel du monde : l'initialisation contre le champion en service,
     par exécution sandbox, bootstrap apparié par fonction (mêmes outils que le Judge)."""
     from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
+    from apex.capabilities.code_repair.benchmark import RepairSuite
     from apex.capabilities.code_repair.corpus import ALL
     from apex.capabilities.code_repair.fresh import FRESH_SUITE, build_fresh_suite, fresh_contamination
     from apex.capabilities.code_repair.solver import solve_suite, suite_report
@@ -209,10 +210,14 @@ def fresh_eval(args: argparse.Namespace) -> int:
         print("aucun champion au registre", file=sys.stderr)
         return 2
     provider = sandbox_provider()
-    suite = build_fresh_suite(provider)
+    built = build_fresh_suite(provider)
     contamination = fresh_contamination(
         [t for split in Split for t in world.dataset.texts(split)], [f.source for f in ALL]
     )
+    # Une tâche qui partage une séquence de code avec un texte du monde n'est pas « fraîche » :
+    # elle est retirée de l'évaluation (et listée), jamais comptée.
+    leaked = set(contamination["shared_12gram_with_world"])
+    suite = RepairSuite(built.name, built.split, tuple(i for i in built.instances if i.fid not in leaked))
     store = LocalFilesystemArtifactStore(root=str(args.workdir / "artifacts"))
     models = {
         "init": initial_model(world, world.spec.seed),
@@ -233,6 +238,7 @@ def fresh_eval(args: argparse.Namespace) -> int:
                 "functions": len(suite.functions),
                 "bugs": len(suite.instances),
                 "contamination": contamination,
+                "excluded_as_contaminated": sorted(leaked),
                 "models": {name: report.summary() for name, report in reports.items()},
                 "comparison": [c.to_dict() for c in verdict.comparisons],
             },

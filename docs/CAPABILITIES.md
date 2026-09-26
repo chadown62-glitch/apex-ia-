@@ -252,3 +252,94 @@ exigeait que tous les domaines entraînés régressent, ce qui est impossible qu
 (jetons vus / jetons tirés, fait ÉTABLI du journal) au-delà de `max_passes` = 4 avec un domaine entraîné
 dégradé déclenche d'abord `more_data` ; les domaines sans suite ne comptent plus. Test :
 `test_policy_adds_data_first_when_the_sample_was_reread_many_times` ; deux mutants dédiés.
+
+## 10. E2E final indépendant (monde reconstruit `sha256:cb9313a0e09d…`, code final)
+
+Monde reconstruit de zéro avec le code final (le contrat est dans l'empreinte) : **même benchmark, même
+empreinte `sha256:61e18a19a307…`** (1 144 mutants, 288 bugs) — la construction est reproductible. Boucle
+autonome : `apex_autonomous_loop.py run --bootstrap stdlib=1.0 --max-total-experiments 10` ; aucune
+expérience choisie à la main.
+
+| # | expérience | stratégie (choisie par la boucle) | coût held-out (résolus /81) | BPB held-out | apprentissage (Judge) | décision |
+|---|---|---|---|---|---|---|
+| 1 | exp-d97d44598669 | bootstrap stdlib | 0,9465 -> 0,9547 (6 -> 5) | 3,873 -> 3,321 ✓ | NONE | REJECT (transfert au-delà de la tolérance) |
+| 2 | exp-2f6ed7cd8e6a | protect_domains code 25 % | 0,9465 -> 0,9177 n.s. (6 -> 10) | -> 2,427 ✓ | NONE ¹ | **ACCEPT, promu** |
+| 3 | exp-85f21fc0f858 | target_only code (cible `cap:code_repair:heldout`) | 0,9177 -> **0,8189 ✓** (10 -> 18) | 2,427 -> 2,443 ✗ | GENERALIZATION + TRANSFER | **REJECT** : régression protégée |
+| 4 | exp-552a21663a76 | protect_domains stdlib 25 % | 0,9177 -> 0,8765 n.s. | -> 2,507 ✗ | NONE | **REJECT** : tous les domaines ENTRAÎNÉS régressent |
+| 5 | exp-17f26b37ea36 | **more_data** 60 k -> 120 k jetons ² | 0,9177 -> **0,8518 ✓ [0,008 ; 0,132]** (10 -> 18) | 2,427 -> **2,272 ✓** | **GENERALIZATION** (aucune solution de tâche vue) | **ACCEPT, promu** |
+| 6 | exp-f46576ddfb7b | protect_domains (rejeu avec solutions train) | 0,8518 -> 0,7695 n.s. | -> 2,572 ✗ | MEMORIZATION (train 0,838 -> 0,019) | REJECT |
+| 7 | exp-d3be6116e7f4 | more_data 60 k -> 120 k | 0,8518 -> **0,7284 ✓** (18 -> 26) | -> 2,353 ✗ | GENERALIZATION + MEMORIZATION ¹ | REJECT : régression protégée |
+| 8 | exp-e4f2b01f8d4f | **more_data** 120 k -> 240 k | 0,8518 -> **0,7490 ✓ [0,025 ; 0,185]** (18 -> 24) | 2,272 -> **2,151 ✓** | GENERALIZATION + MEMORIZATION ¹ | **ACCEPT, promu (champion final)** |
+| 9 | exp-ae29866c326e | more_steps 200 -> 400 pas | 0,7490 -> 0,7613 n.s. | 2,151 -> 2,901 ✗ | NONE ; transfert régresse significativement | REJECT (27 passages : sur-apprentissage) |
+| 10 | exp-4c6d35505f66 | more_data | 0,7490 -> 0,6996 n.s. (24 -> 30) | -> 2,480 ✗ | MEMORIZATION (train seul) | REJECT ; arrêt : plafond de 10 expériences |
+| D | exp-4fa6477d2929 | **dirigée** : `code_tasks` seul (question de l'opérateur) | 0,7490 -> 0,7942 n.s. (24 -> 19) | 2,151 -> 3,503 ✗ | NONE | REJECT : mémoriser les solutions ne généralise pas |
+
+¹ Étiquettes recalculées avec la règle finale (la boucle tournait avec la version précédente de
+`classify_learning`) ; fonction déterministe des comparaisons et des documents d'entraînement journalisés.
+² Justification consignée par la boucle : « ESTABLISHED : 819200 jetons vus pour 60000 tirés (13.7 passages,
+seuil 4.0) ; domaines entraînés dégradés ['code', 'stdlib'] » puis « INFERRED : sur-apprentissage d'un
+échantillon trop petit ».
+
+**Chaîne démontrée (REAL EVIDENCE)** : baseline (init 0,9465, 6/81) -> faiblesse (coût held-out > objectif
+0,25) -> hypothèse pré-enregistrée sur `cap:code_repair:heldout` -> REJECT (#3) -> analyse ÉTABLIE
+(régression protégée) -> nouvelle stratégie (#4) -> REJECT -> analyse ÉTABLIE (13,7 passages) -> nouvelle
+stratégie `more_data` (#5) -> **ACCEPT -> PROMOTION** sur la capacité, avec une amélioration de la
+modélisation du texte au lieu d'un échange compétence contre compétence ; puis une seconde promotion (#8).
+
+**Reproductibilité** : l'expérience #3 donne exactement les mêmes valeurs que exp-7963d440f401 du run 1
+(0,9177 -> 0,8189, mêmes intervalles, mêmes tâches gagnées) sur un monde reconstruit séparément.
+
+### Tâches fraîches (écrites après le gel, jamais dans aucun monde)
+
+`fresh-eval` : 14 fonctions, 42 bugs construits par exécution ; contrôle de contamination : `selection_sort`
+partage une séquence de 12 jetons avec la solution train `insertion_sort` (en-tête
+`(values): items = list(values) for i …`) -> **exclue automatiquement**. Sur les 13 fonctions / 39 bugs
+restants (similarité maximale au corpus 0,571) :
+
+| modèle | coût | bugs réparés |
+|---|---|---|
+| initialisation | 0,889 | 15,4 % |
+| champion exp-e4f2b01f8d4f | **0,744** | **30,8 %** |
+| gain (bootstrap apparié par fonction) | IC 95 % [0,026 ; 0,291], **significatif** | |
+
+### Mesures de performance (4 cœurs CPU, pas de GPU)
+
+| mesure | valeur |
+|---|---|
+| modèle | 724 864 paramètres, vocabulaire 1 024, contexte 256 |
+| mémoire de pointe du processus de boucle | 1,05 Go RSS (échantillonnée toutes les 2 s) |
+| durée totale de l'E2E (10 expériences) | 71 min (21:53 -> 23:04 UTC) ; 2 800 pas d'entraînement |
+| entraînement + mesure déclarée, par expérience | ≈ 100 s (200 pas) ; ≈ 139 s (400 pas) |
+| Judge, par expérience | ≈ 290–330 s (rejeu bit à bit + re-mesure des deux modèles) |
+| exécutions sandbox de candidats par mesure de capacité | 864 (288 tâches × 3 tentatives au plus) |
+| évaluation des tâches fraîches (2 modèles, construction comprise) | 35 s |
+| amélioration vs baseline | coût held-out 0,9465 -> 0,7490 (−21 %), tâches résolues 6 -> 24 / 81 ; tâches fraîches 15 % -> 31 % |
+
+## 11. Limites
+
+**Démontré (REAL EVIDENCE)** : apprentissage réel de la réparation de code par un modèle natif entraîné sur
+du code source réel, jugé par exécution sandbox ; généralisation à des fonctions jamais vues (held-out,
+famille parsing incluse) et à des tâches écrites après le gel ; transfert vers la famille sécurité
+(expérience #3, non promue) ; mémorisation mesurée et distinguée ; boucle autonome REJECT -> analyse ->
+nouvelle stratégie -> ACCEPT -> promotion ; expérience dirigée ; reproductibilité inter-mondes.
+
+**Testé synthétiquement seulement (SYNTHETICALLY TESTED)** : les attaques du §7 (fraude de candidat, sortie
+forgée, métrique forgée, entraînement non déclaré sur le held-out) sont des tests d'attaque sur le vrai
+harness et le vrai Judge, pas des incidents observés en production.
+
+**Implémenté, non démontré** : aucun composant P2 n'est dans cet état (les classes non exercées par
+l'E2E ont des tests réels : refus d'une expérience dirigée sans faiblesse, plafonds).
+
+**Limites connues** :
+- espace de sortie fermé (éditions d'un jeton) ; pas de génération libre, pas de bugs multi-lignes ;
+- le transfert vers la sécurité n'est PAS acquis par le champion promu (#8 : 0,882 -> 0,826 n.s.) ;
+- coût held-out final 0,749 : loin de l'objectif 0,25 du contrat ; 24/81 bugs réparés ;
+- modèle de 0,7 M paramètres : chaque gain de compétence menace la modélisation du texte (la plupart des
+  rejets) ;
+- 27 fonctions held-out, 13 fraîches : les intervalles restent larges ;
+- `explication` d'une vulnérabilité = premier test en échec (fait mesuré), jamais un texte généré.
+
+**Bloqué par l'environnement** : aucun GPU ; les résultats sont ceux d'un sandbox Linux (namespaces) de ce
+conteneur, PAS une validation de la machine de l'utilisateur.
+
+**Hors périmètre** : calcul distribué, business, workers, grands modèles, cloud, UE5, interface commerciale.
