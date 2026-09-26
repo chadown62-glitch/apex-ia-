@@ -4,6 +4,7 @@ décide, et un doute mène à REVIEW ou QUARANTINE, jamais à ACCEPT."""
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import re
 import unicodedata
@@ -169,6 +170,58 @@ def normalize(text: str) -> str:
         if line or (out and out[-1]):
             out.append(line)
     return "\n".join(out).strip()
+
+
+#: Formats d'extraction traités comme du CODE : l'indentation porte la sémantique.
+CODE_FORMATS = frozenset({"x-python"})
+
+
+def normalize_code(text: str) -> str:
+    """Normalisation du CODE : NFC, caractères invisibles retirés, fins de
+    ligne unifiées, espaces de FIN de ligne retirés, au plus une ligne vide
+    consécutive. L'indentation et l'espacement interne sont CONSERVÉS
+    (`normalize` les écrase : un fichier Python en sortait aplati sur une
+    seule ligne logique, donc inutilisable pour apprendre du code)."""
+    text = unicodedata.normalize("NFC", text).translate(_INVISIBLE)
+    text = text.replace("\r\n", "\n").replace("\r", "\n").expandtabs(4)
+    out: list[str] = []
+    for line in (raw.rstrip() for raw in text.split("\n")):
+        if line or (out and out[-1]):
+            out.append(line)
+    return "\n".join(out).strip("\n")
+
+
+def code_quality(text: str) -> QualityScore:
+    """Qualité d'un fichier de CODE Python : il doit être syntaxiquement
+    valide (analyse réelle par `ast`), non trivial et non minifié. Les
+    heuristiques de prose (`quality`) ne s'appliquent pas : elles rejetaient
+    des modules valides de la bibliothèque standard comme « low_value »."""
+    lines = [line for line in text.split("\n") if line.strip()]
+    tokens = words(text)
+    reasons: list[str] = []
+    score = 1.0
+    try:
+        ast.parse(text)
+    except (SyntaxError, ValueError) as exc:
+        score = 0.0
+        reasons.append(f"code Python invalide : {exc.__class__.__name__}")
+    if len(lines) < 5:
+        score = min(score, 0.2)
+        reasons.append(f"{len(lines)} ligne(s) de code : trop court")
+    long_lines = sum(len(line) > 200 for line in lines)
+    if lines and long_lines / len(lines) > 0.2:
+        score = min(score, 0.3)
+        reasons.append("lignes très longues : code minifié ou généré")
+    chars = [c for c in text if not c.isspace()]
+    return QualityScore(
+        score=score,
+        n_words=len(tokens),
+        alpha_ratio=sum(c.isalpha() for c in chars) / len(chars) if chars else 0.0,
+        unique_line_ratio=len(set(lines)) / len(lines) if lines else 0.0,
+        mean_word_length=sum(map(len, tokens)) / len(tokens) if tokens else 0.0,
+        reasons=tuple(reasons),
+        lexical_diversity=len(set(tokens)) / len(tokens) if tokens else 0.0,
+    )
 
 
 def words(text: str) -> list[str]:

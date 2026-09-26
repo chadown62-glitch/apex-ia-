@@ -38,7 +38,7 @@ class ChampionState:
             "index": self.index,
             "artifact": self.artifact,
             "recipe": self.recipe,
-            "metrics": {n: round(r.bits_per_byte, 5) for n, r in self.reports.items()},
+            "metrics": {n: round(r.value, 5) for n, r in self.reports.items()},
             "integrity_ok": self.integrity_ok,
             "integrity_detail": self.integrity_detail,
         }
@@ -60,6 +60,34 @@ class Observation:
             "weaknesses": [w.to_dict() for w in self.weaknesses],
             "memory": self.memory,
         }
+
+
+def capability_weaknesses(world: World, reports: dict[str, EvalReport]) -> list[Weakness]:
+    """Une capacité est faible quand sa suite d'acceptation (held-out,
+    mesurée par exécution) dépasse l'objectif de son contrat."""
+    found = []
+    for capability, _ in world.capabilities.values():
+        contract = capability.contract
+        report = reports.get(contract.acceptance_suite)
+        if report is None or report.metric != contract.metric or report.value <= contract.target_value:
+            continue
+        found.append(
+            Weakness(
+                benchmark=contract.acceptance_suite,
+                domain=contract.training_domains[0],
+                value=round(report.value, 5),
+                reference=contract.target_value,
+                gap=round(report.value - contract.target_value, 5),
+                documents=len(report.scores),
+                evidence=(
+                    f"{contract.acceptance_suite} : {contract.metric} {report.value:.4f} (tâches résolues "
+                    f"{report.token_accuracy:.0%}) au-dessus de l'objectif {contract.target_value} "
+                    f"du contrat « {contract.name} » ({len(report.scores)} fonctions, exécution sandbox, "
+                    f"benchmark {report.benchmark_fingerprint[:19]})"
+                ),
+            )
+        )
+    return sorted(found, key=lambda w: w.gap, reverse=True)
 
 
 def find_weaknesses(world: World, reports: dict[str, EvalReport], *, min_gap: float) -> list[Weakness]:
@@ -119,7 +147,10 @@ def observe(
             integrity_ok=ok,
             integrity_detail=detail,
         )
-        weaknesses = find_weaknesses(world, reports, min_gap=min_gap)
+        # Les capacités déclarées du monde passent d'abord : ce sont ses cibles d'apprentissage.
+        weaknesses = capability_weaknesses(world, reports) + find_weaknesses(
+            world, reports, min_gap=min_gap
+        )
     records = journal.experiments().values()
     memory = {
         "experiments": len(records),
@@ -138,4 +169,4 @@ def observe(
         ],
         "unfinished": [r.experiment_id for r in records if not r.finished],
     }
-    return Observation(world.fingerprint, sorted(world.benchmarks), champion, weaknesses, memory)
+    return Observation(world.fingerprint, sorted(world.suite_names), champion, weaknesses, memory)

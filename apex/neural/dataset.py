@@ -147,13 +147,14 @@ def build_dataset(
     salt: str = "apex",
     max_overlap: float = 0.1,
     decontaminate: bool = False,
+    train_only: Sequence[TrainingCandidate] = (),
 ) -> TrainingDataset:
     """`decontaminate=False` (défaut) : toute fuite vers le held-out lève
     `LeakageError`. `decontaminate=True` : les fragments train/validation qui
     partagent des n-grammes avec un document de test fuyant sont RETIRÉS (le
     test reste intact, donc représentatif) et listés dans `decontaminated` ;
     le contrôle de fuite est ensuite refait et reste bloquant."""
-    for candidate in candidates:
+    for candidate in (*candidates, *train_only):
         problems = candidate.problems()
         if problems:
             raise ProvenanceError(f"{candidate.candidate_id} refusé : {'; '.join(problems)}")
@@ -181,6 +182,21 @@ def build_dataset(
     assignment.update(dict.fromkeys(sources[n_test : n_test + n_val], Split.VALIDATION))
     assignment.update(dict.fromkeys(sources[n_test + n_val :], Split.TRAIN))
     splits = {split: tuple(c for c in unique if assignment[c.source_id] is split) for split in Split}
+    # Documents réservés à l'entraînement (ex. solutions des tâches TRAIN d'une capacité) :
+    # jamais tirés au sort vers validation/test ; dédoublonnés et contrôlés comme les autres.
+    forced: list[TrainingCandidate] = []
+    for candidate in train_only:
+        if candidate.source_id in assignment:
+            raise ProvenanceError(
+                f"{candidate.source_id} : source à la fois tirée au sort et réservée au train"
+            )
+        key = _normalized(candidate.text)
+        if key in seen:
+            dropped.append(candidate.candidate_id)
+            continue
+        seen[key] = candidate.candidate_id
+        forced.append(candidate)
+    splits[Split.TRAIN] = (*splits[Split.TRAIN], *forced)
     removed: list[str] = []
     if decontaminate:
         train_side = [c for s in (Split.TRAIN, Split.VALIDATION) for c in splits[s]]

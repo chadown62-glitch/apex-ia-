@@ -27,7 +27,7 @@ from typing import Any
 
 from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
 from apex.neural.evaluation import EvalReport
-from apex.neural.loop.execute import StopRequested, execute, initial_model, measure, reports_to_dict
+from apex.neural.loop.execute import StopRequested, execute, initial_model, measure_text, reports_to_dict
 from apex.neural.loop.failure import INTEGRITY_CAUSES, analyze_exception, analyze_judgement
 from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord
 from apex.neural.loop.judge import JUDGE_ID, IndependentJudge, JudgeResult
@@ -120,7 +120,12 @@ class LoopController:
         self.log = log
         workdir.mkdir(parents=True, exist_ok=True)
         self.journal = ExperimentJournal(workdir / "journal.jsonl")
-        self.registry = ModelRegistry(workdir / "registry.jsonl", primary=PRIMARY)
+        self.registry = ModelRegistry(
+            workdir / "registry.jsonl",
+            primary=PRIMARY,
+            acceptance=world.acceptance_suites,
+            tolerances=world.metric_tolerances,
+        )
         self.store = LocalFilesystemArtifactStore(root=str(workdir / "artifacts"))
         self.judge = IndependentJudge(world, self.store)
         self.stop_file = workdir / "STOP"
@@ -299,7 +304,8 @@ class LoopController:
     def _init_weakness(self) -> Weakness:
         assert self.bootstrap is not None
         if self._init_cache is None:
-            init = measure(initial_model(self.world, self.bootstrap.seed), self.world)[PRIMARY]
+            # Seule la suite de texte est utile ici : pas d'exécution de capacité superflue.
+            init = measure_text(initial_model(self.world, self.bootstrap.seed), self.world)[PRIMARY]
             self._init_cache = Weakness(
                 benchmark=PRIMARY,
                 domain=None,
@@ -330,7 +336,7 @@ class LoopController:
             parent_experiment_id=decision.parent_experiment_id,
         )
         plan.validate(
-            set(self.world.benchmarks),
+            self.world.suite_names,
             max_modifications=self.limits.max_modifications,
             domains=set(self.world.spec.domains),
         )
@@ -448,6 +454,9 @@ class LoopController:
                 "judged",
                 result=verdict.to_dict(),
                 candidate_reports=reports_to_dict(verdict.candidate_reports),
+                # Mémoire des échecs par tâche : chaque tentative EXÉCUTÉE par le Judge (édition,
+                # tests passés, première cause d'échec), jamais les affirmations de l'exécuteur.
+                capability_details=verdict.candidate_details,
             )
             self.log(f"[{exp}] Judge : {verdict.decision}")
             from_event = "judged"
@@ -455,7 +464,12 @@ class LoopController:
         else:
             judged = self._judge_from_journal(record)
         if from_event == "judged":
-            analysis = analyze_judgement(plan, judged, guard_tolerance=self.judge.max_guard_regression_bpb)
+            analysis = analyze_judgement(
+                plan,
+                judged,
+                guard_tolerance=self.judge.max_guard_regression_bpb,
+                tolerances=self.world.metric_tolerances,
+            )
             self.journal.experiment(
                 exp,
                 "analyzed",
@@ -476,6 +490,8 @@ class LoopController:
             checks=result["checks"],
             comparisons=result["comparisons"],
             candidate_reports={n: EvalReport.from_dict(r) for n, r in judged["candidate_reports"].items()},
+            primary=result.get("primary", PRIMARY),
+            task_changes=result.get("task_changes", {}),
         )
 
     def _promote(self, plan: ExperimentPlan, *, record: ExperimentRecord, judged: JudgeResult) -> None:
@@ -501,6 +517,7 @@ class LoopController:
                 reports=judged.candidate_reports,
                 in_run_decision=judged.decision,
                 artifact=executed["artifact"],
+                primary=judged.primary,
                 metadata={
                     "experiment_id": exp,
                     "recipe": plan.recipe.to_dict(),
@@ -553,9 +570,8 @@ class LoopController:
                     "promoted": r.promoted,
                     "heldout_bpb": candidate.get(PRIMARY, {}).get("bits_per_byte"),
                     "target": r.plan.get("target_benchmark"),
-                    "target_bpb": candidate.get(r.plan.get("target_benchmark", ""), {}).get(
-                        "bits_per_byte"
-                    ),
+                    # valeur de la métrique de la cible (BPB d'un texte, coût d'une capacité)
+                    "target_value": candidate.get(r.plan.get("target_benchmark", ""), {}).get("value"),
                 }
             )
         return rows
@@ -567,8 +583,8 @@ class LoopController:
         à titre d'information, jamais retenu."""
         current = self.registry.current()
         promoted = [r for r in rows if r["promoted"]]
-        measured = [r for r in rows if r["target_bpb"] is not None and not r["promoted"]]
-        best_rejected = min(measured, key=lambda r: r["target_bpb"]) if measured else None
+        measured = [r for r in rows if r["target_value"] is not None and not r["promoted"]]
+        best_rejected = min(measured, key=lambda r: r["target_value"]) if measured else None
         return {
             "selected": promoted[-1]["experiment_id"]
             if promoted
@@ -579,7 +595,7 @@ class LoopController:
             "best_rejected": {
                 "experiment_id": best_rejected["experiment_id"],
                 "target": best_rejected["target"],  # les cibles peuvent différer d'une ligne à l'autre
-                "target_bpb": best_rejected["target_bpb"],
+                "target_value": best_rejected["target_value"],
                 "cause": best_rejected["cause"],
             }
             if best_rejected

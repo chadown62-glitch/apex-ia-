@@ -50,6 +50,21 @@ class WorldSpec:
     validation_ratio: float = 0.1
     test_ratio: float = 0.15
     seed: int = 0
+    #: Capacités apprenables du monde (apex.capabilities.registry) : leurs benchmarks gelés
+    #: deviennent des suites mesurées par le Judge et des cibles possibles de la boucle.
+    capabilities: tuple[str, ...] = ()
+    #: Domaines dont les documents vont TOUJOURS au split train (jamais tirés vers le test).
+    train_only_domains: tuple[str, ...] = ()
+
+    def identity(self) -> dict[str, Any]:
+        """Ce qui entre dans l'empreinte : les champs ajoutés pour les
+        capacités n'y figurent que s'ils sont utilisés (un monde antérieur
+        garde exactement la même empreinte)."""
+        data = asdict(self)
+        for key in ("capabilities", "train_only_domains"):
+            if not data[key]:
+                del data[key]
+        return data
 
     def model_config(self, vocab_size: int, *, dropout: float = 0.0) -> ModelConfig:
         return ModelConfig(
@@ -71,11 +86,45 @@ def _candidate_from_dict(d: dict[str, Any]) -> TrainingCandidate:
     return TrainingCandidate(**{**d, "evidence": tuple(d.get("evidence", ()))})
 
 
+#: Longueur des séquences de jetons de code comparées pour la décontamination.
+CODE_NGRAM = 12
+
+
+def _code_grams(text: str) -> set[tuple[str, ...]]:
+    from apex.capabilities.code_repair.benchmark import code_tokens, ngrams
+
+    return ngrams(code_tokens(text, normalize_names=False), CODE_NGRAM)
+
+
 class World:
-    def __init__(self, spec: WorldSpec, dataset: TrainingDataset, tokenizer: ByteBPETokenizer) -> None:
+    def __init__(
+        self,
+        spec: WorldSpec,
+        dataset: TrainingDataset,
+        tokenizer: ByteBPETokenizer,
+        *,
+        capability_data: dict[str, Any] | None = None,
+        capability_decontaminated: Sequence[str] = (),
+    ) -> None:
+        from apex.capabilities.registry import get_capability
+
         self.spec = spec
         self.dataset = dataset
         self.tokenizer = tokenizer
+        data = capability_data or {}
+        if set(data) != set(spec.capabilities):
+            raise WorldIntegrityError(
+                f"capacités déclarées {sorted(spec.capabilities)}, benchmarks fournis {sorted(data)}"
+            )
+        self.capabilities = {name: (get_capability(name), data[name]) for name in spec.capabilities}
+        self.capability_decontaminated = tuple(capability_decontaminated)
+        for name, (capability, bench) in self.capabilities.items():
+            longest = capability.longest_input(bench, tokenizer)
+            if longest > spec.context_length + 1:
+                raise WorldIntegrityError(
+                    f"capacité « {name} » : une entrée de {longest} jetons dépasse le contexte "
+                    f"({spec.context_length}) — le modèle ne pourrait pas la lire entière"
+                )
         for split in Split:
             for candidate in dataset.splits[split]:
                 if self.domain_of(candidate.source_id) is None:
@@ -85,16 +134,79 @@ class World:
     # -- construction --------------------------------------------------------
 
     @classmethod
-    def build(cls, spec: WorldSpec, candidates: Sequence[TrainingCandidate]) -> World:
+    def build(
+        cls,
+        spec: WorldSpec,
+        candidates: Sequence[TrainingCandidate],
+        *,
+        capability_data: dict[str, Any] | None = None,
+    ) -> World:
+        """`capability_data` : benchmark gelé de chaque capacité déclarée. Tout
+        fragment qui partage une séquence de code avec une solution ou une
+        version boguée d'ÉVALUATION est retiré de l'entraînement (listé)."""
+        from apex.capabilities.registry import get_capability
+
+        data = capability_data or {}
+        protected: set[tuple[str, ...]] = set()
+        train_only: list[TrainingCandidate] = []
+        for name in spec.capabilities:
+            capability = get_capability(name)
+            for text in capability.protected_texts(data[name]):
+                protected |= _code_grams(text)
+            train_only += [
+                doc
+                for doc in capability.train_documents(data[name])
+                if any(doc.source_id.startswith(spec.domains[d]) for d in spec.train_only_domains)
+            ]
+        removed = [c.candidate_id for c in (*candidates, *train_only) if _code_grams(c.text) & protected]
+        gone = set(removed)
         dataset = build_dataset(
-            candidates,
+            [c for c in candidates if c.candidate_id not in gone],
             validation_ratio=spec.validation_ratio,
             test_ratio=spec.test_ratio,
             salt=f"apex-world-{spec.seed}",
             decontaminate=True,
+            train_only=[c for c in train_only if c.candidate_id not in gone],
         )
         tokenizer = ByteBPETokenizer.train(dataset.texts(Split.TRAIN), spec.vocab_size)
-        return cls(spec, dataset, tokenizer)
+        return cls(spec, dataset, tokenizer, capability_data=data, capability_decontaminated=removed)
+
+    # -- capacités -------------------------------------------------------------
+
+    def capability_of_suite(self, suite: str) -> str | None:
+        for name, (capability, _) in self.capabilities.items():
+            if suite in capability.contract.suites:
+                return name
+        return None
+
+    @property
+    def suite_names(self) -> set[str]:
+        """Toutes les suites mesurées : benchmarks de texte + suites de capacité."""
+        names = set(self.benchmarks)
+        for capability, _ in self.capabilities.values():
+            names.update(capability.contract.suites)
+        return names
+
+    @property
+    def acceptance_suites(self) -> frozenset[str]:
+        """Suites qui peuvent fonder une ACCEPTATION quand un plan les vise
+        (pré-enregistrées) : le held-out textuel et la suite d'acceptation
+        déclarée par chaque capacité — jamais une tranche ou une garde."""
+        return frozenset({PRIMARY, *(c.contract.acceptance_suite for c, _ in self.capabilities.values())})
+
+    @property
+    def metric_tolerances(self) -> dict[str, float]:
+        return {c.contract.metric: c.contract.guard_tolerance for c, _ in self.capabilities.values()}
+
+    def suite_domain(self, suite: str) -> str | None:
+        """Domaine d'entraînement associé à une suite : la tranche held-out d'un
+        domaine, ou le premier domaine d'entraînement d'une capacité."""
+        if suite.startswith(f"{PRIMARY}:"):
+            return suite.split(":", 1)[1]
+        name = self.capability_of_suite(suite)
+        if name is not None:
+            return self.capabilities[name][0].contract.training_domains[0]
+        return None
 
     def domain_of(self, source_id: str) -> str | None:
         for name, prefix in self.spec.domains.items():
@@ -109,6 +221,8 @@ class World:
             "validation": Benchmark.from_dataset("validation", self.dataset, Split.VALIDATION),
         }
         for domain in self.spec.domains:
+            if domain in self.spec.train_only_domains:
+                continue  # aucun document de test par construction
             docs = tuple((c.candidate_id, c.text) for c in test if self.domain_of(c.source_id) == domain)
             if len(docs) < 5:
                 raise ValueError(f"domaine « {domain} » : {len(docs)} document(s) de test, 5 requis")
@@ -161,10 +275,20 @@ class World:
         payload = json.dumps(
             {
                 "format": WORLD_FORMAT,
-                "spec": asdict(self.spec),
+                "spec": self.spec.identity(),
                 "dataset": self.dataset.fingerprint,
                 "tokenizer": self.tokenizer.fingerprint(),
                 "benchmarks": {name: b.fingerprint for name, b in sorted(self.benchmarks.items())},
+                **(
+                    {
+                        "capabilities": {
+                            name: cap.fingerprint(data)
+                            for name, (cap, data) in sorted(self.capabilities.items())
+                        }
+                    }
+                    if self.capabilities
+                    else {}
+                ),
             },
             sort_keys=True,
         )
@@ -182,6 +306,8 @@ class World:
             "leakage_ratio": self.dataset.leakage_ratio,
             "manifest": self.dataset.manifest,
             "tokenizer": self.tokenizer.to_dict(),
+            "capabilities": {name: cap.dump(data) for name, (cap, data) in self.capabilities.items()},
+            "capability_decontaminated": list(self.capability_decontaminated),
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
@@ -215,8 +341,27 @@ class World:
         ).hexdigest()
         if dataset.fingerprint != "sha256:" + expected_digest:
             raise WorldIntegrityError("empreinte du dataset incohérente avec son contenu")
-        spec = WorldSpec(**data["spec"])
-        world = cls(spec, dataset, ByteBPETokenizer.from_dict(data["tokenizer"]))
+        spec_data = dict(data["spec"])
+        for key in ("capabilities", "train_only_domains"):
+            if key in spec_data:
+                spec_data[key] = tuple(spec_data[key])
+        spec = WorldSpec(**spec_data)
+        from apex.capabilities.registry import get_capability
+
+        try:
+            capability_data = {
+                name: get_capability(name).load(payload)
+                for name, payload in data.get("capabilities", {}).items()
+            }
+        except Exception as exc:  # benchmark altéré : empreinte relue différente
+            raise WorldIntegrityError(f"benchmark de capacité altéré : {exc}") from exc
+        world = cls(
+            spec,
+            dataset,
+            ByteBPETokenizer.from_dict(data["tokenizer"]),
+            capability_data=capability_data,
+            capability_decontaminated=data.get("capability_decontaminated", ()),
+        )
         if world.fingerprint != data["fingerprint"]:
             raise WorldIntegrityError("empreinte du monde incohérente avec son contenu")
         if expected_fingerprint is not None and world.fingerprint != expected_fingerprint:

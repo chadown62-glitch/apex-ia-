@@ -45,6 +45,7 @@ from apex.neural.loop.execute import (
     initial_model,
     load_model_from_artifact,
     measure,
+    measure_with_details,
 )
 from apex.neural.loop.plan import ExperimentPlan
 from apex.neural.loop.world import PRIMARY, World
@@ -62,6 +63,11 @@ class JudgeResult:
     candidate_reports: dict[str, EvalReport] = field(default_factory=dict)
     baseline_reports: dict[str, EvalReport] = field(default_factory=dict)
     judge_id: str = JUDGE_ID
+    primary: str = PRIMARY
+    #: Par suite de capacité : tâches nouvellement résolues / perdues (mesures du Judge).
+    task_changes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: Détail par tâche de la mesure du CANDIDAT par le Judge (journalisé, non comparé).
+    candidate_details: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
     @property
     def accepted(self) -> bool:
@@ -70,12 +76,14 @@ class JudgeResult:
     def to_dict(self) -> dict[str, Any]:
         return {
             "judge_id": self.judge_id,
+            "primary": self.primary,
             "decision": self.decision,
             "reasons": self.reasons,
             "checks": self.checks,
             "comparisons": self.comparisons,
             "candidate": {n: r.summary() for n, r in self.candidate_reports.items()},
             "baseline": {n: r.summary() for n, r in self.baseline_reports.items()},
+            "task_changes": self.task_changes,
         }
 
 
@@ -90,6 +98,23 @@ def _same_scores(a: dict[str, EvalReport], b: dict[str, EvalReport]) -> bool:
     )
 
 
+def _task_changes(
+    before: dict[str, list[dict[str, Any]]], after: dict[str, list[dict[str, Any]]]
+) -> dict[str, dict[str, Any]]:
+    changes: dict[str, dict[str, Any]] = {}
+    for suite in sorted(set(before) & set(after)):
+        was = {t["instance"]: t["solved"] for t in before[suite]}
+        now = {t["instance"]: t["solved"] for t in after[suite]}
+        changes[suite] = {
+            "solved_before": sum(was.values()),
+            "solved_after": sum(now.values()),
+            "tasks": len(now),
+            "newly_solved": sorted(i for i in now if now[i] and not was.get(i)),
+            "newly_failed": sorted(i for i in now if was.get(i) and not now[i]),
+        }
+    return changes
+
+
 class IndependentJudge:
     def __init__(
         self, world: World, store: ArtifactStoreProvider, *, max_guard_regression_bpb: float = 0.01
@@ -98,11 +123,20 @@ class IndependentJudge:
         self.store = store
         self.max_guard_regression_bpb = max_guard_regression_bpb
 
-    def _measure_twice(self, load: Any) -> tuple[dict[str, EvalReport], bool, ApexLM]:
+    def _measure_twice(
+        self, load: Any
+    ) -> tuple[dict[str, EvalReport], bool, ApexLM, dict[str, list[dict[str, Any]]]]:
         first_model = load()
-        first = measure(first_model, self.world)
+        first, details = measure_with_details(first_model, self.world)
         second = measure(load(), self.world)
-        return first, _same_scores(first, second), first_model
+        return first, _same_scores(first, second), first_model, details
+
+    def primary_for(self, plan: ExperimentPlan | None) -> str:
+        """Suite principale : la cible PRÉ-ENREGISTRÉE du plan si le monde la
+        déclare suite d'acceptation (held-out d'une capacité), sinon le
+        held-out textuel. Jamais une suite choisie après la mesure."""
+        target = plan.hypothesis.target_benchmark if plan is not None else None
+        return target if target in self.world.acceptance_suites else PRIMARY
 
     def _replay(
         self,
@@ -158,7 +192,7 @@ class IndependentJudge:
 
         # 1. Intégrité et mesure du candidat.
         try:
-            candidate, candidate_repro, candidate_model = self._measure_twice(
+            candidate, candidate_repro, candidate_model, candidate_details = self._measure_twice(
                 lambda: load_model_from_artifact(self.store, candidate_artifact, self.world)
             )
         except Exception as exc:  # checkpoint absent, altéré, autre dataset, autre tokenizer
@@ -210,7 +244,7 @@ class IndependentJudge:
                 baseline_model = load_model_from_artifact(self.store, baseline_artifact, self.world)
             else:
                 baseline_model = initial_model(self.world, baseline_seed)
-            baseline = measure(baseline_model, self.world)
+            baseline, baseline_details = measure_with_details(baseline_model, self.world)
         except Exception as exc:
             check("baseline_integrity", False, f"{exc.__class__.__name__}: {exc}")
             return JudgeResult(
@@ -254,8 +288,11 @@ class IndependentJudge:
                 self._replay(plan, candidate_artifact, replay_dir, stop, stop_file, check)
 
         # 5. Statistique.
+        primary = self.primary_for(plan)
         verdict = NeuralJudge(
-            primary=PRIMARY, max_guard_regression_bpb=self.max_guard_regression_bpb
+            primary=primary,
+            max_guard_regression_bpb=self.max_guard_regression_bpb,
+            tolerances=self.world.metric_tolerances,
         ).judge(baseline, candidate)
         failed = [f"{name} : {c['detail']}" for name, c in checks.items() if not c["ok"]]
         decision = JudgeDecision.REJECT.value if failed else verdict.decision.value
@@ -266,4 +303,7 @@ class IndependentJudge:
             comparisons=[c.to_dict() for c in verdict.comparisons],
             candidate_reports=candidate,
             baseline_reports=baseline,
+            primary=primary,
+            task_changes=_task_changes(baseline_details, candidate_details),
+            candidate_details=candidate_details,
         )

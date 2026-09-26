@@ -110,18 +110,22 @@ class StrategyPolicy:
         )
 
     def _hypothesis(self, world: World, weakness: Weakness, strategy: str, change: str) -> LoopHypothesis:
+        # La suite qui décidera est fixée AVANT l'expérience (voir IndependentJudge.primary_for).
+        primary = weakness.benchmark if weakness.benchmark in world.acceptance_suites else PRIMARY
+        capability = world.capability_of_suite(weakness.benchmark)
+        metric = world.capabilities[capability][0].contract.metric if capability else "BPB"
         return LoopHypothesis(
             weakness=weakness,
             claim=(
-                f"{change} réduit le BPB de « {weakness.benchmark} » (actuellement {weakness.value}) "
+                f"{change} réduit le {metric} de « {weakness.benchmark} » (actuellement {weakness.value}) "
                 "sans dégrader les suites protégées"
             ),
             modification=change,
             target_benchmark=weakness.benchmark,
             direction=DIRECTION_DECREASE,
-            protected=tuple(sorted(world.benchmarks)),
+            protected=tuple(sorted(world.suite_names)),
             falsification=(
-                f"réfutée si le gain sur « {PRIMARY} » n'est pas significatif (IC 95 % du bootstrap "
+                f"réfutée si le gain sur « {primary} » n'est pas significatif (IC 95 % du bootstrap "
                 "apparié contenant 0) ou si une suite protégée régresse significativement ou au-delà "
                 "de la tolérance"
             ),
@@ -225,9 +229,7 @@ class StrategyPolicy:
         out: list[StrategyDecision] = []
         if cause == FailureCause.PROTECTED_REGRESSION.value:
             regressed = {
-                s.split(":", 1)[1]
-                for s in analysis.get("regressed_suites", [])
-                if s.startswith(f"{PRIMARY}:")
+                d for d in (world.suite_domain(s) for s in analysis.get("regressed_suites", [])) if d
             }
             if regressed:
                 current = domain_share(parent.mix, regressed)

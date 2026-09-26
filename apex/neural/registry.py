@@ -41,6 +41,9 @@ class Proposal:
     in_run_decision: str
     artifact: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    #: Suite principale PRÉ-ENREGISTRÉE par l'expérience (cible de son plan) ;
+    #: retenue seulement si le registre la connaît comme suite d'acceptation.
+    primary: str | None = None
 
 
 def _digest(entry: dict[str, Any]) -> str:
@@ -51,9 +54,18 @@ def _digest(entry: dict[str, Any]) -> str:
 
 
 class ModelRegistry:
-    def __init__(self, path: Path, *, primary: str = "heldout") -> None:
+    def __init__(
+        self,
+        path: Path,
+        *,
+        primary: str = "heldout",
+        acceptance: frozenset[str] | None = None,
+        tolerances: dict[str, float] | None = None,
+    ) -> None:
         self.path = path
         self.primary = primary
+        self.acceptance = acceptance or frozenset({primary})
+        self.tolerances = tolerances or {}
 
     def entries(self) -> list[dict[str, Any]]:
         if not self.path.exists():
@@ -75,6 +87,7 @@ class ModelRegistry:
     def propose(self, proposal: Proposal) -> dict[str, Any]:
         entries = self.entries()
         current = next((e for e in reversed(entries) if e["promoted"]), None)
+        primary = proposal.primary if proposal.primary in self.acceptance else self.primary
         if current is None:
             promoted = proposal.in_run_decision == JudgeDecision.ACCEPT.value
             decision = proposal.in_run_decision
@@ -86,7 +99,9 @@ class ModelRegistry:
             suites: list[dict[str, Any]] = []
         else:
             baseline = {name: EvalReport.from_dict(r) for name, r in current["reports"].items()}
-            verdict = NeuralJudge(primary=self.primary).judge(baseline, proposal.reports)
+            verdict = NeuralJudge(primary=primary, tolerances=self.tolerances).judge(
+                baseline, proposal.reports
+            )
             promoted = verdict.decision is JudgeDecision.ACCEPT
             decision = verdict.decision.value
             reasons = [f"comparée à « {current['name']} » : {r}" for r in verdict.reasons]
@@ -100,6 +115,7 @@ class ModelRegistry:
             "promoted": promoted,
             "reasons": reasons,
             "suites": suites,
+            "primary": primary,
             "reports": {name: report.to_dict() for name, report in proposal.reports.items()},
             "artifact": proposal.artifact,
             "metadata": proposal.metadata,

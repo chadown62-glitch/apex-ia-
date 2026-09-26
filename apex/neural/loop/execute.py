@@ -51,9 +51,31 @@ class ExecutionResult:
 
 
 def measure(model: ApexLM, world: World) -> dict[str, EvalReport]:
+    return measure_with_details(model, world)[0]
+
+
+def measure_with_details(
+    model: ApexLM, world: World
+) -> tuple[dict[str, EvalReport], dict[str, list[dict[str, Any]]]]:
     """Toutes les suites du monde. Chaque document n'est évalué qu'une fois :
     les tranches par domaine sont des sous-ensembles des scores du held-out
-    (scores par document indépendants), avec l'empreinte de leur benchmark."""
+    (scores par document indépendants), avec l'empreinte de leur benchmark.
+    Les suites de CAPACITÉ sont mesurées par exécution réelle dans le sandbox
+    (jamais en dégradé) ; leurs détails par tâche sont renvoyés à part."""
+    reports = measure_text(model, world)
+    details: dict[str, list[dict[str, Any]]] = {}
+    if world.capabilities:
+        from apex.capabilities.registry import sandbox_provider
+
+        provider = sandbox_provider()
+        for capability, data in world.capabilities.values():
+            evaluation = capability.evaluate(model, world.tokenizer, data, provider=provider)
+            reports.update(evaluation.reports)
+            details.update(evaluation.details)
+    return reports, details
+
+
+def measure_text(model: ApexLM, world: World) -> dict[str, EvalReport]:
     heldout = evaluate(model, world.tokenizer, world.benchmarks[PRIMARY])
     reports = {
         PRIMARY: heldout,

@@ -19,10 +19,10 @@ from typing import Any
 
 from apex.errors import ArtifactIntegrityError, TimeoutExceeded
 from apex.neural.dataset import LeakageError
+from apex.neural.evaluation import BPB
 from apex.neural.loop.execute import StopRequested
 from apex.neural.loop.judge import JudgeResult
 from apex.neural.loop.plan import ExperimentPlan
-from apex.neural.loop.world import PRIMARY
 
 
 class FailureCause(StrEnum):
@@ -111,15 +111,25 @@ def _interpret_tradeoff(mods: list[dict[str, Any]], regressed: list[str]) -> str
 
 def _fmt(comp: dict[str, Any]) -> str:
     low, high = comp["bpb_gain_ci"]
+    unit = "bpb" if comp.get("metric", BPB) == BPB else comp["metric"]
     return (
-        f"{comp['suite']} : {comp['baseline_bpb']} -> {comp['candidate_bpb']} bpb "
+        f"{comp['suite']} : {comp['baseline_bpb']} -> {comp['candidate_bpb']} {unit} "
         f"(gain IC 95 % [{low:.4f}, {high:.4f}], {comp['verdict']}, n={comp['n']})"
     )
 
 
 def analyze_judgement(
-    plan: ExperimentPlan, result: JudgeResult, *, guard_tolerance: float = 0.01
+    plan: ExperimentPlan,
+    result: JudgeResult,
+    *,
+    guard_tolerance: float = 0.01,
+    tolerances: dict[str, float] | None = None,
 ) -> FailureAnalysis | None:
+    """`guard_tolerance` : tolérance BPB ; `tolerances` : tolérance des autres
+    métriques (capacités), identiques à celles du Judge. La suite principale
+    est celle que le Judge a réellement utilisée (`result.primary`)."""
+    primary = result.primary
+    limits = {**(tolerances or {}), BPB: guard_tolerance}
     if result.accepted:
         return None
     attribution, mods = _attribution(plan)
@@ -141,7 +151,7 @@ def analyze_judgement(
         )
     comps = {c["suite"]: c for c in result.comparisons}
     target = plan.hypothesis.target_benchmark
-    if target not in comps or PRIMARY not in comps:
+    if target not in comps or primary not in comps:
         return FailureAnalysis(
             FailureCause.UNKNOWN,
             "unknown",
@@ -156,7 +166,8 @@ def analyze_judgement(
 
     def regression(c: dict[str, Any]) -> bool:
         significant = c["verdict"] == "significant" and c["bpb_gain_ci"][1] < 0
-        beyond = c["suite"] != PRIMARY and c["candidate_bpb"] - c["baseline_bpb"] > guard_tolerance
+        tolerance = limits.get(c.get("metric", BPB), guard_tolerance)
+        beyond = c["suite"] != primary and c["candidate_bpb"] - c["baseline_bpb"] > tolerance
         return bool(significant or beyond)
 
     regressed = sorted(s for s, c in comps.items() if s != target and regression(c))
@@ -192,7 +203,7 @@ def analyze_judgement(
     return FailureAnalysis(
         FailureCause.NO_SIGNIFICANT_EFFECT,
         "established",
-        [_fmt(comps[PRIMARY]), _fmt(target_comp)],
+        list(dict.fromkeys([_fmt(comps[primary]), _fmt(target_comp)])),
         attribution,
         mods,
         refuted="prédiction d'un gain significatif : effet non distinguable du bruit",

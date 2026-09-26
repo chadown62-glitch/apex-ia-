@@ -38,7 +38,65 @@ from apex.neural.registry import ModelRegistry  # noqa: E402
 DOMAINS = {"stdlib": "pydoc:", "apex_docs": "file://"}
 
 
+STDLIB_SOURCES = Path("/usr/lib/python3.12")
+CODE_DOMAINS = {
+    "stdlib": "pydoc:",
+    "code": f"file://{STDLIB_SOURCES}/",
+    "code_tasks": "task:code_repair/",
+}
+
+
+def init_code_world(args: argparse.Namespace) -> int:
+    """Monde de la capacité CODE REPAIR : docstrings (stdlib), sources Python
+    de la bibliothèque standard (code, via le chemin code du Knowledge Agent),
+    solutions des tâches TRAIN (code_tasks, train seulement) et benchmark
+    construit par exécution réelle dans le sandbox."""
+    from apex.capabilities.code_repair.benchmark import build_benchmark
+    from apex.capabilities.code_repair.corpus import ALL
+    from apex.capabilities.registry import sandbox_provider
+
+    bench = build_benchmark(ALL, sandbox_provider())
+    modules = STDLIB_MODULES[: args.modules] if args.modules else STDLIB_MODULES
+    agent = KnowledgeAgent(
+        [PythonDocsAcquirer(), FileAcquirer()], AgentConfig(chunk_words=args.chunk_words)
+    )
+    refs = (
+        PythonDocsDiscovery(modules).discover()
+        + LocalDirectoryDiscovery(STDLIB_SOURCES, ("*.py",), SourceKind.REPOSITORY, "PSF-2.0").discover()
+    )
+    report = agent.run(refs)
+    candidates = to_training_candidates(report.items, chunk_words=args.chunk_words)
+    spec = WorldSpec(
+        domains=CODE_DOMAINS,
+        vocab_size=args.vocab,
+        context_length=args.context,
+        seed=args.seed,
+        capabilities=("code_repair",),
+        train_only_domains=("code_tasks",),
+    )
+    world = World.build(spec, candidates, capability_data={"code_repair": bench})
+    fingerprint = world.save(args.workdir / "world.json")
+    print(
+        json.dumps(
+            {
+                "world": fingerprint,
+                "knowledge": report.decisions,
+                "candidates": len(candidates),
+                "capability_benchmark": {"fingerprint": bench.fingerprint, **bench.report},
+                "capability_decontaminated": list(world.capability_decontaminated),
+                "suites": sorted(world.suite_names),
+                "train_by_domain": {d: len(world.train_candidates(d)) for d in CODE_DOMAINS},
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def init_world(args: argparse.Namespace) -> int:
+    if args.capability == "code_repair":
+        return init_code_world(args)
     modules = STDLIB_MODULES[: args.modules] if args.modules else STDLIB_MODULES
     agent = KnowledgeAgent(
         [PythonDocsAcquirer(), FileAcquirer()], AgentConfig(chunk_words=args.chunk_words)
@@ -117,6 +175,12 @@ def status(args: argparse.Namespace) -> int:
                 .get("candidate", {})
                 .get("heldout", {})
                 .get("bits_per_byte"),
+                "capability": {
+                    name: summary.get("value")
+                    for name, summary in judged.get("result", {}).get("candidate", {}).items()
+                    if name.startswith("cap:")
+                },
+                "primary": judged.get("result", {}).get("primary"),
             }
         )
     current = registry.current()
@@ -160,6 +224,8 @@ def main() -> int:
     p.add_argument("--chunk-words", type=int, default=120)
     p.add_argument("--vocab", type=int, default=512)
     p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--capability", choices=("code_repair",), default=None)
+    p.add_argument("--context", type=int, default=128)
     p.set_defaults(fn=init_world)
     p = sub.add_parser("run")
     p.add_argument("--workdir", type=Path, required=True)

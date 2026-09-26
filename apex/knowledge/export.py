@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from apex.knowledge.model import Decision, KnowledgeItem, QualityClass, sha256_text
-from apex.knowledge.pipeline import chunks_of
+from apex.knowledge.pipeline import chunk_text
 from apex.neural.dataset import TrainingCandidate
 
 _TRAINABLE = (QualityClass.HIGH_VALUE, QualityClass.MEDIUM_VALUE)
@@ -40,7 +40,7 @@ def to_training_candidates(
     for item in items:
         if exclusion_reason(item) is not None or item.text is None or item.quality is None:
             continue
-        for index, chunk in enumerate(chunks_of(item.text, chunk_words)):
+        for index, chunk in enumerate(chunk_text(item.text, item.fmt, chunk_words)):
             candidates.append(
                 TrainingCandidate(
                     candidate_id=f"{item.item_id}#{index}",

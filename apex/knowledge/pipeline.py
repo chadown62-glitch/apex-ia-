@@ -22,11 +22,14 @@ from dataclasses import dataclass, field, replace
 from apex.knowledge.acquisition import Acquirer, AcquisitionResult, acquire
 from apex.knowledge.extraction import extract
 from apex.knowledge.filters import (
+    CODE_FORMATS,
     ClaimIndex,
     DuplicateIndex,
+    code_quality,
     detect_language,
     injection_matches,
     normalize,
+    normalize_code,
     quality,
     relevance,
 )
@@ -169,6 +172,69 @@ def chunks_of(text: str, max_words: int) -> tuple[str, ...]:
     return tuple(chunks)
 
 
+def code_chunks(text: str, max_words: int) -> tuple[str, ...]:
+    """Découpe du CODE par blocs de premier niveau (définitions, classes,
+    instructions), regroupés jusqu'à `max_words` ; un bloc trop grand (une
+    classe) est découpé à ses propres sous-blocs (méthodes). Les lignes ne
+    sont JAMAIS recollées ni ré-indentées : chaque fragment reste du code tel
+    qu'écrit (`chunks_of`, conçu pour la prose, aplatissait le code)."""
+
+    def blocks(lines: list[str], indent: int) -> list[list[str]]:
+        out: list[list[str]] = []
+        for line in lines:
+            stripped = line.lstrip()
+            level = len(line) - len(stripped)
+            starts = (
+                stripped
+                and level <= indent
+                and not stripped.startswith((")", "]", "}", "else", "elif", "except", "finally"))
+                and not (out and out[-1] and out[-1][-1].lstrip().startswith("@"))
+            )
+            if starts or not out:
+                out.append([line])
+            else:
+                out[-1].append(line)
+        return out
+
+    def size(block: list[str]) -> int:
+        return sum(len(line.split()) for line in block)
+
+    def by_lines(block: list[str]) -> list[list[str]]:
+        out: list[list[str]] = [[]]
+        for line in block:
+            if out[-1] and size(out[-1]) + len(line.split()) > max_words:
+                out.append([])
+            out[-1].append(line)
+        return out
+
+    def split(block: list[str], indent: int) -> list[list[str]]:
+        if size(block) <= max_words or len(block) < 3:
+            return [block]
+        inner = [line for line in block[1:] if line.strip()]
+        sub_indent = min((len(x) - len(x.lstrip()) for x in inner), default=indent)
+        parts = blocks(block[1:], sub_indent) if sub_indent > indent else []
+        if len(parts) <= 1:  # aucun sous-bloc : lignes entières, jamais coupées ni recollées
+            return by_lines(block)
+        parts[0] = [block[0], *parts[0]]
+        return [piece for part in parts for piece in split(part, sub_indent)]
+
+    pieces = [piece for block in blocks(text.split("\n"), 0) for piece in split(block, 0)]
+    chunks: list[str] = []
+    current: list[str] = []
+    for piece in pieces:
+        if current and size(current) + size(piece) > max_words:
+            chunks.append("\n".join(current).strip("\n"))
+            current = []
+        current.extend(piece)
+    if current:
+        chunks.append("\n".join(current).strip("\n"))
+    return tuple(chunk for chunk in chunks if chunk.strip())
+
+
+def chunk_text(text: str, fmt: str | None, max_words: int) -> tuple[str, ...]:
+    return code_chunks(text, max_words) if fmt in CODE_FORMATS else chunks_of(text, max_words)
+
+
 class KnowledgeAgent:
     def __init__(self, acquirers: Sequence[Acquirer], config: AgentConfig | None = None) -> None:
         self.acquirers = tuple(acquirers)
@@ -207,23 +273,30 @@ class KnowledgeAgent:
             return self._finish(item, 0.0)
         body = text[1]
 
-        normalized = normalize(body)
+        is_code = item.fmt in CODE_FORMATS
+        normalized = normalize_code(body) if is_code else normalize(body)
+        how = "NFC, fins de ligne, indentation conservée" if is_code else "NFC, espaces, lignes vides"
         item = replace(
             item,
             stage=Stage.NORMALIZED,
             provenance=replace(
-                item.provenance.with_step("normalization", "NFC, espaces, lignes vides"),
+                item.provenance.with_step("normalization", how),
                 content_hash=sha256_text(normalized),
             ),
         )
-        item = item.record("normalization", "done", "NFC + espaces", chars=len(normalized))
+        item = item.record("normalization", "done", how, chars=len(normalized))
 
-        language, lang_score = detect_language(normalized)
-        item = replace(item, language=language)
-        lang_ok = language in cfg.languages
-        item = item.record("language", "ok" if lang_ok else "flag", language, stopword_ratio=lang_score)
-        if not lang_ok:
-            item = item.flagged(FLAG_LANGUAGE)
+        if is_code:
+            # Du code n'a pas de langue naturelle à détecter : la langue est celle du format.
+            item = replace(item, language="python")
+            item = item.record("language", "ok", "python (code)")
+        else:
+            language, lang_score = detect_language(normalized)
+            item = replace(item, language=language)
+            lang_ok = language in cfg.languages
+            item = item.record("language", "ok" if lang_ok else "flag", language, stopword_ratio=lang_score)
+            if not lang_ok:
+                item = item.flagged(FLAG_LANGUAGE)
 
         rel = relevance(normalized, cfg.topics)
         rel_ok = rel >= cfg.min_relevance
@@ -231,7 +304,7 @@ class KnowledgeAgent:
         if not rel_ok:
             item = item.flagged(FLAG_IRRELEVANT)
 
-        q = quality(normalized)
+        q = code_quality(normalized) if is_code else quality(normalized)
         q_ok = q.score >= cfg.reject_below
         item = item.record(
             "quality",
@@ -257,12 +330,17 @@ class KnowledgeAgent:
         if original:
             item = item.flagged(FLAG_DUPLICATE)
 
-        conflicts = self.claims.conflicts(normalized)
+        # Les « affirmations » sont extraites de prose (« x : valeur ») : sur du code, chaque
+        # affectation (`n = 0` puis `n = 1`) passait pour une contradiction factuelle.
+        conflicts = [] if is_code else self.claims.conflicts(normalized)
         detail = "; ".join(
             f"{a.subject}: « {a.value} » vs « {b.value} » ({other})" for other, a, b in conflicts[:3]
         )
         item = item.record(
-            "contradiction", "flag" if conflicts else "ok", detail or "aucune", conflicts=len(conflicts)
+            "contradiction",
+            "flag" if conflicts else "ok",
+            detail or ("non applicable au code" if is_code else "aucune"),
+            conflicts=len(conflicts),
         )
         if conflicts:
             item = item.flagged(FLAG_CONTRADICTION)
@@ -286,7 +364,7 @@ class KnowledgeAgent:
             "structuring",
             "done",
             f"{len(item.sections)} section(s)",
-            chunks=len(chunks_of(normalized, cfg.chunk_words)),
+            chunks=len(chunk_text(normalized, item.fmt, cfg.chunk_words)),
         )
         if item.text is None:
             item = item.record("license", "metadata_only", "texte intégral non conservé (licence)")
@@ -393,5 +471,6 @@ class KnowledgeAgent:
             # en quarantaine ne peut ni masquer un doublon ni fabriquer une
             # contradiction contre une source saine.
             self.duplicates.add(item.item_id, normalized)
-            self.claims.add(item.item_id, normalized)
+            if item.fmt not in CODE_FORMATS:  # le code n'alimente pas l'index d'affirmations factuelles
+                self.claims.add(item.item_id, normalized)
         return item
