@@ -64,6 +64,11 @@ CAPABILITIES: dict[str, CapabilityEntry] = {
         adapter_class="GeneratedSolutionLoopAdapter",
         judge_id="ci-judge:generated-solution",
     ),
+    "model_routing": CapabilityEntry(
+        module="apex.improvement.capabilities.model_routing",
+        adapter_class="ModelRoutingAdapter",
+        judge_id="ci-judge:model-routing",
+    ),
 }
 
 
