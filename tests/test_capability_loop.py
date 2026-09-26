@@ -6,6 +6,7 @@ réel, entraînements réels."""
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -118,14 +119,29 @@ def test_directed_experiment_is_refused_without_a_measured_weakness_or_with_two_
     assert len(run.journal.entries()) == before  # rien n'est consigné pour un plan refusé
 
 
+def test_directed_experiment_respects_the_loop_ceilings(run: LoopController) -> None:
+    before = len(run.journal.entries())
+    with pytest.raises(RuntimeError, match="plafond de 2 expériences"):
+        run.run_directed({"mix": {"code_tasks": 1.0}}, target=TARGET, reason="au-delà du plafond")
+    assert len(run.journal.entries()) == before
+
+
 def test_directed_experiment_goes_through_the_independent_judge(run: LoopController) -> None:
+    # Comme la CLI `directed` : un nouveau contrôleur sur le même répertoire, avec ses propres plafonds.
+    ctrl = LoopController(
+        run.workdir,
+        run.world,
+        limits=replace(run.limits, max_total_experiments=3),
+        policy=run.policy,
+        log=lambda _m: None,
+    )
     # La question : entraîner sur les SOLUTIONS des tâches train généralise-t-il au held-out ?
-    record = run.run_directed(
+    record = ctrl.run_directed(
         {"mix": {"code_tasks": 1.0}}, target=TARGET, reason="mémorisation ou généralisation ?"
     )
     assert record.finished and record.decision in ("accept", "reject")
     assert record.plan["hypothesis"]["strategy"] == DIRECTED
-    assert any(e["experiment"] == record.experiment_id for e in run.journal.loop_events("directed"))
+    assert any(e["experiment"] == record.experiment_id for e in ctrl.journal.loop_events("directed"))
     result = (record.payload("judged") or {})["result"]
     assert result["primary"] == TARGET and result["judge_id"]
     learning = result["learning"]["code_repair"]
@@ -136,4 +152,4 @@ def test_directed_experiment_goes_through_the_independent_judge(run: LoopControl
         assert "GENERALIZATION" not in learning["kinds"]
     if record.decision == "reject":
         assert (record.analysis or {}).get("cause")  # l'échec est analysé comme les autres
-    assert run.attest(run.registry.current()) is None  # type: ignore[arg-type]
+    assert ctrl.attest(ctrl.registry.current()) is None  # type: ignore[arg-type]

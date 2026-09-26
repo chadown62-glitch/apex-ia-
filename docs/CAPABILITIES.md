@@ -205,3 +205,34 @@ sans faiblesse mesurée sur la cible, ou avec plus d'une modification.
   acceptation / transfert) : NON implémentée.
 - **Génération libre de code** : hors de portée d'un modèle de 0,7 M paramètres entraîné sur CPU (mesuré au
   §1) ; l'espace de sortie est fermé (éditions d'un jeton) et c'est une limite déclarée du contrat.
+
+## 9. Résultats réels — run 1 (boucle autonome, monde `sha256:a6aff027f183…`, code d'avant le cycle 3)
+
+Monde réel : 259 documents acceptés par le Knowledge Agent (docstrings stdlib + 40 fichiers source Python de
+la stdlib), 4 210 fragments, modèle de 724 864 paramètres (vocabulaire 1 024, contexte 256), benchmark de
+288 bugs ; chaque mesure de capacité = 288 tâches classées par le modèle puis exécutées dans le sandbox.
+Ce run a été lancé AVANT l'ajout de `more_data`, de `classify_learning` et du contrat dans l'empreinte :
+ses décisions sont celles de l'ancienne politique (c'est ce qui a motivé ces ajouts).
+
+Coût de réparation (plus bas = mieux ; IC 95 % du gain par bootstrap apparié par fonction) :
+
+| expérience | stratégie (choisie par la boucle) | held-out BPB | coût held-out | coût transfert | coût train | décision |
+|---|---|---|---|---|---|---|
+| init | — | 3,8727 | 0,9465 (6/81 résolus) | 0,9236 | 0,9746 | — |
+| exp-db2476cb9e95 | bootstrap stdlib | 3,3209 ✓ | 0,9547 (n.s.) | 0,9931 (n.s., au-delà de la tolérance) | 0,9683 | **REJECT** (régression protégée : transfert) |
+| exp-a2b0ce565c29 | protect_domains code 25 % | 2,4268 ✓ | 0,9177 (n.s.) | 0,9167 | 0,8952 ✓ | **ACCEPT, promu** |
+| exp-7963d440f401 | target_only code, cible `cap:code_repair:heldout` | 2,4425 ✗ | **0,8189 ✓ [0,037 ; 0,165]**, 10 -> 18 résolus | **0,8194 ✓** | 0,8095 ✓ | **REJECT** (BPB held-out / stdlib / validation régressent significativement) |
+| exp-3c4f314d3bc0 | protect_domains stdlib 25 % | 2,5073 ✗ | 0,8765 (n.s.) | 0,8542 | 0,8444 | **REJECT** (tous les domaines, même entraînés, régressent) -> cible épuisée |
+| exp-d73943865e0d | protect_domains, cible `heldout:stdlib`, rejeu 12,5 % code + **12,5 % solutions train** | 2,7028 ✗ | **0,8025 ✓ [0,037 ; 0,202]**, 10 -> 20 résolus | 0,9028 (n.s.) | **0,0222 ✓ [0,797 ; 0,940]** | **REJECT** (cible stdlib dégradée) |
+
+Lecture (REAL EVIDENCE, mesures du Judge) :
+- **l'apprentissage de la réparation est réel et généralise** : entraîné sur du code source (jamais sur les
+  tâches d'évaluation), le coût held-out baisse significativement (0,918 -> 0,819) et le TRANSFERT vers la
+  famille sécurité jamais vue aussi (0,917 -> 0,819) ;
+- **mémorisation mesurée** : avec les solutions train dans le mélange, le coût train s'effondre
+  (0,895 -> 0,022 : quasi toutes les tâches vues sont réparées) alors que le gain held-out reste modéré
+  (0,918 -> 0,803) et que le transfert ne bouge pas : l'écart train / held-out est la signature de la
+  mémorisation ; le gain held-out restant est de la généralisation (fonctions jamais vues) ;
+- **aucune de ces améliorations n'a été promue** : chacune dégradait significativement la modélisation du
+  texte (suites protégées). Le Judge refuse d'échanger une compétence contre une autre ; c'est le
+  comportement voulu, et c'est aussi la limite actuelle d'un modèle de 0,7 M paramètres.
