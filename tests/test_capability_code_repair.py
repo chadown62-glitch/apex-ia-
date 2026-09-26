@@ -394,6 +394,10 @@ def test_learning_is_classified_from_significant_paired_gains_only() -> None:
     general = classify_learning(contract, [_comparison(train, 0.1, 0.3), _comparison(held, 0.02, 0.1)])
     assert general["kinds"] == ["GENERALIZATION"]  # un gain held-out n'est pas de la mémorisation
 
+    # Constat réel (E2E) : train 0,838 -> 0,032 et held-out 0,852 -> 0,749 : les deux à la fois.
+    mixed = classify_learning(contract, [_comparison(train, 0.71, 0.89), _comparison(held, 0.02, 0.18)])
+    assert mixed["kinds"] == ["GENERALIZATION", "MEMORIZATION"]
+
     both = classify_learning(contract, [_comparison(held, 0.02, 0.1), _comparison(transfer, 0.01, 0.2)])
     assert both["kinds"] == ["GENERALIZATION", "TRANSFER"]
 

@@ -118,7 +118,8 @@ def classify_learning(contract: CapabilityContract, comparisons: list[dict[str, 
 
     - GENERALIZATION : gain significatif sur la suite d'acceptation (fonctions jamais vues) ;
     - TRANSFER : gain significatif sur une famille jamais vue à l'entraînement ;
-    - MEMORIZATION : gain significatif sur les tâches VUES sans gain held-out ;
+    - MEMORIZATION : gain significatif sur les tâches VUES, sans gain held-out ou nettement
+      supérieur à lui (intervalles disjoints) : une part du gain ne se transfère pas ;
     - NONE : aucun gain significatif ; les régressions significatives sont listées à part."""
     comps = {c["suite"]: c for c in comparisons}
     kinds: list[str] = []
@@ -139,7 +140,10 @@ def classify_learning(contract: CapabilityContract, comparisons: list[dict[str, 
             kinds.append("TRANSFER")
             note(suite)
     memo = comps.get(contract.memorization_suite or "")
-    if memo is not None and _significant_gain(memo) and "GENERALIZATION" not in kinds:
+    exceeds_heldout = (
+        memo is not None and heldout is not None and memo["bpb_gain_ci"][0] > heldout["bpb_gain_ci"][1]
+    )
+    if memo is not None and _significant_gain(memo) and ("GENERALIZATION" not in kinds or exceeds_heldout):
         kinds.append("MEMORIZATION")
         note(contract.memorization_suite or "")
     regressions = sorted(s for s in contract.suites if s in comps and _significant_loss(comps[s]))

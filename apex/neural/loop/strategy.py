@@ -401,14 +401,14 @@ class StrategyPolicy:
                 )
             )
         # Une décision identique à la référence n'est pas une expérience (le plan serait refusé) :
-        # c'est le cas quand le champion s'entraîne déjà sur le seul domaine cible.
+        # c'est le cas quand le mélange du champion est déjà celui d'une tentative proposée.
         kept = [d for d in out if d.baseline_recipe is None or d.recipe.diff(d.baseline_recipe)]
         if len(kept) < len(out):
             steps = min(reference.steps * 2, self.max_steps)
             if steps != reference.steps:
                 change = (
-                    f"le mélange du champion est déjà « {target} » seul : prolonger l'entraînement "
-                    f"({reference.steps} -> {steps} pas) sur ce mélange"
+                    f"le mélange du champion {reference.mix} est déjà une tentative proposée : "
+                    f"prolonger l'entraînement ({reference.steps} -> {steps} pas) sur ce mélange"
                 )
                 kept.insert(
                     0,
@@ -418,7 +418,7 @@ class StrategyPolicy:
                         replace(reference, steps=steps),
                         reference,
                         None,
-                        [*rationale, "cible déjà seule dans le mélange : on augmente le budget"],
+                        [*rationale, "mélange déjà proposé : on augmente le budget de pas"],
                     ),
                 )
         return kept

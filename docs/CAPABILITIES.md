@@ -160,7 +160,7 @@ déclaré par l'exécuteur :
 |---|---|
 | GENERALIZATION | gain significatif (IC 95 % > 0) sur la suite d'acceptation held-out (fonctions jamais vues, dont la famille parsing) |
 | TRANSFER | gain significatif sur la suite de transfert (famille sécurité jamais vue) |
-| MEMORIZATION | gain significatif sur les tâches TRAIN sans gain held-out |
+| MEMORIZATION | gain significatif sur les tâches TRAIN, sans gain held-out OU nettement supérieur au gain held-out (intervalles disjoints) : une part du gain ne se transfère pas |
 | NONE | aucun gain significatif ; les régressions significatives sont listées à part |
 
 Le résultat est consigné dans le jugement (`learning`) et relu depuis le journal lors d'une reprise.
