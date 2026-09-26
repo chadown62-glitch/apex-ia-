@@ -7,13 +7,18 @@ Journal JSONL en ajout seul, chaîné par empreintes (même principe que
   montré un gain sur V0 (verdict ACCEPT de son propre Judge) ;
 - ensuite, il est comparé à la version en service par `NeuralJudge`, sur les
   MÊMES benchmarks (empreintes identiques, sinon refus) ; seul ACCEPT promeut.
-Une version rejetée reste inscrite avec ses raisons : rien n'est effacé."""
+Une version rejetée reste inscrite avec ses raisons : rien n'est effacé.
+
+Retour arrière (`rollback`) : une nouvelle entrée remet en service une
+version DÉJÀ promue auparavant (jamais une version rejetée), avec la raison ;
+l'historique n'est pas réécrit. `artifact` désigne le checkpoint dans
+l'ArtifactStore (adressé par contenu) : c'est lui qui rend le retour possible."""
 
 from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -34,6 +39,8 @@ class Proposal:
     dataset_fingerprint: str
     reports: dict[str, EvalReport]
     in_run_decision: str
+    artifact: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def _digest(entry: dict[str, Any]) -> str:
@@ -85,9 +92,7 @@ class ModelRegistry:
             reasons = [f"comparée à « {current['name']} » : {r}" for r in verdict.reasons]
             suites = verdict.to_dict()["suites"]  # type: ignore[assignment]
         entry: dict[str, Any] = {
-            "index": len(entries),
-            "prev": entries[-1]["hash"] if entries else GENESIS,
-            "at": datetime.now(UTC).isoformat(),
+            "kind": "proposal",
             "name": proposal.name,
             "checkpoint_sha256": proposal.checkpoint_sha256,
             "dataset_fingerprint": proposal.dataset_fingerprint,
@@ -96,6 +101,65 @@ class ModelRegistry:
             "reasons": reasons,
             "suites": suites,
             "reports": {name: report.to_dict() for name, report in proposal.reports.items()},
+            "artifact": proposal.artifact,
+            "metadata": proposal.metadata,
+        }
+        return self._append(entries, entry)
+
+    def promoted_history(self) -> list[dict[str, Any]]:
+        return [e for e in self.entries() if e["promoted"]]
+
+    def rollback(self, reason: str, *, to_index: int | None = None) -> dict[str, Any]:
+        """Remet en service une version promue AVANT la version courante (la
+        plus récente par défaut, ou l'entrée `to_index`, qui doit avoir été
+        promue). La version courante est RETIRÉE : aucun retour arrière
+        ultérieur ne la remettra en service. Refuse s'il n'existe aucune
+        version antérieure non retirée."""
+        entries = self.entries()
+        promoted = [e for e in entries if e["promoted"]]
+        if not promoted:
+            raise LookupError("aucune version en service : rien à restaurer")
+        current = promoted[-1]
+
+        def origin(entry: dict[str, Any]) -> int:
+            """Une version restaurée garde l'identité de sa promotion d'origine."""
+            return int(entry.get("restores", entry["index"]))
+
+        # Une version remplacée par un retour arrière est RETIRÉE : elle ne
+        # redevient jamais championne par un retour arrière ultérieur.
+        withdrawn = {int(e["replaces_origin"]) for e in entries if e.get("kind") == "rollback"}
+        candidates = [
+            e for e in promoted[:-1] if origin(e) != origin(current) and origin(e) not in withdrawn
+        ]
+        if to_index is not None:
+            candidates = [e for e in candidates if origin(e) == to_index]
+        if not candidates:
+            raise LookupError("aucune version antérieure promue à restaurer")
+        source = entries[origin(candidates[-1])]
+        entry = {
+            "kind": "rollback",
+            "name": source["name"],
+            "checkpoint_sha256": source["checkpoint_sha256"],
+            "dataset_fingerprint": source["dataset_fingerprint"],
+            "decision": "rollback",
+            "promoted": True,
+            "reasons": [f"retour à « {source['name']} » depuis « {current['name']} » : {reason}"],
+            "suites": [],
+            "reports": source["reports"],
+            "artifact": source.get("artifact"),
+            "metadata": source.get("metadata", {}),
+            "restores": source["index"],
+            "replaces": current["index"],
+            "replaces_origin": origin(current),
+        }
+        return self._append(entries, entry)
+
+    def _append(self, entries: list[dict[str, Any]], body: dict[str, Any]) -> dict[str, Any]:
+        entry: dict[str, Any] = {
+            "index": len(entries),
+            "prev": entries[-1]["hash"] if entries else GENESIS,
+            "at": datetime.now(UTC).isoformat(),
+            **body,
         }
         entry["hash"] = _digest(entry)
         self.path.parent.mkdir(parents=True, exist_ok=True)

@@ -38,6 +38,22 @@ class CheckpointInfo:
     dataset_provenance: dict[str, Any]
 
 
+def _canonical(obj: Any) -> Any:
+    """Copie structurelle où chaque chaîne est internée. `pickle` mémorise les
+    objets par IDENTITÉ : sans cela, un état relu depuis un checkpoint (clés
+    « step » de l'optimiseur, etc.) produit d'autres octets que le même état
+    construit en mémoire. Même contenu -> mêmes octets -> même artefact."""
+    if isinstance(obj, str):
+        return sys.intern(str(obj))  # sous-classes (TorchVersion…) ramenées à `str`
+    if isinstance(obj, dict):
+        return {_canonical(k): _canonical(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_canonical(v) for v in obj]
+    if isinstance(obj, tuple) and type(obj) is tuple:
+        return tuple(_canonical(v) for v in obj)
+    return obj
+
+
 def save_checkpoint(
     path: str | Path,
     engine: TrainingEngine,
@@ -71,7 +87,7 @@ def save_checkpoint(
     target = Path(path)
     target.parent.mkdir(parents=True, exist_ok=True)
     tmp = target.with_suffix(target.suffix + ".tmp")
-    torch.save(payload, tmp)
+    torch.save(_canonical(payload), tmp)
     tmp.replace(target)
     return hashlib.sha256(target.read_bytes()).hexdigest()
 
