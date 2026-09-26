@@ -60,11 +60,12 @@ def init_code_world(args: argparse.Namespace) -> int:
     agent = KnowledgeAgent(
         [PythonDocsAcquirer(), FileAcquirer()], AgentConfig(chunk_words=args.chunk_words)
     )
-    refs = (
-        PythonDocsDiscovery(modules).discover()
-        + LocalDirectoryDiscovery(STDLIB_SOURCES, ("*.py",), SourceKind.REPOSITORY, "PSF-2.0").discover()
-    )
-    report = agent.run(refs)
+    code_refs = LocalDirectoryDiscovery(
+        STDLIB_SOURCES, ("*.py",), SourceKind.REPOSITORY, "PSF-2.0"
+    ).discover()
+    # Un lien symbolique qui sort du répertoire (ex. sitecustomize.py -> /etc) n'appartient pas au domaine.
+    code_refs = tuple(r for r in code_refs if r.locator.startswith(CODE_DOMAINS["code"]))
+    report = agent.run(PythonDocsDiscovery(modules).discover() + code_refs)
     candidates = to_training_candidates(report.items, chunk_words=args.chunk_words)
     spec = WorldSpec(
         domains=CODE_DOMAINS,
@@ -154,6 +155,94 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
+def directed(args: argparse.Namespace) -> int:
+    world = World.load(args.workdir / "world.json")
+    limits = LoopLimits(
+        max_total_experiments=args.max_total_experiments,
+        max_total_steps=args.max_total_steps,
+        experiment_timeout_s=args.timeout,
+    )
+    changes: dict[str, object] = {}
+    if args.mix:
+        changes["mix"] = _parse_mix(args.mix)
+    for key in ("steps", "lr", "tokens"):
+        if getattr(args, key) is not None:
+            changes[key] = getattr(args, key)
+    if not changes:
+        print("expérience dirigée : aucune modification demandée", file=sys.stderr)
+        return 2
+    record = LoopController(args.workdir, world, limits=limits).run_directed(
+        changes, target=args.target, reason=args.reason
+    )
+    judged = (record.payload("judged") or {}).get("result", {})
+    print(
+        json.dumps(
+            {
+                "experiment": record.experiment_id,
+                "decision": record.decision,
+                "promoted": record.promoted,
+                "learning": judged.get("learning"),
+                "analysis": record.analysis,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def fresh_eval(args: argparse.Namespace) -> int:
+    """Tâches écrites APRÈS le gel du monde : l'initialisation contre le champion en service,
+    par exécution sandbox, bootstrap apparié par fonction (mêmes outils que le Judge)."""
+    from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
+    from apex.capabilities.code_repair.corpus import ALL
+    from apex.capabilities.code_repair.fresh import FRESH_SUITE, build_fresh_suite, fresh_contamination
+    from apex.capabilities.code_repair.solver import solve_suite, suite_report
+    from apex.capabilities.registry import sandbox_provider
+    from apex.neural.dataset import Split
+    from apex.neural.evaluation import NeuralJudge
+    from apex.neural.loop.execute import initial_model, load_model_from_artifact
+
+    world = World.load(args.workdir / "world.json")
+    current = ModelRegistry(args.workdir / "registry.jsonl").current()
+    if current is None:
+        print("aucun champion au registre", file=sys.stderr)
+        return 2
+    provider = sandbox_provider()
+    suite = build_fresh_suite(provider)
+    contamination = fresh_contamination(
+        [t for split in Split for t in world.dataset.texts(split)], [f.source for f in ALL]
+    )
+    store = LocalFilesystemArtifactStore(root=str(args.workdir / "artifacts"))
+    models = {
+        "init": initial_model(world, world.spec.seed),
+        current["name"]: load_model_from_artifact(store, current["artifact"], world),
+    }
+    reports = {}
+    for name, model in models.items():
+        model.eval()
+        reports[name] = suite_report(suite, solve_suite(model, world.tokenizer, suite, provider), model)
+    verdict = NeuralJudge(primary=FRESH_SUITE, tolerances=world.metric_tolerances).judge(
+        {FRESH_SUITE: reports["init"]}, {FRESH_SUITE: reports[current["name"]]}
+    )
+    print(
+        json.dumps(
+            {
+                "suite": FRESH_SUITE,
+                "fingerprint": suite.fingerprint,
+                "functions": len(suite.functions),
+                "bugs": len(suite.instances),
+                "contamination": contamination,
+                "models": {name: report.summary() for name, report in reports.items()},
+                "comparison": [c.to_dict() for c in verdict.comparisons],
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def status(args: argparse.Namespace) -> int:
     from apex.neural.loop.journal import ExperimentJournal
 
@@ -239,6 +328,21 @@ def main() -> int:
     p.add_argument("--timeout", type=float, default=900.0)
     p.add_argument("--seed", type=int, default=0)
     p.set_defaults(fn=run)
+    p = sub.add_parser("directed", help="une expérience posée par l'opérateur, jugée par la boucle")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.add_argument("--target", required=True, help="suite de la faiblesse visée")
+    p.add_argument("--reason", required=True, help="la question posée (consignée au journal)")
+    p.add_argument("--mix", default="", help="mélange, ex. code_tasks=1.0")
+    p.add_argument("--steps", type=int, default=None)
+    p.add_argument("--lr", type=float, default=None)
+    p.add_argument("--tokens", type=int, default=None)
+    p.add_argument("--max-total-experiments", type=int, default=12)
+    p.add_argument("--max-total-steps", type=int, default=8000)
+    p.add_argument("--timeout", type=float, default=1800.0)
+    p.set_defaults(fn=directed)
+    p = sub.add_parser("fresh-eval", help="tâches écrites après le gel : init contre champion")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.set_defaults(fn=fresh_eval)
     for name, fn in (("status", status), ("stop", stop)):
         p = sub.add_parser(name)
         p.add_argument("--workdir", type=Path, required=True)

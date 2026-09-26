@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any
 
 from apex.artifacts.provider import ArtifactStoreProvider
+from apex.capabilities.contract import classify_learning
 from apex.errors import TimeoutExceeded
 from apex.neural.dataset import Split
 from apex.neural.evaluation import EvalReport, JudgeDecision, NeuralJudge
@@ -68,6 +69,8 @@ class JudgeResult:
     task_changes: dict[str, dict[str, Any]] = field(default_factory=dict)
     #: Détail par tâche de la mesure du CANDIDAT par le Judge (journalisé, non comparé).
     candidate_details: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    #: Par capacité : MÉMORISATION / GÉNÉRALISATION / TRANSFERT établis par les comparaisons.
+    learning: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     @property
     def accepted(self) -> bool:
@@ -84,6 +87,7 @@ class JudgeResult:
             "candidate": {n: r.summary() for n, r in self.candidate_reports.items()},
             "baseline": {n: r.summary() for n, r in self.baseline_reports.items()},
             "task_changes": self.task_changes,
+            "learning": self.learning,
         }
 
 
@@ -306,4 +310,8 @@ class IndependentJudge:
             primary=primary,
             task_changes=_task_changes(baseline_details, candidate_details),
             candidate_details=candidate_details,
+            learning={
+                name: classify_learning(cap.contract, [c.to_dict() for c in verdict.comparisons])
+                for name, (cap, _) in self.world.capabilities.items()
+            },
         )

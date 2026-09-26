@@ -32,8 +32,15 @@ from apex.neural.loop.failure import INTEGRITY_CAUSES, analyze_exception, analyz
 from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord
 from apex.neural.loop.judge import JUDGE_ID, IndependentJudge, JudgeResult
 from apex.neural.loop.observe import Observation, observe
-from apex.neural.loop.plan import Budget, ExperimentPlan, Recipe, Weakness
-from apex.neural.loop.strategy import RETRYABLE, StrategyDecision, StrategyPolicy
+from apex.neural.loop.plan import (
+    Budget,
+    ExperimentPlan,
+    InvalidPlanError,
+    NonFalsifiableHypothesisError,
+    Recipe,
+    Weakness,
+)
+from apex.neural.loop.strategy import DIRECTED, RETRYABLE, StrategyDecision, StrategyPolicy
 from apex.neural.loop.world import PRIMARY, World
 from apex.neural.registry import ModelRegistry, Proposal
 
@@ -155,14 +162,17 @@ class LoopController:
 
     # -- boucle ----------------------------------------------------------------
 
+    def _check_world(self) -> None:
+        previous = self.journal.loop_events("started")
+        if previous and previous[0]["world_fingerprint"] != self.world.fingerprint:
+            raise WorldMismatchError(
+                f"journal produit sur le monde {previous[0]['world_fingerprint']}, "
+                f"monde fourni {self.world.fingerprint}"
+            )
+
     def run(self) -> dict[str, Any]:
         with self._lock():
-            previous = self.journal.loop_events("started")
-            if previous and previous[0]["world_fingerprint"] != self.world.fingerprint:
-                raise WorldMismatchError(
-                    f"journal produit sur le monde {previous[0]['world_fingerprint']}, "
-                    f"monde fourni {self.world.fingerprint}"
-                )
+            self._check_world()
             self.journal.loop(
                 "started",
                 world_fingerprint=self.world.fingerprint,
@@ -181,6 +191,44 @@ class LoopController:
             self.journal.loop("stopped", reason=reason, summary=summary)
             self.log(f"boucle arrêtée : {reason}")
             return {"reason": reason, **summary}
+
+    def run_directed(self, changes: dict[str, Any], *, target: str, reason: str) -> ExperimentRecord:
+        """Expérience DIRIGÉE : l'opérateur pose une question précise (ex. « entraîner sur les
+        solutions des tâches vues généralise-t-il ? ») sous la forme d'UNE modification de la
+        recette de référence du champion. Seule la décision vient de l'extérieur : plan validé,
+        entraînement réel, Judge indépendant, analyse d'échec, journal et registre sont ceux de la
+        boucle, et le journal le dit (stratégie « directed »). La faiblesse citée doit avoir été
+        mesurée ; aucune expérience sans champion attesté."""
+        with self._lock():
+            self._check_world()
+            self._recover()
+            obs = self._observe_with_integrity()
+            if obs.champion is None:
+                raise ValueError("expérience dirigée : aucun champion attesté à améliorer")
+            weakness = next((w for w in obs.weaknesses if w.benchmark == target), None)
+            if weakness is None:
+                raise ValueError(
+                    f"expérience dirigée : aucune faiblesse mesurée sur « {target} » "
+                    f"(faiblesses : {[w.benchmark for w in obs.weaknesses]})"
+                )
+            reference = self.policy.reference(obs, self.world)
+            recipe = replace(reference, **changes)
+            change = "expérience dirigée : " + ", ".join(f"{k}={v}" for k, v in sorted(changes.items()))
+            decision = StrategyDecision(
+                DIRECTED,
+                self.policy.hypothesis(self.world, weakness, DIRECTED, change),
+                recipe,
+                reference,
+                None,
+                [f"posée par l'opérateur : {reason}", f"faiblesse observée : {weakness.evidence}"],
+            )
+            plan = self._plan(obs, decision)
+            try:
+                self._check_global_limits()  # mêmes plafonds que la boucle autonome
+                self.journal.loop("directed", experiment=plan.experiment_id, reason=reason, changes=changes)
+                return self._run(plan, decision)
+            except _LoopStop as stop:
+                raise RuntimeError(f"expérience dirigée refusée : {stop.reason}") from stop
 
     def _cycle(self, cycle: int) -> None:
         if self._stop_requested():
@@ -209,7 +257,25 @@ class LoopController:
                 )
                 exhausted.add(target)
                 continue
-            plan = self._plan(obs, decision)
+            try:
+                plan = self._plan(obs, decision)
+            except (InvalidPlanError, NonFalsifiableHypothesisError) as exc:
+                # Défense en profondeur : une décision invalide de la politique est consignée et
+                # sa cible écartée pour ce champion — jamais un plantage, jamais une boucle infinie.
+                self.journal.loop(
+                    "plan_refused",
+                    target=decision.hypothesis.target_benchmark,
+                    strategy=decision.strategy,
+                    reason=str(exc),
+                    champion=obs.champion.artifact if obs.champion else None,
+                )
+                self.journal.loop(
+                    "target_exhausted",
+                    target=decision.hypothesis.target_benchmark,
+                    champion=obs.champion.artifact if obs.champion else None,
+                )
+                exhausted.add(decision.hypothesis.target_benchmark)
+                continue
             record = self._run(plan, decision)
             ids.append(record.experiment_id)
             if record.promoted:
@@ -492,6 +558,7 @@ class LoopController:
             candidate_reports={n: EvalReport.from_dict(r) for n, r in judged["candidate_reports"].items()},
             primary=result.get("primary", PRIMARY),
             task_changes=result.get("task_changes", {}),
+            learning=result.get("learning", {}),
         )
 
     def _promote(self, plan: ExperimentPlan, *, record: ExperimentRecord, judged: JudgeResult) -> None:

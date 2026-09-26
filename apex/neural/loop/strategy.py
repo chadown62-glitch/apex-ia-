@@ -38,8 +38,11 @@ BOOTSTRAP = "bootstrap"
 TARGET_ONLY = "target_only"
 PROTECT_DOMAINS = "protect_domains"
 MORE_STEPS = "more_steps"
+MORE_DATA = "more_data"
 LOWER_LR = "lower_lr"
 RETRY = "retry"
+#: Expérience posée par l'opérateur (LoopController.run_directed), jamais choisie par la politique.
+DIRECTED = "directed"
 
 #: Causes sans lien établi avec l'hypothèse (panne inconnue, délai dépassé
 #: sous charge) : le MÊME plan peut être rejoué, au plus `max_retries` fois.
@@ -109,7 +112,7 @@ class StrategyPolicy:
             seed=world.spec.seed,
         )
 
-    def _hypothesis(self, world: World, weakness: Weakness, strategy: str, change: str) -> LoopHypothesis:
+    def hypothesis(self, world: World, weakness: Weakness, strategy: str, change: str) -> LoopHypothesis:
         # La suite qui décidera est fixée AVANT l'expérience (voir IndependentJudge.primary_for).
         primary = weakness.benchmark if weakness.benchmark in world.acceptance_suites else PRIMARY
         capability = world.capability_of_suite(weakness.benchmark)
@@ -195,7 +198,7 @@ class StrategyPolicy:
                 return [
                     StrategyDecision(
                         BOOTSTRAP,
-                        self._hypothesis(world, weakness, BOOTSTRAP, change),
+                        self.hypothesis(world, weakness, BOOTSTRAP, change),
                         bootstrap,
                         None,
                         None,
@@ -219,7 +222,7 @@ class StrategyPolicy:
             return [
                 StrategyDecision(
                     RETRY,
-                    self._hypothesis(world, weakness, strategy, last.plan["hypothesis"]["modification"]),
+                    self.hypothesis(world, weakness, strategy, last.plan["hypothesis"]["modification"]),
                     parent,
                     Recipe.from_dict(baseline_recipe) if baseline_recipe else None,
                     last.experiment_id,
@@ -231,6 +234,40 @@ class StrategyPolicy:
             regressed = {
                 d for d in (world.suite_domain(s) for s in analysis.get("regressed_suites", [])) if d
             }
+            trained = {d for d, w in parent.mix.items() if w > 0}
+            if trained and trained <= regressed:
+                # Même les domaines ENTRAÎNÉS régressent : ce n'est pas un oubli par manque de
+                # diversité (augmenter leur part n'a pas de sens). Lecture INFERRED : échantillon
+                # trop petit ou pas trop grand. Une modification à la fois : plus de données, puis lr.
+                facts = f"domaines entraînés {sorted(trained)} eux-mêmes dégradés"
+                tokens = parent.tokens * 2
+                if tokens <= self.max_tokens:
+                    change = (
+                        f"doubler les données tirées ({parent.tokens} -> {tokens} tokens), même mélange"
+                    )
+                    out.append(
+                        StrategyDecision(
+                            MORE_DATA,
+                            self.hypothesis(world, weakness, MORE_DATA, change),
+                            replace(parent, tokens=tokens),
+                            parent,
+                            last.experiment_id,
+                            [*base, facts, "INFERRED : sur-apprentissage d'un échantillon trop petit"],
+                        )
+                    )
+                lr = parent.lr / 2
+                if lr >= self.min_lr:
+                    change = f"diviser le taux d'apprentissage par deux ({parent.lr} -> {lr})"
+                    out.append(
+                        StrategyDecision(
+                            LOWER_LR,
+                            self.hypothesis(world, weakness, LOWER_LR, change),
+                            replace(parent, lr=lr),
+                            parent,
+                            last.experiment_id,
+                            [*base, facts, "INFERRED : pas d'apprentissage trop grand pour un affinage"],
+                        )
+                    )
             if regressed:
                 current = domain_share(parent.mix, regressed)
                 for level in self.protect_levels:
@@ -243,7 +280,7 @@ class StrategyPolicy:
                         out.append(
                             StrategyDecision(
                                 PROTECT_DOMAINS,
-                                self._hypothesis(world, weakness, PROTECT_DOMAINS, change),
+                                self.hypothesis(world, weakness, PROTECT_DOMAINS, change),
                                 replace(parent, mix=mix),
                                 parent,
                                 last.experiment_id,
@@ -255,16 +292,16 @@ class StrategyPolicy:
                             )
                         )
         elif cause in (FailureCause.NO_SIGNIFICANT_EFFECT.value, FailureCause.NO_CHANGE.value):
-            steps, tokens = parent.steps * 2, parent.tokens * 2
-            if steps <= self.max_steps and tokens <= self.max_tokens:
-                change = (
-                    f"doubler le budget d'entraînement ({parent.steps} -> {steps} pas) avec le même mélange"
-                )
+            # UNE modification : le nombre de pas (plus d'époques sur les mêmes données). Doubler
+            # aussi les tokens en ferait deux, et le plan serait refusé (attribution impossible).
+            steps = parent.steps * 2
+            if steps <= self.max_steps:
+                change = f"doubler le nombre de pas ({parent.steps} -> {steps}) avec le même mélange"
                 out.append(
                     StrategyDecision(
                         MORE_STEPS,
-                        self._hypothesis(world, weakness, MORE_STEPS, change),
-                        replace(parent, steps=steps, tokens=tokens),
+                        self.hypothesis(world, weakness, MORE_STEPS, change),
+                        replace(parent, steps=steps),
                         parent,
                         last.experiment_id,
                         [*base, "aucun effet mesurable : on double le budget, dans la limite autorisée"],
@@ -277,7 +314,7 @@ class StrategyPolicy:
                 out.append(
                     StrategyDecision(
                         LOWER_LR,
-                        self._hypothesis(world, weakness, LOWER_LR, change),
+                        self.hypothesis(world, weakness, LOWER_LR, change),
                         replace(parent, lr=lr),
                         parent,
                         last.experiment_id,
@@ -343,11 +380,32 @@ class StrategyPolicy:
             out.append(
                 StrategyDecision(
                     strategy,
-                    self._hypothesis(world, weakness, strategy, change),
+                    self.hypothesis(world, weakness, strategy, change),
                     replace(reference, mix=mix),
                     reference,
                     None,
                     rationale,
                 )
             )
-        return out
+        # Une décision identique à la référence n'est pas une expérience (le plan serait refusé) :
+        # c'est le cas quand le champion s'entraîne déjà sur le seul domaine cible.
+        kept = [d for d in out if d.baseline_recipe is None or d.recipe.diff(d.baseline_recipe)]
+        if len(kept) < len(out):
+            steps = min(reference.steps * 2, self.max_steps)
+            if steps != reference.steps:
+                change = (
+                    f"le mélange du champion est déjà « {target} » seul : prolonger l'entraînement "
+                    f"({reference.steps} -> {steps} pas) sur ce mélange"
+                )
+                kept.insert(
+                    0,
+                    StrategyDecision(
+                        MORE_STEPS,
+                        self.hypothesis(world, weakness, MORE_STEPS, change),
+                        replace(reference, steps=steps),
+                        reference,
+                        None,
+                        [*rationale, "cible déjà seule dans le mélange : on augmente le budget"],
+                    ),
+                )
+        return kept

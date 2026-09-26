@@ -401,6 +401,10 @@ def test_policy_adapts_to_failures_and_never_repeats_a_plan(tmp_path: Path) -> N
     fourth = policy.decide(obs, world, journal, exhausted=set())
     assert fourth is not None and fourth.strategy == "more_steps" and fourth.recipe.steps == 200
     p4 = plan_of(fourth)
+    # Toute décision doit donner un plan VALIDE (une seule modification) : doubler aussi les
+    # tokens en faisait deux et la boucle aurait planté sur ce chemin.
+    for plan in (p1, p2, p3, p4):
+        plan.validate(set(world.suite_names), max_modifications=1, domains=set(world.spec.domains))
     _record(journal, p4, "no_significant_effect")
     fifth = policy.decide(obs, world, journal, exhausted=set())
     assert fifth is not None and fifth.recipe.steps == 400
@@ -475,3 +479,31 @@ def test_weakness_detection_cites_measured_evidence() -> None:
     assert [w.benchmark for w in found] == ["heldout:apex_docs"] and found[0].documents == 20
     assert found[0].gap == pytest.approx(0.6)
     assert find_weaknesses(world, reports, min_gap=1.0) == []
+
+
+def test_policy_adapts_when_even_the_trained_domain_regresses(tmp_path: Path) -> None:
+    """Constat de l'exécution réelle P2 : un affinage régressait sur TOUS les domaines, y compris
+    celui qu'il entraînait. Augmenter la part des domaines dégradés n'a alors aucun sens."""
+    world = support.world()
+    obs = _observation(world)
+    journal = ExperimentJournal(tmp_path / "j.jsonl")
+    policy = StrategyPolicy(finetune_steps=100, finetune_tokens=10_000, max_steps=400, max_tokens=40_000)
+    first = policy.decide(obs, world, journal, exhausted=set())
+    assert (
+        first is not None and first.recipe.mix == {"apex_docs": 1.0} and first.baseline_recipe is not None
+    )
+    plan = ExperimentPlan(
+        world.fingerprint,
+        {"name": "c", "artifact": obs.champion.artifact},  # type: ignore[union-attr]
+        first.baseline_recipe,
+        first.recipe,
+        first.hypothesis,
+        Budget(400, 40_000, 60.0),
+    )
+    _record(journal, plan, "protected_regression", regressed=["heldout:apex_docs", "heldout:stdlib"])
+    second = policy.decide(obs, world, journal, exhausted=set())
+    assert second is not None and second.strategy == "more_data"
+    assert second.recipe.tokens == 20_000 and second.recipe.diff(first.recipe) == [
+        {"field": "tokens", "from": 10_000, "to": 20_000}
+    ]
+    assert any("INFERRED" in line for line in second.rationale)

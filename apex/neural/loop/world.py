@@ -281,8 +281,10 @@ class World:
                 "benchmarks": {name: b.fingerprint for name, b in sorted(self.benchmarks.items())},
                 **(
                     {
+                        # Le CONTRAT (critères, tolérance, objectif, suite d'acceptation) fait partie
+                        # du monde : changer les critères de succès change l'empreinte.
                         "capabilities": {
-                            name: cap.fingerprint(data)
+                            name: {"benchmark": cap.fingerprint(data), "contract": cap.contract.to_dict()}
                             for name, (cap, data) in sorted(self.capabilities.items())
                         }
                     }

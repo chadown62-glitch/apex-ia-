@@ -50,6 +50,10 @@ class CapabilityContract:
     acceptance_suite: str  # seule suite de la capacité qui peut fonder une acceptation
     suites: tuple[str, ...]
     limits: tuple[str, ...] = field(default_factory=tuple)  # ce que la capacité NE fait PAS
+    #: Suite des tâches dont les solutions peuvent être VUES à l'entraînement (sonde de mémorisation).
+    memorization_suite: str | None = None
+    #: Suites d'une famille jamais vue à l'entraînement (sonde de transfert).
+    transfer_suites: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -98,3 +102,50 @@ class Capability(ABC):
         *,
         provider: SandboxProvider,
     ) -> CapabilityEvaluation: ...
+
+
+def _significant_gain(c: dict[str, Any]) -> bool:
+    return bool(c.get("verdict") == "significant" and c["bpb_gain_ci"][0] > 0)
+
+
+def _significant_loss(c: dict[str, Any]) -> bool:
+    return bool(c.get("verdict") == "significant" and c["bpb_gain_ci"][1] < 0)
+
+
+def classify_learning(contract: CapabilityContract, comparisons: list[dict[str, Any]]) -> dict[str, Any]:
+    """MÉMORISATION / GÉNÉRALISATION / TRANSFERT, établis par les comparaisons
+    appariées du Judge (jamais déclarés) :
+
+    - GENERALIZATION : gain significatif sur la suite d'acceptation (fonctions jamais vues) ;
+    - TRANSFER : gain significatif sur une famille jamais vue à l'entraînement ;
+    - MEMORIZATION : gain significatif sur les tâches VUES sans gain held-out ;
+    - NONE : aucun gain significatif ; les régressions significatives sont listées à part."""
+    comps = {c["suite"]: c for c in comparisons}
+    kinds: list[str] = []
+    evidence: list[str] = []
+
+    def note(suite: str) -> None:
+        c = comps[suite]
+        low, high = c["bpb_gain_ci"]
+        values = f"{c.get('baseline_bpb')} -> {c.get('candidate_bpb')}"
+        evidence.append(f"{suite} : {values} (gain IC 95 % [{low:.3f}, {high:.3f}])")
+
+    heldout = comps.get(contract.acceptance_suite)
+    if heldout is not None and _significant_gain(heldout):
+        kinds.append("GENERALIZATION")
+        note(contract.acceptance_suite)
+    for suite in contract.transfer_suites:
+        if suite in comps and _significant_gain(comps[suite]):
+            kinds.append("TRANSFER")
+            note(suite)
+    memo = comps.get(contract.memorization_suite or "")
+    if memo is not None and _significant_gain(memo) and "GENERALIZATION" not in kinds:
+        kinds.append("MEMORIZATION")
+        note(contract.memorization_suite or "")
+    regressions = sorted(s for s in contract.suites if s in comps and _significant_loss(comps[s]))
+    return {
+        "kinds": kinds or ["NONE"],
+        "evidence": evidence,
+        "regressions": regressions,
+        "status": "ESTABLISHED",  # bootstrap apparié par fonction, sur les mesures du Judge
+    }

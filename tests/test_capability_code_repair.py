@@ -22,9 +22,11 @@ from apex.capabilities.code_repair.benchmark import (
     suite_name,
 )
 from apex.capabilities.code_repair.corpus import ALL
+from apex.capabilities.code_repair.fresh import FRESH, fresh_contamination
 from apex.capabilities.code_repair.harness import _MAX_BATCH_CHARS, judge_run, run_sources
 from apex.capabilities.code_repair.mutation import candidates, single_edits
 from apex.capabilities.code_repair.solver import METRIC, rank_candidates, solve_suite, suite_report
+from apex.capabilities.contract import classify_learning
 from apex.capabilities.registry import get_capability, sandbox_provider
 from apex.knowledge.filters import code_quality, normalize_code
 from apex.knowledge.pipeline import code_chunks
@@ -312,3 +314,102 @@ def test_repair_suite_fingerprint_changes_with_any_instance() -> None:
         suite.name, suite.split, (replace(suite.instances[0], inputs=("(1,)",)), *suite.instances[1:])
     )
     assert altered.fingerprint != suite.fingerprint
+
+
+@needs_sandbox
+def test_every_kept_bug_is_really_detected_by_the_tests() -> None:
+    bench = support.benchmark()
+    for suite in bench.suites.values():
+        for inst in suite.instances:
+            (run,) = run_sources(
+                sandbox_provider(), name=inst.name, sources=[inst.buggy], inputs=list(inst.inputs)
+            )
+            assert not judge_run(run, inst.expected).passed, inst.instance_id
+
+
+def test_ranking_rule_is_the_mean_per_token_nll() -> None:
+    import torch
+    import torch.nn.functional as F
+
+    world = support.world()
+    model = initial_model(world, 0)
+    view = support.benchmark().suites[suite_name("validation")].instances[0].view()
+    top = rank_candidates(model, world.tokenizer, view)[0]
+    ids = world.tokenizer.encode(top.source, add_bos=True, add_eos=True)
+    with torch.no_grad():
+        logits, _ = model(torch.tensor([ids[:-1]]))
+        mean = float(F.cross_entropy(logits[0].float(), torch.tensor(ids[1:])))
+    assert math.isclose(top.score, mean, rel_tol=1e-4)
+
+
+@needs_sandbox
+def test_world_refuses_a_context_too_short_for_the_benchmark() -> None:
+    short = replace(support.SPEC, context_length=48)
+    with pytest.raises(WorldIntegrityError, match="dépasse le contexte"):
+        World.build(short, support.candidates(), capability_data={"code_repair": support.benchmark()})
+
+
+def test_code_reaches_training_candidates_intact() -> None:
+    from apex.knowledge.acquisition import FileAcquirer, LocalDirectoryDiscovery
+    from apex.knowledge.export import to_training_candidates
+    from apex.knowledge.model import SourceKind
+    from apex.knowledge.pipeline import AgentConfig, KnowledgeAgent
+
+    refs = LocalDirectoryDiscovery(
+        support.STDLIB, ("heapq.py",), SourceKind.REPOSITORY, "PSF-2.0"
+    ).discover()
+    items = KnowledgeAgent([FileAcquirer()], AgentConfig(chunk_words=80)).run(refs).items
+    chunks = to_training_candidates(items, chunk_words=80)
+    assert len(chunks) > 1 and any(c.text.startswith("def ") for c in chunks)
+    assert any("\n    " in c.text for c in chunks)  # l'indentation survit à l'export
+    original = normalize_code((support.STDLIB / "heapq.py").read_text())
+    assert [line for c in chunks for line in c.text.split("\n") if line.strip()] == [
+        line for line in original.split("\n") if line.strip()
+    ]
+
+
+# Mémorisation / généralisation / transfert : établis par les comparaisons du Judge ----------
+
+
+def _comparison(suite: str, low: float, high: float, verdict: str = "significant") -> dict:
+    return {
+        "suite": suite,
+        "bpb_gain_ci": [low, high],
+        "verdict": verdict,
+        "baseline_bpb": 0.9,
+        "candidate_bpb": 0.8,
+    }
+
+
+def test_learning_is_classified_from_significant_paired_gains_only() -> None:
+    contract = get_capability("code_repair").contract
+    held, train, transfer = (suite_name(s) for s in ("heldout", "train", "transfer"))
+    assert contract.memorization_suite == train and contract.transfer_suites == (transfer,)
+
+    memo = classify_learning(
+        contract, [_comparison(train, 0.1, 0.3), _comparison(held, -0.05, 0.02, "no_difference")]
+    )
+    assert memo["kinds"] == ["MEMORIZATION"] and memo["evidence"][0].startswith(train)
+
+    general = classify_learning(contract, [_comparison(train, 0.1, 0.3), _comparison(held, 0.02, 0.1)])
+    assert general["kinds"] == ["GENERALIZATION"]  # un gain held-out n'est pas de la mémorisation
+
+    both = classify_learning(contract, [_comparison(held, 0.02, 0.1), _comparison(transfer, 0.01, 0.2)])
+    assert both["kinds"] == ["GENERALIZATION", "TRANSFER"]
+
+    # un intervalle qui contient zéro n'est jamais un apprentissage, même avec un verdict mal formé
+    noise = classify_learning(contract, [_comparison(held, -0.01, 0.1), _comparison(train, 0.0, 0.2)])
+    assert noise["kinds"] == ["NONE"] and noise["evidence"] == []
+
+    worse = classify_learning(contract, [_comparison(held, -0.2, -0.05)])
+    assert worse["kinds"] == ["NONE"] and worse["regressions"] == [held]
+
+
+def test_fresh_tasks_are_checked_against_everything_the_world_contains() -> None:
+    fresh = FRESH[0]
+    assert {f.fid for f in FRESH}.isdisjoint({f.fid for f in ALL})  # jamais dans le benchmark gelé
+    leaked = fresh_contamination(["# prose\n", "x = 1\n" + fresh.source], [f.source for f in ALL])
+    assert leaked["shared_12gram_with_world"] == [fresh.fid]
+    clean = fresh_contamination(["def unrelated(a):\n    return a\n"], [f.source for f in ALL])
+    assert clean["shared_12gram_with_world"] == []
+    assert clean["max_similarity_to_corpus"][0] <= 0.6  # pas une variante d'une fonction du corpus

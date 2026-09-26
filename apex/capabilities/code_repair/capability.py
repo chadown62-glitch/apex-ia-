@@ -60,6 +60,8 @@ CONTRACT = CapabilityContract(
     training_domains=("code", TASKS_DOMAIN),
     acceptance_suite=suite_name("heldout"),
     suites=tuple(suite_name(s) for s in ("train", "validation", "heldout", "transfer")),
+    memorization_suite=suite_name("train"),
+    transfer_suites=(suite_name("transfer"),),
     limits=(
         "pas de génération libre : sélection parmi des éditions d'un jeton énumérées",
         "bugs à une seule édition ; pas de bug multi-lignes ni de refactoring",
