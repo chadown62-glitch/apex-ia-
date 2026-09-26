@@ -69,8 +69,25 @@ INJECTION_PATTERNS: tuple[str, ...] = (
 _INJECTION = [re.compile(p, re.IGNORECASE) for p in INJECTION_PATTERNS]
 
 
+#: Caractères invisibles sans rôle linguistique, retirés du texte conservé.
+#: (ZWNJ/ZWJ restent : ils portent du sens dans certaines écritures.)
+_INVISIBLE = dict.fromkeys(map(ord, "\u200b\u2060\ufeff\u00ad\u180e"))
+
+
+def canonical(text: str, *, format_as_space: bool = False) -> str:
+    """Vue de DÉTECTION (jamais stockée) : compatibilité Unicode (NFKC :
+    pleine chasse, ligatures...) et suppression de TOUS les caractères de
+    format (catégorie Cf : espaces de largeur nulle, marques de direction...).
+    Les filtres comparent cette vue, pas le texte brut, pour qu'un maquillage
+    invisible ne contourne ni la détection d'injection ni le dédoublonnage."""
+    folded = unicodedata.normalize("NFKC", text)
+    replacement = " " if format_as_space else ""
+    return "".join(replacement if unicodedata.category(c) == "Cf" else c for c in folded)
+
+
 def normalize(text: str) -> str:
-    text = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n")
+    text = unicodedata.normalize("NFC", text).translate(_INVISIBLE)
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.split("\n")]
     out: list[str] = []
     for line in lines:
@@ -154,7 +171,14 @@ def quality(text: str) -> QualityScore:
 
 
 def injection_matches(text: str) -> tuple[str, ...]:
-    return tuple(m.group(0) for pattern in _INJECTION if (m := pattern.search(text)))
+    """Deux vues : caractère de format supprimé (glissé DANS un mot) et
+    remplacé par une espace (glissé À LA PLACE d'un séparateur)."""
+    found: dict[str, None] = {}
+    for view in (canonical(text), canonical(text, format_as_space=True)):
+        for pattern in _INJECTION:
+            if m := pattern.search(view):
+                found.setdefault(m.group(0))
+    return tuple(found)
 
 
 def _shingles(text: str, size: int = 5) -> set[str]:
@@ -195,6 +219,7 @@ class DuplicateIndex:
     def find(self, text: str) -> tuple[str | None, float]:
         """(identifiant de l'original, similarité) ou (None, meilleure similarité).
         Ne modifie pas l'index : seul `add` y inscrit un texte."""
+        text = canonical(text)
         key = hashlib.sha256(" ".join(words(text)).encode()).hexdigest()
         if key in self._exact:
             return self._exact[key], 1.0
@@ -207,6 +232,7 @@ class DuplicateIndex:
         return (best_id, best) if best >= self.threshold else (None, best)
 
     def add(self, item_id: str, text: str) -> None:
+        text = canonical(text)
         key = hashlib.sha256(" ".join(words(text)).encode()).hexdigest()
         self._exact.setdefault(key, item_id)
         self._signatures.append((item_id, minhash(text)))
