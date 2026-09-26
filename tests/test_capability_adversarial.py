@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -109,7 +110,10 @@ def test_partial_or_forged_sandbox_output_is_invalid() -> None:
 
     two = [FN.source, FN.source]
     for tamper in (
-        lambda out: out.replace("APEX_REPAIR_RESULT:", "APEX_REPAIR_RESULT:ffff"),  # mauvais nonce
+        # nonce deviné, de même longueur, charge utile intacte : seule la vérification du nonce refuse
+        lambda out: re.sub(
+            r"APEX_REPAIR_RESULT:[0-9a-f]{16}:", "APEX_REPAIR_RESULT:" + "0" * 16 + ":", out
+        ),
         lambda out: out + "\n" + out,  # deux lignes de résultat
         lambda out: out.rsplit("},", 1)[0] + "}]",  # un résultat manquant (exécution partielle)
         lambda out: "",  # aucune ligne

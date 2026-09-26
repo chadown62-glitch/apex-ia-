@@ -8,6 +8,7 @@ import json
 import math
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -23,7 +24,7 @@ from apex.capabilities.code_repair.benchmark import (
 )
 from apex.capabilities.code_repair.corpus import ALL
 from apex.capabilities.code_repair.fresh import FRESH, fresh_contamination
-from apex.capabilities.code_repair.harness import _MAX_BATCH_CHARS, judge_run, run_sources
+from apex.capabilities.code_repair.harness import judge_run, run_sources
 from apex.capabilities.code_repair.mutation import candidates, single_edits
 from apex.capabilities.code_repair.solver import METRIC, rank_candidates, solve_suite, suite_report
 from apex.capabilities.contract import classify_learning
@@ -43,6 +44,9 @@ try:
 except Exception:  # pragma: no cover - dépend de l'hôte
     SANDBOX = False
 needs_sandbox = pytest.mark.skipif(not SANDBOX, reason="aucun sandbox NAMESPACED sur cet hôte")
+
+
+MAX_ARG_STRLEN = 131_072  # limite Linux d'UN argument de exec (32 pages)
 
 
 # Knowledge Agent : le code arrive intact au modèle ------------------------------------------
@@ -113,12 +117,23 @@ def test_harness_distinguishes_pass_wrong_output_exception_and_timeout() -> None
 @needs_sandbox
 def test_large_payloads_are_batched_under_the_kernel_argument_limit() -> None:
     fn = next(f for f in ALL if f.fid == "max_index")
-    many = [t for t, _ in candidates(fn.source.replace("> values[best]", ">= values[best]"))] * 20
-    assert sum(map(len, many)) > 2 * _MAX_BATCH_CHARS  # plusieurs lancements nécessaires
-    runs = run_sources(
-        sandbox_provider(), name="max_index", sources=many, inputs=[repr(t) for t in fn.tests]
-    )
+    variants = [t for t, _ in candidates(fn.source.replace("> values[best]", ">= values[best]"))]
+    many = variants * (1 + MAX_ARG_STRLEN // sum(map(len, variants)))
+    assert sum(map(len, many)) > MAX_ARG_STRLEN  # un seul lancement dépasserait la limite du noyau
+    real = sandbox_provider()
+    launched: list[int] = []
+
+    class Spy:
+        def detect(self) -> Any:
+            return real.detect()
+
+        def execute(self, spec: Any, **kw: Any) -> Any:
+            launched.append(max(len(arg.encode()) for arg in spec.command))
+            return real.execute(spec, **kw)
+
+    runs = run_sources(Spy(), name="max_index", sources=many, inputs=[repr(t) for t in fn.tests])  # type: ignore[arg-type]
     assert len(runs) == len(many) and all(r.status in ("ok", "timeout", "crash") for r in runs)
+    assert len(launched) > 1 and max(launched) < MAX_ARG_STRLEN
 
 
 # Benchmark ---------------------------------------------------------------------------------------
