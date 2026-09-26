@@ -74,15 +74,90 @@ _INJECTION = [re.compile(p, re.IGNORECASE) for p in INJECTION_PATTERNS]
 _INVISIBLE = dict.fromkeys(map(ord, "\u200b\u2060\ufeff\u00ad\u180e"))
 
 
+#: Homoglyphes cyrilliques et grecs courants -> lettre latine visuellement identique.
+_CONFUSABLES = {
+    0x0430: "a",
+    0x0435: "e",
+    0x043E: "o",
+    0x0440: "p",
+    0x0441: "c",
+    0x0443: "y",
+    0x0445: "x",
+    0x0456: "i",
+    0x0458: "j",
+    0x0455: "s",
+    0x04BB: "h",
+    0x0501: "d",
+    0x0410: "A",
+    0x0412: "B",
+    0x0415: "E",
+    0x041A: "K",
+    0x041C: "M",
+    0x041D: "H",
+    0x041E: "O",
+    0x0420: "P",
+    0x0421: "C",
+    0x0422: "T",
+    0x0425: "X",
+    0x0406: "I",
+    0x0408: "J",
+    0x0405: "S",
+    0x03BF: "o",
+    0x03B1: "a",
+    0x03B5: "e",
+    0x03B9: "i",
+    0x03BD: "v",
+    0x03C1: "p",
+    0x03C4: "t",
+    0x03BA: "k",
+    0x0391: "A",
+    0x0392: "B",
+    0x0395: "E",
+    0x0396: "Z",
+    0x0397: "H",
+    0x0399: "I",
+    0x039A: "K",
+    0x039C: "M",
+    0x039D: "N",
+    0x039F: "O",
+    0x03A1: "P",
+    0x03A4: "T",
+    0x03A5: "Y",
+    0x03A7: "X",
+}
+_WORD_RUN = re.compile(r"\w+", re.UNICODE)
+
+
+def _is_latin(char: str) -> bool:
+    return char.isascii() and char.isalpha()
+
+
+def _fold_mixed_script(text: str) -> str:
+    """Ne replie QUE les mots qui mêlent l'alphabet latin et des homoglyphes :
+    un vrai texte russe ou grec n'est pas touché. Limite connue : un mot écrit
+    ENTIÈREMENT en homoglyphes (ex. « are » tapé en cyrillique) n'est pas replié."""
+
+    def fold(match: re.Match[str]) -> str:
+        word = match.group(0)
+        if any(_is_latin(c) for c in word) and any(ord(c) in _CONFUSABLES for c in word):
+            return word.translate(_CONFUSABLES)
+        return word
+
+    return _WORD_RUN.sub(fold, text)
+
+
 def canonical(text: str, *, format_as_space: bool = False) -> str:
     """Vue de DÉTECTION (jamais stockée) : compatibilité Unicode (NFKC :
     pleine chasse, ligatures...) et suppression de TOUS les caractères de
     format (catégorie Cf : espaces de largeur nulle, marques de direction...).
     Les filtres comparent cette vue, pas le texte brut, pour qu'un maquillage
-    invisible ne contourne ni la détection d'injection ni le dédoublonnage."""
+    invisible ne contourne ni la détection d'injection ni le dédoublonnage.
+    Les mots qui mêlent latin et homoglyphes (cyrillique, grec) sont repliés
+    vers le latin."""
     folded = unicodedata.normalize("NFKC", text)
     replacement = " " if format_as_space else ""
-    return "".join(replacement if unicodedata.category(c) == "Cf" else c for c in folded)
+    stripped = "".join(replacement if unicodedata.category(c) == "Cf" else c for c in folded)
+    return _fold_mixed_script(stripped)
 
 
 def normalize(text: str) -> str:
