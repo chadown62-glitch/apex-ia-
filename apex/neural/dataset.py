@@ -23,6 +23,8 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 
+from apex.knowledge.filters import canonical
+
 ALLOWED_LICENSES = frozenset({"free", "compatible"})
 ALLOWED_QUALITY = frozenset({"high_value", "medium_value"})
 _WORD = re.compile(r"\w+", re.UNICODE)
@@ -72,7 +74,10 @@ class TrainingCandidate:
 
 
 def _normalized(text: str) -> str:
-    return " ".join(w.lower() for w in _WORD.findall(text))
+    """Clé de comparaison (doublons, n-grammes de fuite) calculée sur la vue
+    canonique du Knowledge Agent : un caractère invisible ou pleine chasse ne
+    fait pas d'une copie une donnée nouvelle."""
+    return " ".join(w.lower() for w in _WORD.findall(canonical(text)))
 
 
 def _ngrams(text: str, n: int) -> set[tuple[str, ...]]:

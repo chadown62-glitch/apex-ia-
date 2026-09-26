@@ -188,3 +188,19 @@ def test_decontamination_removes_contaminating_train_fragments_and_keeps_test_in
     assert all(c.candidate_id != "copier" for s in Split for c in cleaned.splits[s])
     assert cleaned.leakage_ratio <= 0.1
     assert build_dataset(items, decontaminate=True).decontaminated == ()
+
+
+# Cycle CI 1 (native_learning) : copies maquillées ------------------------------
+
+
+def test_invisible_or_fullwidth_copies_do_not_inflate_the_dataset() -> None:
+    items = corpus()
+    original = items[0].text
+    zero_width = " ".join(w[:2] + chr(0x200B) + w[2:] if len(w) > 4 else w for w in original.split(" "))
+    fullwidth = "".join(chr(ord(c) + 0xFEE0) if "!" <= c <= "~" else c for c in original)
+    copies = [
+        candidate(0, 0, candidate_id="zw", source_id="mirror-zw", text=zero_width),
+        candidate(0, 0, candidate_id="fw", source_id="mirror-fw", text=fullwidth),
+    ]
+    dataset = build_dataset([*items, *copies])
+    assert set(dataset.dropped_duplicates) == {"zw", "fw"}
