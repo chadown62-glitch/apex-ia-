@@ -181,6 +181,65 @@ Le ledger contient aussi un snapshot `cycle2@7cf3abd:flaky64` **invalide**
 (le premier des deux) : mesuré depuis un worktree sous /tmp, il a révélé ce
 défaut. Il n'a servi à aucune comparaison.
 
+## Deuxième capacité : Learning / Model Routing
+
+Même moteur, seul l'adaptateur est nouveau (`capabilities/model_routing.py`)
+— aucune modification du moteur n'a été nécessaire. Le banc mesure le point
+d'entrée de production `apex solve` (`run_solution_loop`) : des historiques
+produits par de vraies exécutions (EvalRunner, sandbox, oracle, Experience)
+sur deux modèles contrôlés, puis le modèle réellement appelé par le code de
+production. Chaque cycle est jugé dans un processus séparé, avec une
+définition du juge épinglée à un commit ANTÉRIEUR au correctif
+(`60bd2cb` pour le cycle 1, `3ad2c6c` pour les cycles 2 et 3).
+
+| Métrique | Baseline | C1 | C2 | C3 |
+|---|---|---|---|---|
+| picks_proven_model | 0 | **1** | 1 | 1 |
+| keeps_proven_reference (garde-fou) | 1 | 1 | 1 | 1 |
+| reference_without_history (garde-fou) | 1 | 1 | 1 | 1 |
+| avoids_dead_model | 0 | **1** | 1 | 1 |
+| infra_not_blamed_on_model | 1 | 1 | 1 | 1 |
+| unconfirmed_success_not_credited | 0 | **1** | 1 | 1 |
+| abandons_failing_for_untried | 0 | 0 | 0 | **1** |
+| strong_record_beats_single_success | — | 0 | **1** | 1 |
+| dead_reference_abandoned | — | 0 | 0 | **1** |
+
+- **Baseline** : le juge confirme 4 défauts ; `apex solve` prend toujours le
+  premier modèle de `config.yaml`. Les garde-fous « passent » seulement parce
+  que rien ne change jamais.
+- **Cycle 1 (functionality)** `7222249` : `performance_from_experiences` +
+  `choose_endpoint` (`select_model(performance=...)`). Test causal : même
+  configuration, historique A -> référence, historique B -> autre modèle.
+- **Cycle 2 (adversarial)** : attaques trouvées APRÈS le cycle 1 et ajoutées
+  au banc avant correctif (`3ad2c6c`) : un succès isolé (1/1) surclassait
+  9/10 ; une référence injoignable restait appelée. Correctif `78d6b1a` :
+  lissage de Laplace (`reliability_prior_strength`).
+- **Cycle 3 (improvement)** `7120a26` : attribution de l'échec de génération
+  au modèle demandé + fiabilité relative à l'a priori (un modèle en échec
+  passe sous un modèle jamais essayé).
+- Non résolu : aucune exploration (un modèle écarté n'est jamais ré-essayé) ;
+  les autres sites d'appel du routeur (missions, conversations, TaskLoop)
+  ne transmettent toujours pas `performance=`.
+
+## Validation inter-systèmes
+
+Statut d'une connexion : CONNECTED (code relié), TESTED (test exécuté qui la
+traverse), MEASURED (métrique avant/après au ledger), UNVERIFIED, BROKEN.
+
+| Connexion | Statut | Preuve |
+|---|---|---|
+| Learning -> Evaluation | TESTED, MEASURED | `tests/test_adaptive_solution_loop.py` ; ledger A |
+| Learning -> Experience | TESTED, MEASURED | `TestLuckySuccessDoesNotContaminateLearning` ; ledger A cycle 4 |
+| Learning -> ModelRouter (`apex solve`) | TESTED, MEASURED | `tests/test_model_performance.py` ; ledger B |
+| Learning -> ModelRouter (missions, conversations, TaskLoop) | BROKEN (non relié) | aucun `performance=` transmis ; `agent_executions` sans `model_id` en échec |
+| ModelRouter -> Models | TESTED (double de backend), UNVERIFIED (vrai modèle) | banc B : endpoint réellement appelé ; aucun Ollama joignable |
+| Models -> Generated Solutions | TESTED (double), UNVERIFIED (vrai modèle) | `tests/test_evalrunner_generated_solution.py` |
+| Generated Solutions -> Sandbox | TESTED, MEASURED | namespaces : suite complète ; conteneur : `tests/test_container_generated_solution.py` |
+| Sandbox -> Evaluation | TESTED, MEASURED | `TestResultContract` ; métriques false_positive/verdict_accuracy |
+| Evaluation -> Judges | TESTED | `TestChampionConfirmation` (RobustnessJudge) ; `tests/test_improvement_invariants.py` |
+| Judges -> Experience | TESTED, MEASURED | `SuccessEvidence` persistée après confirmation ; ledger A cycle 4 |
+| Experience -> Future Decision | TESTED, MEASURED | `decide_next_strategies` et `choose_endpoint` ; ledgers A et B |
+
 ## Validations d'environnement
 
 - **ContainerSandbox : TESTÉ** (démon Docker démarré dans le bac à sable,

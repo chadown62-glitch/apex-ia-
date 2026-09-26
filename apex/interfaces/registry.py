@@ -291,7 +291,29 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "peut durablement favoriser le premier candidat ayant "
               "accumulé un historique, au détriment d'alternatives jamais "
               "réessayées (voir le rapport « Hardening », design documenté, "
-              "aucune valeur arbitraire introduite ici).",
+              "aucune valeur arbitraire introduite ici).\n\n"
+              "MISE À JOUR (Continuous Improvement Engine, capacité « Learning / "
+              "Model Routing ») : l'état DORMANT ci-dessus reste exact pour "
+              "les trois sites d'appel cités ET pour le quatrième, "
+              "`apex.taskloop.loop` (l'audit d'origine l'omettait). Un "
+              "cinquième site ÉCOUTE désormais l'historique : `apex solve` "
+              "(`apex.metalearner.solution_loop_runner.choose_endpoint`) "
+              "transmet `performance=` construit à partir des `Experience` "
+              "JUGÉES (`apex.metalearner.model_performance` : succès "
+              "CONFIRMÉ seulement, échecs du code généré, pannes "
+              "d'infrastructure exclues, échec de génération attribué au "
+              "modèle demandé) et `config.routing`, où "
+              "`reliability_prior_strength: 2.0` (lissage de Laplace) et "
+              "`reliability_relative_to_prior: true` (un modèle en échec "
+              "passe sous un modèle jamais essayé) sont activés ; leurs "
+              "valeurs par défaut (0 / False) laissent tout autre appelant "
+              "inchangé. Mesuré par trois cycles (docs/improvement/"
+              "model_routing.ledger.jsonl). Toujours PLANNED : exploration "
+              "(un modèle écarté n'est jamais ré-essayé) ; `eval_quality` "
+              "— la remarque « EvalRunRow n'a pas de colonne model_id » "
+              "est périmée (la colonne existe), mais l'axe reste UNKNOWN ; "
+              "`agent_executions` enregistre `model_id=None` sur échec, "
+              "donc brancher ce signal-là tel quel ne verrait que des succès.",
     ),
     Abstraction(
         "ArtifactStore", "workspaces adressés par contenu", 3, 3,
@@ -1706,18 +1728,21 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
         32, 32,
         ImplStatus.STUB, "comparaison manuelle de résultats de tests",
         module="apex.improvement.engine",
-        notes="STUB et non IMPLEMENTED délibérément : une seule capacité est "
-              "branchée (`generated_solution`, `apex.improvement.capabilities`). "
-              "Le moteur ne modifie jamais de code : il mesure deux fois "
-              "(reproductibilité), compare métrique par métrique (`StatTest` "
-              "pour les métriques stochastiques), fait juger par des sondes de "
-              "réfutation agrégées par `GauntletRunner.run_stage`, ré-exécute "
-              "chaque réfutation (debugger : PROBABLE/CONFIRMED/REJECTED) et "
-              "consigne le tout dans un ledger JSON Lines append-only. "
-              "`author_id == judge_id` est refusé avant toute mesure. Limites : "
-              "modèle scripté (aucun Ollama joignable là où les cycles ont été "
-              "mesurés), `ContainerSandbox` non exercé, sondes et correctifs "
-              "écrits par le même agent (sauf la revue adverse du cycle 2). "
+        notes="STUB et non IMPLEMENTED délibérément : deux capacités sont "
+              "branchées (`generated_solution`, `model_routing`), toutes deux "
+              "mesurées avec des modèles scriptés. Le moteur ne modifie jamais "
+              "de code : il mesure deux fois (reproductibilité), refuse une "
+              "baseline absente ou un snapshot non mesuré par lui ou absent du "
+              "ledger, ne compare jamais deux définitions de benchmark ou deux "
+              "environnements différents, agrège lui-même les résultats de "
+              "sondes (`GauntletRunner.run_stage`) — un juge, éventuellement "
+              "dans un processus séparé et épinglé à une révision git "
+              "(`remote_judge.SubprocessJudge`), ne rend jamais de décision "
+              "globale — puis consigne dans un ledger chaîné par hachage. "
+              "Limites : modèle réel jamais exercé (politique réseau de "
+              "l'environnement de mesure) ; sondes et correctifs écrits par le "
+              "même agent ; le chaînage n'arrête pas quelqu'un qui recalcule "
+              "toute la chaîne (ancrage externe : git). "
               "Voir docs/CONTINUOUS_IMPROVEMENT.md.",
     ),
 )
