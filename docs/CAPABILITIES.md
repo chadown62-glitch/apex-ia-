@@ -343,3 +343,27 @@ l'E2E ont des tests réels : refus d'une expérience dirigée sans faiblesse, pl
 conteneur, PAS une validation de la machine de l'utilisateur.
 
 **Hors périmètre** : calcul distribué, business, workers, grands modèles, cloud, UE5, interface commerciale.
+
+## 12. Mutation testing (cycle 2)
+
+`42` mutants, chacun affaiblissant UNE garantie (harness, opérateurs, benchmark, solveur, agrégation,
+monde, Judge, registre, observation, analyse d'échec, stratégie, Knowledge Agent, classification
+mémorisation / généralisation / transfert, tâches fraîches) ; exécutés dans une copie de travail isolée
+(`git worktree`), sources restaurées et vérifiées par hash, chaque mutant tué par un ÉCHEC d'assertion
+(jamais une erreur d'import ou de collecte).
+
+| passage | total | valides | compilent | tués | survivants |
+|---|---|---|---|---|---|
+| 1er passage | 42 | 42 | 42 | 38 | 4 |
+| après correction des tests | 4 | 4 | 4 | 4 | 0 |
+| **bilan** | **42** | **42** | **42** | **42** | **0** |
+
+Les 4 survivants étaient des tests qui passaient pour une MAUVAISE raison (défauts réels des tests, pas du
+code) :
+
+| survivant | pourquoi le test passait quand même | correction |
+|---|---|---|
+| nonce non vérifié | le faux nonce était 4 caractères plus long : c'est l'analyse JSON qui échouait | faux nonce de même longueur, charge utile intacte |
+| pas de découpage en lots | la charge (≈ 80 Ko) restait sous `MAX_ARG_STRLEN` (131 072) | charge au-delà de la limite noyau + espion : plusieurs lancements, chaque argument sous la limite |
+| valeur de capacité pondérée par les exécutions | le modèle non entraîné exécutait presque toujours 3 candidats : pondérations égales | test direct avec des nombres d'exécutions inégaux |
+| benchmark non gelé dans `world.json` | l'empreinte du MONDE rattrapait la falsification (couche redondante, réécrivable par un attaquant) | le test exige que la couche benchmark elle-même détecte |
