@@ -27,6 +27,7 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from apex.knowledge.filters import canonical
 from apex.neural.dataset import Split, TrainingDataset
 from apex.neural.model import IGNORE_INDEX, ApexLM
 from apex.neural.tokenizer import ByteBPETokenizer
@@ -38,6 +39,17 @@ from apex.stattest.model import StatTestResult, StatTestVerdict
 class Benchmark:
     name: str
     documents: tuple[tuple[str, str], ...]
+
+    def __post_init__(self) -> None:
+        """Un document répété gonfle l'échantillon apparié du Judge et peut
+        fabriquer une significativité : identifiants et textes (vue
+        canonique) doivent être uniques."""
+        ids = [doc_id for doc_id, _ in self.documents]
+        if len(set(ids)) != len(ids):
+            raise ValueError(f"benchmark « {self.name} » : identifiants de documents répétés")
+        texts = [" ".join(canonical(text).lower().split()) for _, text in self.documents]
+        if len(set(texts)) != len(texts):
+            raise ValueError(f"benchmark « {self.name} » : textes de documents répétés")
 
     @property
     def fingerprint(self) -> str:

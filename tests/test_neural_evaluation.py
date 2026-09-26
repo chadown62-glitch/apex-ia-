@@ -160,3 +160,14 @@ def test_structural_refusals() -> None:
     assert judge.judge({"heldout": report(BASE)}, {"heldout": nan}).decision is JudgeDecision.REJECT
     few = judge.judge({"heldout": report(BASE[:3])}, {"heldout": report(BETTER[:3])})
     assert few.decision is JudgeDecision.INCONCLUSIVE  # trop peu de paires : jamais ACCEPT
+
+
+# Cycle CI 2 (native_learning) : documents répétés dans un benchmark ------------
+
+
+def test_benchmark_refuses_repeated_documents() -> None:
+    with pytest.raises(ValueError, match="identifiants"):
+        Benchmark("h", (("a", "one text"), ("b", "other text"), ("a", "third text")))
+    with pytest.raises(ValueError, match="textes"):
+        Benchmark("h", (("a", "one text"), ("b", "One  text")))
+    assert len(Benchmark("h", (("a", "one text"), ("b", "other text"))).documents) == 2
