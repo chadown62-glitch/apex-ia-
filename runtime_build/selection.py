@@ -81,6 +81,7 @@ RESEARCH_PACKAGES: frozenset[str] = frozenset(
         "improvement",
         "judge",
         "metalearner",
+        "neural",
         "oracles",
         "selfmodel",
         "skills",
