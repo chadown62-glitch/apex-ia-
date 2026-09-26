@@ -120,6 +120,7 @@ class TestRouterScoringPolicy(unittest.TestCase):
         self.assertEqual(cfg.routing.local_preference_weight, 0.5)
         self.assertEqual(cfg.routing.reliability_weight, 0.3)
         self.assertEqual(cfg.routing.latency_weight, 0.2)
+        self.assertEqual(cfg.routing.reliability_prior_strength, 0.0)
 
     def test_custom_weights_are_applied(self) -> None:
         cfg = parse_config(config(routing={"reliability_weight": 0.9, "latency_weight": 0.1}))
@@ -145,6 +146,7 @@ class TestRouterScoringPolicy(unittest.TestCase):
         validation en silence. Vérifié sur les 4 champs, pas seulement un."""
         for field_name in (
             "capability_match_weight", "local_preference_weight", "reliability_weight", "latency_weight",
+            "reliability_prior_strength",
         ):
             with self.subTest(field=field_name):
                 with self.assertRaises(ConfigError):
@@ -156,6 +158,7 @@ class TestRouterScoringPolicy(unittest.TestCase):
         candidat avec un historique réel."""
         for field_name in (
             "capability_match_weight", "local_preference_weight", "reliability_weight", "latency_weight",
+            "reliability_prior_strength",
         ):
             with self.subTest(field=field_name):
                 with self.assertRaises(ConfigError):
@@ -168,6 +171,7 @@ class TestRouterScoringPolicy(unittest.TestCase):
         même si la garde de finitude change un jour d'implémentation."""
         for field_name in (
             "capability_match_weight", "local_preference_weight", "reliability_weight", "latency_weight",
+            "reliability_prior_strength",
         ):
             with self.subTest(field=field_name):
                 with self.assertRaises(ConfigError):

@@ -106,14 +106,19 @@ def _score_breakdown(
 
     if performance is not None and performance.usage_count > 0 and performance.success_rate.status is DataStatus.REAL:
         rate = performance.success_rate.value
+        prior = policy.reliability_prior_strength
+        estimate = rate
+        if prior:
+            estimate = (performance.success_count + prior / 2) / (performance.usage_count + prior)
+        smoothing = f", estimation lissée {estimate:.0%} (a priori {prior:g} obs.)" if prior else ""
         contributions.append(
             ScoreContribution(
                 name="historical_reliability",
-                value=policy.reliability_weight * rate,
+                value=policy.reliability_weight * estimate,
                 status=DataStatus.REAL,
                 reason=(
                     f"taux de succès observé {rate:.0%} sur {performance.usage_count} "
-                    f"exécution(s) réelle(s) (poids {policy.reliability_weight})"
+                    f"exécution(s) réelle(s){smoothing} (poids {policy.reliability_weight})"
                 ),
             )
         )

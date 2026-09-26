@@ -257,3 +257,50 @@ class TestCapacityRiskAxis(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _reliability(decision):
+    contributions = decision.ranked_candidates[0].breakdown.contributions
+    return next(c for c in contributions if c.name == "historical_reliability")
+
+
+class TestReliabilitySmoothing(unittest.TestCase):
+    """`reliability_prior_strength` : un succès isolé ne surclasse plus un
+    dossier solide ; sans lissage (défaut), le taux brut est inchangé."""
+
+    def setUp(self) -> None:
+        self.strong = a_candidate(ref=a_ref(family="alpha", version="1"))
+        self.single = a_candidate(ref=a_ref(family="beta", version="1"))
+        self.performance = {
+            self.strong.ref.id: real_perf(self.strong.ref.id, usage_count=10, success_count=9),
+            self.single.ref.id: real_perf(self.single.ref.id, usage_count=1, success_count=1),
+        }
+
+    def choose(self, policy: RouterScoringPolicy):
+        return select_model(
+            [self.strong, self.single], RoutingRequest(), performance=self.performance,
+            scoring_policy=policy,
+        ).selected
+
+    def test_without_smoothing_a_single_success_wins(self) -> None:
+        self.assertEqual(self.choose(RouterScoringPolicy()), self.single)
+
+    def test_with_laplace_smoothing_the_strong_record_wins(self) -> None:
+        self.assertEqual(self.choose(RouterScoringPolicy(reliability_prior_strength=2.0)), self.strong)
+
+    def test_the_smoothed_estimate_is_the_rule_of_succession(self) -> None:
+        decision = select_model(
+            [self.strong], RoutingRequest(), performance=self.performance,
+            scoring_policy=RouterScoringPolicy(reliability_prior_strength=2.0),
+        )
+        reliability = _reliability(decision)
+        self.assertAlmostEqual(reliability.value, 0.3 * (9 + 1) / (10 + 2))
+        self.assertIn("lissée", reliability.reason)
+
+    def test_smoothing_never_gives_a_candidate_without_history_a_contribution(self) -> None:
+        decision = select_model(
+            [self.single], RoutingRequest(), performance={},
+            scoring_policy=RouterScoringPolicy(reliability_prior_strength=2.0),
+        )
+        reliability = _reliability(decision)
+        self.assertEqual((reliability.value, reliability.status), (0.0, DataStatus.UNKNOWN))

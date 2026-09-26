@@ -954,6 +954,14 @@ class RouterScoringPolicy:
       Nulle tant qu'aucun échec de ce type n'a été observé, ou qu'aucun
       historique n'existe — jamais une supposition de capacité.
 
+    - `reliability_prior_strength` (défaut `0.0`, taux brut) : nombre
+      d'observations fictives, moitié succès moitié échecs, ajoutées au
+      taux de succès — `(succès + k/2) / (exécutions + k)`, la règle de
+      succession de Laplace pour `k = 2`. Sans lissage, un seul succès
+      (1/1 = 100 %) surclasse un dossier de 9 succès sur 10 ; le lissage
+      tient compte de la taille de l'échantillon. N'ajoute jamais de
+      contribution à un candidat SANS historique.
+
     Les poids fondés sur l'historique (`reliability_weight`/
     `latency_weight`/`capacity_risk_weight`) ne changent AUCUNE décision de
     routage tant qu'aucun historique réel n'existe pour un candidat
@@ -968,6 +976,7 @@ class RouterScoringPolicy:
     reliability_weight: float = 0.3
     latency_weight: float = 0.2
     capacity_risk_weight: float = 0.4
+    reliability_prior_strength: float = 0.0
 
     @classmethod
     def parse(cls, raw: dict[str, Any]) -> RouterScoringPolicy:
@@ -988,6 +997,9 @@ class RouterScoringPolicy:
             "reliability_weight": float(raw.get("reliability_weight", defaults.reliability_weight)),
             "latency_weight": float(raw.get("latency_weight", defaults.latency_weight)),
             "capacity_risk_weight": float(raw.get("capacity_risk_weight", defaults.capacity_risk_weight)),
+            "reliability_prior_strength": float(
+                raw.get("reliability_prior_strength", defaults.reliability_prior_strength)
+            ),
         }
         for field_name, value in values.items():
             if not math.isfinite(value):

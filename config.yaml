@@ -392,6 +392,9 @@ routing:
   reliability_weight: 0.3
   latency_weight: 0.2
   capacity_risk_weight: 0.4
+  # Règle de succession de Laplace : 1 succès isolé ne surclasse plus un
+  # dossier de 9 succès sur 10 (voir RouterScoringPolicy).
+  reliability_prior_strength: 2.0
 
 # ----------------------------------------------------------------------------
 # Services d'infrastructure locaux
