@@ -59,4 +59,26 @@ réelle répétable), **JUDGED** (décision du Judge indépendant sur mesures r�
 
 ## 3. Expérience de faisabilité P3 (avant toute architecture)
 
-*(résultats ci-dessous)*
+Question : le cerveau natif, tel quel (chemin de production : `ApexLM`, `ByteBPETokenizer`,
+`TokenBatcher`, `TrainingEngine`), peut-il APPRENDRE un raisonnement multi-étapes dont la réponse est
+GÉNÉRÉE, et généraliser à des problèmes jamais vus ? Tâche : programmes d'affectations dépendantes
+(`c=9;f=c+8;k=f-c` -> valeur de `k`), profondeur = nombre d'opérations enchaînées ; vérification
+exacte par un évaluateur indépendant ; 60 000 problèmes d'entraînement (profondeurs 1 à 3) ; 200
+problèmes FRAIS par profondeur (36 collisions avec l'entraînement rejetées). 631 168 paramètres,
+6 000 pas, ≈ 17 min sur 2 cœurs. Scripts : hors dépôt (brouillon de faisabilité).
+
+| problèmes frais | prof. 1 | prof. 2 | prof. 3 | prof. 4 (jamais entraînée) | prof. 5 (jamais entraînée) |
+|---|---|---|---|---|---|
+| réponse directe | 0,74 | 0,665 | 0,48 | 0,07 | 0,035 |
+| trace des étapes | **1,00** | **1,00** | **0,725** | 0,065 | 0,105 |
+
+MEASURED :
+- le cerveau APPREND un raisonnement multi-étapes génératif et le généralise à des problèmes frais
+  de même profondeur (0 -> 1,00 / 1,00 / 0,725) ;
+- écrire les étapes intermédiaires améliore fortement la fiabilité (profondeur 3 : 0,48 -> 0,725) ;
+- AUCUNE généralisation en longueur : profondeurs 4-5 au niveau du hasard ;
+- **trace partiellement décorative détectée** : les VALEURS intermédiaires sont justes mais les NOMS
+  de variables écrits dans la trace sont faux (`s6,g12` au lieu de `j6,v11`) : le modèle calcule sans
+  recopier. Un contrôle « réponse finale seulement » l'aurait masqué ; la vérification doit porter
+  sur chaque étape, et la fidélité (l'étape est-elle réellement utilisée ?) doit être mesurée par
+  intervention.
