@@ -62,7 +62,10 @@ class CapabilityContract:
 @dataclass(frozen=True)
 class CapabilityEvaluation:
     reports: dict[str, EvalReport]
-    details: dict[str, list[dict[str, Any]]]  # suite -> résultats par tâche (JSON)
+    #: suite -> résultats par tâche (JSON). Chaque ligne porte au moins `instance` (identifiant
+    #: stable d'un modèle à l'autre) et `solved` (booléen) : le Judge en tire les tâches
+    #: nouvellement résolues ou perdues, quelle que soit la capacité.
+    details: dict[str, list[dict[str, Any]]]
 
 
 class Capability(ABC):

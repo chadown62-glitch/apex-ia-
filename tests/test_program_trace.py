@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import replace
+from pathlib import Path
 
 import pytest
 
@@ -223,7 +224,7 @@ def test_a_real_model_that_memorised_the_train_suite_is_scored_as_such(
     assert result.reports[suite_name("train")].value <= 0.5
     for split in ("validation", "heldout", "deeper"):
         assert result.reports[suite_name(split)].value >= 0.9
-    solved = [d for d in result.details[suite_name("train")] if d["exact"]]
+    solved = [d for d in result.details[suite_name("train")] if d["solved"]]
     assert solved and all(d["well_formed"] and d["final_ok"] for d in solved)
 
 
@@ -284,3 +285,52 @@ def test_child_world_adds_program_trace_next_to_code_repair(small: ProgramTraceB
     )
     assert suite_name("heldout") in child.acceptance_suites
     assert child.capability_of_suite(suite_name("deeper")) == "program_trace"
+
+
+@needs_sandbox
+def test_the_loop_judges_a_world_holding_both_capabilities(
+    small: ProgramTraceBenchmark, tmp_path: Path
+) -> None:
+    """Régression (P3, run réel) : le Judge lisait les détails de tâche au format de `code_repair`
+    seul et plantait sur une seconde capacité. Boucle réelle, deux capacités, un entraînement
+    jugé (rejeu et réplique compris)."""
+    from apex.neural.loop.controller import LoopController, LoopLimits
+    from apex.neural.loop.strategy import StrategyPolicy
+    from apex.neural.loop.world import World
+    from tests import capability_support as support
+
+    spec = replace(
+        support.SPEC,
+        domains={**support.SPEC.domains, TASKS_DOMAIN: TASKS_PREFIX},
+        train_only_domains=(*support.SPEC.train_only_domains, TASKS_DOMAIN),
+        capabilities=("code_repair", "program_trace"),
+    )
+    world = World.build(
+        spec,
+        support.candidates(),
+        capability_data={"code_repair": support.benchmark(), "program_trace": small},
+    )
+    ctrl = LoopController(
+        tmp_path / "loop",
+        world,
+        limits=LoopLimits(
+            max_cycles=1,
+            max_experiments_per_cycle=1,
+            max_total_experiments=1,
+            max_steps_per_experiment=60,
+            max_tokens_per_experiment=20_000,
+            checkpoint_every=30,
+            experiment_timeout_s=300,
+        ),
+        policy=StrategyPolicy(finetune_steps=40, finetune_tokens=8_000, max_steps=60),
+        bootstrap=support.recipe(steps=60, mix={"code": 1.0, TASKS_DOMAIN: 1.0}),
+        log=lambda _m: None,
+    )
+    summary = ctrl.run()
+    assert summary["unfinished"] == []
+    record = next(iter(ctrl.journal.experiments().values()))
+    judged = (record.payload("judged") or {})["result"]
+    changes = judged["task_changes"]
+    for split in ("train", "validation", "heldout", "deeper"):
+        assert changes[suite_name(split)]["tasks"] == SMALL[split]
+    assert changes["cap:code_repair:heldout"]["tasks"] > 0

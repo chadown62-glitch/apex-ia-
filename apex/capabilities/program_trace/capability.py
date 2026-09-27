@@ -100,11 +100,23 @@ def solve(model: ApexLM, tokenizer: ByteBPETokenizer, problems: tuple[Problem, .
     return [tokenizer.decode(ids) for ids in outputs]
 
 
+def _row(instance: str, problem: Problem, text: str) -> dict[str, Any]:
+    """Détail d'UNE tâche, au format du contrat (`instance`, `solved`) lu par le Judge."""
+    score = score_output(problem, text)
+    return {
+        "instance": instance,
+        "solved": score.pop("exact"),
+        "depth": problem.depth,
+        "output": text[:80],
+        **score,
+    }
+
+
 def suite_report(suite: TraceSuite, results: list[dict[str, Any]], model: ApexLM) -> EvalReport:
     scores = tuple(
         DocScore(
-            r["id"],
-            0.0 if r["exact"] else 1.0,  # valeur de la métrique (erreur, plus bas = mieux)
+            r["instance"],
+            0.0 if r["solved"] else 1.0,  # valeur de la métrique (erreur, plus bas = mieux)
             r["steps_ok"] / (p.depth + 1),  # fraction des valeurs intermédiaires exactes
             len(p.document.encode()),
             p.depth + 1,
@@ -169,8 +181,7 @@ class ProgramTraceCapability(Capability):
         for name, suite in sorted(data.suites.items()):
             texts = solve(model, tokenizer, suite.problems)
             results = [
-                {"id": pid, "depth": p.depth, "output": text[:80], **score_output(p, text)}
-                for pid, p, text in zip(suite.ids(), suite.problems, texts, strict=True)
+                _row(pid, p, text) for pid, p, text in zip(suite.ids(), suite.problems, texts, strict=True)
             ]
             reports[name] = suite_report(suite, results, model)
             details[name] = results

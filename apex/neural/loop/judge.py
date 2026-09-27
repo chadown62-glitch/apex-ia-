@@ -110,6 +110,12 @@ def _task_changes(
 ) -> dict[str, dict[str, Any]]:
     changes: dict[str, dict[str, Any]] = {}
     for suite in sorted(set(before) & set(after)):
+        malformed = [t for t in (*before[suite], *after[suite]) if not {"instance", "solved"} <= set(t)]
+        if malformed:
+            raise ValueError(
+                f"suite {suite} : détails de tâche sans `instance`/`solved` (contrat de capacité) : "
+                f"{sorted(malformed[0])}"
+            )
         was = {t["instance"]: t["solved"] for t in before[suite]}
         now = {t["instance"]: t["solved"] for t in after[suite]}
         changes[suite] = {
