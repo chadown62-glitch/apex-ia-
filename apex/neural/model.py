@@ -176,6 +176,42 @@ class ApexLM(nn.Module):
         return out
 
 
+@torch.no_grad()
+def generate_batch(
+    model: ApexLM, prompts: list[list[int]], max_new_tokens: int, *, eos_id: int, batch_size: int = 256
+) -> list[list[int]]:
+    """Décodage GLOUTON de nombreuses invites : regroupées par longueur (aucun remplissage, donc
+    exactement les mêmes sorties que `ApexLM.generate` une à une), arrêt dès que toutes les
+    séquences d'un lot ont émis `eos_id`. Chaque sortie est tronquée à son premier `eos_id`
+    (exclu). Coût : un passage avant par jeton et par lot, au lieu d'un par invite."""
+    was_training = model.training
+    model.eval()
+    by_length: dict[int, list[int]] = {}
+    for index, prompt in enumerate(prompts):
+        if not prompt:
+            raise ValueError("invite vide : le décodage a besoin d'au moins un jeton")
+        by_length.setdefault(len(prompt), []).append(index)
+    outputs: list[list[int]] = [[] for _ in prompts]
+    context = model.config.context_length
+    for length, indices in by_length.items():
+        for start in range(0, len(indices), batch_size):
+            chunk = indices[start : start + batch_size]
+            x = torch.tensor([prompts[i] for i in chunk], dtype=torch.long)
+            done = torch.zeros(len(chunk), dtype=torch.bool)
+            for _ in range(max_new_tokens):
+                logits, _ = model(x[:, -context:])
+                nxt = logits[:, -1, :].float().argmax(dim=-1)
+                x = torch.cat([x, nxt[:, None]], dim=1)
+                done |= nxt == eos_id
+                if bool(done.all()):
+                    break
+            for row, i in enumerate(chunk):
+                generated = x[row, length:].tolist()
+                outputs[i] = generated[: generated.index(eos_id)] if eos_id in generated else generated
+    model.train(was_training)
+    return outputs
+
+
 def language_modeling_loss(logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
     """Entropie croisée moyenne sur les positions cibles non ignorées."""
     if not bool((targets != IGNORE_INDEX).any()):

@@ -192,3 +192,55 @@ class TestModel(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@SKIP
+class TestBatchedGeneration(unittest.TestCase):
+    """`generate_batch` : mêmes sorties que le décodage une invite à la fois, en moins de passes."""
+
+    def setUp(self) -> None:
+        from apex.neural.config import ModelConfig
+        from apex.neural.model import ApexLM
+
+        torch.manual_seed(0)
+        self.model = ApexLM(
+            ModelConfig(
+                vocab_size=64,
+                hidden_size=32,
+                num_layers=2,
+                num_heads=4,
+                intermediate_size=64,
+                context_length=48,
+            )
+        )
+        gen = torch.Generator().manual_seed(1)
+        self.prompts = [
+            torch.randint(3, 64, (int(n),), generator=gen).tolist()
+            for n in torch.randint(1, 12, (40,), generator=gen)
+        ]
+
+    def sequential(self, prompt: list[int], max_new: int, eos_id: int) -> list[int]:
+        out = self.model.generate(torch.tensor([prompt]), max_new_tokens=max_new)[0, len(prompt) :].tolist()
+        return out[: out.index(eos_id)] if eos_id in out else out
+
+    def test_outputs_equal_one_prompt_at_a_time_greedy_decoding(self) -> None:
+        from apex.neural.model import generate_batch
+
+        for eos_id in (2, 17):  # 17 : jeton fréquent, pour exercer la troncature et l'arrêt anticipé
+            with self.subTest(eos_id=eos_id):
+                batched = generate_batch(self.model, self.prompts, 20, eos_id=eos_id, batch_size=7)
+                self.assertEqual(batched, [self.sequential(p, 20, eos_id) for p in self.prompts])
+
+    def test_generation_past_the_context_window_matches_too(self) -> None:
+        from apex.neural.model import generate_batch
+
+        long = [self.prompts[0] * 6][0][:40]
+        self.assertEqual(
+            generate_batch(self.model, [long], 20, eos_id=2), [self.sequential(long, 20, eos_id=2)]
+        )
+
+    def test_empty_prompts_are_refused(self) -> None:
+        from apex.neural.model import generate_batch
+
+        with self.assertRaises(ValueError):
+            generate_batch(self.model, [[5], []], 4, eos_id=2)
