@@ -151,6 +151,10 @@ Conclusions :
   finales justes et 0 trace exacte : un vérificateur de résultat n'y garderait que des traces fausses
   (INFERRED des mesures du §2 et de la faisabilité).
 
+**Suite complète** (bac à sable, fin d'étape) : 2 492 réussis, 175 ignorés (PostgreSQL, Docker, GPU
+absents), 4 échecs — les 4 tests d'empaquetage `test_runtime_packaging.py`, qui échouent à
+l'identique sur le commit de départ `25244e5` (pré-existants, hors périmètre).
+
 ## 5. Limites (ce qui n'est PAS démontré)
 
 - Profondeur 4 et au-delà : échec complet ; aucune expérience n'a testé si la taille du modèle, le
