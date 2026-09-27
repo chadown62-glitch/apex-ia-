@@ -174,10 +174,10 @@ def derive_world(args: argparse.Namespace) -> int:
 
 
 def self_world(args: argparse.Namespace) -> int:
-    """Monde ENFANT nourri des tentatives du champion ATTESTÉ du parent sur des problèmes
-    program_trace neufs : domaine `self_verified` (résultat vérifié par exécution) et domaine
-    `self_rejected` (tentatives de forme valide refusées ; mêlées au premier dans leur proportion
-    naturelle, elles forment le contrôle « sans vérificateur »)."""
+    """Monde ENFANT pour UN bras du protocole P5 : le champion ATTESTÉ du parent tente des problèmes
+    program_trace neufs (vérité terrain exécutée dans le sandbox) ; le domaine `self_data` reçoit
+    exactement `--docs` documents du bras choisi (étiquettes, tentatives non vérifiées, tentatives
+    vérifiées, ou moitié-moitié). Mêmes problèmes tentés pour tous les bras (même graine)."""
     import random
     from dataclasses import replace
 
@@ -187,11 +187,12 @@ def self_world(args: argparse.Namespace) -> int:
     from apex.neural.loop.execute import load_model_from_artifact
 
     parent = World.load(args.parent / "world.json")
-    champion = LoopController(args.parent, parent, log=lambda _m: None).registry.current()
+    loop = LoopController(args.parent, parent, log=lambda _m: None)
+    champion = loop.registry.current()
     if champion is None:
         print("le monde parent n'a aucun champion", file=sys.stderr)
         return 2
-    problem = LoopController(args.parent, parent, log=lambda _m: None).attest(champion)
+    problem = loop.attest(champion)
     if problem is not None:
         print(f"champion du parent non attesté : {problem}", file=sys.stderr)
         return 2
@@ -201,16 +202,13 @@ def self_world(args: argparse.Namespace) -> int:
     rng = random.Random(args.seed)  # noqa: S311 - tirage reproductible
     problems = self_training.fresh_problems(bench, args.count, args.depth, rng)
     attempts = self_training.attempt_and_verify(model, parent.tokenizer, problems, sandbox_provider())
-    docs = [
-        *self_training.documents(attempts, self_training.VERIFIED_DOMAIN),
-        *self_training.documents(attempts, self_training.REJECTED_DOMAIN),
-    ]
-    domains = {**parent.spec.domains, **self_training.PREFIXES}
+    texts = self_training.arm_texts(attempts, args.arm, args.docs)
+    docs = self_training.documents(texts, f"self:program_trace:{args.arm}")
     spec = replace(
         parent.spec,
         parent=parent.fingerprint,
-        domains=domains,
-        train_only_domains=(*parent.spec.train_only_domains, *self_training.PREFIXES),
+        domains={**parent.spec.domains, self_training.SELF_DOMAIN: self_training.SELF_PREFIX},
+        train_only_domains=(*parent.spec.train_only_domains, self_training.SELF_DOMAIN),
     )
     world = World.build(spec, [], parent=parent, train_only=docs)
     fingerprint = world.save(args.workdir / "world.json")
@@ -220,9 +218,12 @@ def self_world(args: argparse.Namespace) -> int:
                 "world": fingerprint,
                 "parent": parent.fingerprint,
                 "champion": champion["name"],
+                "arm": args.arm,
                 "attempts": self_training.summary(attempts),
+                "documents": len(docs),
+                "document_tokens": sum(len(parent.tokenizer.encode(t)) for t in texts),
                 "capability_decontaminated": len(world.capability_decontaminated),
-                "train_by_domain": {d: len(world.train_candidates(d)) for d in self_training.PREFIXES},
+                "train_self_data": len(world.train_candidates(self_training.SELF_DOMAIN)),
             },
             indent=2,
         )
@@ -260,7 +261,17 @@ def run(args: argparse.Namespace) -> int:
         max_experiments_per_cycle=args.max_experiments_per_cycle,
         max_total_experiments=args.max_total_experiments,
         max_total_steps=args.max_total_steps,
+        max_steps_per_experiment=args.max_steps_per_experiment,
+        max_tokens_per_experiment=args.max_tokens_per_experiment,
         experiment_timeout_s=args.timeout,
+    )
+    policy = StrategyPolicy(
+        finetune_steps=args.finetune_steps,
+        finetune_tokens=args.finetune_tokens,
+        finetune_lr=args.finetune_lr,
+        max_steps=limits.max_steps_per_experiment,
+        max_tokens=limits.max_tokens_per_experiment,
+        max_retries=limits.max_retries,
     )
     bootstrap = (
         Recipe(
@@ -274,7 +285,7 @@ def run(args: argparse.Namespace) -> int:
         if args.bootstrap
         else None
     )
-    summary = LoopController(args.workdir, world, limits=limits, bootstrap=bootstrap).run()
+    summary = LoopController(args.workdir, world, limits=limits, policy=policy, bootstrap=bootstrap).run()
     print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 
@@ -465,6 +476,11 @@ def main() -> int:
     p.add_argument("--max-experiments-per-cycle", type=int, default=3)
     p.add_argument("--max-total-experiments", type=int, default=8)
     p.add_argument("--max-total-steps", type=int, default=6000)
+    p.add_argument("--max-steps-per-experiment", type=int, default=800)
+    p.add_argument("--max-tokens-per-experiment", type=int, default=240_000)
+    p.add_argument("--finetune-steps", type=int, default=200, help="échelle de la recette de référence")
+    p.add_argument("--finetune-tokens", type=int, default=60_000)
+    p.add_argument("--finetune-lr", type=float, default=1e-3)
     p.add_argument("--timeout", type=float, default=900.0)
     p.add_argument("--seed", type=int, default=0)
     p.set_defaults(fn=run)
@@ -501,7 +517,9 @@ def main() -> int:
     p = sub.add_parser("self-world", help="monde enfant nourri des tentatives vérifiées du champion")
     p.add_argument("--workdir", type=Path, required=True)
     p.add_argument("--parent", type=Path, required=True)
-    p.add_argument("--count", type=int, default=3000)
+    p.add_argument("--arm", choices=("labeled", "unverified", "verified", "mixed"), required=True)
+    p.add_argument("--docs", type=int, default=2000, help="documents d'entraînement du bras")
+    p.add_argument("--count", type=int, default=3000, help="problèmes neufs tentés")
     p.add_argument("--depth", type=int, default=3)
     p.add_argument("--seed", type=int, default=0)
     p.set_defaults(fn=self_world)

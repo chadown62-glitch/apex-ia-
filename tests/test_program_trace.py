@@ -463,18 +463,35 @@ def test_self_training_problems_are_new_to_the_brain(
 def test_a_lucky_answer_is_kept_with_the_models_wrong_steps() -> None:
     """Le vérificateur de résultat garde une réponse juste malgré une étape fausse : le document est
     la trace du MODÈLE (avec son erreur), jamais la trace de référence ; elle est comptée."""
-    from apex.capabilities.program_trace.self_training import (
-        VERIFIED_DOMAIN,
-        SelfAttempt,
-        documents,
-        summary,
-    )
+    from apex.capabilities.program_trace.self_training import SelfAttempt, arm_texts, summary
 
     problem = interpret("a=3;b=a+4;c=b-a")
     lucky = SelfAttempt(problem, "a3,b8,c4=4", True, True, False)
-    (doc,) = documents([lucky], VERIFIED_DOMAIN)
-    assert doc.text == problem.prompt + "a3,b8,c4=4" != problem.document
+    assert arm_texts([lucky], "verified", 1) == [problem.prompt + "a3,b8,c4=4"]
+    assert arm_texts([lucky], "labeled", 1) == [problem.document] != [problem.prompt + "a3,b8,c4=4"]
     assert summary([lucky])["outcome_verified_with_a_wrong_step"] == 1
+
+
+def test_p5_arms_receive_the_same_number_of_documents_and_differ_only_by_source() -> None:
+    from apex.capabilities.program_trace.self_training import SelfAttempt, arm_texts
+
+    rng = random.Random(3)
+    problems = [generate(3, rng) for _ in range(12)]
+    wrong = [SelfAttempt(p, "a0,b0,c0,d0=0", True, False, False) for p in problems[:4]]
+    right = [SelfAttempt(p, p.answer, True, True, True) for p in problems[4:]]
+    attempts = [*wrong, *right]
+    arms = {arm: arm_texts(attempts, arm, 8) for arm in ("labeled", "unverified", "verified", "mixed")}
+    assert {len(texts) for texts in arms.values()} == {8}
+    assert arms["labeled"] == [p.document for p in problems[:8]]
+    assert arms["verified"] == [p.document for p in problems[4:12]]  # juste et vérifié
+    assert arms["unverified"][:4] == [p.prompt + "a0,b0,c0,d0=0" for p in problems[:4]]
+    labeled_half, verified_half = arms["mixed"][:4], arms["mixed"][4:]
+    assert labeled_half == [p.document for p in problems[:4]]
+    assert not set(labeled_half) & set(verified_half)  # problèmes distincts
+    with pytest.raises(ValueError, match="disponibles"):
+        arm_texts(attempts, "verified", 9)
+    with pytest.raises(ValueError, match="bras inconnu"):
+        arm_texts(attempts, "oracle", 1)
 
 
 @needs_sandbox
@@ -485,8 +502,7 @@ def test_outcome_verification_keeps_the_models_own_trace(
     que le résultat ; le document gardé est la trace écrite par le modèle ; une trace entièrement
     juste a toujours un résultat juste ; les étapes fausses gardées sont comptées."""
     from apex.capabilities.program_trace.self_training import (
-        REJECTED_DOMAIN,
-        VERIFIED_DOMAIN,
+        arm_texts,
         attempt_and_verify,
         documents,
         summary,
@@ -496,13 +512,11 @@ def test_outcome_verification_keeps_the_models_own_trace(
     problems = list(small.suites[suite_name("train")].problems)
     attempts = attempt_and_verify(model, tokenizer, problems, sandbox_provider())
     assert all(a.final_ok for a in attempts if a.steps_ok)
-    kept = documents(attempts, VERIFIED_DOMAIN)
-    assert len(kept) == sum(a.final_ok for a in attempts) > 0
+    verified = sum(a.final_ok for a in attempts)
+    kept = documents(arm_texts(attempts, "verified", verified), "self:test")
+    assert len(kept) == verified > 0
     outputs = {a.document() for a in attempts if a.final_ok}
     assert {d.text for d in kept} == outputs  # la trace du MODÈLE, pas celle de référence
-    rejected = documents(attempts, REJECTED_DOMAIN)
-    assert len(rejected) == sum(a.well_formed and not a.final_ok for a in attempts)
-    assert not {d.text for d in rejected} & outputs  # domaines disjoints : pas de doublon à fusionner
     report = summary(attempts)
     assert report["outcome_verified"] == len(kept)
     assert report["outcome_verified_with_a_wrong_step"] == sum(
@@ -514,7 +528,7 @@ def test_outcome_verification_keeps_the_models_own_trace(
 def test_train_only_documents_must_be_declared_and_are_decontaminated(
     small: ProgramTraceBenchmark,
 ) -> None:
-    from apex.capabilities.program_trace.self_training import PREFIXES, VERIFIED_DOMAIN
+    from apex.capabilities.program_trace.self_training import SELF_DOMAIN, SELF_PREFIX
     from apex.neural.dataset import TrainingCandidate
     from apex.neural.loop.world import World, WorldIntegrityError
     from tests import capability_support as support
@@ -530,19 +544,19 @@ def test_train_only_documents_must_be_declared_and_are_decontaminated(
             origin="test:self",
         )
 
-    prefix = PREFIXES[VERIFIED_DOMAIN]
+    prefix = SELF_PREFIX
     fresh = generate(3, random.Random(5))
     leak = small.suites[suite_name("validation")].problems[0].document
     spec = replace(
         support.SPEC,
-        domains={**support.SPEC.domains, TASKS_DOMAIN: TASKS_PREFIX, VERIFIED_DOMAIN: prefix},
-        train_only_domains=(*support.SPEC.train_only_domains, TASKS_DOMAIN, VERIFIED_DOMAIN),
+        domains={**support.SPEC.domains, TASKS_DOMAIN: TASKS_PREFIX, SELF_DOMAIN: prefix},
+        train_only_domains=(*support.SPEC.train_only_domains, TASKS_DOMAIN, SELF_DOMAIN),
         capabilities=("code_repair", "program_trace"),
     )
     data = {"code_repair": support.benchmark(), "program_trace": small}
     good, bad = doc("0", fresh.document, prefix), doc("1", leak, prefix)
     world = World.build(spec, support.candidates(), capability_data=data, train_only=[good, bad])
-    assert [c.candidate_id for c in world.train_candidates(VERIFIED_DOMAIN)] == [good.candidate_id]
+    assert [c.candidate_id for c in world.train_candidates(SELF_DOMAIN)] == [good.candidate_id]
     assert bad.candidate_id in world.capability_decontaminated
     with pytest.raises(WorldIntegrityError, match="train seulement"):
         World.build(spec, support.candidates(), capability_data=data, train_only=[doc("2", "x", "zz:")])

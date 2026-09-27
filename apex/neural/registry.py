@@ -23,7 +23,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from apex.neural.evaluation import EvalReport, JudgeDecision, NeuralJudge
+from apex.neural.evaluation import BPB, EvalReport, JudgeDecision, NeuralJudge
+from apex.neural.protection import FORGOTTEN, forgetting, protections
 
 GENESIS = "sha256:" + "0" * 64
 
@@ -61,11 +62,15 @@ class ModelRegistry:
         primary: str = "heldout",
         acceptance: frozenset[str] | None = None,
         tolerances: dict[str, float] | None = None,
+        protected_groups: dict[str, tuple[str, ...]] | None = None,
     ) -> None:
+        """`protected_groups` : groupes de suites dont l'oubli, mesuré contre leur ancre (meilleur
+        niveau démontré par une version promue), interdit une promotion."""
         self.path = path
         self.primary = primary
         self.acceptance = acceptance or frozenset({primary})
         self.tolerances = tolerances or {}
+        self.protected_groups = protected_groups or {}
 
     def entries(self) -> list[dict[str, Any]]:
         if not self.path.exists():
@@ -106,6 +111,22 @@ class ModelRegistry:
             decision = verdict.decision.value
             reasons = [f"comparée à « {current['name']} » : {r}" for r in verdict.reasons]
             suites = verdict.to_dict()["suites"]  # type: ignore[assignment]
+            tolerances = {**self.tolerances, BPB: 0.01}
+            rows = [
+                row
+                for protection in protections(entries, self.protected_groups)
+                if set(protection.suites) <= set(proposal.reports)  # sinon déjà refusée (suites)
+                for row in forgetting(protection, proposal.reports, tolerances)
+            ]
+            forgotten = [r for r in rows if r["status"] == FORGOTTEN]
+            if forgotten:
+                promoted = False
+                decision = JudgeDecision.REJECT.value
+                reasons += [
+                    f"oubli de « {r['group']} » sur « {r['suite']} » : {r['before']} -> {r['after']} "
+                    f"(ancre #{r['anchor_index']})"
+                    for r in forgotten
+                ]
         entry: dict[str, Any] = {
             "kind": "proposal",
             "name": proposal.name,
@@ -120,6 +141,8 @@ class ModelRegistry:
             "artifact": proposal.artifact,
             "metadata": proposal.metadata,
         }
+        if current is not None and self.protected_groups:
+            entry["forgetting"] = rows
         return self._append(entries, entry)
 
     def adopt(

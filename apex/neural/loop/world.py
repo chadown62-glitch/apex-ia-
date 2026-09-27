@@ -411,6 +411,17 @@ class World:
         return frozenset({PRIMARY, *(c.contract.acceptance_suite for c, _ in self.capabilities.values())})
 
     @property
+    def protected_groups(self) -> dict[str, tuple[str, ...]]:
+        """Groupes dont l'oubli est mesuré : le texte (suite-clé : held-out), puis chaque
+        capacité (suite-clé : sa suite d'acceptation)."""
+        groups = {"text": (PRIMARY, *sorted(n for n in self.benchmarks if n != PRIMARY))}
+        for name, (capability, _) in self.capabilities.items():
+            contract = capability.contract
+            others = [s for s in contract.suites if s != contract.acceptance_suite]
+            groups[name] = (contract.acceptance_suite, *others)
+        return groups
+
+    @property
     def metric_tolerances(self) -> dict[str, float]:
         return {c.contract.metric: c.contract.guard_tolerance for c, _ in self.capabilities.values()}
 

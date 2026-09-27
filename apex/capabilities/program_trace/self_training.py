@@ -25,9 +25,9 @@ from apex.neural.model import ApexLM
 from apex.neural.tokenizer import ByteBPETokenizer
 from apex.sandbox.provider import SandboxProvider
 
-VERIFIED_DOMAIN = "self_verified"
-REJECTED_DOMAIN = "self_rejected"
-PREFIXES = {VERIFIED_DOMAIN: "self:verified/", REJECTED_DOMAIN: "self:rejected/"}
+SELF_DOMAIN = "self_data"
+SELF_PREFIX = "self:data/"
+ARMS = ("labeled", "unverified", "verified", "mixed")
 
 
 def fresh_problems(
@@ -84,26 +84,45 @@ def attempt_and_verify(
     return attempts
 
 
-def documents(attempts: list[SelfAttempt], domain: str) -> list[TrainingCandidate]:
-    """`self_verified` : tentatives dont le résultat est vérifié ; `self_rejected` : tentatives de
-    forme valide que le vérificateur refuse. Les deux domaines sont disjoints : un bras « sans
-    vérificateur » les mélange dans leur proportion naturelle (toutes les tentatives)."""
-    if domain == VERIFIED_DOMAIN:
-        keep = [a for a in attempts if a.final_ok]
+def arm_texts(attempts: list[SelfAttempt], arm: str, count: int) -> list[str]:
+    """Exactement `count` documents pour un bras du protocole P5 (même nombre de documents, même
+    format, mêmes problèmes tentés ; seule la SOURCE de la trace change) :
+    - `labeled`    : trace de référence des problèmes tentés (étiquettes) ;
+    - `unverified` : trace du modèle, sans filtre (forme valide) ;
+    - `verified`   : trace du modèle dont le résultat est vérifié par exécution ;
+    - `mixed`      : moitié étiquettes, moitié tentatives vérifiées, sur des problèmes distincts."""
+    labeled = [a.problem.document for a in attempts]
+    verified = [a.document() for a in attempts if a.final_ok]
+    unverified = [a.document() for a in attempts if a.well_formed]
+    if arm == "labeled":
+        texts = labeled
+    elif arm == "verified":
+        texts = verified
+    elif arm == "unverified":
+        texts = unverified
+    elif arm == "mixed":
+        half = count // 2
+        taken = {a.problem for a in attempts[:half]}
+        texts = labeled[:half] + [a.document() for a in attempts if a.final_ok and a.problem not in taken]
     else:
-        keep = [a for a in attempts if a.well_formed and not a.final_ok]
-    prefix = PREFIXES[domain]
+        raise ValueError(f"bras inconnu « {arm} » (bras : {ARMS})")
+    if len(texts) < count:
+        raise ValueError(f"bras « {arm} » : {len(texts)} documents disponibles pour {count} demandés")
+    return texts[:count]
+
+
+def documents(texts: list[str], origin: str) -> list[TrainingCandidate]:
     return [
         TrainingCandidate(
-            candidate_id=f"{prefix}{index:05d}",
-            text=a.document(),
-            source_id=f"{prefix}{index:05d}",
-            content_hash="sha256:" + hashlib.sha256(a.document().encode()).hexdigest(),
+            candidate_id=f"{SELF_PREFIX}{index:05d}",
+            text=text,
+            source_id=f"{SELF_PREFIX}{index:05d}",
+            content_hash="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
             license_status="free",
             quality="high_value",
-            origin=f"self:program_trace:{domain}",
+            origin=origin,
         )
-        for index, a in enumerate(keep)
+        for index, text in enumerate(texts)
     ]
 
 

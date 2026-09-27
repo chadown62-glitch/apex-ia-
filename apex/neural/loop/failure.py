@@ -135,7 +135,34 @@ def analyze_judgement(
     if result.accepted:
         return None
     attribution, mods = _attribution(plan)
+
+    def regression(c: dict[str, Any]) -> bool:
+        significant = c["verdict"] == "significant" and c["bpb_gain_ci"][1] < 0
+        tolerance = limits.get(c.get("metric", BPB), guard_tolerance)
+        beyond = c["suite"] != primary and c["candidate_bpb"] - c["baseline_bpb"] > tolerance
+        return bool(significant or beyond)
+
     if result.replicated is False:
+        target = plan.hypothesis.target_benchmark
+        replica_losses = sorted(
+            c["suite"] for c in result.replica_comparisons if c["suite"] != target and regression(c)
+        )
+        if replica_losses:
+            # La réplique a oublié une capacité protégée : ce n'est pas un gain trop faible, c'est un
+            # oubli qui dépend de la graine ; la réponse est de protéger ces domaines.
+            return FailureAnalysis(
+                cause=FailureCause.PROTECTED_REGRESSION,
+                status="established",
+                evidence=[
+                    f"réplique (graine indépendante) : {_fmt(c)}"
+                    for c in result.replica_comparisons
+                    if c["suite"] in replica_losses
+                ],
+                attribution=attribution,
+                implicated_modifications=mods,
+                refuted="partie « sans dégrader les suites protégées », pour une graine indépendante",
+                regressed_suites=replica_losses,
+            )
         return FailureAnalysis(
             cause=FailureCause.NOT_REPLICATED,
             status="established",
@@ -176,15 +203,10 @@ def analyze_judgement(
     def gain_significant(c: dict[str, Any]) -> bool:
         return bool(c["verdict"] == "significant" and c["bpb_gain_ci"][0] > 0)
 
-    def regression(c: dict[str, Any]) -> bool:
-        significant = c["verdict"] == "significant" and c["bpb_gain_ci"][1] < 0
-        tolerance = limits.get(c.get("metric", BPB), guard_tolerance)
-        beyond = c["suite"] != primary and c["candidate_bpb"] - c["baseline_bpb"] > tolerance
-        return bool(significant or beyond)
-
-    regressed = sorted(s for s, c in comps.items() if s != target and regression(c))
+    forgotten = {r["suite"] for r in result.forgetting if r["status"] == "forgotten"}
+    regressed = sorted(s for s, c in comps.items() if s != target and (regression(c) or s in forgotten))
     target_comp = comps[target]
-    if regression(target_comp):
+    if regression(target_comp) or target in forgotten:
         return FailureAnalysis(
             FailureCause.TARGET_REGRESSION,
             "established",

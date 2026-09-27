@@ -50,6 +50,7 @@ from apex.neural.loop.plan import (
 )
 from apex.neural.loop.strategy import DIRECTED, RETRYABLE, StrategyDecision, StrategyPolicy
 from apex.neural.loop.world import PRIMARY, World
+from apex.neural.protection import Protection, protections
 from apex.neural.registry import ModelRegistry, Proposal
 
 #: Décalage de graine de la réplique d'une promotion (graine indépendante, déterministe).
@@ -148,6 +149,7 @@ class LoopController:
             primary=PRIMARY,
             acceptance=world.acceptance_suites,
             tolerances=world.metric_tolerances,
+            protected_groups=world.protected_groups,
         )
         self.store = LocalFilesystemArtifactStore(root=str(workdir / "artifacts"))
         self.judge = IndependentJudge(world, self.store)
@@ -596,6 +598,7 @@ class LoopController:
                     replay_dir=self._run_dir(exp) / "judge_replay",
                     stop=self.stop,
                     stop_file=self.stop_file,
+                    protections=self._protections(),
                 )
             except StopRequested as stop:
                 # Rien n'est consigné : l'expérience reste « executed » et sera re-jugée.
@@ -685,6 +688,7 @@ class LoopController:
             replay_dir=run_dir / "judge_replay",
             stop=self.stop,
             stop_file=self.stop_file,
+            protections=self._protections(),
         )
         return {
             "seed": replica_plan.recipe.seed,
@@ -710,6 +714,7 @@ class LoopController:
                 *judged.reasons,
             ],
             replicated=False,
+            replica_comparisons=replicated.get("comparisons", []),
         )
 
     def _first_judgement(self, record: ExperimentRecord) -> JudgeResult:
@@ -725,7 +730,13 @@ class LoopController:
             primary=result.get("primary", PRIMARY),
             task_changes=result.get("task_changes", {}),
             learning=result.get("learning", {}),
+            forgetting=result.get("forgetting", []),
         )
+
+    def _protections(self) -> list[Protection]:
+        """Ancres des capacités acquises, depuis les seules versions ATTESTÉES du registre."""
+        attested = [e for e in self.registry.entries() if not e["promoted"] or self.attest(e) is None]
+        return protections(attested, self.world.protected_groups)
 
     def _promote(self, plan: ExperimentPlan, *, record: ExperimentRecord, judged: JudgeResult) -> None:
         exp = plan.experiment_id

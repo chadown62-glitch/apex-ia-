@@ -23,7 +23,10 @@ leur fait jamais confiance. Contrôles, dans cet ordre :
    autre chose (données d'évaluation, autre recette) tout en déclarant la
    recette est ainsi démasqué ;
 7. statistique : `NeuralJudge` (bootstrap apparié, toutes les suites du monde
-   protégées).
+   protégées) ;
+8. oubli : chaque groupe protégé est comparé à son ANCRE (meilleur niveau démontré, registre) ;
+   le Judge re-mesure lui-même une ancre qui n'est pas le champion et refuse une ancre dont les
+   mesures enregistrées ne sont plus celles du checkpoint.
 
 Un seul contrôle en échec suffit à rejeter. Les critères sont ceux du monde,
 jamais ceux proposés par le plan."""
@@ -39,7 +42,7 @@ from apex.artifacts.provider import ArtifactStoreProvider
 from apex.capabilities.contract import classify_learning
 from apex.errors import TimeoutExceeded
 from apex.neural.dataset import Split
-from apex.neural.evaluation import EvalReport, JudgeDecision, NeuralJudge
+from apex.neural.evaluation import BPB, EvalReport, JudgeDecision, NeuralJudge
 from apex.neural.loop.execute import (
     StopRequested,
     execute,
@@ -51,6 +54,7 @@ from apex.neural.loop.execute import (
 from apex.neural.loop.plan import ExperimentPlan
 from apex.neural.loop.world import PRIMARY, World
 from apex.neural.model import ApexLM
+from apex.neural.protection import FORGOTTEN, Protection, forgetting
 
 JUDGE_ID = "apex-neural-independent-judge/1"
 
@@ -73,6 +77,10 @@ class JudgeResult:
     learning: dict[str, dict[str, Any]] = field(default_factory=dict)
     #: None : pas de réplique ; False : la réplique (graine indépendante) n'a pas confirmé le gain.
     replicated: bool | None = None
+    #: Oubli mesuré par groupe protégé, contre son ancre (voir `apex.neural.protection`).
+    forgetting: list[dict[str, Any]] = field(default_factory=list)
+    #: Comparaisons de la réplique refusée (graine indépendante) : l'analyse y cherche un oubli.
+    replica_comparisons: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def accepted(self) -> bool:
@@ -91,6 +99,7 @@ class JudgeResult:
             "task_changes": self.task_changes,
             "learning": self.learning,
             "replicated": self.replicated,
+            "forgetting": self.forgetting,
         }
 
 
@@ -202,10 +211,12 @@ class IndependentJudge:
         replay_dir: Path | None = None,
         stop: threading.Event | None = None,
         stop_file: Path | None = None,
+        protections: list[Protection] | None = None,
     ) -> JudgeResult:
         """`plan` + `replay_dir` activent le contrôle de provenance par
         rejeu. Un arrêt demandé pendant le rejeu lève `StopRequested` (le
-        rejeu reprend depuis son dernier checkpoint au jugement suivant)."""
+        rejeu reprend depuis son dernier checkpoint au jugement suivant).
+        `protections` : ancres des capacités acquises (registre) ; oubli mesuré contre elles."""
         checks: dict[str, dict[str, Any]] = {}
 
         def check(name: str, ok: bool, detail: str, cause: str | None = None) -> bool:
@@ -309,7 +320,41 @@ class IndependentJudge:
             if replay_dir is not None:
                 self._replay(plan, candidate_artifact, replay_dir, stop, stop_file, check)
 
-        # 5. Statistique.
+        # 6. Oubli, contre l'ancre de chaque groupe protégé (re-mesurée si ce n'est pas le champion).
+        forgotten_rows: list[dict[str, Any]] = []
+        anchors: dict[str, dict[str, EvalReport]] = {}
+        for protection in protections or []:
+            artifact = protection.anchor_artifact
+            if artifact == baseline_artifact:
+                measured = baseline
+            elif artifact is None:
+                check(f"anchor_{protection.group}", False, "ancre sans artefact : invérifiable")
+                continue
+            else:
+                if artifact not in anchors:
+                    anchors[artifact] = measure(
+                        load_model_from_artifact(self.store, artifact, self.world), self.world
+                    )
+                measured = anchors[artifact]
+            subset = {s: measured[s] for s in protection.suites}
+            if not check(
+                f"anchor_{protection.group}",
+                _same_scores(subset, protection.reports),
+                f"ancre #{protection.anchor_index} re-mesurée : mesures identiques au registre"
+                if _same_scores(subset, protection.reports)
+                else f"ancre #{protection.anchor_index} : mesures du registre différentes du checkpoint",
+            ):
+                continue
+            tolerances = {**self.world.metric_tolerances, BPB: self.max_guard_regression_bpb}
+            forgotten_rows += forgetting(protection, candidate, tolerances)
+        oubli = [
+            f"oubli de « {r['group']} » sur « {r['suite']} » : {r['before']} -> {r['after']} "
+            f"(ancre #{r['anchor_index']}, IC du gain {r['gain_ci']}, tolérance {r['tolerance']})"
+            for r in forgotten_rows
+            if r["status"] == FORGOTTEN
+        ]
+
+        # 7. Statistique.
         primary = self.primary_for(plan)
         verdict = NeuralJudge(
             primary=primary,
@@ -317,10 +362,10 @@ class IndependentJudge:
             tolerances=self.world.metric_tolerances,
         ).judge(baseline, candidate)
         failed = [f"{name} : {c['detail']}" for name, c in checks.items() if not c["ok"]]
-        decision = JudgeDecision.REJECT.value if failed else verdict.decision.value
+        decision = JudgeDecision.REJECT.value if failed or oubli else verdict.decision.value
         return JudgeResult(
             decision=decision,
-            reasons=failed + list(verdict.reasons),
+            reasons=failed + oubli + list(verdict.reasons),
             checks=checks,
             comparisons=[c.to_dict() for c in verdict.comparisons],
             candidate_reports=candidate,
@@ -336,4 +381,5 @@ class IndependentJudge:
                 )
                 for name, (cap, _) in self.world.capabilities.items()
             },
+            forgetting=forgotten_rows,
         )
