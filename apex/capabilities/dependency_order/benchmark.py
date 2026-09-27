@@ -7,7 +7,8 @@ exige de résoudre les dépendances (planification de l'ordre d'exécution), pas
 
 Fraîcheur : la forme canonique du programme ORDONNÉ décide (mélanger ou renommer ne rend pas un
 problème nouveau). Exclusions, tirées du benchmark `program_trace` du monde : un problème évalué
-ici n'a jamais été vu à l'entraînement, même ordonné (`seen` : réservoir `program_trace`) ; aucun
+ici n'a jamais été vu à l'entraînement, même ordonné (`seen` : réservoir `program_trace`, et
+`seen_grams` : ses séquences de jetons de code, contrôle du monde) ; aucun
 document d'ici ne fournit la solution d'un problème `program_trace` évalué (`evaluated`).
 Vérité terrain : programme ordonné EXÉCUTÉ dans le sandbox ; un résolveur hôte indépendant
 (analyse du texte mélangé seul) doit retrouver le même ordre et les mêmes valeurs."""
@@ -234,6 +235,7 @@ def build_benchmark(
     *,
     seen: Iterable[str] = (),
     evaluated: Iterable[str] = (),
+    seen_grams: frozenset[tuple[str, ...]] = frozenset(),
     seed: str = "apex-dependency-order",
     pool_size: int = 30_000,
     sizes: dict[str, int] | None = None,
@@ -252,8 +254,14 @@ def build_benchmark(
             if problem.canonical in seen_set:
                 rejected["excluded"] += 1
             elif problem.canonical not in canonical:
+                candidate = shuffled(problem, rng)
+                # Même règle que le monde : une séquence de 12 jetons de code partagée avec un
+                # document d'entraînement de program_trace (préfixe identique, noms compris).
+                if (document_grams(candidate) | document_grams(problem)) & seen_grams:  # type: ignore[arg-type]
+                    rejected["ngram"] += 1
+                    continue
                 canonical.add(problem.canonical)
-                drawn.append(shuffled(problem, rng))
+                drawn.append(candidate)
         eval_suites[split] = drawn
     protected: set[tuple[str, ...]] = set()
     for problems in eval_suites.values():

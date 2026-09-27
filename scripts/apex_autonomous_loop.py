@@ -152,6 +152,7 @@ def derive_world(args: argparse.Namespace) -> int:
         from apex.capabilities.dependency_order import benchmark as order
         from apex.capabilities.dependency_order.capability import TASKS_DOMAIN as ORDER_DOMAIN
         from apex.capabilities.dependency_order.capability import TASKS_PREFIX as ORDER_PREFIX
+        from apex.capabilities.program_trace.benchmark import document_grams
         from apex.capabilities.registry import sandbox_provider
 
         trace = capability_data.get("program_trace")
@@ -164,6 +165,7 @@ def derive_world(args: argparse.Namespace) -> int:
             sandbox_provider(),
             seen={p.canonical for p in trace.pool},
             evaluated={p.canonical for p in trace.eval_problems()},
+            seen_grams=frozenset(g for p in trace.pool for g in document_grams(p)),
         )
         domains[ORDER_DOMAIN] = ORDER_PREFIX
         train_only.append(ORDER_DOMAIN)

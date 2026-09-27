@@ -22,7 +22,11 @@ from apex.capabilities.dependency_order.benchmark import (
 )
 from apex.capabilities.dependency_order.capability import TASKS_DOMAIN, TASKS_PREFIX, score_output
 from apex.capabilities.program_trace import benchmark as trace_module
-from apex.capabilities.program_trace.benchmark import BenchmarkBuildError, ProgramTraceBenchmark
+from apex.capabilities.program_trace.benchmark import (
+    BenchmarkBuildError,
+    ProgramTraceBenchmark,
+    document_grams,
+)
 from apex.capabilities.program_trace.generator import Problem, generate, interpret
 from apex.capabilities.registry import get_capability, sandbox_provider
 from apex.neural.dataset import Split
@@ -54,6 +58,7 @@ def small(trace: ProgramTraceBenchmark) -> DependencyOrderBenchmark:
         sandbox_provider(),
         seen={p.canonical for p in trace.pool},
         evaluated={p.canonical for p in trace.eval_problems()},
+        seen_grams=frozenset(g for p in trace.pool for g in document_grams(p)),
         pool_size=800,
         sizes=SMALL,
     )
@@ -104,6 +109,10 @@ def test_benchmark_is_fresh_and_never_overlaps_program_trace(
     assert not set(evaluated) & {p.canonical for p in small.pool}
     # Évalué ici : jamais entraîné par program_trace, même ordonné ou renommé.
     assert not set(evaluated) & {p.canonical for p in trace.pool}
+    # Même contrôle que le monde : aucune séquence de 12 jetons de code d'un problème évalué ici
+    # (formes mélangée et ordonnée) dans un document d'entraînement de program_trace.
+    trained = {g for p in trace.pool for g in document_grams(p)}
+    assert not any((document_grams(p) | document_grams(p.base)) & trained for p in small.eval_problems())
     # Entraîné ici : jamais la solution d'un problème évalué par program_trace.
     assert not {p.canonical for p in small.pool} & {p.canonical for p in trace.eval_problems()}
     assert small.report["sandbox_verified"] == len(small.pool) + len(evaluated)
@@ -244,3 +253,15 @@ def test_an_outside_document_quoting_an_evaluated_program_is_decontaminated(
     )
     assert leak.candidate_id in world.capability_decontaminated
     assert all(c.candidate_id != leak.candidate_id for s in Split for c in world.dataset.splits[s])
+
+
+@needs_sandbox
+def test_evaluation_problems_sharing_code_with_program_trace_training_are_redrawn() -> None:
+    """Contrôle du monde appliqué à la construction : une séquence de 12 jetons de code partagée
+    avec un document d'entraînement de program_trace (même préfixe, mêmes noms) refuse le problème.
+    Les séquences sont celles d'une première construction : la seconde doit tout retirer."""
+    first = build_benchmark(sandbox_provider(), pool_size=100, sizes=SMALL)
+    grams = frozenset(g for p in first.eval_problems() for g in document_grams(p.base))
+    second = build_benchmark(sandbox_provider(), seen_grams=grams, pool_size=100, sizes=SMALL)
+    assert second.report["rejected"]["ngram"] >= len(first.eval_problems())
+    assert not any((document_grams(p) | document_grams(p.base)) & grams for p in second.eval_problems())
