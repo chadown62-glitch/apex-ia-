@@ -32,6 +32,7 @@ from apex.knowledge.pipeline import AgentConfig, KnowledgeAgent  # noqa: E402
 from apex.neural.experiment import STDLIB_MODULES  # noqa: E402
 from apex.neural.loop.controller import LoopController, LoopLimits, workdir_lock  # noqa: E402
 from apex.neural.loop.plan import Recipe  # noqa: E402
+from apex.neural.loop.strategy import StrategyPolicy  # noqa: E402
 from apex.neural.loop.world import World, WorldSpec  # noqa: E402
 from apex.neural.registry import ModelRegistry  # noqa: E402
 
@@ -239,7 +240,14 @@ def directed(args: argparse.Namespace) -> int:
     if not changes:
         print("expérience dirigée : aucune modification demandée", file=sys.stderr)
         return 2
-    record = LoopController(args.workdir, world, limits=limits).run_directed(
+    policy = StrategyPolicy(
+        finetune_steps=args.reference_steps,
+        finetune_tokens=args.reference_tokens,
+        max_steps=limits.max_steps_per_experiment,
+        max_tokens=limits.max_tokens_per_experiment,
+        max_retries=limits.max_retries,
+    )
+    record = LoopController(args.workdir, world, limits=limits, policy=policy).run_directed(
         changes, target=args.target, reason=args.reason
     )
     judged = (record.payload("judged") or {}).get("result", {})
@@ -414,6 +422,12 @@ def main() -> int:
     p.add_argument("--max-total-steps", type=int, default=8000)
     p.add_argument("--max-steps-per-experiment", type=int, default=800)
     p.add_argument("--max-tokens-per-experiment", type=int, default=240_000)
+    p.add_argument(
+        "--reference-steps", type=int, default=200, help="échelle de la recette de référence (pas)"
+    )
+    p.add_argument(
+        "--reference-tokens", type=int, default=60_000, help="échelle de la recette de référence (tokens)"
+    )
     p.add_argument("--batch-size", type=int, default=None)
     p.add_argument("--warmup-steps", type=int, default=None)
     p.add_argument("--timeout", type=float, default=1800.0)
