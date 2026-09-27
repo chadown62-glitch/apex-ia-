@@ -91,6 +91,15 @@ la suite est recalculée à partir d'elle) :
 | champion promu, held-out | 215 | **177 (82 %)** | 5 (2 %) | 33 |
 | champion promu, validation | 135 | 107 (79 %) | 1 | 27 |
 
+**Mutation** (TESTED ; worktree git isolé, `PYTHONPATH` vérifié pointant sur le worktree, sources
+restaurées et vérifiées par empreinte) : 42 mutants, chacun affaiblissant UNE protection de P3, F1 ou
+F2 (générateur, vérificateur, benchmark, décontamination, tokenizer, Judge, fidélité, P5-noyau,
+lignée, réplique, décodage par lots). Premier passage : 38 tués, 4 survivants — chacun révélait un
+test trop faible (réponse chanceuse jamais testée, monde frère au même tokenizer, fin de séquence
+jamais émise, générateur qui propose un problème évalué), et un défaut réel (`fresh_problems`
+bouclait sans fin quand l'espace était épuisé). Après renforcement : **42 / 42 tués**, chacun par le
+test visé (un mutant n'est compté tué que si un test ÉCHOUE, jamais sur une erreur de collecte).
+
 La trace du champion est majoritairement CAUSALE (il calcule à partir de ce qu'il écrit) ; celle du
 mémoriseur ne l'est pas.
 
