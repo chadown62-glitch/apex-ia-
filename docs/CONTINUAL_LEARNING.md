@@ -173,6 +173,30 @@ enseignent-elles mieux `program_trace` que des traces étiquetées (référence)
 apparié de l'écart d'erreur excluant 0, en faveur de C) sans oubli (verdict du Judge). Sinon :
 **HYPOTHESIS REJECTED**, sans changer de métrique ni de budget après coup.
 
+### Résultats P5 (MEASURED, un entraînement par bras, budget identique)
+
+Même champion, mêmes 3 000 problèmes neufs tentés (le champion en résout 72 %), 2 000 documents par
+bras (≈ 78 000 jetons chacun : 78 151 / 78 204 / 77 949 / 78 032), 1 500 pas, 6,1 M jetons vus,
+même mélange. Erreur `program_trace` held-out (avant 0,283) :
+
+| bras | held-out | validation | texte (BPB) | `code_repair` validation | oubli (ancre) | Judge |
+|---|---|---|---|---|---|---|
+| A labeled | 0,270 (n.s.) | 0,275 | 1,801 -> 1,788 | 0,469 -> 0,593 | `code_repair` validation | REJECT |
+| B unverified | **0,327 (pire, significatif)** | 0,360 | 1,789 | 0,531 | `program_trace` held-out/train ; `code_repair` validation | REJECT |
+| C verified | 0,283 (inchangé) | 0,310 | 1,787 | 0,543 | `code_repair` validation | REJECT |
+| D mixed | 0,283 (inchangé) | 0,280 | 1,788 | 0,512 (n.s.) | aucun | INCONCLUSIVE |
+
+Comparaisons appariées entre bras (held-out, 300 problèmes) : C bat B (écart [0,003 ; 0,083]) ;
+C contre A : non significatif ([−0,03 ; 0,06], A légèrement meilleur) ; D contre A et C : non
+significatif ; D bat B sur la validation.
+
+**HYPOTHESIS REJECTED** (critère pré-enregistré : C doit battre A ET B) : la vérification empêche
+le mal que font les traces non vérifiées (B dégrade la capacité), mais n'apporte rien de mesurable
+par rapport au même nombre de traces étiquetées. Explication compatible avec les mesures : les
+traces vérifiées portent sur les problèmes que le modèle résout déjà (72 %), alors que les
+étiquettes couvrent aussi ceux qu'il rate. Aucun bras n'améliore significativement la cible à ce
+budget ; seul D n'oublie rien. Non répliqué (un entraînement par bras).
+
 ## 6. Transfert : protocole PRÉ-ENREGISTRÉ (commité avant exécution)
 
 Nouvelle capacité `dependency_order` (instructions mélangées, trace dans l'ordre d'exécution :
