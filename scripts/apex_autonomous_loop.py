@@ -131,17 +131,44 @@ def derive_world(args: argparse.Namespace) -> int:
     from dataclasses import replace
 
     parent = World.load(args.parent / "world.json")
+    added = [c for c in dict.fromkeys(args.add_capability) if c not in parent.spec.capabilities]
+    unsupported = [c for c in added if c != "program_trace"]
+    if unsupported:
+        print(f"capacités non dérivables par cette commande : {unsupported}", file=sys.stderr)
+        return 2
+    domains = dict(parent.spec.domains)
+    train_only = list(parent.spec.train_only_domains)
+    capability_data = {}
+    if "program_trace" in added:
+        from apex.capabilities.program_trace.benchmark import build_benchmark
+        from apex.capabilities.program_trace.capability import TASKS_DOMAIN, TASKS_PREFIX
+        from apex.capabilities.registry import sandbox_provider
+
+        capability_data["program_trace"] = build_benchmark(sandbox_provider())
+        domains[TASKS_DOMAIN] = TASKS_PREFIX
+        train_only.append(TASKS_DOMAIN)
     spec = replace(
         parent.spec,
         parent=parent.fingerprint,
-        capabilities=tuple(dict.fromkeys((*parent.spec.capabilities, *args.add_capability))),
+        domains=domains,
+        train_only_domains=tuple(train_only),
+        capabilities=(*parent.spec.capabilities, *added),
     )
-    if set(spec.capabilities) != set(parent.spec.capabilities):
-        print("aucune capacité nouvelle n'est encore dérivable par cette commande", file=sys.stderr)
-        return 2
-    world = World.build(spec, [], parent=parent)
+    world = World.build(spec, [], capability_data=capability_data, parent=parent)
     fingerprint = world.save(args.workdir / "world.json")
-    print(json.dumps({"world": fingerprint, "parent": parent.fingerprint}, indent=2))
+    print(
+        json.dumps(
+            {
+                "world": fingerprint,
+                "parent": parent.fingerprint,
+                "added_capabilities": added,
+                "benchmarks": {n: getattr(b, "report", {}) for n, b in capability_data.items()},
+                "capability_decontaminated": len(world.capability_decontaminated),
+                "train_by_domain": {d: len(world.train_candidates(d)) for d in spec.domains},
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
