@@ -223,3 +223,23 @@ problèmes évalués protégées contre toute citation extérieure. 14 tests ; c
 protections) **13/13 tués** après l'ajout d'un test (l'exclusion des évaluations de
 `program_trace` n'était jamais exercée par le hasard du tirage) et la suppression de deux gardes
 redondantes (mutants équivalents : la couverture de la chaîne les subsumait).
+
+**Passage final (code corrigé, cycle 3, REAL E2E, 6 expériences, 9 000 pas, ≈ 60 min)** :
+
+| # | stratégie (choisie par la boucle) | modification | cible (avant -> après) | oubli contre l'ancre | Judge |
+|---|---|---|---|---|---|
+| 1 | target_only | mix `code` 1,0 | code_repair 0,770 -> 0,761 (n.s.) | program_trace 0,283 -> 1,0 ; code_repair train/validation | REJECT |
+| 2 | lower_lr | lr 0,0005 | 0,770 -> 0,728 (n.s.) | program_trace -> 1,0 ; code_repair validation 0,469 -> 0,574 | REJECT |
+| 3 | protect_domains (lr gardé, aide code_repair) | + 25 % `reasoning_tasks` | 0,770 -> 0,712 (n.s.) | **program_trace corrigé** ; code_repair validation 0,568 | REJECT |
+| 4 | lower_lr (mémoire : a aidé code_repair) | lr 0,00025, rejeu gardé | **0,770 -> 0,700 (significatif)** | code_repair validation 0,469 -> 0,556 (n = 18) | REJECT |
+| 5 | protect_domains (cible suivante : program_trace) | 75 % `reasoning_tasks` | **0,283 -> 0,233 (significatif)** | texte (+0,17 à +0,21 BPB) ; code_repair validation | REJECT |
+| 6 | protect_domains | rejeu du texte relevé | 0,283 -> 0,250 (n.s.) | texte toujours oublié ; code_repair validation | REJECT |
+
+Constats (MEASURED) : la boucle observe « X s'améliore mais Y se dégrade » et change de levier à
+partir des mesures (1 -> 2 -> 3 -> 4) ; chaque changement cite l'effet mesuré du précédent. Les
+protections ont refusé les six candidats, dont deux qui amélioraient significativement leur cible :
+aucune capacité acquise n'a été détruite, le champion P3 reste en service. **Aucune promotion** : en
+6 expériences, la boucle n'a pas trouvé de recette qui apprend sans oublier (`code_repair`
+validation, 18 tâches, reste dégradée dans tous les bras). La meilleure recette connue pour
+`program_trace` (bras F, §2 : 2,4 M jetons, 48 % d'anciennes données) n'est pas celle que la
+politique construit (elle part du seul domaine cible puis relève le rejeu par paliers).
