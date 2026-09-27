@@ -626,3 +626,51 @@ def test_policy_changes_lever_according_to_the_measured_effect_of_the_last_one(t
     # entraîné — plus rien de fondé à essayer, la politique s'arrête.
     _, none = after_lower_lr(5.0, 3.9, "trained_unaffected")
     assert none is None
+
+
+def test_policy_remembers_which_lever_helped_which_suite_along_the_chain(tmp_path: Path) -> None:
+    """Chaîne réelle rejouée en miniature : `lower_lr` réduit l'oubli de « apex_docs » (pas de
+    « stdlib ») ; `protect_domains` CORRIGE entièrement « stdlib » (la suite n'est plus dégradée : cela
+    compte comme un effet) mais pas « apex_docs ». La suite propose le levier qui a déjà aidé
+    « apex_docs » (taux divisé), depuis la recette qui protège « stdlib »."""
+    world = support.world()
+    obs = _observation(world)
+    policy = StrategyPolicy(finetune_steps=100, finetune_tokens=10_000, max_steps=400, max_tokens=10_000)
+    journal = ExperimentJournal(tmp_path / "chain.jsonl")
+
+    def report(name: str, level: float) -> dict[str, object]:
+        scores = tuple(DocScore(f"{name}#{i}", level + 0.01 * (i % 7), 0.5, 100, 20) for i in range(40))
+        return EvalReport(name, "sha256:" + "e" * 64, "m", scores).to_dict()
+
+    def run(
+        decision: StrategyDecision | None, docs: float, stdlib: float, regressed: list[str]
+    ) -> ExperimentPlan:
+        assert decision is not None and obs.champion is not None and decision.baseline_recipe is not None
+        p = ExperimentPlan(
+            world.fingerprint,
+            {"name": "c", "artifact": obs.champion.artifact},
+            decision.baseline_recipe,
+            decision.recipe,
+            decision.hypothesis,
+            Budget(400, 40_000, 60.0),
+            parent_experiment_id=decision.parent_experiment_id,
+        )
+        reports = {
+            "heldout:apex_docs": report("heldout:apex_docs", docs),
+            "heldout:stdlib": report("heldout:stdlib", stdlib),
+        }
+        _record(journal, p, "protected_regression", regressed=regressed, candidate_reports=reports)
+        return p
+
+    both = ["heldout:apex_docs", "heldout:stdlib"]
+    p1 = run(policy.decide(obs, world, journal, exhausted=set()), 5.0, 4.0, both)
+    p2 = run(policy.decide(obs, world, journal, exhausted=set()), 4.9, 4.0, both)
+    assert p2.hypothesis.strategy == "lower_lr"
+    p3 = run(policy.decide(obs, world, journal, exhausted=set()), 4.9, 3.5, ["heldout:apex_docs"])
+    assert p3.hypothesis.strategy == "protect_domains" and p3.recipe.lr == p2.recipe.lr
+    fourth = policy.decide(obs, world, journal, exhausted=set())
+    assert fourth is not None and fourth.strategy == "lower_lr"
+    assert fourth.parent_experiment_id == p3.experiment_id
+    assert fourth.recipe.mix == p3.recipe.mix and fourth.recipe.lr == p3.recipe.lr / 2
+    assert any("a déjà réduit l'oubli de ['heldout:apex_docs']" in r for r in fourth.rationale)
+    assert p1.experiment_id != p2.experiment_id

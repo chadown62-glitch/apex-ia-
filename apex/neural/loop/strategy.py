@@ -79,28 +79,30 @@ class StrategyDecision:
 
 def lever_effect(previous: ExperimentRecord, last: ExperimentRecord) -> dict[str, Any] | None:
     """Effet MESURÉ de la modification de `last` (par rapport à `previous`) sur l'oubli : pour
-    chaque suite que les deux dégradent, bootstrap apparié par élément entre les mesures du Judge
-    des deux candidats. `improved` : oubli significativement réduit ; `unaffected` : non. None si
-    les mesures manquent (rien n'est présumé)."""
+    chaque suite que `previous` dégradait, bootstrap apparié par élément entre les mesures du Judge
+    des deux candidats. `improved` : oubli significativement réduit (même entièrement corrigé) ;
+    `unaffected` : toujours dégradée, sans réduction significative. None si les mesures manquent
+    (rien n'est présumé)."""
     before = (previous.payload("judged") or {}).get("candidate_reports") or {}
     after = (last.payload("judged") or {}).get("candidate_reports") or {}
-    still = [
-        s
-        for s in (last.analysis or {}).get("regressed_suites", [])
-        if s in (previous.analysis or {}).get("regressed_suites", []) and s in before and s in after
-    ]
-    if not still:
+    still = set((last.analysis or {}).get("regressed_suites", []))
+    degraded = (previous.analysis or {}).get("regressed_suites", [])
+    suites = [s for s in degraded if s in before and s in after]
+    if not suites:
         return None
     stat = StatTest(n_bootstrap=2000, confidence_level=0.95, seed=0)
     improved, unaffected, facts = [], [], []
-    for suite in still:
+    for suite in suites:
         old, new = EvalReport.from_dict(before[suite]), EvalReport.from_dict(after[suite])
         old_by_id = {s.doc_id: s.value for s in old.scores}
         new_by_id = {s.doc_id: s.value for s in new.scores}
         ids = sorted(set(old_by_id) & set(new_by_id))
         gain = stat.compare_paired([new_by_id[i] for i in ids], [old_by_id[i] for i in ids])  # > 0 : mieux
         helped = gain.verdict is StatTestVerdict.SIGNIFICANT and (gain.ci_lower or 0.0) > 0
-        (improved if helped else unaffected).append(suite)
+        if helped:
+            improved.append(suite)
+        elif suite in still:
+            unaffected.append(suite)
         facts.append(
             f"{suite} {round(old.value, 4)} -> {round(new.value, 4)} "
             f"(IC du gain [{gain.ci_lower}, {gain.ci_upper}]{', réduit' if helped else ''})"
@@ -114,6 +116,25 @@ def lever_effect(previous: ExperimentRecord, last: ExperimentRecord) -> dict[str
             f"{previous.experiment_id} : {'; '.join(facts)}"
         ),
     }
+
+
+def helpful_levers(journal: ExperimentJournal, last: ExperimentRecord) -> dict[str, set[str]]:
+    """Le long de la chaîne d'expériences qui mène à `last` : stratégie -> suites dont elle a
+    MESURABLEMENT réduit l'oubli (effet de chaque maillon sur son parent)."""
+    out: dict[str, set[str]] = {}
+    experiments = journal.experiments()
+    node, seen = last, set()
+    while node is not None and node.experiment_id not in seen:
+        seen.add(node.experiment_id)
+        parent = experiments.get(node.plan.get("parent_experiment_id") or "")
+        if parent is None:
+            break
+        effect = lever_effect(parent, node)
+        if effect is not None and effect["improved"]:
+            strategy = node.plan.get("hypothesis", {}).get("strategy", "")
+            out.setdefault(strategy, set()).update(effect["improved"])
+        node = parent
+    return out
 
 
 def domain_share(mix: dict[str, float], domains: set[str]) -> float:
@@ -294,8 +315,8 @@ class StrategyPolicy:
                     base.append("INFERRED : levier sans effet — annulé")
                 else:
                     # X s'améliore, Y reste dégradé : on garde le levier (utile à X) et on traite Y
-                    # autrement (le répéter ne l'a pas aidé).
-                    spent = strategy
+                    # autrement (répéter le même réglage ne l'a pas aidé).
+                    spent = strategy if strategy in (LOWER_LR, MORE_DATA, MORE_STEPS) else None
                     regressed_suites = effect["unaffected"]
                     base.append(
                         f"INFERRED : « {strategy} » aide {effect['improved']} mais pas "
@@ -344,6 +365,18 @@ class StrategyPolicy:
                     )
                 )
 
+        # Mémoire mesurée : un levier qui a déjà réduit l'oubli de CES suites est proposé en premier,
+        # même hors des heuristiques par défaut.
+        helpful = {
+            s: suites & set(regressed_suites)
+            for s, suites in helpful_levers(journal, last).items()
+            if suites & set(regressed_suites)
+        }
+        if LOWER_LR in helpful and not (trained and trained <= regressed):
+            lower_lr(
+                f"ESTABLISHED : diviser le taux a déjà réduit l'oubli de {sorted(helpful[LOWER_LR])} "
+                "dans cette chaîne d'expériences"
+            )
         if overfit:
             more_data(
                 f"ESTABLISHED : {seen} jetons vus pour {parent.tokens} tirés ({passes:.1f} passages, "
