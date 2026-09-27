@@ -333,10 +333,10 @@ politique construit (elle part du seul domaine cible puis relève le rejeu par p
 | 6 | P5 démontré ou rejeté | MEASURED — **HYPOTHESIS REJECTED** | §5 : vérifié > non vérifié, mais pas > étiquettes à budget égal |
 | 7 | transfert mesuré | MEASURED, répliqué | §6 : échelle (aucun transfert sans entraînement au-delà de la forme apprise) ; transfert faible mais répliqué vers `dependency_order` |
 | 8 | tests adversariaux | ADVERSARIAL | ancres forgées, entrées non attestées, dérive cumulée, citations extérieures, collisions de jetons |
-| 9 | mutation testing | 28/28 (protection), 9/9 (stratégie), 13/13 (`dependency_order`) | worktree isolé |
+| 9 | mutation testing | 28/28 (protection), 9/9 (stratégie), 14/14 (`dependency_order`, dont la règle de séquences de jetons) | worktree isolé |
 | 10 | E2E réel | REAL E2E | §7 ; mondes de transfert construits et jugés |
 | 11 | reproductibilité | partielle | E2E : expériences 1–3 identiques sur 3 exécutions (même graine) ; F et transfert répliqués (graine indépendante) ; P5 et P4 non répliqués (P4 : aucun succès à répliquer) |
-| 12 | aucune régression critique | champion P3 inchangé | aucune promotion ; suite de tests : voir rapport de fin |
+| 12 | aucune régression critique | champion P3 inchangé | aucune promotion ; suite complète : seuls échouent les 4 tests de packaging `test_runtime_packaging` déjà en échec avant la mission (Docker absent du bac à sable) |
 
 **Non démontré, à ne pas présenter comme acquis** : apprendre une NOUVELLE capacité sans oublier
 les anciennes (aucune promotion dans cette mission : chaque candidat qui apprenait oubliait
