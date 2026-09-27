@@ -133,7 +133,7 @@ def derive_world(args: argparse.Namespace) -> int:
 
     parent = World.load(args.parent / "world.json")
     added = [c for c in dict.fromkeys(args.add_capability) if c not in parent.spec.capabilities]
-    unsupported = [c for c in added if c != "program_trace"]
+    unsupported = [c for c in added if c not in ("program_trace", "dependency_order")]
     if unsupported:
         print(f"capacités non dérivables par cette commande : {unsupported}", file=sys.stderr)
         return 2
@@ -148,6 +148,23 @@ def derive_world(args: argparse.Namespace) -> int:
         capability_data["program_trace"] = build_benchmark(sandbox_provider())
         domains[TASKS_DOMAIN] = TASKS_PREFIX
         train_only.append(TASKS_DOMAIN)
+    if "dependency_order" in added:
+        from apex.capabilities.dependency_order import benchmark as order
+        from apex.capabilities.dependency_order.capability import TASKS_DOMAIN as ORDER_DOMAIN
+        from apex.capabilities.dependency_order.capability import TASKS_PREFIX as ORDER_PREFIX
+        from apex.capabilities.registry import sandbox_provider
+
+        if "program_trace" not in parent.capabilities:
+            print("dependency_order exige program_trace dans le monde parent (exclusions)", file=sys.stderr)
+            return 2
+        _, trace = parent.capabilities["program_trace"]
+        capability_data["dependency_order"] = order.build_benchmark(
+            sandbox_provider(),
+            seen={p.canonical for p in trace.pool},
+            evaluated={p.canonical for p in trace.eval_problems()},
+        )
+        domains[ORDER_DOMAIN] = ORDER_PREFIX
+        train_only.append(ORDER_DOMAIN)
     spec = replace(
         parent.spec,
         parent=parent.fingerprint,

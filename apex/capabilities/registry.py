@@ -11,7 +11,7 @@ from apex.capabilities.contract import Capability
 from apex.errors import IsolationUnavailable
 from apex.sandbox.provider import SandboxProvider, select_sandbox_provider
 
-AVAILABLE = ("code_repair", "program_trace")
+AVAILABLE = ("code_repair", "program_trace", "dependency_order")
 
 
 def get_capability(name: str) -> Capability:
@@ -23,6 +23,10 @@ def get_capability(name: str) -> Capability:
         from apex.capabilities.program_trace.capability import ProgramTraceCapability
 
         return ProgramTraceCapability()
+    if name == "dependency_order":
+        from apex.capabilities.dependency_order.capability import DependencyOrderCapability
+
+        return DependencyOrderCapability()
     raise KeyError(f"capacité inconnue « {name} » (disponibles : {AVAILABLE})")
 
 
