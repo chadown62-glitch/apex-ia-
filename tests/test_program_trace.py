@@ -301,6 +301,13 @@ def test_child_world_adds_program_trace_next_to_code_repair(small: ProgramTraceB
     )
     assert suite_name("heldout") in child.acceptance_suites
     assert child.capability_of_suite(suite_name("deeper")) == "program_trace"
+    # Chaque capacité héritée ou ajoutée est un groupe protégé, ancré sur sa suite d'acceptation.
+    groups = child.protected_groups
+    assert set(groups) == {"text", "code_repair", "program_trace"}
+    for name, (capability, _) in child.capabilities.items():
+        assert groups[name][0] == capability.contract.acceptance_suite
+        assert set(groups[name]) == set(capability.contract.suites)
+    assert set(groups["text"]) == set(child.benchmarks)
 
 
 @needs_sandbox
@@ -488,6 +495,10 @@ def test_p5_arms_receive_the_same_number_of_documents_and_differ_only_by_source(
     labeled_half, verified_half = arms["mixed"][:4], arms["mixed"][4:]
     assert labeled_half == [p.document for p in problems[:4]]
     assert not set(labeled_half) & set(verified_half)  # problèmes distincts
+    # Moitié vérifiée prise sur des problèmes DISTINCTS de ceux de la moitié étiquetée.
+    first_right = arm_texts([*right, *wrong], "mixed", 8)
+    assert first_right[:4] == [p.document for p in problems[4:8]]
+    assert first_right[4:] == [p.document for p in problems[8:12]]
     with pytest.raises(ValueError, match="disponibles"):
         arm_texts(attempts, "verified", 9)
     with pytest.raises(ValueError, match="bras inconnu"):

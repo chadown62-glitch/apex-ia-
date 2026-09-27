@@ -96,6 +96,23 @@ def test_forgetting_distinguishes_forgotten_improved_and_noise() -> None:
     assert status(8)[0] == IMPROVED
     with pytest.raises(ValueError, match="benchmark"):
         forgetting(anchor, {CAP: cap_report(20, "n", fingerprint="sha256:other")}, TOLERANCES)
+    fewer = cap_report(20, "n")
+    with pytest.raises(ValueError, match="éléments"):
+        forgetting(
+            anchor,
+            {
+                CAP: EvalReport(
+                    CAP, fewer.benchmark_fingerprint, "n", fewer.scores[:-1], metric="trace_error"
+                )
+            },
+            TOLERANCES,
+        )
+
+    # Dégradation SYSTÉMATIQUE mais sous la tolérance (+0,005 BPB < 0,01 sur chaque document) :
+    # distinguable du bruit, donc un oubli.
+    (text,) = [p for p in protections([entry], GROUPS) if p.group == "text"]
+    (row,) = forgetting(text, {"heldout": text_report(2.005, "n")}, TOLERANCES)
+    assert row["forgetting"] < TOLERANCES[BPB] and row["status"] == FORGOTTEN
 
 
 def test_cumulative_drift_is_refused_only_with_anchored_protection(tmp_path: Path) -> None:
@@ -167,6 +184,42 @@ def test_the_judge_measures_forgetting_against_the_anchor(two_experiments) -> No
         assert abs(row["forgetting"] - (row["after"] - row["before"])) < 2e-5  # arrondis à 5 décimales
         assert row["status"] in (FORGOTTEN, IMPROVED, NOISE)
     assert result["checks"]["anchor_text"]["ok"]
+    assert ctrl.registry.protected_groups == ctrl.world.protected_groups  # le registre refuse aussi
+
+
+def test_a_model_better_than_its_champion_but_below_the_demonstrated_level_is_rejected(
+    two_experiments,
+) -> None:
+    """Dérive réelle, sans substitution : le premier modèle (accepté contre l'initialisation) est
+    re-jugé alors qu'une version meilleure (le candidat de la 2e expérience, mesuré par le Judge) est
+    l'ancre. Le Judge re-mesure l'ancre depuis SON checkpoint (ce n'est pas le champion comparé),
+    mesure l'oubli contre elle et refuse, bien que le candidat batte son champion."""
+    ctrl = two_experiments
+    first, second = list(ctrl.journal.experiments().values())
+    executed, better = first.payload("executed") or {}, second.payload("executed") or {}
+    anchor_entry = {
+        "index": 1,
+        "name": "better",
+        "promoted": True,
+        "artifact": better["artifact"],
+        "reports": (second.payload("judged") or {})["candidate_reports"],
+    }
+    (protection,) = protections([anchor_entry], ctrl.world.protected_groups)
+    verdict = ctrl.judge.judge(
+        candidate_artifact=executed["artifact"],
+        claimed_reports={n: EvalReport.from_dict(r) for n, r in executed["claimed_reports"].items()},
+        training_candidate_ids=executed["training_candidate_ids"],
+        baseline_artifact=first.plan["baseline"]["artifact"],
+        baseline_seed=first.plan["recipe"]["seed"],
+        protections=[protection],
+    )
+    assert verdict.checks["anchor_text"]["ok"]  # ancre re-mesurée : mesures identiques au registre
+    forgotten = {r["suite"] for r in verdict.forgetting if r["status"] == FORGOTTEN}
+    assert "heldout" in forgotten
+    assert verdict.decision == "reject"
+    assert any("oubli de « text » sur « heldout »" in r for r in verdict.reasons)
+    # Sans l'ancre, ce même modèle est accepté (il bat son champion) : c'est l'ancre qui refuse.
+    assert (first.payload("judged") or {})["result"]["decision"] == "accept"
 
 
 def test_an_anchor_whose_recorded_measures_are_false_is_refused(two_experiments) -> None:
@@ -255,3 +308,52 @@ def test_a_replica_that_forgets_leads_to_protecting_the_forgotten_domain(
     assert analysis["cause"] == FailureCause.PROTECTED_REGRESSION.value
     assert analysis["regressed_suites"] == ["heldout:stdlib"]
     assert all("réplique" in e for e in analysis["evidence"])
+
+
+def test_a_forgotten_suite_invisible_against_the_champion_is_analysed_as_forgetting(
+    two_experiments,
+) -> None:
+    """La comparaison au champion ne montre rien sur « heldout:stdlib » ; l'oubli contre l'ancre si :
+    l'analyse retient cette suite (-> `protect_domains`), pas un gain trop faible."""
+    from dataclasses import replace
+
+    from apex.neural.loop.failure import FailureCause, analyze_judgement
+    from apex.neural.loop.judge import JudgeResult
+    from apex.neural.loop.plan import ExperimentPlan
+
+    ctrl = two_experiments
+    record = list(ctrl.journal.experiments().values())[1]
+    plan = ExperimentPlan.from_dict(record.plan)
+    target = plan.hypothesis.target_benchmark
+    flat = {"verdict": "not_significant", "bpb_gain_ci": [-0.001, 0.001], "metric": BPB, "n": 20}
+    comparisons = [
+        {"suite": s, "baseline_bpb": 3.0, "candidate_bpb": 3.0, **flat}
+        for s in ctrl.world.protected_groups["text"]
+    ]
+    row = {"group": "text", "suite": "heldout:stdlib", "status": FORGOTTEN, "before": 2.9, "after": 3.0}
+    result = JudgeResult("reject", ["oubli"], {}, comparisons, primary=target)
+    assert analyze_judgement(plan, result).regressed_suites == []  # rien contre le champion
+    analysis = analyze_judgement(plan, replace(result, forgetting=[row]))
+    assert analysis is not None and analysis.cause is FailureCause.PROTECTED_REGRESSION
+    assert analysis.regressed_suites == ["heldout:stdlib"]
+
+
+def test_only_attested_versions_can_become_anchors(two_experiments) -> None:
+    """Une entrée promue que le journal n'atteste pas (registre modifié à la main) ne peut pas
+    devenir l'ancre, même si elle annonce un niveau meilleur."""
+    ctrl = two_experiments
+    (genuine,) = ctrl._protections()
+    forged = dict(
+        ctrl.registry.entries()[0], index=1, name="forged", metadata={"experiment_id": "exp-none"}
+    )
+    forged["reports"] = {
+        name: {**report, "value": report["value"] - 1.0} for name, report in forged["reports"].items()
+    }
+    real_entries = ctrl.registry.entries
+    ctrl.registry.entries = lambda: [*real_entries(), forged]  # type: ignore[method-assign]
+    try:
+        assert ctrl.attest(forged) is not None
+        (anchor,) = ctrl._protections()
+    finally:
+        del ctrl.registry.entries
+    assert anchor.anchor_index == genuine.anchor_index == 0
