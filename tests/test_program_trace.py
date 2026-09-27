@@ -26,6 +26,12 @@ from apex.capabilities.program_trace.capability import (
     TASKS_PREFIX,
     score_output,
 )
+from apex.capabilities.program_trace.faithfulness import (
+    Intervention,
+    interventions,
+    measure_faithfulness,
+    recompute,
+)
 from apex.capabilities.program_trace.generator import (
     Problem,
     canonical_form,
@@ -165,17 +171,8 @@ def test_an_evaluation_problem_seen_in_training_is_refused(small: ProgramTraceBe
 # -- évaluation d'un modèle réel -------------------------------------------------
 
 
-@needs_sandbox
-def test_a_real_model_that_memorised_the_train_suite_is_scored_as_such(
-    small: ProgramTraceBenchmark,
-) -> None:
-    """Modèle réel entraîné sur les SEULS documents de la suite train : il les restitue (erreur
-    basse) sans rien résoudre de neuf (held-out, validation, deeper à 1). La métrique sépare
-    mémorisation et généralisation, et un modèle non entraîné échoue partout."""
-    torch.manual_seed(0)
-    tokenizer = ByteBPETokenizer.train([p.document for p in small.pool], 300)
-    capability = get_capability("program_trace")
-    config = ModelConfig(
+def _config(tokenizer: ByteBPETokenizer) -> ModelConfig:
+    return ModelConfig(
         vocab_size=tokenizer.vocab_size,
         hidden_size=64,
         num_layers=2,
@@ -183,18 +180,18 @@ def test_a_real_model_that_memorised_the_train_suite_is_scored_as_such(
         intermediate_size=128,
         context_length=128,
     )
-    untrained = ApexLM(config)
-    assert all(
-        r.value == 1.0
-        for r in capability.evaluate(
-            untrained, tokenizer, small, provider=sandbox_provider()
-        ).reports.values()
-    )
+
+
+@pytest.fixture(scope="module")
+def memorised(small: ProgramTraceBenchmark) -> tuple[ApexLM, ByteBPETokenizer]:
+    """Modèle RÉEL entraîné sur les SEULS documents de la suite train (40 répétitions)."""
+    torch.manual_seed(0)
+    tokenizer = ByteBPETokenizer.train([p.document for p in small.pool], 300)
     stream: list[int] = []
     for _ in range(40):
         for p in small.suites[suite_name("train")].problems:
             stream += tokenizer.encode(p.document, add_bos=True, add_eos=True)
-    model = ApexLM(config)
+    model = ApexLM(_config(tokenizer))
     training = TrainingConfig(
         max_steps=300,
         batch_size=16,
@@ -205,6 +202,22 @@ def test_a_real_model_that_memorised_the_train_suite_is_scored_as_such(
     TrainingEngine(model, training, pad_id=tokenizer.pad_id).fit(
         TokenBatcher(stream, window=64, batch_size=16, seed=0), steps=300
     )
+    return model, tokenizer
+
+
+@needs_sandbox
+def test_a_real_model_that_memorised_the_train_suite_is_scored_as_such(
+    small: ProgramTraceBenchmark, memorised: tuple[ApexLM, ByteBPETokenizer]
+) -> None:
+    """Le modèle restitue les problèmes vus (erreur basse) sans rien résoudre de neuf (held-out,
+    validation, deeper) : la métrique sépare mémorisation et généralisation. Un modèle non
+    entraîné échoue partout."""
+    model, tokenizer = memorised
+    capability = get_capability("program_trace")
+    untrained = capability.evaluate(
+        ApexLM(_config(tokenizer)), tokenizer, small, provider=sandbox_provider()
+    )
+    assert all(r.value == 1.0 for r in untrained.reports.values())
     result = capability.evaluate(model, tokenizer, small, provider=sandbox_provider())
     assert set(result.reports) == set(capability.contract.suites)
     assert result.reports[suite_name("train")].value <= 0.5
@@ -212,6 +225,34 @@ def test_a_real_model_that_memorised_the_train_suite_is_scored_as_such(
         assert result.reports[suite_name(split)].value >= 0.9
     solved = [d for d in result.details[suite_name("train")] if d["exact"]]
     assert solved and all(d["well_formed"] and d["final_ok"] for d in solved)
+
+
+# -- fidélité par intervention -------------------------------------------------------
+
+
+def test_recomputation_propagates_an_intervention_through_the_program() -> None:
+    problem = interpret("a=3;b=a+4;c=b-a;d=c+2")
+    assert recompute(problem, 0, 5) == [5, 9, 4, 6]  # a change : b, c, d suivent (c lit a et b)
+    assert recompute(problem, 1, 0) == [3, 0, -3, -1]
+    assert recompute(problem, 3, 9) == [*problem.values[:3], 9]
+    case = Intervention(problem, 1, 0)
+    assert case.prefix == "a3,b0,"
+    assert case.followed == [-3, -1] and case.ignored == [4, 6]
+    chosen = interventions([problem] * 20, random.Random(1))
+    assert chosen and all(c.step < problem.depth and c.followed != c.ignored for c in chosen)
+
+
+@needs_sandbox
+def test_a_memoriser_is_not_counted_as_a_faithful_reasoner(
+    small: ProgramTraceBenchmark, memorised: tuple[ApexLM, ByteBPETokenizer]
+) -> None:
+    """Un modèle qui RÉCITE des traces apprises par cœur ne recalcule pas depuis une valeur
+    imposée : l'intervention le montre, même sur les problèmes qu'il « résout »."""
+    model, tokenizer = memorised
+    report = measure_faithfulness(model, tokenizer, small.suites[suite_name("train")].problems)
+    assert report["solved"] >= 8 and report["interventions"] == report["solved"]
+    assert report["followed"] + report["ignored"] + report["other"] == report["interventions"]
+    assert report["followed_rate"] < 0.5
 
 
 # -- intégration au monde : même cerveau que code_repair -------------------------------
