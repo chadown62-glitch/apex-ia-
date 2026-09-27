@@ -353,10 +353,15 @@ def _record(
     promoted: bool = False,
     regressed: list[str] | None = None,
     tokens_seen: int | None = None,
+    candidate_reports: dict[str, object] | None = None,
 ) -> None:
     journal.experiment(p.experiment_id, "planned", plan=p.to_dict())
     if tokens_seen is not None:
         journal.experiment(p.experiment_id, "executed", tokens_seen=tokens_seen)
+    if candidate_reports is not None:
+        journal.experiment(
+            p.experiment_id, "judged", result={"decision": "reject"}, candidate_reports=candidate_reports
+        )
     journal.experiment(
         p.experiment_id,
         "analyzed",
@@ -541,3 +546,79 @@ def test_policy_adds_data_first_when_the_sample_was_reread_many_times(tmp_path: 
     assert any(line.startswith("ESTABLISHED : 137000 jetons vus") for line in reread.rationale)
     assert after(20_000, "target_regression").strategy == "lower_lr"  # 2 passages : pas de sur-lecture
     assert after(137_000, "protected_regression").strategy == "more_data"
+
+
+def test_policy_changes_lever_according_to_the_measured_effect_of_the_last_one(tmp_path: Path) -> None:
+    """Constat du run réel (apprentissage continu) : diviser le taux d'apprentissage a réduit
+    l'oubli de `code_repair` mais laissé `program_trace` entièrement oublié ; la politique divisait
+    encore le taux. L'effet MESURÉ du levier (candidat contre candidat précédent, par élément)
+    décide maintenant : répété s'il aide partout, remplacé pour les suites qu'il n'aide pas,
+    annulé s'il n'aide nulle part."""
+    world = support.world()
+    obs = _observation(world)
+    policy = StrategyPolicy(finetune_steps=100, finetune_tokens=10_000, max_steps=400, max_tokens=10_000)
+    regressed = ["heldout:apex_docs", "heldout:stdlib"]
+
+    def report(name: str, level: float) -> dict[str, object]:
+        scores = tuple(DocScore(f"{name}#{i}", level + 0.01 * (i % 7), 0.5, 100, 20) for i in range(40))
+        return EvalReport(name, "sha256:" + "e" * 64, "m", scores).to_dict()
+
+    def plan_of(decision: StrategyDecision) -> ExperimentPlan:
+        assert obs.champion is not None and decision.baseline_recipe is not None
+        return ExperimentPlan(
+            world.fingerprint,
+            {"name": "c", "artifact": obs.champion.artifact},
+            decision.baseline_recipe,
+            decision.recipe,
+            decision.hypothesis,
+            Budget(400, 40_000, 60.0),
+            parent_experiment_id=decision.parent_experiment_id,
+        )
+
+    def after_lower_lr(docs: float, stdlib: float, name: str) -> tuple[ExperimentPlan, StrategyDecision]:
+        journal = ExperimentJournal(tmp_path / f"{name}.jsonl")
+        first = policy.decide(obs, world, journal, exhausted=set())
+        assert first is not None and first.recipe.mix == {"apex_docs": 1.0}
+        p1 = plan_of(first)
+        _record(
+            journal,
+            p1,
+            "protected_regression",
+            regressed=regressed,
+            candidate_reports={
+                "heldout:apex_docs": report("heldout:apex_docs", 5.0),
+                "heldout:stdlib": report("heldout:stdlib", 4.0),
+            },
+        )
+        second = policy.decide(obs, world, journal, exhausted=set())
+        assert second is not None and second.strategy == "lower_lr"  # plus de données : hors budget
+        p2 = plan_of(second)
+        _record(
+            journal,
+            p2,
+            "protected_regression",
+            regressed=regressed,
+            candidate_reports={
+                "heldout:apex_docs": report("heldout:apex_docs", docs),
+                "heldout:stdlib": report("heldout:stdlib", stdlib),
+            },
+        )
+        third = policy.decide(obs, world, journal, exhausted=set())
+        assert third is not None
+        return p2, third
+
+    # Aide partout (oubli réduit sur les deux suites, encore au-delà de la garde) : on continue.
+    p2, third = after_lower_lr(4.9, 3.9, "everywhere")
+    assert third.strategy == "lower_lr" and third.recipe.lr == p2.recipe.lr / 2
+    # Aide « apex_docs » seulement : levier gardé (recette de p2), autre levier pour « stdlib ».
+    p2, third = after_lower_lr(4.9, 4.0, "partial")
+    assert third.strategy == "protect_domains" and third.parent_experiment_id == p2.experiment_id
+    assert third.recipe.lr == p2.recipe.lr and third.recipe.mix["stdlib"] >= 0.25
+    assert "apex_docs" not in {d for d, w in third.recipe.mix.items() if w > 0} - {"apex_docs"}
+    assert any("aide ['heldout:apex_docs'] mais pas ['heldout:stdlib']" in r for r in third.rationale)
+    # N'aide nulle part : modification annulée, autre levier depuis la recette précédente.
+    p2, third = after_lower_lr(5.0, 4.0, "nowhere")
+    assert third.strategy == "protect_domains" and third.parent_experiment_id != p2.experiment_id
+    assert third.recipe.lr == policy.finetune_lr and third.baseline_recipe is not None
+    assert third.baseline_recipe.lr == policy.finetune_lr  # une seule modification, depuis p1
+    assert any("levier sans effet" in r for r in third.rationale)

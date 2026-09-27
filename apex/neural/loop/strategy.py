@@ -17,6 +17,9 @@ Règles d'adaptation (cause ÉTABLIE du dernier échec -> UNE modification) :
   des domaines dégradés au palier suivant (`protect_levels`) ;
 - NO_SIGNIFICANT_EFFECT / NO_CHANGE -> doubler le budget de pas (dans le budget) ;
 - TARGET_REGRESSION / DIVERGED -> diviser le taux d'apprentissage par deux ;
+- une modification qui n'a réduit (bootstrap apparié, candidat contre candidat précédent)
+  l'oubli d'AUCUNE suite que l'expérience précédente dégradait est annulée : les candidats
+  repartent de la recette précédente, ce qui écarte ce levier (plan déjà exécuté) ;
 - UNKNOWN / TIMEOUT -> rejouer le même plan, au plus `max_retries` fois ;
 - intégrité, arrêt -> aucune suite automatique.
 
@@ -32,11 +35,13 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Any
 
+from apex.neural.evaluation import EvalReport
 from apex.neural.loop.failure import INTEGRITY_CAUSES, FailureCause
 from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord
 from apex.neural.loop.observe import Observation
 from apex.neural.loop.plan import DIRECTION_DECREASE, LoopHypothesis, Recipe, Weakness, plan_fingerprint
 from apex.neural.loop.world import PRIMARY, World
+from apex.stattest import StatTest, StatTestVerdict
 
 BOOTSTRAP = "bootstrap"
 TARGET_ONLY = "target_only"
@@ -70,6 +75,45 @@ class StrategyDecision:
             "parent": self.parent_experiment_id,
             "retry_of": self.retry_of,
         }
+
+
+def lever_effect(previous: ExperimentRecord, last: ExperimentRecord) -> dict[str, Any] | None:
+    """Effet MESURÉ de la modification de `last` (par rapport à `previous`) sur l'oubli : pour
+    chaque suite que les deux dégradent, bootstrap apparié par élément entre les mesures du Judge
+    des deux candidats. `improved` : oubli significativement réduit ; `unaffected` : non. None si
+    les mesures manquent (rien n'est présumé)."""
+    before = (previous.payload("judged") or {}).get("candidate_reports") or {}
+    after = (last.payload("judged") or {}).get("candidate_reports") or {}
+    still = [
+        s
+        for s in (last.analysis or {}).get("regressed_suites", [])
+        if s in (previous.analysis or {}).get("regressed_suites", []) and s in before and s in after
+    ]
+    if not still:
+        return None
+    stat = StatTest(n_bootstrap=2000, confidence_level=0.95, seed=0)
+    improved, unaffected, facts = [], [], []
+    for suite in still:
+        old, new = EvalReport.from_dict(before[suite]), EvalReport.from_dict(after[suite])
+        old_by_id = {s.doc_id: s.value for s in old.scores}
+        new_by_id = {s.doc_id: s.value for s in new.scores}
+        ids = sorted(set(old_by_id) & set(new_by_id))
+        gain = stat.compare_paired([new_by_id[i] for i in ids], [old_by_id[i] for i in ids])  # > 0 : mieux
+        helped = gain.verdict is StatTestVerdict.SIGNIFICANT and (gain.ci_lower or 0.0) > 0
+        (improved if helped else unaffected).append(suite)
+        facts.append(
+            f"{suite} {round(old.value, 4)} -> {round(new.value, 4)} "
+            f"(IC du gain [{gain.ci_lower}, {gain.ci_upper}]{', réduit' if helped else ''})"
+        )
+    modification = last.plan.get("hypothesis", {}).get("modification")
+    return {
+        "improved": improved,
+        "unaffected": unaffected,
+        "fact": (
+            f"ESTABLISHED : effet de « {modification} » ({last.experiment_id}) sur l'oubli laissé par "
+            f"{previous.experiment_id} : {'; '.join(facts)}"
+        ),
+    }
 
 
 def domain_share(mix: dict[str, float], domains: set[str]) -> float:
@@ -236,7 +280,28 @@ class StrategyPolicy:
                 )
             ]
         out: list[StrategyDecision] = []
-        regressed = {d for d in (world.suite_domain(s) for s in analysis.get("regressed_suites", [])) if d}
+        origin = last
+        regressed_suites = list(analysis.get("regressed_suites", []))
+        spent: str | None = None  # levier dont l'effet mesuré interdit la répétition
+        if cause in (FailureCause.PROTECTED_REGRESSION.value, FailureCause.TARGET_REGRESSION.value):
+            previous = journal.experiments().get(last.plan.get("parent_experiment_id") or "")
+            effect = lever_effect(previous, last) if previous is not None else None
+            if previous is not None and effect is not None and effect["unaffected"]:
+                base.append(effect["fact"])
+                if not effect["improved"]:
+                    # Sans effet sur aucune suite : modification annulée, autre levier.
+                    origin, parent = previous, Recipe.from_dict(previous.plan["recipe"])
+                    base.append("INFERRED : levier sans effet — annulé")
+                else:
+                    # X s'améliore, Y reste dégradé : on garde le levier (utile à X) et on traite Y
+                    # autrement (le répéter ne l'a pas aidé).
+                    spent = strategy
+                    regressed_suites = effect["unaffected"]
+                    base.append(
+                        f"INFERRED : « {strategy} » aide {effect['improved']} mais pas "
+                        f"{effect['unaffected']} — autre levier pour ces dernières"
+                    )
+        regressed = {d for d in (world.suite_domain(s) for s in regressed_suites) if d}
         # Un domaine sans suite d'évaluation (ex. solutions des tâches train) ne peut pas régresser :
         # il ne compte pas parmi les domaines entraînés à comparer aux domaines dégradés.
         evaluated = {world.suite_domain(s) for s in world.suite_names}
@@ -259,7 +324,7 @@ class StrategyPolicy:
                         self.hypothesis(world, weakness, MORE_DATA, change),
                         replace(parent, tokens=tokens),
                         parent,
-                        last.experiment_id,
+                        origin.experiment_id,
                         [*base, facts, "INFERRED : sur-apprentissage d'un échantillon trop petit"],
                     )
                 )
@@ -274,7 +339,7 @@ class StrategyPolicy:
                         self.hypothesis(world, weakness, LOWER_LR, change),
                         replace(parent, lr=lr),
                         parent,
-                        last.experiment_id,
+                        origin.experiment_id,
                         [*base, facts],
                     )
                 )
@@ -293,13 +358,16 @@ class StrategyPolicy:
                 if not overfit:
                     more_data(facts)
                 lower_lr(f"{facts} ; INFERRED : pas d'apprentissage trop grand pour un affinage")
-            if regressed:
-                current = domain_share(parent.mix, regressed)
+            # Les domaines entraînés sont déjà dans le mélange : on protège par le REJEU des autres
+            # domaines dégradés (s'il n'y en a pas, tous les domaines dégradés).
+            replayed = (regressed - trained) or regressed
+            if replayed:
+                current = domain_share(parent.mix, replayed)
                 for level in self.protect_levels:
                     if level > current:
-                        mix = raise_share(parent.mix, regressed, level, list(world.spec.domains))
+                        mix = raise_share(parent.mix, replayed, level, list(world.spec.domains))
                         change = (
-                            f"porter la part des domaines dégradés {sorted(regressed)} à "
+                            f"porter la part des domaines dégradés {sorted(replayed)} à "
                             f"{int(level * 100)} % du mélange (contrainte de diversité) : {mix}"
                         )
                         out.append(
@@ -308,10 +376,10 @@ class StrategyPolicy:
                                 self.hypothesis(world, weakness, PROTECT_DOMAINS, change),
                                 replace(parent, mix=mix),
                                 parent,
-                                last.experiment_id,
+                                origin.experiment_id,
                                 [
                                     *base,
-                                    f"suites protégées dégradées {analysis.get('regressed_suites')} : "
+                                    f"suites protégées dégradées {regressed_suites} : "
                                     "on augmente la représentation de leurs domaines",
                                 ],
                             )
@@ -332,13 +400,13 @@ class StrategyPolicy:
                         self.hypothesis(world, weakness, MORE_STEPS, change),
                         replace(parent, steps=steps),
                         parent,
-                        last.experiment_id,
+                        origin.experiment_id,
                         [*base, "aucun effet mesurable : on double le budget, dans la limite autorisée"],
                     )
                 )
         elif cause in (FailureCause.TARGET_REGRESSION.value, FailureCause.DIVERGED.value):
             lower_lr("la cible se dégradait ou l'entraînement divergeait : pas plus petit")
-        return out
+        return [d for d in out if d.strategy != spent]
 
     def _first_attempts(
         self, world: World, journal: ExperimentJournal, weakness: Weakness, target: str, reference: Recipe

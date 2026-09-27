@@ -186,3 +186,49 @@ def test_child_world_holds_both_reasoning_capabilities_and_protects_them(
         assert not any(p.shown in t or p.base.program in t for t in train_texts)
     assert child.protected_groups["dependency_order"][0] == suite_name("heldout")
     assert get_capability("dependency_order").contract.metric == "order_error"
+
+
+@needs_sandbox
+@pytest.mark.parametrize("form", ["ordered", "shuffled"])
+def test_an_outside_document_quoting_an_evaluated_program_is_decontaminated(
+    small: DependencyOrderBenchmark, trace: ProgramTraceBenchmark, form: str
+) -> None:
+    """La forme ORDONNÉE d'un problème évalué porte la même trace que sa réponse : un document
+    extérieur qui la cite (comme la forme mélangée) est retiré de l'entraînement."""
+    import hashlib
+
+    from apex.capabilities.program_trace.capability import TASKS_DOMAIN as TRACE_DOMAIN
+    from apex.capabilities.program_trace.capability import TASKS_PREFIX as TRACE_PREFIX
+    from apex.neural.dataset import TrainingCandidate
+    from apex.neural.loop.world import World
+    from tests import capability_support as support
+
+    problem = small.suites[suite_name("heldout")].problems[0]
+    program = (problem.base.program if form == "ordered" else problem.shown).replace(";", "; ")
+    text = f"Qu'obtient-on avec le programme suivant : {program} ? Réponse attendue plus bas.\n"
+    leak = TrainingCandidate(
+        candidate_id="leak#0",
+        text=text,
+        source_id=support.SPEC.domains["code"] + "zz_quotes_an_eval_program.py",
+        content_hash="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+        license_status="free",
+        quality="high_value",
+        origin="test:adversarial",
+    )
+    spec = replace(
+        support.SPEC,
+        domains={**support.SPEC.domains, TRACE_DOMAIN: TRACE_PREFIX, TASKS_DOMAIN: TASKS_PREFIX},
+        train_only_domains=(*support.SPEC.train_only_domains, TRACE_DOMAIN, TASKS_DOMAIN),
+        capabilities=("code_repair", "program_trace", "dependency_order"),
+    )
+    world = World.build(
+        spec,
+        (*support.candidates(), leak),
+        capability_data={
+            "code_repair": support.benchmark(),
+            "program_trace": trace,
+            "dependency_order": small,
+        },
+    )
+    assert leak.candidate_id in world.capability_decontaminated
+    assert all(c.candidate_id != leak.candidate_id for s in Split for c in world.dataset.splits[s])
