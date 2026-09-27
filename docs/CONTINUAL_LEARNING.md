@@ -218,6 +218,39 @@ vérifiées) ; même expérience dirigée : cible `cap:dependency_order:heldout`
 (IC 95 % apparié sur les 300 problèmes excluant 0). Aucun barreau n'autorise « raisonnement
 général » : au mieux, transfert mesuré vers UNE tâche apparentée.
 
+### Résultats du transfert (MEASURED, REAL E2E, répliqué)
+
+Mondes frères T (parent P3) et C (parent P2) : benchmarks `program_trace`, `dependency_order` et
+`code_repair` d'empreintes IDENTIQUES (vérifié). Défaut trouvé en construisant T : le contrôle de
+filiation du monde a refusé le benchmark (5 documents d'entraînement de `program_trace` partageaient
+une séquence de 12 jetons de code avec des problèmes évalués : même préfixe, mêmes noms) ; le
+constructeur applique désormais la règle du monde (47 problèmes retirés), test ajouté.
+
+Échelle, sans entraînement (champions P3 et P2, mêmes problèmes) :
+
+| barreau | P3 | P2 | écart (IC 95 %) |
+|---|---|---|---|
+| 1 domaine entraîné (`program_trace:train`) | 0,68 | 0,0 | [0,62 ; 0,75] |
+| 2 même forme held-out | 0,717 | 0,0 | [0,67 ; 0,76] |
+| 3 forme nouvelle (question intermédiaire) | **0,0** (écrit tout le programme : 100 %) | 0,0 | 0 |
+| 4 tâche apparentée (`dependency_order`) | **0,0** (lit de gauche à droite : 68 %) | 0,0 | 0 |
+| 5 tâche lointaine (`code_repair` held-out, résolues) | 0,309 | 0,296 | [−0,10 ; 0,12] |
+
+Apprentissage de la tâche apparentée (même recette, 1 500 pas, 2,4 M jetons, sans traces
+`program_trace`), erreur `dependency_order` held-out (avant : 1,0 pour les deux) :
+
+| graine | T (depuis P3) | C (depuis P2) | écart T − C (IC 95 %) | `program_trace` après T | Judge T / C |
+|---|---|---|---|---|---|
+| monde | 0,970 | 0,997 | [0,007 ; 0,047] | 0,283 -> 0,953 (oubli) | REJECT / INCONCLUSIVE |
+| 1000003 (réplique) | 0,957 | 1,000 | [0,023 ; 0,070] | 0,283 -> 0,930 (oubli) | REJECT / INCONCLUSIVE |
+
+Conclusions : **transfert établi et répliqué selon le critère pré-enregistré, mais FAIBLE** (9 à 13
+problèmes de plus sur 300 ; la tâche reste échouée à ≈ 96 %) ; sans entraînement, aucun transfert
+aux barreaux 3 et 4 — l'acquis P3 reste lié à sa forme (mémorisation de la procédure dans son
+format, pas une compétence de dépendance réutilisable). Apprendre la tâche apparentée sans rejeu
+DÉTRUIT `program_trace` dans les deux graines : le Judge le refuse. Aucune promotion. Ce n'est en
+aucun cas du « raisonnement général ».
+
 ## 7. Boucle autonome : « X s'améliore mais Y se dégrade » (REAL E2E, deux défauts corrigés)
 
 Protocole : monde P3 (texte + `code_repair` + `program_trace`), champion P3 adopté, `run` avec
