@@ -154,10 +154,12 @@ def derive_world(args: argparse.Namespace) -> int:
         from apex.capabilities.dependency_order.capability import TASKS_PREFIX as ORDER_PREFIX
         from apex.capabilities.registry import sandbox_provider
 
-        if "program_trace" not in parent.capabilities:
-            print("dependency_order exige program_trace dans le monde parent (exclusions)", file=sys.stderr)
+        trace = capability_data.get("program_trace")
+        if trace is None and "program_trace" in parent.capabilities:
+            _, trace = parent.capabilities["program_trace"]
+        if trace is None:
+            print("dependency_order exige program_trace (parent ou ajouté ici)", file=sys.stderr)
             return 2
-        _, trace = parent.capabilities["program_trace"]
         capability_data["dependency_order"] = order.build_benchmark(
             sandbox_provider(),
             seen={p.canonical for p in trace.pool},
