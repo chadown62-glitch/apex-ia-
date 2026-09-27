@@ -4,6 +4,7 @@ monde enfant (même cerveau que `code_repair`)."""
 
 from __future__ import annotations
 
+import hashlib
 import random
 from dataclasses import replace
 from pathlib import Path
@@ -334,3 +335,75 @@ def test_the_loop_judges_a_world_holding_both_capabilities(
     for split in ("train", "validation", "heldout", "deeper"):
         assert changes[suite_name(split)]["tasks"] == SMALL[split]
     assert changes["cap:code_repair:heldout"]["tasks"] > 0
+
+
+# -- adversarial -------------------------------------------------------------------
+
+
+@needs_sandbox
+def test_an_outside_document_quoting_an_evaluation_problem_is_decontaminated(
+    small: ProgramTraceBenchmark,
+) -> None:
+    """Un document d'un AUTRE domaine qui cite un problème d'évaluation (programme et trace) ne
+    peut pas entrer dans l'entraînement : le monde le retire, quelle que soit sa source."""
+    from apex.neural.dataset import TrainingCandidate
+    from apex.neural.loop.world import World
+    from tests import capability_support as support
+
+    quoted = small.suites[suite_name("heldout")].problems[0].document
+    text = f"# exemple d'exécution\n# {quoted}\nprint('ok')\n"
+    leak = TrainingCandidate(
+        candidate_id="leak#0",
+        text=text,
+        source_id=support.SPEC.domains["code"] + "zz_quotes_an_eval_trace.py",
+        content_hash="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+        license_status="free",
+        quality="high_value",
+        origin="test:adversarial",
+    )
+    spec = replace(
+        support.SPEC,
+        domains={**support.SPEC.domains, TASKS_DOMAIN: TASKS_PREFIX},
+        train_only_domains=(*support.SPEC.train_only_domains, TASKS_DOMAIN),
+        capabilities=("code_repair", "program_trace"),
+    )
+    world = World.build(
+        spec,
+        (*support.candidates(), leak),
+        capability_data={"code_repair": support.benchmark(), "program_trace": small},
+    )
+    assert leak.candidate_id in world.capability_decontaminated
+    assert all(c.candidate_id != leak.candidate_id for s in Split for c in world.dataset.splits[s])
+
+
+class _MergingTokenizer:
+    """Tokenizer RÉEL enveloppé qui fusionne « : » avec le caractère suivant (propriété précise
+    testée : une fusion à la frontière invite/réponse est refusée)."""
+
+    def __init__(self, inner: ByteBPETokenizer) -> None:
+        self.inner = inner
+
+    def encode(self, text: str, *, add_bos: bool = False, add_eos: bool = False) -> list[int]:
+        head, sep, tail = text.partition(":")
+        if not sep or not tail:
+            return self.inner.encode(text, add_bos=add_bos, add_eos=add_eos)
+        merged = [*self.inner.encode(head, add_bos=add_bos), 10_000 + ord(tail[0])]
+        return merged + self.inner.encode(tail[1:], add_eos=add_eos)
+
+
+@needs_sandbox
+def test_a_tokenizer_merging_prompt_and_answer_is_refused(small: ProgramTraceBenchmark) -> None:
+    capability = get_capability("program_trace")
+    tokenizer = ByteBPETokenizer.train([p.document for p in small.pool], 300)
+    assert capability.longest_input(small, tokenizer) > 0
+    with pytest.raises(ValueError, match="frontière"):
+        capability.longest_input(small, _MergingTokenizer(tokenizer))  # type: ignore[arg-type]
+
+
+def test_the_judge_refuses_task_details_outside_the_contract() -> None:
+    from apex.neural.loop.judge import _task_changes
+
+    good = {"s": [{"instance": "t#0", "solved": True}]}
+    assert _task_changes(good, good)["s"]["solved_after"] == 1
+    with pytest.raises(ValueError, match="instance"):
+        _task_changes({"s": [{"id": "t#0", "solved": True}]}, good)

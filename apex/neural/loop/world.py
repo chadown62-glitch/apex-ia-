@@ -108,6 +108,32 @@ def _code_grams(text: str) -> set[tuple[str, ...]]:
     return ngrams(code_tokens(text, normalize_names=False), CODE_NGRAM)
 
 
+def _squashed(text: str) -> str:
+    return "".join(text.split())
+
+
+class _Protection:
+    """Textes d'évaluation protégés, reconnus de deux façons : séquences de jetons de code
+    partagées (copie reformatée ou partielle d'une solution), et présence TELLE QUELLE aux
+    espaces près (texte cité dans un commentaire, une docstring ou de la prose, que la
+    tokenisation de code ignore)."""
+
+    def __init__(self) -> None:
+        self.grams: set[tuple[str, ...]] = set()
+        self.verbatim: set[str] = set()
+
+    def add(self, texts: Sequence[str]) -> None:
+        for text in texts:
+            self.grams |= _code_grams(text)
+            self.verbatim.add(_squashed(text))
+
+    def hits(self, text: str) -> bool:
+        if _code_grams(text) & self.grams:
+            return True
+        squashed = _squashed(text)
+        return any(p in squashed for p in self.verbatim if len(p) <= len(squashed))
+
+
 #: Recouvrement maximal (8-grammes) d'un nouveau document avec l'entraînement de la lignée.
 LINEAGE_MAX_OVERLAP = 0.1
 
@@ -287,24 +313,22 @@ class World:
         missing = set(spec.capabilities) - set(data)
         if missing:
             raise WorldIntegrityError(f"benchmark absent pour les capacités {sorted(missing)}")
-        protected: set[tuple[str, ...]] = set()
-        protected_new: set[tuple[str, ...]] = set()
+        protected = _Protection()
+        protected_new = _Protection()
         train_only: list[TrainingCandidate] = []
         for name in spec.capabilities:
             capability = get_capability(name)
-            grams: set[tuple[str, ...]] = set()
-            for text in capability.protected_texts(data[name]):
-                grams |= _code_grams(text)
-            protected |= grams
+            texts = capability.protected_texts(data[name])
+            protected.add(texts)
             if name in inherited:
                 continue  # ses documents « train seulement » sont déjà dans les splits du parent
-            protected_new |= grams
+            protected_new.add(texts)
             train_only += [
                 doc
                 for doc in capability.train_documents(data[name])
                 if any(doc.source_id.startswith(spec.domains[d]) for d in spec.train_only_domains)
             ]
-        removed = [c.candidate_id for c in (*candidates, *train_only) if _code_grams(c.text) & protected]
+        removed = [c.candidate_id for c in (*candidates, *train_only) if protected.hits(c.text)]
         gone = set(removed)
         kept = [c for c in candidates if c.candidate_id not in gone]
         kept_train_only = [c for c in train_only if c.candidate_id not in gone]
@@ -324,7 +348,7 @@ class World:
                 c.candidate_id
                 for split in (Split.TRAIN, Split.VALIDATION)
                 for c in parent.dataset.splits[split]
-                if _code_grams(c.text) & protected_new
+                if protected_new.hits(c.text)
             ]
             if seen_by_champion:
                 raise WorldIntegrityError(

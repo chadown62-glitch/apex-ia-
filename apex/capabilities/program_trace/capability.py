@@ -142,8 +142,10 @@ class ProgramTraceCapability(Capability):
         return {name: suite.fingerprint for name, suite in data.suites.items()}
 
     def protected_texts(self, data: ProgramTraceBenchmark) -> list[str]:
-        """Documents complets (programme, question, trace) des suites d'évaluation."""
-        return [p.document for p in data.eval_problems()]
+        """Documents complets (programme, question, trace) ET programmes seuls des suites
+        d'évaluation : ni la solution, ni l'entrée d'un problème évalué n'entrent à
+        l'entraînement."""
+        return [text for p in data.eval_problems() for text in (p.document, p.program)]
 
     def train_documents(self, data: ProgramTraceBenchmark) -> list[TrainingCandidate]:
         return [
@@ -160,11 +162,19 @@ class ProgramTraceCapability(Capability):
         ]
 
     def longest_input(self, data: ProgramTraceBenchmark, tokenizer: ByteBPETokenizer) -> int:
-        return MAX_NEW_TOKENS + max(
-            len(tokenizer.encode(p.prompt, add_bos=True))
-            for suite in data.suites.values()
-            for p in suite.problems
-        )
+        """Refuse aussi un tokenizer qui fusionne la fin de l'invite avec le début de la réponse :
+        l'invite évaluée ne serait pas découpée comme dans les documents d'entraînement."""
+        longest = 0
+        for suite in data.suites.values():
+            for p in suite.problems:
+                prompt = tokenizer.encode(p.prompt, add_bos=True)
+                if tokenizer.encode(p.document, add_bos=True)[: len(prompt)] != prompt:
+                    raise ValueError(
+                        f"tokenizer : l'invite {p.prompt!r} n'est pas un préfixe du document "
+                        "tokenisé (fusion à la frontière invite/réponse)"
+                    )
+                longest = max(longest, len(prompt))
+        return MAX_NEW_TOKENS + longest
 
     def evaluate(
         self,
