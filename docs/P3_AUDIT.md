@@ -82,3 +82,86 @@ MEASURED :
   recopier. Un contrôle « réponse finale seulement » l'aurait masqué ; la vérification doit porter
   sur chaque étape, et la fidélité (l'étape est-elle réellement utilisée ?) doit être mesurée par
   intervention.
+
+### 3b. Apprendre de sa propre expérience vérifiée (cœur de P5), mesuré
+
+Protocole : base entraînée sur les profondeurs 1-3 ; deux tours où le modèle tente 3 000 problèmes de
+profondeur 4 puis 5 ; ne deviennent données que les tentatives dont CHAQUE valeur intermédiaire est
+vérifiée exacte. Contrôles causaux à budget égal : « more » (données d'origine seules) et
+« unverified » (toutes ses tentatives, non filtrées).
+
+| après 2 tours (problèmes frais) | prof. 3 | prof. 4 | prof. 5 | prof. 6 |
+|---|---|---|---|---|
+| base | 0,90 | 0,115 | 0,09 | 0,04 |
+| auto-entraînement VÉRIFIÉ | 0,97 | 0,105 | 0,10 | 0,055 |
+| contrôle « more » | 0,97 | 0,105 | 0,10 | 0,055 |
+| contrôle « unverified » | **0,89** | 0,095 | 0,065 | 0,045 |
+
+MEASURED :
+1. **L'auto-amélioration n'a pas pu démarrer** : 0 tentative entièrement correcte sur 3 000 à la
+   profondeur 4 (les ≈ 10 % de réponses finales justes sont de la chance). Le bras vérifié est
+   identique au contrôle, au chiffre près (ce qui confirme au passage le déterminisme).
+2. **Cause structurelle** : en profondeur 4, le modèle écrit TOUJOURS exactement 4 étapes (le maximum
+   vu) : il saute une étape au lieu de la calculer. Même 16 tirages échantillonnés par problème
+   (1 600 tentatives) ne donnent aucune trace correcte en profondeur 4 ou 5. L'exploration n'atteint
+   jamais un succès vérifiable : la difficulté suivante doit être ATTEIGNABLE.
+3. **Apprendre de ses tentatives non vérifiées nuit** (profondeur 3 : 0,97 -> 0,89) : le
+   vérificateur-filtre est nécessaire, pas décoratif.
+4. **Variance entre exécutions** : même configuration, profondeur 3 = 0,725 dans un run, 0,90 dans
+   l'autre (seul le nombre de threads diffère). Une promotion jugée sur UN entraînement peut être la
+   chance de la graine ; le Judge actuel ne le mesure pas (P2 inclus).
+
+## 4. Définition du raisonnement : ce que je recommande
+
+« Raisonnement » = un calcul en plusieurs étapes dont :
+- la solution est **GÉNÉRÉE** (pas choisie dans une liste) ;
+- **chaque étape** est vérifiable par un vérificateur exact indépendant (pas seulement la réponse) ;
+- les problèmes de test sont **frais par construction** (générateur procédural, espace combinatoire,
+  collisions avec l'entraînement rejetées) : la mémorisation est impossible ;
+- la généralisation est mesurée le long d'axes STRUCTURELS nommés à l'avance (profondeur, nouvelles
+  combinaisons d'opérations, distracteurs, noms jamais vus) ;
+- la **fidélité** est mesurée par intervention : corrompre une étape écrite doit changer la réponse,
+  sinon la trace est décorative.
+
+Une chaîne de prompts, un score de réponse finale seule ou un benchmark fixe réutilisé ne satisfont
+aucun de ces points.
+
+## 5. Faut-il faire P3 maintenant ? Ordre recommandé
+
+Oui pour P3, mais **pas comme une capacité isolée de plus** et **pas avant deux fondations** :
+
+| étape | contenu | pourquoi maintenant |
+|---|---|---|
+| **F1 — cerveau continu** | tokenizer partagé et figé, filiation de mondes (monde enfant = parent + nouvelles capacités), adoption auditée du champion parent comme point de départ re-mesuré | sans elle, chaque capacité remet le cerveau à zéro (problème 4) : P3 puis P5 produiraient une succession de capacités isolées |
+| **F2 — outillage génératif et statistique** | décodage par lots avec arrêt anticipé ; calibration du bruit entre graines (le Judge exige un gain au-delà de la variance mesurée entre deux entraînements) | évaluer une capacité générative est sinon trop coûteux (problème 2) ; sans calibration, une promotion peut être la chance de la graine (§3b.4) |
+| **P3 — raisonnement vérifiable** | deuxième capacité dans le MÊME cerveau que `code_repair` : exécution de programmes générée et vérifiée étape par étape, tests frais, axes de généralisation structurels, fidélité par intervention | le monde commun oblige le Judge à garder `code_repair` et le texte : première preuve de coexistence multi-capacités |
+| **P5-noyau (avancé)** | apprentissage à partir de SES tentatives vérifiées, avec une difficulté suivante atteignable (nouvelles combinaisons, distracteurs, noms jamais vus avant la longueur) et les contrôles causaux ci-dessus | c'est le mécanisme manquant (problème 3) ; il doit être construit sur une capacité où le vérificateur est exact, donc P3 |
+| **P4 — mesurer puis dimensionner** | sonde de dimensionnement (3 tailles × 2 graines) sur les deux capacités, et levier d'architecture (encodage de position, format) pour la généralisation en longueur | §3b.2 montre une limite de FORMAT et d'architecture, pas seulement de taille ; P4 doit comparer « plus gros » à « mieux conçu » |
+| P6 | cybersécurité défensive | après P5-noyau ; le transfert depuis `code_repair` n'est pas une preuve |
+| P7 -> P10 | inchangés | |
+
+Différences avec la roadmap proposée : deux fondations avant P3 ; le noyau de P5 avancé et construit
+AVEC P3 ; P4 réduit d'abord à une MESURE des goulots (taille contre format / architecture).
+
+## 6. Architecture recommandée contre les capacités isolées
+
+- UN monde et UN cerveau porteurs de toutes les capacités ; chaque nouvelle capacité arrive par un
+  monde enfant qui hérite du tokenizer et du champion (adoption re-mesurée, jamais une promotion
+  héritée sans mesure) ; le Judge garde TOUTES les suites de toutes les capacités.
+- Interface `Capability` existante conservée (contrat, benchmark, `evaluate`) ; deux familles
+  d'évaluateurs réellement utilisées : classement exécuté (`code_repair`) et génération vérifiée
+  (P3). Pas de framework plus abstrait tant qu'une troisième capacité n'en a pas besoin.
+- Source de données « expérience vérifiée » : les tentatives réussies d'une capacité deviennent des
+  documents d'entraînement journalisés et rejouables par le Judge (même provenance que le reste).
+
+## 7. Plan d'expérimentation et critères de réussite
+
+- **F1** : un champion `code_repair` adopté par un monde enfant garde sa valeur re-mesurée (même
+  empreinte de benchmark) ; une adoption non attestée ou un tokenizer différent est refusé.
+- **F2** : l'évaluation générative est au moins 10 fois plus rapide ; le seuil de promotion intègre la
+  variance entre graines mesurée.
+- **P3** : de la ligne de base (0) à un gain significatif sur des problèmes frais ; aucune régression
+  de `code_repair` ni du texte ; exactitude PAR ÉTAPE rapportée ; fidélité par intervention ; au moins
+  un axe structurel hors distribution mesuré honnêtement (réussite ou échec).
+- **P5-noyau** : le bras « vérifié » bat les deux contrôles à budget égal, sur des problèmes frais du
+  niveau suivant.
