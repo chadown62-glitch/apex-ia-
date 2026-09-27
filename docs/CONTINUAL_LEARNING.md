@@ -129,6 +129,26 @@ longueur n'est établie qu'à une profondeur JAMAIS entraînée par le bras (5 p
 REJOUÉ avec une seconde graine avant toute conclusion ; seul un bras répliqué peut être intégré au
 cerveau (par une expérience jugée par le Judge, avec les protections).
 
+### Résultats P4 (MEASURED, graine 0, 6 000 pas × 32 × 256 jetons par bras, CPU)
+
+| bras | paramètres | temps | prof. 3 exact [IC 95 %] | prof. 4 | prof. 5 | valeurs écrites (prof. 4 / 5) | critère |
+|---|---|---|---|---|---|---|---|
+| base | 0,72 M | 20 min | 0,790 [0,743 ; 0,833] | 0,0 | 0,0 | 4 valeurs : 161/200, 188/200 | échec |
+| explicit | 0,72 M | 19 min | 0,793 (= base, IC de l'écart [−0,03 ; 0,03]) | 0,0 | 0,0 | 4 valeurs : 199/200, 141/200 | échec |
+| curriculum (25 % prof. 4) | 0,72 M | 20 min | **0,170** (régression, [−0,68 ; −0,56]) | 0,590 (profondeur ENTRAÎNÉE) | 0,0 | 5 valeurs : 199/200, 190/200 | échec |
+| big | 2,87 M | 60 min | **0,997** [0,99 ; 1,0] (+0,16 à +0,25) | 0,0 | 0,0 | 4 valeurs : 176/200, 198/200 | échec |
+
+**HYPOTHESIS REJECTED** (les trois leviers, à ce budget) : aucun bras ne dépasse le critère
+pré-enregistré à une profondeur jamais entraînée. Diagnostic mesuré, identique dans les quatre bras :
+le modèle écrit le NOMBRE d'étapes vu à l'entraînement (4 ; 5 après le curriculum), pas le nombre
+d'instructions du programme — il a appris un gabarit de longueur, pas « suivre les dépendances
+jusqu'à la variable demandée ». Plus de capacité perfectionne la profondeur entraînée (0,997) sans
+rien transférer ; recopier l'instruction exécutée (`explicit`) ne suffit pas (le modèle saute la
+première instruction et garde 4 étapes) ; le curriculum déplace le gabarit (5 étapes partout) et
+détruit la profondeur 3. Aucun bras n'ayant réussi, rien à répliquer ni à intégrer au cerveau.
+La profondeur 5 reste NON DÉMONTRÉE. Piste non testée ici : un format où la fin de trace dépend
+explicitement du programme (compteur d'instructions restantes), à pré-enregistrer.
+
 ## 5. P5 — données vérifiées : protocole PRÉ-ENREGISTRÉ (commité avant exécution)
 
 Question : à budget STRICTEMENT égal, des traces écrites par le modèle et VÉRIFIÉES par exécution
