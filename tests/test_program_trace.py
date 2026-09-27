@@ -341,17 +341,23 @@ def test_the_loop_judges_a_world_holding_both_capabilities(
 
 
 @needs_sandbox
+@pytest.mark.parametrize("quote", ["trace_in_a_comment", "program_in_prose"])
 def test_an_outside_document_quoting_an_evaluation_problem_is_decontaminated(
-    small: ProgramTraceBenchmark,
+    small: ProgramTraceBenchmark, quote: str
 ) -> None:
-    """Un document d'un AUTRE domaine qui cite un problème d'évaluation (programme et trace) ne
-    peut pas entrer dans l'entraînement : le monde le retire, quelle que soit sa source."""
+    """Un document d'un AUTRE domaine qui cite un problème d'évaluation — sa trace dans un
+    commentaire, ou seulement son programme dans de la prose — ne peut pas entrer dans
+    l'entraînement : le monde le retire, quelle que soit sa source."""
     from apex.neural.dataset import TrainingCandidate
     from apex.neural.loop.world import World
     from tests import capability_support as support
 
-    quoted = small.suites[suite_name("heldout")].problems[0].document
-    text = f"# exemple d'exécution\n# {quoted}\nprint('ok')\n"
+    problem = small.suites[suite_name("heldout")].problems[0]
+    if quote == "trace_in_a_comment":
+        text = f"# exemple d'exécution\n# {problem.document}\nprint('ok')\n"
+    else:
+        program = problem.program.replace(";", "; ")
+        text = f"Considérons le programme suivant : {program}. Que vaut la dernière variable ?\n"
     leak = TrainingCandidate(
         candidate_id="leak#0",
         text=text,
