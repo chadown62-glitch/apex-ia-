@@ -367,3 +367,22 @@ code) :
 | pas de découpage en lots | la charge (≈ 80 Ko) restait sous `MAX_ARG_STRLEN` (131 072) | charge au-delà de la limite noyau + espion : plusieurs lancements, chaque argument sous la limite |
 | valeur de capacité pondérée par les exécutions | le modèle non entraîné exécutait presque toujours 3 candidats : pondérations égales | test direct avec des nombres d'exécutions inégaux |
 | benchmark non gelé dans `world.json` | l'empreinte du MONDE rattrapait la falsification (couche redondante, réécrivable par un attaquant) | le test exige que la couche benchmark elle-même détecte |
+
+## 13. Tests et non-régression
+
+Suite complète (`pytest`, JUnit XML) : **2 447 réussis, 4 échecs, 175 ignorés, 0 erreur** (18 min 46 s).
+
+- Les 4 échecs sont tous dans `tests/test_runtime_packaging.py` et **identiques sur le commit de départ
+  `51b77d2`** (vérifié en exécutant ce fichier sur une copie de travail de ce commit : 31 réussis,
+  les mêmes 4 échecs) : imports `apex.metalearner` dans l'API, une migration qui mentionne
+  `apex.metalearner`, champ `schema_version` absent du contrat `doctor`. Pré-existants, hors périmètre.
+- **Régression introduite puis corrigée** : le nouveau sous-paquet `apex.capabilities` n'était classé
+  ni Runtime ni Research dans `runtime_build/selection.py` ; la garde de construction refusait alors
+  de construire (29 tests de packaging en échec supplémentaires). Classé Research (il importe
+  `apex.neural` et n'est importé que par `apex.neural.loop`, aucun paquet Runtime ne l'importe).
+- Tests de la priorité 2 : `test_capability_code_repair.py` (23), `test_capability_adversarial.py` (12),
+  `test_capability_loop.py` (7, boucle réelle sur un monde réduit réel), `test_loop_components.py`
+  (21) : 63 réussis. Boucle P1 : `test_loop_*` inclus dans la suite complète, sans régression.
+- Lint (`ruff check`, `ruff format`) et types (`mypy`) propres sur tous les fichiers de la mission
+  (seul `runtime_build/selection.py` était déjà non formaté au départ ; laissé tel quel, une ligne
+  ajoutée).
