@@ -320,3 +320,26 @@ aucune capacité acquise n'a été détruite, le champion P3 reste en service. *
 validation, 18 tâches, reste dégradée dans tous les bras). La meilleure recette connue pour
 `program_trace` (bras F, §2 : 2,4 M jetons, 48 % d'anciennes données) n'est pas celle que la
 politique construit (elle part du seul domaine cible puis relève le rejeu par paliers).
+
+## 9. Gate de fin de mission (état exact)
+
+| # | point | statut | preuve |
+|---|---|---|---|
+| 1 | apprentissage continu mesuré | MEASURED, REAL E2E | §2 (bras A–F), §7 (boucle, 6 expériences) |
+| 2 | oubli mesuré (formel, brut, vérifiable par le Judge) | IMPLEMENTED, TESTED, ADVERSARIAL | §3, `apex/neural/protection.py` |
+| 3 | stratégie anti-oubli comparée | MEASURED | §2 : la relecture d'un petit échantillon est la cause principale (F : cible apprise, texte non oublié) ; lr réduit = oubli ↓ mais apprentissage supprimé ; rejeu faible |
+| 4 | capacités acquises protégées | IMPLEMENTED, TESTED, ADVERSARIAL, REAL E2E | ancres + Judge + registre ; 0 promotion destructrice sur 6 + 6 + 4 + 4 candidats rejetés |
+| 5 | P4 évalué proprement | MEASURED — **HYPOTHESIS REJECTED** | §4 : critère pré-enregistré, 4 bras, aucune généralisation à une profondeur non entraînée |
+| 6 | P5 démontré ou rejeté | MEASURED — **HYPOTHESIS REJECTED** | §5 : vérifié > non vérifié, mais pas > étiquettes à budget égal |
+| 7 | transfert mesuré | MEASURED, répliqué | §6 : échelle (aucun transfert sans entraînement au-delà de la forme apprise) ; transfert faible mais répliqué vers `dependency_order` |
+| 8 | tests adversariaux | ADVERSARIAL | ancres forgées, entrées non attestées, dérive cumulée, citations extérieures, collisions de jetons |
+| 9 | mutation testing | 28/28 (protection), 9/9 (stratégie), 13/13 (`dependency_order`) | worktree isolé |
+| 10 | E2E réel | REAL E2E | §7 ; mondes de transfert construits et jugés |
+| 11 | reproductibilité | partielle | E2E : expériences 1–3 identiques sur 3 exécutions (même graine) ; F et transfert répliqués (graine indépendante) ; P5 et P4 non répliqués (P4 : aucun succès à répliquer) |
+| 12 | aucune régression critique | champion P3 inchangé | aucune promotion ; suite de tests : voir rapport de fin |
+
+**Non démontré, à ne pas présenter comme acquis** : apprendre une NOUVELLE capacité sans oublier
+les anciennes (aucune promotion dans cette mission : chaque candidat qui apprenait oubliait
+quelque chose) ; profondeur 4 et 5 ; supériorité de l'expérience vérifiée ; transfert
+significatif ; raisonnement général. PROMOTED : rien — le cerveau en service reste le champion P3
+(texte 1,801 BPB, `program_trace` 0,283, `code_repair` held-out 0,770, `dependency_order` 1,0).
