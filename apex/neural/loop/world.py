@@ -280,6 +280,7 @@ class World:
         *,
         capability_data: dict[str, Any] | None = None,
         parent: World | None = None,
+        train_only: Sequence[TrainingCandidate] = (),
     ) -> World:
         """`capability_data` : benchmark gelé de chaque capacité déclarée. Tout
         fragment qui partage une séquence de code avec une solution ou une
@@ -289,8 +290,20 @@ class World:
         du parent sont repris tels quels (un document vu par le champion adopté ne change jamais
         de split) ; seuls les nouveaux sont tirés au sort. Les capacités héritées gardent le
         benchmark du parent. Refusé si un document d'entraînement du parent contient une séquence
-        d'évaluation d'une NOUVELLE capacité : le champion adopté l'a déjà vue."""
+        d'évaluation d'une NOUVELLE capacité : le champion adopté l'a déjà vue.
+
+        `train_only` : documents qui ne servent JAMAIS de test (ex. tentatives du modèle lui-même),
+        chacun dans un domaine déclaré « train seulement » ; soumis aux mêmes contrôles de
+        contamination que tout document."""
         from apex.capabilities.registry import get_capability
+
+        outside = [
+            c.candidate_id
+            for c in train_only
+            if not any(c.source_id.startswith(spec.domains[d]) for d in spec.train_only_domains)
+        ]
+        if outside:
+            raise WorldIntegrityError(f"documents « train seulement » hors de ces domaines : {outside[:5]}")
 
         given = dict(capability_data or {})
         if parent is None:
@@ -315,7 +328,7 @@ class World:
             raise WorldIntegrityError(f"benchmark absent pour les capacités {sorted(missing)}")
         protected = _Protection()
         protected_new = _Protection()
-        train_only: list[TrainingCandidate] = []
+        train_only = list(train_only)
         for name in spec.capabilities:
             capability = get_capability(name)
             texts = capability.protected_texts(data[name])

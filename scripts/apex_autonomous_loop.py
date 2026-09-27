@@ -173,6 +173,62 @@ def derive_world(args: argparse.Namespace) -> int:
     return 0
 
 
+def self_world(args: argparse.Namespace) -> int:
+    """Monde ENFANT nourri des tentatives du champion ATTESTÉ du parent sur des problèmes
+    program_trace neufs : domaine `self_verified` (résultat vérifié par exécution) et domaine
+    `self_unverified` (toutes les tentatives de forme valide, contrôle causal du filtre)."""
+    import random
+    from dataclasses import replace
+
+    from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
+    from apex.capabilities.program_trace import self_training
+    from apex.capabilities.registry import sandbox_provider
+    from apex.neural.loop.execute import load_model_from_artifact
+
+    parent = World.load(args.parent / "world.json")
+    champion = LoopController(args.parent, parent, log=lambda _m: None).registry.current()
+    if champion is None:
+        print("le monde parent n'a aucun champion", file=sys.stderr)
+        return 2
+    problem = LoopController(args.parent, parent, log=lambda _m: None).attest(champion)
+    if problem is not None:
+        print(f"champion du parent non attesté : {problem}", file=sys.stderr)
+        return 2
+    store = LocalFilesystemArtifactStore(root=str(args.parent / "artifacts"))
+    model = load_model_from_artifact(store, str(champion["artifact"]), parent)
+    _, bench = parent.capabilities["program_trace"]
+    rng = random.Random(args.seed)  # noqa: S311 - tirage reproductible
+    problems = self_training.fresh_problems(bench, args.count, args.depth, rng)
+    attempts = self_training.attempt_and_verify(model, parent.tokenizer, problems, sandbox_provider())
+    docs = [
+        *self_training.documents(attempts, self_training.VERIFIED_DOMAIN),
+        *self_training.documents(attempts, self_training.UNVERIFIED_DOMAIN),
+    ]
+    domains = {**parent.spec.domains, **self_training.PREFIXES}
+    spec = replace(
+        parent.spec,
+        parent=parent.fingerprint,
+        domains=domains,
+        train_only_domains=(*parent.spec.train_only_domains, *self_training.PREFIXES),
+    )
+    world = World.build(spec, [], parent=parent, train_only=docs)
+    fingerprint = world.save(args.workdir / "world.json")
+    print(
+        json.dumps(
+            {
+                "world": fingerprint,
+                "parent": parent.fingerprint,
+                "champion": champion["name"],
+                "attempts": self_training.summary(attempts),
+                "capability_decontaminated": len(world.capability_decontaminated),
+                "train_by_domain": {d: len(world.train_candidates(d)) for d in self_training.PREFIXES},
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
 def adopt(args: argparse.Namespace) -> int:
     world = World.load(args.workdir / "world.json")
     entry = LoopController(args.workdir, world).adopt(args.parent, reason=args.reason)
@@ -437,6 +493,13 @@ def main() -> int:
     p.add_argument("--parent", type=Path, required=True)
     p.add_argument("--add-capability", action="append", default=[])
     p.set_defaults(fn=derive_world)
+    p = sub.add_parser("self-world", help="monde enfant nourri des tentatives vérifiées du champion")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.add_argument("--parent", type=Path, required=True)
+    p.add_argument("--count", type=int, default=3000)
+    p.add_argument("--depth", type=int, default=3)
+    p.add_argument("--seed", type=int, default=0)
+    p.set_defaults(fn=self_world)
     p = sub.add_parser("adopt", help="adopte le champion attesté du monde parent, re-mesuré ici")
     p.add_argument("--workdir", type=Path, required=True)
     p.add_argument("--parent", type=Path, required=True)

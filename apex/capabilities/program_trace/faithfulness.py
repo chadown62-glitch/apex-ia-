@@ -10,8 +10,8 @@ impose ce préfixe et on laisse le modèle écrire la suite :
   la trace écrite est décorative) ;
 - AUTRE : ni l'un ni l'autre (sortie incohérente).
 
-Seules les interventions dont la suite recalculée DIFFÈRE de l'originale sont comptées (sinon
-suivre et ignorer seraient indiscernables)."""
+Suivre et ignorer sont toujours discernables : chaque affectation lit la variable précédente, donc
+toute valeur imposée (δ ≠ 0) change l'étape suivante (vérifié par les tests)."""
 
 from __future__ import annotations
 
@@ -66,15 +66,11 @@ class Intervention:
 
 
 def interventions(problems: list[Problem], rng: random.Random) -> list[Intervention]:
-    out = []
-    for problem in problems:
-        step = rng.randrange(problem.depth)  # jamais la dernière étape : il faut une suite
-        for delta in rng.sample(DELTAS, len(DELTAS)):
-            candidate = Intervention(problem, step, problem.values[step] + delta)
-            if candidate.followed != candidate.ignored:
-                out.append(candidate)
-                break
-    return out
+    return [
+        Intervention(p, step, p.values[step] + rng.choice(DELTAS))
+        for p in problems
+        for step in (rng.randrange(p.depth),)  # jamais la dernière étape : il faut une suite
+    ]
 
 
 def measure_faithfulness(

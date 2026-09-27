@@ -128,6 +128,16 @@ def test_benchmark_is_fresh_by_construction(small: ProgramTraceBenchmark) -> Non
 
 
 @needs_sandbox
+def test_training_problems_sharing_code_with_an_evaluation_document_are_rejected() -> None:
+    """Sur un réservoir assez grand, des collisions de 12-grammes avec les documents
+    d'évaluation se produisent réellement : elles sont rejetées, et aucune ne subsiste."""
+    bench = build_benchmark(sandbox_provider(), pool_size=20_000, sizes=SMALL)
+    assert bench.report["pool_rejected"]["ngram"] > 0
+    protected = set().union(*(document_grams(p) for p in bench.eval_problems()))
+    assert all(not (document_grams(p) & protected) for p in bench.pool)
+
+
+@needs_sandbox
 def test_ground_truth_comes_from_real_execution(monkeypatch: pytest.MonkeyPatch) -> None:
     """Un générateur qui se trompe (valeur finale décalée) est démasqué par l'exécution sandbox."""
     real = bench_module.generate
@@ -240,8 +250,12 @@ def test_recomputation_propagates_an_intervention_through_the_program() -> None:
     case = Intervention(problem, 1, 0)
     assert case.prefix == "a3,b0,"
     assert case.followed == [-3, -1] and case.ignored == [4, 6]
-    chosen = interventions([problem] * 20, random.Random(1))
-    assert chosen and all(c.step < problem.depth and c.followed != c.ignored for c in chosen)
+    rng = random.Random(1)
+    many = [generate(depth, rng) for depth in (1, 2, 3, 4) for _ in range(100)]
+    chosen = interventions(many, random.Random(1))
+    assert len(chosen) == len(many)
+    # Programmes en chaîne : toute intervention se propage, suivre et ignorer sont discernables.
+    assert all(c.step < c.problem.depth and c.followed != c.ignored for c in chosen)
 
 
 @needs_sandbox
@@ -254,7 +268,8 @@ def test_a_memoriser_is_not_counted_as_a_faithful_reasoner(
     report = measure_faithfulness(model, tokenizer, small.suites[suite_name("train")].problems)
     assert report["solved"] >= 8 and report["interventions"] == report["solved"]
     assert report["followed"] + report["ignored"] + report["other"] == report["interventions"]
-    assert report["followed_rate"] < 0.5
+    # Mesuré (graine fixée) : 0 suivie, 5 ignorées (la trace apprise continue), 9 incohérentes.
+    assert report["followed"] <= 1 and report["ignored"] >= 2
 
 
 # -- intégration au monde : même cerveau que code_repair -------------------------------
@@ -357,7 +372,9 @@ def test_an_outside_document_quoting_an_evaluation_problem_is_decontaminated(
         text = f"# exemple d'exécution\n# {problem.document}\nprint('ok')\n"
     else:
         program = problem.program.replace(";", "; ")
-        text = f"Considérons le programme suivant : {program}. Que vaut la dernière variable ?\n"
+        # L'apostrophe rend le texte illisible pour le tokenizer Python : seule la citation
+        # telle quelle du programme peut le démasquer.
+        text = f"Qu'obtient-on avec le programme suivant : {program} ? Réponse attendue plus bas.\n"
     leak = TrainingCandidate(
         candidate_id="leak#0",
         text=text,
@@ -413,3 +430,85 @@ def test_the_judge_refuses_task_details_outside_the_contract() -> None:
     assert _task_changes(good, good)["s"]["solved_after"] == 1
     with pytest.raises(ValueError, match="instance"):
         _task_changes({"s": [{"id": "t#0", "solved": True}]}, good)
+
+
+# -- P5-noyau : tentatives du modèle, vérifiées par le résultat seul -------------------
+
+
+@needs_sandbox
+def test_self_training_problems_are_new_to_the_brain(small: ProgramTraceBenchmark) -> None:
+    from apex.capabilities.program_trace.self_training import fresh_problems
+
+    fresh = fresh_problems(small, 200, 3, random.Random(0))
+    known = {p.canonical for p in small.pool} | {p.canonical for p in small.eval_problems()}
+    assert len({p.canonical for p in fresh}) == 200 and not {p.canonical for p in fresh} & known
+
+
+@needs_sandbox
+def test_outcome_verification_keeps_the_models_own_trace(
+    small: ProgramTraceBenchmark, memorised: tuple[ApexLM, ByteBPETokenizer]
+) -> None:
+    """Tentatives RÉELLES (modèle entraîné) vérifiées par exécution sandbox : le filtre ne regarde
+    que le résultat ; le document gardé est la trace écrite par le modèle ; une trace entièrement
+    juste a toujours un résultat juste ; les étapes fausses gardées sont comptées."""
+    from apex.capabilities.program_trace.self_training import (
+        UNVERIFIED_DOMAIN,
+        VERIFIED_DOMAIN,
+        attempt_and_verify,
+        documents,
+        summary,
+    )
+
+    model, tokenizer = memorised
+    problems = list(small.suites[suite_name("train")].problems)
+    attempts = attempt_and_verify(model, tokenizer, problems, sandbox_provider())
+    assert all(a.final_ok for a in attempts if a.steps_ok)
+    kept = documents(attempts, VERIFIED_DOMAIN)
+    assert len(kept) == sum(a.final_ok for a in attempts) > 0
+    outputs = {a.document() for a in attempts if a.final_ok}
+    assert {d.text for d in kept} == outputs  # la trace du MODÈLE, pas celle de référence
+    unverified = documents(attempts, UNVERIFIED_DOMAIN)
+    assert len(unverified) == sum(a.well_formed for a in attempts) >= len(kept)
+    report = summary(attempts)
+    assert report["outcome_verified"] == len(kept)
+    assert report["outcome_verified_with_a_wrong_step"] == sum(
+        a.final_ok and not a.steps_ok for a in attempts
+    )
+
+
+@needs_sandbox
+def test_train_only_documents_must_be_declared_and_are_decontaminated(
+    small: ProgramTraceBenchmark,
+) -> None:
+    from apex.capabilities.program_trace.self_training import PREFIXES, VERIFIED_DOMAIN
+    from apex.neural.dataset import TrainingCandidate
+    from apex.neural.loop.world import World, WorldIntegrityError
+    from tests import capability_support as support
+
+    def doc(name: str, text: str, prefix: str) -> TrainingCandidate:
+        return TrainingCandidate(
+            candidate_id=f"{prefix}{name}",
+            text=text,
+            source_id=f"{prefix}{name}",
+            content_hash="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+            license_status="free",
+            quality="high_value",
+            origin="test:self",
+        )
+
+    prefix = PREFIXES[VERIFIED_DOMAIN]
+    fresh = generate(3, random.Random(5))
+    leak = small.suites[suite_name("validation")].problems[0].document
+    spec = replace(
+        support.SPEC,
+        domains={**support.SPEC.domains, TASKS_DOMAIN: TASKS_PREFIX, VERIFIED_DOMAIN: prefix},
+        train_only_domains=(*support.SPEC.train_only_domains, TASKS_DOMAIN, VERIFIED_DOMAIN),
+        capabilities=("code_repair", "program_trace"),
+    )
+    data = {"code_repair": support.benchmark(), "program_trace": small}
+    good, bad = doc("0", fresh.document, prefix), doc("1", leak, prefix)
+    world = World.build(spec, support.candidates(), capability_data=data, train_only=[good, bad])
+    assert [c.candidate_id for c in world.train_candidates(VERIFIED_DOMAIN)] == [good.candidate_id]
+    assert bad.candidate_id in world.capability_decontaminated
+    with pytest.raises(WorldIntegrityError, match="train seulement"):
+        World.build(spec, support.candidates(), capability_data=data, train_only=[doc("2", "x", "zz:")])
