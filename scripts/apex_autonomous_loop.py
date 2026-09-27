@@ -226,12 +226,14 @@ def directed(args: argparse.Namespace) -> int:
     limits = LoopLimits(
         max_total_experiments=args.max_total_experiments,
         max_total_steps=args.max_total_steps,
+        max_steps_per_experiment=args.max_steps_per_experiment,
+        max_tokens_per_experiment=args.max_tokens_per_experiment,
         experiment_timeout_s=args.timeout,
     )
     changes: dict[str, object] = {}
     if args.mix:
         changes["mix"] = _parse_mix(args.mix)
-    for key in ("steps", "lr", "tokens"):
+    for key in ("steps", "lr", "tokens", "batch_size", "warmup_steps"):
         if getattr(args, key) is not None:
             changes[key] = getattr(args, key)
     if not changes:
@@ -410,6 +412,10 @@ def main() -> int:
     p.add_argument("--tokens", type=int, default=None)
     p.add_argument("--max-total-experiments", type=int, default=12)
     p.add_argument("--max-total-steps", type=int, default=8000)
+    p.add_argument("--max-steps-per-experiment", type=int, default=800)
+    p.add_argument("--max-tokens-per-experiment", type=int, default=240_000)
+    p.add_argument("--batch-size", type=int, default=None)
+    p.add_argument("--warmup-steps", type=int, default=None)
     p.add_argument("--timeout", type=float, default=1800.0)
     p.set_defaults(fn=directed)
     p = sub.add_parser("derive-world", help="monde enfant : hérite splits, tokenizer, architecture")
