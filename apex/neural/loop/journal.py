@@ -60,8 +60,15 @@ class ExperimentRecord:
 
     @property
     def decision(self) -> str | None:
+        """Décision FINALE : celle du Judge, sauf si la réplique (graine indépendante) ne l'a pas
+        confirmée ; une acceptation non répliquée est un rejet."""
         judged = self._last("judged")
-        return judged["result"]["decision"] if judged else None
+        if judged is None:
+            return None
+        replicated = self._last("replicated")
+        if replicated is not None and not replicated["accepted"]:
+            return "reject"
+        return str(judged["result"]["decision"])
 
     @property
     def promoted(self) -> bool:

@@ -316,7 +316,11 @@ class StrategyPolicy:
                                 ],
                             )
                         )
-        elif cause in (FailureCause.NO_SIGNIFICANT_EFFECT.value, FailureCause.NO_CHANGE.value):
+        elif cause in (
+            FailureCause.NO_SIGNIFICANT_EFFECT.value,
+            FailureCause.NO_CHANGE.value,
+            FailureCause.NOT_REPLICATED.value,
+        ):
             # UNE modification : le nombre de pas (plus d'époques sur les mêmes données). Doubler
             # aussi les tokens en ferait deux, et le plan serait refusé (attribution impossible).
             steps = parent.steps * 2

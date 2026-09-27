@@ -30,6 +30,8 @@ class FailureCause(StrEnum):
     TARGET_REGRESSION = "target_regression"
     NO_SIGNIFICANT_EFFECT = "no_significant_effect"
     NO_CHANGE = "no_change"
+    #: Gain accepté par le Judge mais NON confirmé par une réplique à graine indépendante.
+    NOT_REPLICATED = "not_replicated"
     CONTAMINATION = "contamination"
     UNDECLARED_TRAINING = "undeclared_training"
     METRIC_MISMATCH = "metric_mismatch"
@@ -133,6 +135,16 @@ def analyze_judgement(
     if result.accepted:
         return None
     attribution, mods = _attribution(plan)
+    if result.replicated is False:
+        return FailureAnalysis(
+            cause=FailureCause.NOT_REPLICATED,
+            status="established",
+            evidence=result.reasons[:1],
+            attribution=attribution,
+            implicated_modifications=mods,
+            refuted="le gain de l'hypothèse ne tient pas avec une graine indépendante",
+            interpretation="effet trop faible devant la variance d'entraînement entre graines",
+        )
     failed_checks = [name for name, c in result.checks.items() if not c["ok"]]
     if failed_checks:
         first = result.checks[failed_checks[0]]

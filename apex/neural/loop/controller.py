@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
-from apex.neural.evaluation import EvalReport
+from apex.neural.evaluation import EvalReport, JudgeDecision
 from apex.neural.loop.execute import (
     StopRequested,
     execute,
@@ -51,6 +51,9 @@ from apex.neural.loop.plan import (
 from apex.neural.loop.strategy import DIRECTED, RETRYABLE, StrategyDecision, StrategyPolicy
 from apex.neural.loop.world import PRIMARY, World
 from apex.neural.registry import ModelRegistry, Proposal
+
+#: Décalage de graine de la réplique d'une promotion (graine indépendante, déterministe).
+REPLICA_SEED_OFFSET = 1_000_003
 
 
 class LoopBusyError(RuntimeError):
@@ -78,9 +81,14 @@ class LoopLimits:
     max_retries: int = 1
     checkpoint_every: int = 50
     min_weakness_gap: float = 0.1
+    #: Une promotion exige qu'une RÉPLIQUE (même plan, graine indépendante) soit elle aussi
+    #: acceptée par le Judge : un gain qui tient à la graine n'est pas un apprentissage.
+    replicate_promotions: bool = True
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
+            if isinstance(value, bool):
+                continue
             if value <= 0:
                 raise ValueError(f"borne « {name} » doit être strictement positive (reçu {value})")
 
@@ -606,7 +614,26 @@ class LoopController:
             judged = verdict
         else:
             judged = self._judge_from_journal(record)
-        if from_event == "judged":
+        if from_event == "judged" and judged.accepted and self.limits.replicate_promotions:
+            try:
+                replica = self._replicate(plan)
+            except StopRequested as stop:
+                # Rien n'est consigné : l'expérience reste « judged » et la réplique sera refaite.
+                raise _LoopStop("arrêt demandé pendant la réplique (reprise possible)") from stop
+            except Exception as exc:  # une réplique qui échoue ne confirme rien
+                replica = {
+                    "seed": plan.recipe.seed + REPLICA_SEED_OFFSET,
+                    "artifact": None,
+                    "decision": "error",
+                    "accepted": False,
+                    "reasons": [f"{exc.__class__.__name__}: {exc}"],
+                    "comparisons": [],
+                }
+            self.journal.experiment(exp, "replicated", **replica)
+            self.log(f"[{exp}] réplique (graine {replica['seed']}) : {replica['decision']}")
+            judged = self._judge_from_journal(self.journal.experiments()[exp])
+            from_event = "replicated"
+        if from_event in ("judged", "replicated"):
             analysis = analyze_judgement(
                 plan,
                 judged,
@@ -623,7 +650,69 @@ class LoopController:
             self._promote(plan, record=self.journal.experiments()[exp], judged=judged)
         return self.journal.experiments()[exp]
 
+    def _replicate(self, plan: ExperimentPlan) -> dict[str, Any]:
+        """Même plan, graine indépendante : entraînement réel puis jugement complet (rejeu
+        compris) contre la MÊME référence. Seul ACCEPT confirme la promotion."""
+        replica_plan = replace(
+            plan,
+            recipe=replace(plan.recipe, seed=plan.recipe.seed + REPLICA_SEED_OFFSET),
+            experiment_id=f"{plan.experiment_id}-replica",
+        )
+        run_dir = self._run_dir(plan.experiment_id) / "replica"
+        result = execute(
+            replica_plan,
+            self.world,
+            self.store,
+            run_dir,
+            stop=self.stop,
+            stop_file=self.stop_file,
+            checkpoint_every=self.limits.checkpoint_every,
+        )
+        current = self.registry.current()
+        stored = (
+            {n: EvalReport.from_dict(r) for n, r in current["reports"].items()}
+            if plan.baseline.get("artifact") and current is not None
+            else None
+        )
+        verdict = self.judge.judge(
+            candidate_artifact=result.artifact,
+            claimed_reports=result.claimed_reports,
+            training_candidate_ids=result.training_candidate_ids,
+            baseline_artifact=plan.baseline.get("artifact"),
+            baseline_seed=replica_plan.recipe.seed,
+            baseline_stored_reports=stored,
+            plan=replica_plan,
+            replay_dir=run_dir / "judge_replay",
+            stop=self.stop,
+            stop_file=self.stop_file,
+        )
+        return {
+            "seed": replica_plan.recipe.seed,
+            "artifact": result.artifact,
+            "decision": verdict.decision,
+            "accepted": verdict.accepted,
+            "reasons": verdict.reasons[:3],
+            "comparisons": verdict.to_dict()["comparisons"],
+        }
+
     def _judge_from_journal(self, record: ExperimentRecord) -> JudgeResult:
+        judged = self._first_judgement(record)
+        replicated = record.payload("replicated")
+        if replicated is None or replicated["accepted"]:
+            return judged
+        # La décision finale est REJECT : le gain n'a pas tenu avec une graine indépendante.
+        return replace(
+            judged,
+            decision=JudgeDecision.REJECT.value,
+            reasons=[
+                f"gain non répliqué : la réplique (graine {replicated['seed']}) est jugée "
+                f"{replicated['decision']} — {'; '.join(replicated['reasons'][:1])}",
+                *judged.reasons,
+            ],
+            replicated=False,
+        )
+
+    def _first_judgement(self, record: ExperimentRecord) -> JudgeResult:
         judged = record.payload("judged")
         assert judged is not None
         result = judged["result"]

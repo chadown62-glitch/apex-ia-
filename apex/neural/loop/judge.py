@@ -71,6 +71,8 @@ class JudgeResult:
     candidate_details: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     #: Par capacité : MÉMORISATION / GÉNÉRALISATION / TRANSFERT établis par les comparaisons.
     learning: dict[str, dict[str, Any]] = field(default_factory=dict)
+    #: None : pas de réplique ; False : la réplique (graine indépendante) n'a pas confirmé le gain.
+    replicated: bool | None = None
 
     @property
     def accepted(self) -> bool:
@@ -88,6 +90,7 @@ class JudgeResult:
             "baseline": {n: r.summary() for n, r in self.baseline_reports.items()},
             "task_changes": self.task_changes,
             "learning": self.learning,
+            "replicated": self.replicated,
         }
 
 
