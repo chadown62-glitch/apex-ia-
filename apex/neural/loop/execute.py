@@ -95,13 +95,18 @@ def measure_text(model: ApexLM, world: World) -> dict[str, EvalReport]:
 
 def load_model_from_artifact(store: ArtifactStoreProvider, artifact: str, world: World) -> ApexLM:
     """Recharge un modèle depuis l'ArtifactStore (intégrité vérifiée par le
-    hash) en exigeant qu'il ait été entraîné sur le dataset de ce monde, avec
-    son tokenizer."""
+    hash) en exigeant qu'il ait été entraîné sur le dataset de ce monde ou
+    d'un de ses ancêtres (filiation), avec le tokenizer du monde."""
     data = store.get(artifact)
     with tempfile.TemporaryDirectory(prefix="apex-loop-") as tmp:
         path = Path(tmp) / "model.pt"
         path.write_bytes(data)
-        engine, tokenizer, _ = load_checkpoint(path, dataset_fingerprint=world.dataset.fingerprint)
+        engine, tokenizer, info = load_checkpoint(path)
+    if not world.accepts_dataset(info.dataset_fingerprint):
+        raise ValueError(
+            f"checkpoint entraîné sur le dataset {info.dataset_fingerprint}, étranger à ce monde "
+            "et à ses ancêtres : refusé"
+        )
     if tokenizer.fingerprint() != world.tokenizer.fingerprint():
         raise ValueError("checkpoint entraîné avec un autre tokenizer que celui du monde")
     return engine.model

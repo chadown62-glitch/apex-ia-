@@ -122,6 +122,38 @@ class ModelRegistry:
         }
         return self._append(entries, entry)
 
+    def adopt(
+        self,
+        *,
+        name: str,
+        checkpoint_sha256: str,
+        dataset_fingerprint: str,
+        reports: dict[str, EvalReport],
+        artifact: str,
+        metadata: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Première entrée d'un monde ENFANT : le champion du parent devient la version en
+        service, avec des rapports RE-MESURÉS dans ce monde (jamais ceux du parent). Refusée
+        si le registre n'est pas vide : une adoption ne remplace jamais un champion."""
+        entries = self.entries()
+        if entries:
+            raise ValueError("adoption refusée : le registre contient déjà des versions")
+        entry: dict[str, Any] = {
+            "kind": "adoption",
+            "name": name,
+            "checkpoint_sha256": checkpoint_sha256,
+            "dataset_fingerprint": dataset_fingerprint,
+            "decision": "adopted",
+            "promoted": True,
+            "reasons": ["champion du monde parent, re-mesuré sur toutes les suites de ce monde"],
+            "suites": [],
+            "primary": self.primary,
+            "reports": {suite: report.to_dict() for suite, report in reports.items()},
+            "artifact": artifact,
+            "metadata": metadata,
+        }
+        return self._append(entries, entry)
+
     def promoted_history(self) -> list[dict[str, Any]]:
         return [e for e in self.entries() if e["promoted"]]
 

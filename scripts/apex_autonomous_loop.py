@@ -125,6 +125,45 @@ def init_world(args: argparse.Namespace) -> int:
     return 0
 
 
+def derive_world(args: argparse.Namespace) -> int:
+    """Monde ENFANT d'un monde existant : mêmes splits, tokenizer et architecture ; seules les
+    nouvelles capacités (et leurs documents) s'ajoutent. Le champion s'adopte ensuite (`adopt`)."""
+    from dataclasses import replace
+
+    parent = World.load(args.parent / "world.json")
+    spec = replace(
+        parent.spec,
+        parent=parent.fingerprint,
+        capabilities=tuple(dict.fromkeys((*parent.spec.capabilities, *args.add_capability))),
+    )
+    if set(spec.capabilities) != set(parent.spec.capabilities):
+        print("aucune capacité nouvelle n'est encore dérivable par cette commande", file=sys.stderr)
+        return 2
+    world = World.build(spec, [], parent=parent)
+    fingerprint = world.save(args.workdir / "world.json")
+    print(json.dumps({"world": fingerprint, "parent": parent.fingerprint}, indent=2))
+    return 0
+
+
+def adopt(args: argparse.Namespace) -> int:
+    world = World.load(args.workdir / "world.json")
+    entry = LoopController(args.workdir, world).adopt(args.parent, reason=args.reason)
+    print(
+        json.dumps(
+            {
+                "adopted": entry["name"],
+                "artifact": entry["artifact"],
+                "reports": {
+                    name: r.get("value", r.get("bits_per_byte")) for name, r in entry["reports"].items()
+                },
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _parse_mix(text: str) -> dict[str, float]:
     return {k: float(v) for k, v in (part.split("=") for part in text.split(","))}
 
@@ -346,6 +385,16 @@ def main() -> int:
     p.add_argument("--max-total-steps", type=int, default=8000)
     p.add_argument("--timeout", type=float, default=1800.0)
     p.set_defaults(fn=directed)
+    p = sub.add_parser("derive-world", help="monde enfant : hérite splits, tokenizer, architecture")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.add_argument("--parent", type=Path, required=True)
+    p.add_argument("--add-capability", action="append", default=[])
+    p.set_defaults(fn=derive_world)
+    p = sub.add_parser("adopt", help="adopte le champion attesté du monde parent, re-mesuré ici")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.add_argument("--parent", type=Path, required=True)
+    p.add_argument("--reason", required=True)
+    p.set_defaults(fn=adopt)
     p = sub.add_parser("fresh-eval", help="tâches écrites après le gel : init contre champion")
     p.add_argument("--workdir", type=Path, required=True)
     p.set_defaults(fn=fresh_eval)

@@ -27,7 +27,15 @@ from typing import Any
 
 from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
 from apex.neural.evaluation import EvalReport
-from apex.neural.loop.execute import StopRequested, execute, initial_model, measure_text, reports_to_dict
+from apex.neural.loop.execute import (
+    StopRequested,
+    execute,
+    initial_model,
+    load_model_from_artifact,
+    measure_text,
+    measure_with_details,
+    reports_to_dict,
+)
 from apex.neural.loop.failure import INTEGRITY_CAUSES, analyze_exception, analyze_judgement
 from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord
 from apex.neural.loop.judge import JUDGE_ID, IndependentJudge, JudgeResult
@@ -321,6 +329,8 @@ class LoopController:
         dont l'artefact exécuté est celui du registre et dont l'événement de
         promotion pointe sur cette entrée. Renvoie le problème, ou None."""
         origin = self.registry.entries()[int(entry.get("restores", entry["index"]))]
+        if origin.get("kind") == "adoption":
+            return self._attest_adoption(origin)
         exp = origin.get("metadata", {}).get("experiment_id")
         record = self.journal.experiments().get(exp) if exp else None
         if record is None:
@@ -335,6 +345,73 @@ class LoopController:
         if not promotion.get("promoted") or promotion.get("registry_index") != origin["index"]:
             return f"« {origin['name']} » : l'expérience n'a pas consigné cette promotion"
         return None
+
+    def _attest_adoption(self, origin: dict[str, Any]) -> str | None:
+        adopted = [e for e in self.journal.loop_events("adopted") if e["registry_index"] == origin["index"]]
+        if not adopted:
+            return f"« {origin['name']} » : adoption absente du journal"
+        event = adopted[-1]
+        if event["parent_world"] != self.world.spec.parent:
+            return f"« {origin['name']} » : adoptée d'un autre monde que le parent déclaré"
+        if event["artifact"] != origin.get("artifact") or not self.store.exists(str(origin["artifact"])):
+            return f"« {origin['name']} » : l'artefact adopté n'est pas celui du registre"
+        return None
+
+    def adopt(self, parent_workdir: Path, *, reason: str) -> dict[str, Any]:
+        """Monde ENFANT : le champion attesté du parent devient le point de départ, re-mesuré sur
+        toutes les suites de ce monde (les nouvelles capacités comprises). Refusée sans parent
+        déclaré, sur un registre non vide, ou si le champion du parent n'est pas attesté par la
+        boucle du parent (ACCEPT du Judge indépendant consigné)."""
+        with self._lock():
+            self._check_world()
+            if not self.world.spec.parent:
+                raise ValueError("ce monde ne déclare aucun parent : rien à adopter")
+            if self.registry.entries():
+                raise ValueError("adoption refusée : le registre de ce monde n'est pas vide")
+            parent_world = World.load(
+                parent_workdir / "world.json", expected_fingerprint=self.world.spec.parent
+            )
+            parent = LoopController(parent_workdir, parent_world, log=lambda _m: None)
+            champion = parent.registry.current()
+            if champion is None:
+                raise ValueError("le monde parent n'a aucun champion à adopter")
+            problem = parent.attest(champion)
+            if problem is not None:
+                raise ValueError(f"champion du parent non attesté : {problem}")
+            artifact = str(champion["artifact"])
+            copied = self.store.put(
+                parent.store.get(artifact), content_type="application/x-apex-checkpoint"
+            )
+            if copied.content_hash != artifact:
+                raise ValueError("artefact du parent altéré pendant la copie")
+            model = load_model_from_artifact(self.store, artifact, self.world)
+            reports, details = measure_with_details(model, self.world)
+            entry = self.registry.adopt(
+                name=f"adopted:{champion['name']}",
+                checkpoint_sha256=champion["checkpoint_sha256"],
+                dataset_fingerprint=champion["dataset_fingerprint"],
+                reports=reports,
+                artifact=artifact,
+                metadata={
+                    **champion.get("metadata", {}),
+                    "parent_world": parent_world.fingerprint,
+                    "parent_registry_index": champion["index"],
+                    "reason": reason,
+                },
+            )
+            self.journal.loop(
+                "adopted",
+                registry_index=entry["index"],
+                artifact=artifact,
+                parent_world=parent_world.fingerprint,
+                parent_registry_index=champion["index"],
+                parent_champion=champion["name"],
+                reason=reason,
+                reports=reports_to_dict(reports),
+                capability_details=details,
+            )
+            self.log(f"adoption de « {champion['name']} » du monde {parent_world.fingerprint[:19]}")
+            return entry
 
     def _observe_with_integrity(self) -> Observation:
         obs = observe(

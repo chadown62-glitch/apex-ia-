@@ -139,6 +139,22 @@ def verify_no_leakage(dataset: TrainingDataset, *, max_overlap: float = 0.1, n: 
     return worst
 
 
+def splits_fingerprint(splits: dict[Split, tuple[TrainingCandidate, ...]]) -> str:
+    """Empreinte d'un dataset : quels documents (identifiant + contenu) dans quel split."""
+    rows = [[split.value, c.candidate_id, c.content_hash] for split in Split for c in splits[split]]
+    return "sha256:" + hashlib.sha256(json.dumps(rows, sort_keys=True).encode()).hexdigest()
+
+
+def text_ngrams(text: str, n: int = 8) -> set[tuple[str, ...]]:
+    """n-grammes de mots normalisés : la mesure de recouvrement du contrôle de fuite."""
+    return _ngrams(text, n)
+
+
+def normalized_text(text: str) -> str:
+    """Forme utilisée pour le dédoublonnage exact entre documents."""
+    return _normalized(text)
+
+
 def build_dataset(
     candidates: Sequence[TrainingCandidate],
     *,
@@ -213,13 +229,9 @@ def build_dataset(
                 split: tuple(c for c in cs if c.candidate_id not in gone) if split is not Split.TEST else cs
                 for split, cs in splits.items()
             }
-    digest = hashlib.sha256(
-        json.dumps(
-            [[split.value, c.candidate_id, c.content_hash] for split in Split for c in splits[split]],
-            sort_keys=True,
-        ).encode()
-    ).hexdigest()
     manifest = {split.value: sorted({c.source_id for c in splits[split]}) for split in Split}
-    dataset = TrainingDataset(splits, "sha256:" + digest, tuple(dropped), 0.0, manifest, tuple(removed))
+    dataset = TrainingDataset(
+        splits, splits_fingerprint(splits), tuple(dropped), 0.0, manifest, tuple(removed)
+    )
     ratio = verify_no_leakage(dataset, max_overlap=max_overlap)
     return TrainingDataset(splits, dataset.fingerprint, tuple(dropped), ratio, manifest, tuple(removed))

@@ -23,7 +23,16 @@ from pathlib import Path
 from typing import Any
 
 from apex.neural.config import ModelConfig
-from apex.neural.dataset import Split, TrainingCandidate, TrainingDataset, build_dataset
+from apex.neural.dataset import (
+    Split,
+    TrainingCandidate,
+    TrainingDataset,
+    build_dataset,
+    normalized_text,
+    splits_fingerprint,
+    text_ngrams,
+    verify_no_leakage,
+)
 from apex.neural.evaluation import Benchmark
 from apex.neural.tokenizer import ByteBPETokenizer
 
@@ -55,13 +64,16 @@ class WorldSpec:
     capabilities: tuple[str, ...] = ()
     #: Domaines dont les documents vont TOUJOURS au split train (jamais tirés vers le test).
     train_only_domains: tuple[str, ...] = ()
+    #: Empreinte du monde PARENT : l'enfant hérite de son tokenizer (jamais réentraîné) et de
+    #: l'architecture, pour que les capacités s'accumulent dans un même cerveau.
+    parent: str = ""
 
     def identity(self) -> dict[str, Any]:
         """Ce qui entre dans l'empreinte : les champs ajoutés pour les
         capacités n'y figurent que s'ils sont utilisés (un monde antérieur
         garde exactement la même empreinte)."""
         data = asdict(self)
-        for key in ("capabilities", "train_only_domains"):
+        for key in ("capabilities", "train_only_domains", "parent"):
             if not data[key]:
                 del data[key]
         return data
@@ -96,6 +108,103 @@ def _code_grams(text: str) -> set[tuple[str, ...]]:
     return ngrams(code_tokens(text, normalize_names=False), CODE_NGRAM)
 
 
+#: Recouvrement maximal (8-grammes) d'un nouveau document avec l'entraînement de la lignée.
+LINEAGE_MAX_OVERLAP = 0.1
+
+#: Champs de la spécification qui fixent la forme des poids : identiques entre parent et enfant.
+_ARCHITECTURE = (
+    "vocab_size",
+    "hidden_size",
+    "num_layers",
+    "num_heads",
+    "intermediate_size",
+    "context_length",
+)
+
+
+def _check_lineage(spec: WorldSpec, parent: World) -> None:
+    problems = []
+    if spec.parent != parent.fingerprint:
+        problems.append(f"parent déclaré {spec.parent or '(aucun)'}, parent fourni {parent.fingerprint}")
+    for name in _ARCHITECTURE:
+        if getattr(spec, name) != getattr(parent.spec, name):
+            problems.append(f"architecture : {name} {getattr(parent.spec, name)} -> {getattr(spec, name)}")
+    for domain, prefix in parent.spec.domains.items():
+        if spec.domains.get(domain) != prefix:
+            problems.append(f"domaine du parent « {domain} » absent ou redéfini")
+    missing = set(parent.spec.capabilities) - set(spec.capabilities)
+    if missing:
+        problems.append(f"capacités du parent abandonnées : {sorted(missing)}")
+    if problems:
+        raise WorldIntegrityError("filiation refusée : " + " ; ".join(problems))
+
+
+def _extend_dataset(
+    parent: TrainingDataset,
+    candidates: Sequence[TrainingCandidate],
+    train_only: Sequence[TrainingCandidate],
+    spec: WorldSpec,
+) -> TrainingDataset:
+    """Splits du parent inchangés + nouveaux documents répartis entre eux ; contrôle de fuite
+    refait sur l'ensemble (un nouveau document d'entraînement ne peut pas recouvrir un test
+    du parent, et réciproquement)."""
+    parent_docs = [c for split in Split for c in parent.splits[split]]
+    parent_sources = {c.source_id for c in parent_docs}
+    clash = [c.candidate_id for c in (*candidates, *train_only) if c.source_id in parent_sources]
+    if clash:
+        raise WorldIntegrityError(
+            f"nouveaux documents issus de sources déjà présentes chez le parent : {clash[:5]}"
+        )
+    known = {normalized_text(c.text) for c in parent_docs}
+    dropped = [c.candidate_id for c in (*candidates, *train_only) if normalized_text(c.text) in known]
+    # Un nouveau document qui recouvre un document de la lignée est retiré (listé) : côté
+    # entraînement, le champion adopté l'a déjà vu (il ne peut servir de test) ; côté test, il
+    # ferait fuir ce test dans l'entraînement. Les splits du parent, eux, ne bougent jamais.
+    seen: set[tuple[str, ...]] = set()
+    for c in parent_docs:
+        seen |= text_ngrams(c.text)
+
+    def overlaps(c: TrainingCandidate) -> bool:
+        grams = text_ngrams(c.text)
+        return bool(grams) and len(grams & seen) / len(grams) > LINEAGE_MAX_OVERLAP
+
+    overlapping = [c.candidate_id for c in candidates if c.candidate_id not in dropped and overlaps(c)]
+    excluded = set(dropped) | set(overlapping)
+    fresh = [c for c in candidates if c.candidate_id not in excluded]
+    fresh_train_only = [c for c in train_only if c.candidate_id not in excluded]
+    if fresh:
+        added = build_dataset(
+            fresh,
+            validation_ratio=spec.validation_ratio,
+            test_ratio=spec.test_ratio,
+            salt=f"apex-world-{spec.seed}",
+            decontaminate=True,
+            train_only=fresh_train_only,
+        )
+        added_splits, removed = added.splits, [*overlapping, *added.decontaminated]
+        dropped += list(added.dropped_duplicates)
+    else:
+        unique: dict[str, TrainingCandidate] = {}
+        for c in fresh_train_only:
+            unique.setdefault(normalized_text(c.text), c)
+        added_splits = {Split.TRAIN: tuple(unique.values()), Split.VALIDATION: (), Split.TEST: ()}
+        removed = overlapping
+    splits = {split: (*parent.splits[split], *added_splits[split]) for split in Split}
+    manifest = {split.value: sorted({c.source_id for c in splits[split]}) for split in Split}
+    merged = TrainingDataset(
+        splits,
+        splits_fingerprint(splits),
+        (*parent.dropped_duplicates, *dropped),
+        0.0,
+        manifest,
+        (*parent.decontaminated, *removed),
+    )
+    ratio = verify_no_leakage(merged)
+    return TrainingDataset(
+        splits, merged.fingerprint, merged.dropped_duplicates, ratio, manifest, merged.decontaminated
+    )
+
+
 class World:
     def __init__(
         self,
@@ -105,10 +214,14 @@ class World:
         *,
         capability_data: dict[str, Any] | None = None,
         capability_decontaminated: Sequence[str] = (),
+        ancestor_datasets: Sequence[str] = (),
     ) -> None:
         from apex.capabilities.registry import get_capability
 
+        if bool(spec.parent) != bool(ancestor_datasets):
+            raise WorldIntegrityError("un monde enfant déclare son parent ET les datasets de ses ancêtres")
         self.spec = spec
+        self.ancestor_datasets = tuple(ancestor_datasets)
         self.dataset = dataset
         self.tokenizer = tokenizer
         data = capability_data or {}
@@ -140,19 +253,52 @@ class World:
         candidates: Sequence[TrainingCandidate],
         *,
         capability_data: dict[str, Any] | None = None,
+        parent: World | None = None,
     ) -> World:
         """`capability_data` : benchmark gelé de chaque capacité déclarée. Tout
         fragment qui partage une séquence de code avec une solution ou une
-        version boguée d'ÉVALUATION est retiré de l'entraînement (listé)."""
+        version boguée d'ÉVALUATION est retiré de l'entraînement (listé).
+
+        Monde ENFANT (`parent`) : `candidates` ne contient que les NOUVEAUX documents. Les splits
+        du parent sont repris tels quels (un document vu par le champion adopté ne change jamais
+        de split) ; seuls les nouveaux sont tirés au sort. Les capacités héritées gardent le
+        benchmark du parent. Refusé si un document d'entraînement du parent contient une séquence
+        d'évaluation d'une NOUVELLE capacité : le champion adopté l'a déjà vue."""
         from apex.capabilities.registry import get_capability
 
-        data = capability_data or {}
+        given = dict(capability_data or {})
+        if parent is None:
+            if spec.parent:
+                raise WorldIntegrityError(f"monde enfant de {spec.parent} : le parent doit être fourni")
+            data, inherited = given, set()
+        else:
+            _check_lineage(spec, parent)
+            inherited = set(parent.spec.capabilities)
+            data = {name: bench for name, (_, bench) in parent.capabilities.items()}
+            for name, bench in given.items():
+                capability = get_capability(name)
+                if name in inherited and capability.fingerprint(bench) != capability.fingerprint(
+                    data[name]
+                ):
+                    raise WorldIntegrityError(
+                        f"capacité héritée « {name} » : benchmark différent du parent"
+                    )
+                data.setdefault(name, bench)
+        missing = set(spec.capabilities) - set(data)
+        if missing:
+            raise WorldIntegrityError(f"benchmark absent pour les capacités {sorted(missing)}")
         protected: set[tuple[str, ...]] = set()
+        protected_new: set[tuple[str, ...]] = set()
         train_only: list[TrainingCandidate] = []
         for name in spec.capabilities:
             capability = get_capability(name)
+            grams: set[tuple[str, ...]] = set()
             for text in capability.protected_texts(data[name]):
-                protected |= _code_grams(text)
+                grams |= _code_grams(text)
+            protected |= grams
+            if name in inherited:
+                continue  # ses documents « train seulement » sont déjà dans les splits du parent
+            protected_new |= grams
             train_only += [
                 doc
                 for doc in capability.train_documents(data[name])
@@ -160,16 +306,49 @@ class World:
             ]
         removed = [c.candidate_id for c in (*candidates, *train_only) if _code_grams(c.text) & protected]
         gone = set(removed)
-        dataset = build_dataset(
-            [c for c in candidates if c.candidate_id not in gone],
-            validation_ratio=spec.validation_ratio,
-            test_ratio=spec.test_ratio,
-            salt=f"apex-world-{spec.seed}",
-            decontaminate=True,
-            train_only=[c for c in train_only if c.candidate_id not in gone],
+        kept = [c for c in candidates if c.candidate_id not in gone]
+        kept_train_only = [c for c in train_only if c.candidate_id not in gone]
+        if parent is None:
+            dataset = build_dataset(
+                kept,
+                validation_ratio=spec.validation_ratio,
+                test_ratio=spec.test_ratio,
+                salt=f"apex-world-{spec.seed}",
+                decontaminate=True,
+                train_only=kept_train_only,
+            )
+            tokenizer = ByteBPETokenizer.train(dataset.texts(Split.TRAIN), spec.vocab_size)
+            ancestors: tuple[str, ...] = ()
+        else:
+            seen_by_champion = [
+                c.candidate_id
+                for split in (Split.TRAIN, Split.VALIDATION)
+                for c in parent.dataset.splits[split]
+                if _code_grams(c.text) & protected_new
+            ]
+            if seen_by_champion:
+                raise WorldIntegrityError(
+                    "filiation refusée : des documents d'entraînement du parent contiennent une "
+                    f"évaluation de la nouvelle capacité : {seen_by_champion[:5]}"
+                )
+            dataset = _extend_dataset(parent.dataset, kept, kept_train_only, spec)
+            tokenizer = parent.tokenizer  # hérité, jamais réentraîné : les poids restent lisibles
+            ancestors = (parent.dataset.fingerprint, *parent.ancestor_datasets)
+        return cls(
+            spec,
+            dataset,
+            tokenizer,
+            capability_data=data,
+            capability_decontaminated=removed,
+            ancestor_datasets=ancestors,
         )
-        tokenizer = ByteBPETokenizer.train(dataset.texts(Split.TRAIN), spec.vocab_size)
-        return cls(spec, dataset, tokenizer, capability_data=data, capability_decontaminated=removed)
+
+    def accepts_dataset(self, dataset_fingerprint: str) -> bool:
+        """Un checkpoint est lisible dans ce monde s'il a été entraîné sur son dataset ou sur celui
+        d'un ancêtre (même tokenizer, même architecture : garanti à la construction)."""
+        return (
+            dataset_fingerprint == self.dataset.fingerprint or dataset_fingerprint in self.ancestor_datasets
+        )
 
     # -- capacités -------------------------------------------------------------
 
@@ -279,6 +458,7 @@ class World:
                 "dataset": self.dataset.fingerprint,
                 "tokenizer": self.tokenizer.fingerprint(),
                 "benchmarks": {name: b.fingerprint for name, b in sorted(self.benchmarks.items())},
+                **({"ancestor_datasets": list(self.ancestor_datasets)} if self.ancestor_datasets else {}),
                 **(
                     {
                         # Le CONTRAT (critères, tolérance, objectif, suite d'acceptation) fait partie
@@ -310,6 +490,7 @@ class World:
             "tokenizer": self.tokenizer.to_dict(),
             "capabilities": {name: cap.dump(data) for name, (cap, data) in self.capabilities.items()},
             "capability_decontaminated": list(self.capability_decontaminated),
+            "ancestor_datasets": list(self.ancestor_datasets),
         }
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(path.suffix + ".tmp")
@@ -363,6 +544,7 @@ class World:
             ByteBPETokenizer.from_dict(data["tokenizer"]),
             capability_data=capability_data,
             capability_decontaminated=data.get("capability_decontaminated", ()),
+            ancestor_datasets=data.get("ancestor_datasets", ()),
         )
         if world.fingerprint != data["fingerprint"]:
             raise WorldIntegrityError("empreinte du monde incohérente avec son contenu")
