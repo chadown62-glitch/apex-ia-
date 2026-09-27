@@ -300,6 +300,7 @@ def directed(args: argparse.Namespace) -> int:
     policy = StrategyPolicy(
         finetune_steps=args.reference_steps,
         finetune_tokens=args.reference_tokens,
+        finetune_lr=args.reference_lr,
         max_steps=limits.max_steps_per_experiment,
         max_tokens=limits.max_tokens_per_experiment,
         max_retries=limits.max_retries,
@@ -484,6 +485,9 @@ def main() -> int:
     )
     p.add_argument(
         "--reference-tokens", type=int, default=60_000, help="échelle de la recette de référence (tokens)"
+    )
+    p.add_argument(
+        "--reference-lr", type=float, default=1e-3, help="taux d'apprentissage de la recette de référence"
     )
     p.add_argument("--batch-size", type=int, default=None)
     p.add_argument("--warmup-steps", type=int, default=None)
