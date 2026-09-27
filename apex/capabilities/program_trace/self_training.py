@@ -26,8 +26,8 @@ from apex.neural.tokenizer import ByteBPETokenizer
 from apex.sandbox.provider import SandboxProvider
 
 VERIFIED_DOMAIN = "self_verified"
-UNVERIFIED_DOMAIN = "self_unverified"
-PREFIXES = {VERIFIED_DOMAIN: "self:verified/", UNVERIFIED_DOMAIN: "self:unverified/"}
+REJECTED_DOMAIN = "self_rejected"
+PREFIXES = {VERIFIED_DOMAIN: "self:verified/", REJECTED_DOMAIN: "self:rejected/"}
 
 
 def fresh_problems(
@@ -81,9 +81,13 @@ def attempt_and_verify(
 
 
 def documents(attempts: list[SelfAttempt], domain: str) -> list[TrainingCandidate]:
-    """`self_verified` : tentatives dont le résultat est vérifié ; `self_unverified` : toutes les
-    tentatives de forme valide (contrôle causal du filtre)."""
-    keep = [a for a in attempts if (a.final_ok if domain == VERIFIED_DOMAIN else a.well_formed)]
+    """`self_verified` : tentatives dont le résultat est vérifié ; `self_rejected` : tentatives de
+    forme valide que le vérificateur refuse. Les deux domaines sont disjoints : un bras « sans
+    vérificateur » les mélange dans leur proportion naturelle (toutes les tentatives)."""
+    if domain == VERIFIED_DOMAIN:
+        keep = [a for a in attempts if a.final_ok]
+    else:
+        keep = [a for a in attempts if a.well_formed and not a.final_ok]
     prefix = PREFIXES[domain]
     return [
         TrainingCandidate(

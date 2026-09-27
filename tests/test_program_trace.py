@@ -452,7 +452,7 @@ def test_outcome_verification_keeps_the_models_own_trace(
     que le résultat ; le document gardé est la trace écrite par le modèle ; une trace entièrement
     juste a toujours un résultat juste ; les étapes fausses gardées sont comptées."""
     from apex.capabilities.program_trace.self_training import (
-        UNVERIFIED_DOMAIN,
+        REJECTED_DOMAIN,
         VERIFIED_DOMAIN,
         attempt_and_verify,
         documents,
@@ -467,8 +467,9 @@ def test_outcome_verification_keeps_the_models_own_trace(
     assert len(kept) == sum(a.final_ok for a in attempts) > 0
     outputs = {a.document() for a in attempts if a.final_ok}
     assert {d.text for d in kept} == outputs  # la trace du MODÈLE, pas celle de référence
-    unverified = documents(attempts, UNVERIFIED_DOMAIN)
-    assert len(unverified) == sum(a.well_formed for a in attempts) >= len(kept)
+    rejected = documents(attempts, REJECTED_DOMAIN)
+    assert len(rejected) == sum(a.well_formed and not a.final_ok for a in attempts)
+    assert not {d.text for d in rejected} & outputs  # domaines disjoints : pas de doublon à fusionner
     report = summary(attempts)
     assert report["outcome_verified"] == len(kept)
     assert report["outcome_verified_with_a_wrong_step"] == sum(

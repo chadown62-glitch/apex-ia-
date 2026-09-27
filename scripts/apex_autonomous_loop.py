@@ -176,7 +176,8 @@ def derive_world(args: argparse.Namespace) -> int:
 def self_world(args: argparse.Namespace) -> int:
     """Monde ENFANT nourri des tentatives du champion ATTESTÉ du parent sur des problèmes
     program_trace neufs : domaine `self_verified` (résultat vérifié par exécution) et domaine
-    `self_unverified` (toutes les tentatives de forme valide, contrôle causal du filtre)."""
+    `self_rejected` (tentatives de forme valide refusées ; mêlées au premier dans leur proportion
+    naturelle, elles forment le contrôle « sans vérificateur »)."""
     import random
     from dataclasses import replace
 
@@ -202,7 +203,7 @@ def self_world(args: argparse.Namespace) -> int:
     attempts = self_training.attempt_and_verify(model, parent.tokenizer, problems, sandbox_provider())
     docs = [
         *self_training.documents(attempts, self_training.VERIFIED_DOMAIN),
-        *self_training.documents(attempts, self_training.UNVERIFIED_DOMAIN),
+        *self_training.documents(attempts, self_training.REJECTED_DOMAIN),
     ]
     domains = {**parent.spec.domains, **self_training.PREFIXES}
     spec = replace(
