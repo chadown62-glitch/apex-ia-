@@ -173,3 +173,53 @@ vérifiées) ; même expérience dirigée : cible `cap:dependency_order:heldout`
 **Critère** : transfert établi si l'erreur de T après entraînement est inférieure à celle de C
 (IC 95 % apparié sur les 300 problèmes excluant 0). Aucun barreau n'autorise « raisonnement
 général » : au mieux, transfert mesuré vers UNE tâche apparentée.
+
+## 7. Boucle autonome : « X s'améliore mais Y se dégrade » (REAL E2E, deux défauts corrigés)
+
+Protocole : monde P3 (texte + `code_repair` + `program_trace`), champion P3 adopté, `run` avec
+1 500 pas / 2,4 M jetons par expérience, protections actives (Judge, registre, réplique).
+
+**Premier passage (défaut 1)** : faiblesse choisie `code_repair` (écart le plus grand) ;
+1. `target_only` (code seul) : texte amélioré, mais `program_trace` entièrement oublié
+   (0,283 -> 1,0) et `code_repair` validation/train oubliés -> REJECT (oubli contre l'ancre) ;
+2. `lower_lr` (0,001 -> 0,0005) : oubli de `code_repair` réduit (train 0,143 -> 0,032, significatif),
+   `program_trace` toujours à 1,0 -> REJECT ;
+3. la politique divisait ENCORE le taux : elle n'utilisait pas l'effet mesuré de sa modification.
+
+Correction : `lever_effect` compare, par élément (bootstrap apparié), le candidat de l'expérience
+à celui de l'expérience précédente sur chaque suite que la précédente dégradait :
+levier utile partout -> répétable ; utile à X seulement -> gardé, AUTRE levier pour Y (le même
+réglage scalaire n'est pas répété) ; utile nulle part -> annulé (on repart de la recette
+précédente). Le rejeu vise les domaines dégradés qui ne sont pas déjà entraînés.
+
+**Deuxième passage (défaut 2)** : 3. `protect_domains` (25 % `reasoning_tasks`) CORRIGE
+`program_trace` (1,0 -> 0,32, IC du gain [0,63 ; 0,73]) sans aider `code_repair` ; la règle ne
+comptait que les suites ENCORE dégradées : l'effet sur `program_trace` était ignoré, le levier
+jugé inutile et annulé. Correction : une suite corrigée compte comme un effet ; et une MÉMOIRE le
+long de la chaîne d'expériences (`helpful_levers`) propose d'abord le levier qui a déjà réduit
+l'oubli des suites encore dégradées. Rejouée sur le journal réel, la décision suivante devient :
+garder le rejeu (utile à `program_trace`) ET diviser le taux (utile à `code_repair` en 1 -> 2),
+chaque étape citant sa mesure (ESTABLISHED) et son inférence (INFERRED).
+
+Cycle 2 : 9 mutants de la stratégie (effet ignoré, levier partiel répété, levier inutile gardé,
+signification ignorée, signe inversé, rejeu du domaine entraîné, suite corrigée non comptée,
+mémoire ignorée, mémoire limitée au dernier maillon) : **9/9 tués**.
+
+## 8. Capacité `dependency_order` (IMPLEMENTED, TESTED, ADVERSARIAL)
+
+Choisie pour le meilleur test de transfert : même arithmétique et même format de sortie que
+`program_trace` (transfert possible), mais une compétence nouvelle — les instructions sont
+présentées dans le désordre (`c=b-a;a=3;b=a+4?c:`) et la trace doit suivre l'ordre imposé par les
+dépendances. Lire de gauche à droite échoue (la notation l'identifie : `textual_order`) ; les
+noms comptent dans la métrique (l'ordre est l'objet du raisonnement).
+
+Garanties : vérité terrain exécutée dans le sandbox (programme ordonné) ; résolveur hôte
+indépendant qui retrouve l'ordre depuis le seul texte mélangé ; présentation jamais dans l'ordre
+d'exécution ; fraîcheur par forme canonique du programme ORDONNÉ (mélanger ou renommer ne rend pas
+un problème nouveau) ; exclusions croisées avec `program_trace` (jamais évalué ici un programme
+entraîné là-bas ; jamais entraîné ici un programme évalué là-bas) ; formes mélangée ET ordonnée des
+problèmes évalués protégées contre toute citation extérieure. 14 tests ; cycle 2 : 13 mutants
+(résolveur, mélange, notation, exclusions à la construction et à la relecture, vérité terrain,
+protections) **13/13 tués** après l'ajout d'un test (l'exclusion des évaluations de
+`program_trace` n'était jamais exercée par le hasard du tirage) et la suppression de deux gardes
+redondantes (mutants équivalents : la couverture de la chaîne les subsumait).
