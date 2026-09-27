@@ -177,7 +177,7 @@ def test_the_judge_measures_forgetting_against_the_anchor(two_experiments) -> No
     anchor = ctrl.registry.entries()[0]
     result = (records[1].payload("judged") or {})["result"]
     rows = {r["suite"]: r for r in result["forgetting"]}
-    assert set(rows) == set(ctrl.world.protected_groups["text"])  # chaque suite protégée mesurée
+    assert set(rows) == set(ctrl.world.benchmarks)  # chaque benchmark texte mesuré contre l'ancre
     for suite, row in rows.items():
         assert row["anchor_index"] == anchor["index"]
         assert row["before"] == round(anchor["reports"][suite]["value"], 5)
