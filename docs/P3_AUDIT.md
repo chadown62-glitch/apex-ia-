@@ -5,6 +5,9 @@ Point de départ : `25244e5` (fin de Priority 2). Chaque affirmation porte son s
 réelle répétable), **JUDGED** (décision du Judge indépendant sur mesures réelles), **INFERRED**
 (interprétation plausible, non prouvée), **UNVERIFIED**, **BLOCKED** (impossible dans cet environnement).
 
+> **Statut (mise à jour)** : F1, F2 et P3 (capacité `program_trace`, trois cycles, P5-noyau mesuré)
+> sont réalisés — résultats, preuves et limites dans `docs/P3_REASONING.md`.
+
 ## 1. Ce qui est réellement acquis après P2
 
 | affirmation | statut | preuve |

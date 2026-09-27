@@ -98,9 +98,49 @@ mémoriseur ne l'est pas.
 (`d=c+a`), l'exactitude tombe à 0,38 contre 0,88 pour un littéral ; 61 des 85 erreurs portent sur la
 dernière étape. Le goulot est la recherche d'une valeur lointaine dans le contexte, pas l'arithmétique.
 
-## 4. Cycle 3 — amélioration (P5-noyau)
+## 4. Cycle 3 — amélioration (P5-noyau : apprendre de ses propres tentatives vérifiées)
 
-(en cours — voir §6)
+Protocole (réel, de bout en bout) :
+
+1. le champion promu tente 4 000 problèmes NEUFS de profondeur 3 (forme canonique ni évaluée ni
+   dans le réservoir : il n'en a jamais vu la solution) — difficulté ATTEIGNABLE (il en résout ≈ 72 %) ;
+2. le vérificateur ne connaît que le RÉSULTAT final, exécuté dans le sandbox (comme un test unitaire)
+   — pour cette tâche, vérifier chaque étape reviendrait à fournir la solution ;
+3. ses tentatives deviennent les documents « train seulement » d'un monde PETIT-ENFANT (F1), sous les
+   mêmes contrôles de contamination (4 retirées : 12-grammes partagés avec l'évaluation) ;
+4. trois bras partent du MÊME champion adopté, même budget (1 500 pas, 52 % de traces), une seule
+   modification (le mélange) ; jugés par le Judge, puis comparés entre eux par bootstrap apparié.
+
+Tentatives (MEASURED) : 3 992 / 4 000 de forme valide ; 2 844 vérifiées par le résultat, dont **4**
+seulement ont une étape fausse (réponse juste malgré une erreur) ; 1 148 refusées.
+
+| bras | donnée ajoutée (20 %) | erreur held-out | BPB texte | verdict |
+|---|---|---|---|---|
+| vérifié | tentatives dont le résultat est vérifié | 0,240 | 2,106 | REJECT (régression texte) |
+| non vérifié | toutes les tentatives (proportion naturelle) | 0,290 | 2,109 | REJECT (régression texte) |
+| plus d'étiqueté | davantage du réservoir étiqueté d'origine | 0,233 | 2,108 | REJECT (régression texte) |
+| champion de départ | — | 0,283 | 1,801 | — |
+
+Comparaisons appariées entre bras (held-out, n = 300 ; MEASURED, un entraînement par bras) :
+
+- vérifié **meilleur** que non vérifié : IC 95 % de l'écart [0,013 ; 0,087] — le filtre est causal ;
+- vérifié **≈** plus d'étiqueté : [-0,047 ; 0,033], non significatif ;
+- non vérifié **pire** que plus d'étiqueté : [-0,097 ; -0,020].
+
+Conclusions :
+
+- Les tentatives du cerveau, vérifiées par le seul résultat, valent autant que des données
+  étiquetées à budget égal (MEASURED) ; sans vérificateur, elles nuisent (MEASURED, cohérent avec la
+  faisabilité). **Le critère P5 « battre les deux contrôles » n'est PAS atteint** : l'auto-amélioration
+  n'apporte rien de PLUS que des étiquettes quand des étiquettes existent.
+- Les trois bras régressent IDENTIQUEMENT sur le texte (1,80 -> 2,11) : la cause est le régime de
+  poursuite d'entraînement (taux d'apprentissage remis au maximum sur un modèle en fin de décroissance,
+  part de texte réduite), pas la donnée (MEASURED : aucun écart texte entre bras). Aucun bras n'est
+  promu : la garde du Judge a fonctionné.
+- Où le P5 aurait une valeur réelle : quand aucune étiquette n'existe (code évalué par des tests) et
+  quand la difficulté suivante est atteignable ; en profondeur 4, le champion obtient 7 % de réponses
+  finales justes et 0 trace exacte : un vérificateur de résultat n'y garderait que des traces fausses
+  (INFERRED des mesures du §2 et de la faisabilité).
 
 ## 5. Limites (ce qui n'est PAS démontré)
 
@@ -111,7 +151,14 @@ dernière étape. Le goulot est la recherche d'une valeur lointaine dans le cont
   étiqueteur. Le P5-noyau n'utilise donc que le résultat final (comme un test unitaire).
 - Les chiffres viennent d'un seul monde et d'une paire d'entraînements (original + réplique).
 
-## 6. Suite
+## 6. Étape suivante recommandée
 
-Voir le rapport de fin d'étape (§21) : P5-noyau mesuré contre deux contrôles à budget égal, puis
-P4 comme mesure (taille vs format pour la profondeur 4).
+1. **Poursuite d'entraînement sans oubli** (préalable à tout P5 et P4) : les trois bras P5 montrent que
+   reprendre l'entraînement d'un champion au taux maximal détruit le texte. Mesurer un régime de
+   poursuite (taux réduit, échauffement, part de rejeu) avant toute nouvelle expérience.
+2. **P4 comme mesure, pas comme mise à l'échelle** : l'échec en profondeur 4 est-il dû à la taille, au
+   format (le modèle écrit un nombre FIXE d'étapes) ou aux données (aucune profondeur 4) ? Trois bras à
+   budget égal : modèle plus grand ; format avec compteur d'étapes explicite ; curriculum (quelques
+   exemples de profondeur 4). Le critère : profondeur 5 jamais vue > 0.
+3. **P5 là où il a un sens** : `code_repair` génératif (le modèle écrit le correctif ; les tests
+   vérifient sans donner la solution).
