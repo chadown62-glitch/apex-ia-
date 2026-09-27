@@ -67,7 +67,7 @@ Conclusions (MEASURED, un entraînement par bras + une réplique pour F) :
   sa réplique oublie `code_repair` validation. Le Judge (réplique comprise) a refusé les six bras
   qu'il devait refuser ; aucune capacité acquise n'a été détruite dans le cerveau promu.
 
-## 3. Protection des capacités acquises (IMPLEMENTED, TESTED)
+## 3. Protection des capacités acquises (IMPLEMENTED, TESTED, ADVERSARIAL)
 
 `apex/neural/protection.py`, branché dans le Judge (`judge(..., protections=)`), le registre
 (`ModelRegistry(protected_groups=)`) et l'analyse d'échec de la boucle. Groupes protégés
@@ -92,6 +92,16 @@ par élément, métrique, tolérance, historique de toutes les versions comparab
 - **Boucle** : une réplique qui gagne sur la cible mais dégrade une suite protégée est analysée comme
   `protected_regression` (-> stratégie `protect_domains`), et non plus comme « non répliqué »
   (-> plus de pas), ce qui aurait aggravé l'oubli. Défaut trouvé par le bras F, corrigé et testé.
+
+Cycle 2 (adversarial + mutation, worktree isolé) : 28 mutants sur l'ancre (meilleur niveau, versions
+rejetées, autre benchmark), la règle d'oubli (tolérance, signification, signe, éléments), le Judge
+(oubli sans rejet, ancre crue sur parole, ancre non champion mesurée sur le champion), le registre,
+la boucle (versions non attestées, groupes non transmis) et les bras P5 : **28/28 tués**, après deux
+corrections de tests révélées par les survivants (test circulaire sur `protected_groups` ; aucun test
+ne vérifiait la distinction des problèmes du bras `mixed`). Tests adversariaux sur modèles réels :
+un modèle meilleur que son champion mais sous le niveau démontré est refusé (ancre = autre checkpoint,
+re-mesurée) ; une entrée de registre forgée non attestée ne devient jamais ancre ; une ancre dont les
+mesures enregistrées sont fausses invalide le jugement.
 
 ## 4. P4 — profondeur : protocole PRÉ-ENREGISTRÉ (écrit et commité avant toute exécution)
 
@@ -118,3 +128,48 @@ longueur n'est établie qu'à une profondeur JAMAIS entraînée par le bras (5 p
 `curriculum`). La profondeur 3 ne doit pas régresser par rapport à `base`. Un bras qui réussit est
 REJOUÉ avec une seconde graine avant toute conclusion ; seul un bras répliqué peut être intégré au
 cerveau (par une expérience jugée par le Judge, avec les protections).
+
+## 5. P5 — données vérifiées : protocole PRÉ-ENREGISTRÉ (commité avant exécution)
+
+Question : à budget STRICTEMENT égal, des traces écrites par le modèle et VÉRIFIÉES par exécution
+enseignent-elles mieux `program_trace` que des traces étiquetées (référence) ou non vérifiées ?
+
+- Quatre mondes enfants du monde P3 (`self-world`, même graine, mêmes 3 000 problèmes neufs tentés
+  par le champion P3 attesté) ; seul change le contenu des 2 000 documents du domaine `self_data` :
+  A `labeled` (trace de référence), B `unverified` (trace du modèle, forme valide),
+  C `verified` (trace du modèle dont le résultat est exact à l'exécution), D `mixed` (moitié A,
+  moitié C, problèmes distincts).
+- Même champion adopté, même expérience dirigée : cible `cap:program_trace:heldout`, mélange
+  `code 0,36 / code_tasks 0,06 / stdlib 0,06 / self_data 0,52` (le réservoir `reasoning_tasks`
+  exclu : seule la source du bras apporte des traces), 1 500 pas, 2,4 M jetons tirés, lr 1e-3
+  (régime F, sans oubli du texte mesuré en §2). Même nombre de documents, même nombre de pas,
+  mêmes jetons vus ; nombre de jetons par bras consigné (les traces fausses peuvent différer en
+  longueur).
+- Mesures : Judge complet (cible, texte, `code_repair`, oubli contre les ancres) + comparaisons
+  appariées ENTRE bras sur les mesures du Judge (mêmes 300 problèmes held-out).
+
+**Critère (fixé avant les résultats)** : l'hypothèse « la vérification apporte plus que les
+étiquettes » n'est retenue que si C bat A ET B sur `program_trace:heldout` (IC 95 % du bootstrap
+apparié de l'écart d'erreur excluant 0, en faveur de C) sans oubli (verdict du Judge). Sinon :
+**HYPOTHESIS REJECTED**, sans changer de métrique ni de budget après coup.
+
+## 6. Transfert : protocole PRÉ-ENREGISTRÉ (commité avant exécution)
+
+Nouvelle capacité `dependency_order` (instructions mélangées, trace dans l'ordre d'exécution :
+planification de l'ordre imposé par les dépendances), benchmark neuf, protégé, disjoint de
+`program_trace` (voir `apex/capabilities/dependency_order`).
+
+Échelle (`scripts/transfer_ladder.py`, champions P2 et P3, mêmes problèmes) : 1 domaine entraîné
+(`program_trace:train`), 2 même forme held-out, 3 forme nouvelle (question sur une variable
+intermédiaire), 4 tâche apparentée (`dependency_order:heldout`, sans entraînement), 5 tâche
+lointaine (`code_repair:heldout`).
+
+Apprentissage de la tâche apparentée : bras T = champion P3 (a appris `program_trace`), bras C =
+champion P2 (jamais de traces), dans deux mondes frères aux benchmarks IDENTIQUES (empreintes
+vérifiées) ; même expérience dirigée : cible `cap:dependency_order:heldout`, mélange
+`order_tasks 0,52 / code 0,36 / code_tasks 0,06 / stdlib 0,06` (aucune trace `program_trace`),
+1 500 pas, 2,4 M jetons, lr 1e-3.
+
+**Critère** : transfert établi si l'erreur de T après entraînement est inférieure à celle de C
+(IC 95 % apparié sur les 300 problèmes excluant 0). Aucun barreau n'autorise « raisonnement
+général » : au mieux, transfert mesuré vers UNE tâche apparentée.
