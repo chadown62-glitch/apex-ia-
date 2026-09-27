@@ -336,6 +336,7 @@ def directed(args: argparse.Namespace) -> int:
         max_steps=limits.max_steps_per_experiment,
         max_tokens=limits.max_tokens_per_experiment,
         max_retries=limits.max_retries,
+        seed=args.seed,
     )
     record = LoopController(args.workdir, world, limits=limits, policy=policy).run_directed(
         changes, target=args.target, reason=args.reason
@@ -529,6 +530,7 @@ def main() -> int:
     p.add_argument("--batch-size", type=int, default=None)
     p.add_argument("--warmup-steps", type=int, default=None)
     p.add_argument("--timeout", type=float, default=1800.0)
+    p.add_argument("--seed", type=int, default=None, help="graine de la référence (réplication)")
     p.set_defaults(fn=directed)
     p = sub.add_parser("derive-world", help="monde enfant : hérite splits, tokenizer, architecture")
     p.add_argument("--workdir", type=Path, required=True)

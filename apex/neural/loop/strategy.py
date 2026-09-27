@@ -170,6 +170,9 @@ class StrategyPolicy:
     #: Au-delà, un entraînement qui relit son échantillon est présumé sur-apprendre.
     max_passes: float = 4.0
     max_retries: int = 1
+    #: Graine de la recette de référence (celle du monde par défaut) : une réplication change la
+    #: graine de la référence ET de l'expérience, qui ne diffèrent toujours que d'une modification.
+    seed: int | None = None
 
     def reference(self, obs: Observation, world: World) -> Recipe:
         champion_recipe = (obs.champion.recipe if obs.champion else None) or {}
@@ -180,7 +183,7 @@ class StrategyPolicy:
             steps=self.finetune_steps,
             lr=self.finetune_lr,
             tokens=self.finetune_tokens,
-            seed=world.spec.seed,
+            seed=world.spec.seed if self.seed is None else self.seed,
         )
 
     def hypothesis(self, world: World, weakness: Weakness, strategy: str, change: str) -> LoopHypothesis:
