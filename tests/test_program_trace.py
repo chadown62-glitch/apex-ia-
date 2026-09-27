@@ -436,12 +436,45 @@ def test_the_judge_refuses_task_details_outside_the_contract() -> None:
 
 
 @needs_sandbox
-def test_self_training_problems_are_new_to_the_brain(small: ProgramTraceBenchmark) -> None:
-    from apex.capabilities.program_trace.self_training import fresh_problems
+def test_self_training_problems_are_new_to_the_brain(
+    small: ProgramTraceBenchmark, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from apex.capabilities.program_trace import self_training
 
-    fresh = fresh_problems(small, 200, 3, random.Random(0))
+    fresh = self_training.fresh_problems(small, 200, 3, random.Random(0))
     known = {p.canonical for p in small.pool} | {p.canonical for p in small.eval_problems()}
     assert len({p.canonical for p in fresh}) == 200 and not {p.canonical for p in fresh} & known
+    # Générateur substitué (propriété précise) : il propose d'abord les problèmes ÉVALUÉS, renommés.
+    evaluated = [p for p in small.eval_problems() if p.depth == 3]
+    replay = iter(evaluated)
+    real = self_training.generate
+
+    def evaluated_first(depth: int, rng: random.Random) -> Problem:
+        leaked = next(replay, None)
+        return leaked if leaked else real(depth, rng)
+
+    monkeypatch.setattr(self_training, "generate", evaluated_first)
+    fresh = self_training.fresh_problems(small, 10, 3, random.Random(0))
+    assert not {p.canonical for p in fresh} & {p.canonical for p in evaluated}
+    with pytest.raises(ValueError, match="épuisé"):
+        self_training.fresh_problems(small, 300, 1, random.Random(0))  # 200 formes en profondeur 1
+
+
+def test_a_lucky_answer_is_kept_with_the_models_wrong_steps() -> None:
+    """Le vérificateur de résultat garde une réponse juste malgré une étape fausse : le document est
+    la trace du MODÈLE (avec son erreur), jamais la trace de référence ; elle est comptée."""
+    from apex.capabilities.program_trace.self_training import (
+        VERIFIED_DOMAIN,
+        SelfAttempt,
+        documents,
+        summary,
+    )
+
+    problem = interpret("a=3;b=a+4;c=b-a")
+    lucky = SelfAttempt(problem, "a3,b8,c4=4", True, True, False)
+    (doc,) = documents([lucky], VERIFIED_DOMAIN)
+    assert doc.text == problem.prompt + "a3,b8,c4=4" != problem.document
+    assert summary([lucky])["outcome_verified_with_a_wrong_step"] == 1
 
 
 @needs_sandbox

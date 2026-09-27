@@ -36,12 +36,16 @@ def fresh_problems(
     """Problèmes dont la forme canonique n'est ni évaluée ni dans le réservoir d'entraînement."""
     seen = {p.canonical for p in bench.pool} | {p.canonical for p in bench.eval_problems()}
     out: list[Problem] = []
-    while len(out) < count:
+    for _ in range(count * 1000):
+        if len(out) == count:
+            return out
         problem = generate(depth, rng)
         if problem.canonical not in seen:
             seen.add(problem.canonical)
             out.append(problem)
-    return out
+    if len(out) == count:
+        return out
+    raise ValueError(f"profondeur {depth} : espace de problèmes neufs épuisé ({len(out)}/{count})")
 
 
 @dataclass(frozen=True)

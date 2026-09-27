@@ -231,6 +231,20 @@ class TestBatchedGeneration(unittest.TestCase):
                 batched = generate_batch(self.model, self.prompts, 20, eos_id=eos_id, batch_size=7)
                 self.assertEqual(batched, [self.sequential(p, 20, eos_id) for p in self.prompts])
 
+    def test_generation_stops_at_the_first_eos_actually_emitted(self) -> None:
+        """Jeton de fin choisi parmi ceux que le modèle GÉNÈRE réellement : la troncature est
+        exercée (au moins une sortie coupée), et rien de ce qui suit ce jeton n'est rendu."""
+        from collections import Counter
+
+        from apex.neural.model import generate_batch
+
+        full = [self.sequential(p, 20, eos_id=-1) for p in self.prompts]
+        eos_id = Counter(t for out in full for t in out[1:]).most_common(1)[0][0]
+        batched = generate_batch(self.model, self.prompts, 20, eos_id=eos_id, batch_size=7)
+        self.assertTrue(any(len(out) < 20 for out in batched))
+        self.assertTrue(all(eos_id not in out for out in batched))
+        self.assertEqual(batched, [self.sequential(p, 20, eos_id) for p in self.prompts])
+
     def test_generation_past_the_context_window_matches_too(self) -> None:
         from apex.neural.model import generate_batch
 

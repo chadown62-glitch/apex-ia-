@@ -269,3 +269,37 @@ def test_new_documents_overlapping_the_lineage_training_are_removed(
         child.dataset.dropped_duplicates
     )
     assert all(c.candidate_id != copy.candidate_id for s in Split for c in child.dataset.splits[s])
+
+
+def test_a_checkpoint_from_a_sibling_world_is_refused_despite_the_same_tokenizer(
+    parent_run: tuple[Path, World], tmp_path: Path
+) -> None:
+    """Deux enfants du même parent partagent le tokenizer ; un checkpoint entraîné dans l'un n'est
+    PAS de la lignée de l'autre : seule l'empreinte du dataset le refuse."""
+    from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
+    from apex.neural.checkpoint import save_checkpoint
+    from apex.neural.config import TrainingConfig
+    from apex.neural.training import TrainingEngine
+
+    _, parent = parent_run
+    docs = new_documents()
+    first = World.build(child_spec(parent), docs, parent=parent)
+    second = World.build(child_spec(parent, seed=parent.spec.seed + 1), docs, parent=parent)
+    assert first.tokenizer.fingerprint() == second.tokenizer.fingerprint()
+    assert first.dataset.fingerprint != second.dataset.fingerprint
+    engine = TrainingEngine(initial_model(first, 0), TrainingConfig(max_steps=1, batch_size=2))
+    path = tmp_path / "first.pt"
+    save_checkpoint(
+        path,
+        engine,
+        tokenizer=first.tokenizer,
+        batcher=None,
+        dataset_fingerprint=first.dataset.fingerprint,
+        dataset_provenance={"world": first.fingerprint},
+        dataset_tokens=1,
+    )
+    store = LocalFilesystemArtifactStore(root=str(tmp_path / "store"))
+    artifact = store.put(path.read_bytes(), content_type="application/x-apex-checkpoint").content_hash
+    assert load_model_from_artifact(store, artifact, first) is not None
+    with pytest.raises(ValueError, match="étranger"):
+        load_model_from_artifact(store, artifact, second)
