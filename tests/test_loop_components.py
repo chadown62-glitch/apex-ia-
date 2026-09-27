@@ -575,7 +575,9 @@ def test_policy_changes_lever_according_to_the_measured_effect_of_the_last_one(t
             parent_experiment_id=decision.parent_experiment_id,
         )
 
-    def after_lower_lr(docs: float, stdlib: float, name: str) -> tuple[ExperimentPlan, StrategyDecision]:
+    def after_lower_lr(
+        docs: float, stdlib: float, name: str
+    ) -> tuple[ExperimentPlan, StrategyDecision | None]:
         journal = ExperimentJournal(tmp_path / f"{name}.jsonl")
         first = policy.decide(obs, world, journal, exhausted=set())
         assert first is not None and first.recipe.mix == {"apex_docs": 1.0}
@@ -603,9 +605,7 @@ def test_policy_changes_lever_according_to_the_measured_effect_of_the_last_one(t
                 "heldout:stdlib": report("heldout:stdlib", stdlib),
             },
         )
-        third = policy.decide(obs, world, journal, exhausted=set())
-        assert third is not None
-        return p2, third
+        return p2, policy.decide(obs, world, journal, exhausted=set())
 
     # Aide partout (oubli réduit sur les deux suites, encore au-delà de la garde) : on continue.
     p2, third = after_lower_lr(4.9, 3.9, "everywhere")
@@ -622,3 +622,7 @@ def test_policy_changes_lever_according_to_the_measured_effect_of_the_last_one(t
     assert third.recipe.lr == policy.finetune_lr and third.baseline_recipe is not None
     assert third.baseline_recipe.lr == policy.finetune_lr  # une seule modification, depuis p1
     assert any("levier sans effet" in r for r in third.rationale)
+    # Aide « stdlib » mais pas le domaine ENTRAÎNÉ : ni le répéter, ni rejouer un domaine déjà
+    # entraîné — plus rien de fondé à essayer, la politique s'arrête.
+    _, none = after_lower_lr(5.0, 3.9, "trained_unaffected")
+    assert none is None

@@ -103,17 +103,19 @@ def resolve(shown: str) -> Problem:
         by_target[target] = statement
         if len(expr) == 1 and expr.isdigit():
             root.append(target)
-        elif len(expr) == 3 and expr[1] in OPERATORS and expr[0] not in following:
+        elif len(expr) == 3 and expr[1] in OPERATORS:
             following[expr[0]] = target
         else:
-            raise ValueError(f"instruction invalide ou dépendance ambiguë « {statement} »")
-    if len(root) != 1:
-        raise ValueError(f"il faut exactement une racine : {shown!r}")
-    chain = root
-    while chain[-1] in following:
+            raise ValueError(f"instruction invalide « {statement} »")
+    if not root:
+        raise ValueError(f"aucune racine : {shown!r}")
+    chain = root[:1]
+    while chain[-1] in following and len(chain) <= len(by_target):
         chain.append(following[chain[-1]])
+    # Deux racines, deux instructions partant de la même variable ou une instruction orpheline
+    # laissent toujours une instruction hors de la chaîne.
     if len(chain) != len(by_target):
-        raise ValueError(f"instructions hors de la chaîne de dépendances : {shown!r}")
+        raise ValueError(f"instructions hors d'une chaîne unique de dépendances : {shown!r}")
     return interpret(";".join(by_target[name] for name in chain))
 
 

@@ -110,6 +110,18 @@ def test_benchmark_is_fresh_and_never_overlaps_program_trace(
 
 
 @needs_sandbox
+def test_problems_evaluated_by_program_trace_are_never_drawn() -> None:
+    """Toutes les formes de profondeur 1 déclarées évaluées par program_trace : aucune n'entre au
+    réservoir ni à l'évaluation, quelle que soit la chance du tirage."""
+    depth_one = {
+        interpret(f"a={x};b=a{op}{y}").canonical for x in range(10) for y in range(10) for op in "+-"
+    }
+    bench = build_benchmark(sandbox_provider(), evaluated=depth_one, pool_size=150, sizes=SMALL)
+    assert bench.report["pool_depths"][1] == 0 and bench.report["rejected"]["excluded"] > 0
+    assert not depth_one & {p.canonical for p in (*bench.pool, *bench.eval_problems())}
+
+
+@needs_sandbox
 def test_forbidden_overlaps_are_refused_on_verification(
     small: DependencyOrderBenchmark, trace: ProgramTraceBenchmark
 ) -> None:
