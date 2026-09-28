@@ -178,6 +178,9 @@ reprise après arrêt (petite échelle), journal d'un autre monde. Attaques ajou
 
 ## 6. Résultats
 
+Les sous-sections 5.x et 6.x sont ENTRELACÉES dans l'ordre chronologique d'écriture : chaque
+pré-enregistrement (5.4, 5.5, 5.6) précède ses résultats dans le fichier ET dans l'historique git.
+
 ### 6.1 Lignée reconstruite (MEASURED, JUDGED)
 
 Mondes et champions perdus avec l'ancien conteneur : reconstruits avec le code actuel. Le benchmark
@@ -454,7 +457,8 @@ pré-enregistrer : fin de trace explicitement dictée par le programme (instruct
 
 **Synthèse P4 (MEASURED, deux goulots, aucun n'est la taille)** : le modèle apprend des procédures
 LOCALES et POSITIONNELLES. Rendre la dépendance locale dans le texte écrit (`explicit`) débloque
-`dependency_order` (0,11 -> 0,76) ; la longueur, elle, reste un gabarit. Passer à l'échelle
+`dependency_order` (0,11 -> 0,76 en graine 0 ; 0,19 -> 0,58 en graine 1) ; la longueur, elle, reste
+un gabarit. Passer à l'échelle
 (paramètres) n'est justifié par aucune de ces mesures.
 
 ### 6.8 Cycle 3b — politique corrigée, à échelle réelle (JUDGED) + reprise après arrêt brutal
@@ -484,3 +488,39 @@ restant, et le rejeu à ce niveau ne le traite pas.
 `recovered` (depuis `executed`), l'événement `EXPERIMENT_RECOVERED` est apparu en direct, le Judge a
 repris son rejeu depuis son point de reprise et obtenu un checkpoint **identique bit à bit** au
 candidat (`sha256:2b1d330072cc…`). Reprise après interruption : REAL E2E.
+
+## 7. Synthèse
+
+**Mutation testing** (protections critiques ajoutées ou modifiées ; worktree isolé, PYTHONPATH
+vérifié, sources restaurées et vérifiées par empreinte) : 18 mutants valides, **18 tués** —
+APEX Live 10/10 (1 survivant au premier passage : le curseur par défaut de l'API, test ajouté puis
+tué), politique « données épuisées » + télémétrie du rejeu 6/6, attestation des mesures 2/2.
+
+**Hypothèses confirmées** : le Judge refuse « gain + destruction » à chaque fois (5 expériences
+visant `dependency_order` : NR, R, C3 ×2, 3b — 5 rejets, 4 d'entre elles avec un gain significatif
+sur la cible ; plus les 2 A/A) ; le rejeu réduit l'oubli de `program_trace`
+(0,94 -> 0,71–0,74) ; relever la part d'un domaine épuisé l'effondre (prédit puis vérifié deux
+fois) ; la politique corrigée supprime cet effondrement (JUDGED) ; reprise après arrêt et après arrêt
+brutal : bit à bit ; la liaison non locale implicite est le goulot dominant de `dependency_order`
+(répliqué) ; `program_trace` : gabarits de longueur, pas d'interpolation.
+
+**Hypothèses rejetées** : « le rejeu (20–25 %) suffit à apprendre sans oublier » ; « 4× plus de pas
+fait émerger `dependency_order` depuis le champion » (0,97–0,98 à 1 500 comme à 6 000 pas) ;
+« la boucle, laissée à elle-même, trouve la bonne recette » (2 rejets, dont un prévisible) ;
+« l'IC par élément suffit à distinguer deux modèles » (A/A : 3 suites sur 12) ; « `base` ne peut pas
+apprendre la liaison » (0,19 en graine 1) ; interpolation de longueur.
+
+**Aucune promotion.** Le champion P3 reste en service. Le critère P3.5 (5.2) n'est pas atteint.
+
+**Limites** : un seul monde reconstruit (autres modèles que ceux documentés en P2/P3) ; une graine
+par expérience de lignée (plus la réplique quand accepté) ; CPU 4 cœurs, 724 864 paramètres ; aucune
+validation de la machine Windows/WSL de l'utilisateur ; chaînes de hachage sans clé ; variance
+d'entraînement non modélisée par le Judge (faux rejets mesurés).
+
+**Prochaine étape justifiée par les mesures** : (1) pré-enregistrer une version du format de
+`dependency_order` à liaison explicite (nouveau monde, benchmark au format explicite) et refaire le
+cycle 1 depuis le champion : seule une capacité ACQUÉRABLE rend le test d'oubli informatif ; (2) en
+parallèle, pré-enregistrer la tolérance par suite fondée sur l'A/A et la confirmation de l'oubli par
+la réplique, appliquées seulement aux expériences suivantes, tests adversariaux et mutants verts ;
+(3) pour la longueur, un format où la fin de trace est dictée par le programme. Aucun passage à
+l'échelle des paramètres n'est justifié par ces mesures.
