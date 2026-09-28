@@ -144,6 +144,9 @@ def test_api_serves_the_engine_state_and_never_masks_a_broken_chain(
     assert body["status"] == "real" and body["data"]["champion"]["attested"]
     events = client.get("/api/v1/brain/events", params={"after": 2}).json()
     assert events["status"] == "real" and all(e["seq"] > 2 for e in events["data"])
+    # Sans curseur : tout le journal, dont le premier événement (numéro 0).
+    first = client.get("/api/v1/brain/events").json()["data"]
+    assert [e["seq"] for e in first] == list(range(len(_journal(loop_dir))))
 
     tampered = tmp_path / "tampered"
     shutil.copytree(loop_dir, tampered)
