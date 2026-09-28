@@ -303,3 +303,28 @@ RÉEL du bras R (à blanc, sans entraînement) : `protect_domains`, `reasoning_t
 expérience, échelle 6 000 pas / 9,6 M jetons, Judge et critères inchangés. Prédiction écrite
 d'avance : l'oubli de `program_trace` diminue sans doute encore un peu mais l'acquisition de
 `dependency_order` reste minime ; un REJET reste l'issue la plus probable.
+
+### 6.4 Cycle 3 — la boucle choisit seule (politique d'origine)
+
+Expérience 1 (`exp-88e71328c2af`, choisie par la boucle depuis le rejet de R, cause établie
+`protected_regression`) : `protect_domains`, `reasoning_tasks` + `stdlib` portés à 50 %
+(25 % chacun), `order_tasks` 27,8 %. **REJETÉE** (JUDGED) :
+
+| suite | champion P3 | candidat | statut |
+|---|---|---|---|
+| `dependency_order:heldout` (cible) | 1,000 | 0,990 | non significatif |
+| `heldout:stdlib` (BPB) | 2,672 | **3,439** | **OUBLIÉ** (IC [−0,797 ; −0,734]) |
+| texte `heldout` (BPB) | 1,863 | 2,036 | OUBLIÉ |
+| `program_trace:heldout` | 0,480 | 0,710 | OUBLIÉ |
+
+Cause découverte (MEASURED, tokenisation des données du monde) : `stdlib` n'a que **75 966 jetons
+uniques** ; 25 % d'un tirage de 9,6 M en fait **32 relectures** (81 en comptant les 2,56 passages de
+l'entraînement), contre 7,6 (NR) et 10,1 (R). Relever la part d'un domaine épuisé ne le « protège »
+pas : il est sur-appris et son held-out s'effondre. `code_tasks` (2 531 jetons, 270 à 580 relectures)
+explique de même la MEMORIZATION de `code_repair:train` relevée par le Judge dans tous les bras.
+La règle de sur-apprentissage de la politique (`max_passes`) ne regardait que le flux global
+(≈ 2,6 passages) : aveugle à ce cas. Correction : 5.6 (test ajouté).
+
+Expérience 2 (politique d'origine, déjà lancée) : le levier précédent jugé sans effet est annulé,
+puis `code` + `reasoning_tasks` + `stdlib` à 75 % — de nouveau `stdlib` à 25 %. Prédiction écrite
+avant son verdict : nouvel effondrement de `heldout:stdlib`.
