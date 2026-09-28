@@ -173,7 +173,9 @@ def attest(
     """Une entrée du registre est attestée si elle a été promue PAR CETTE BOUCLE : une expérience
     du journal, jugée ACCEPT par le Judge indépendant, dont l'artefact exécuté est celui du registre
     et dont l'événement de promotion pointe sur cette entrée ; ou une adoption consignée du champion
-    du monde parent déclaré. Renvoie le problème, ou None."""
+    du monde parent déclaré. Les mesures du registre doivent être celles que le journal a consignées
+    (Judge ou adoption) : un registre réécrit seul, même avec sa chaîne recalculée, n'est pas attesté.
+    Renvoie le problème, ou None."""
     origin = entries[int(entry.get("restores", entry["index"]))]
     if origin.get("kind") == "adoption":
         adopted = [e for e in journal.loop_events("adopted") if e["registry_index"] == origin["index"]]
@@ -184,6 +186,8 @@ def attest(
             return f"« {origin['name']} » : adoptée d'un autre monde que le parent déclaré"
         if event["artifact"] != origin.get("artifact") or not artifact_exists(str(origin["artifact"])):
             return f"« {origin['name']} » : l'artefact adopté n'est pas celui du registre"
+        if event.get("reports") != origin.get("reports"):
+            return f"« {origin['name']} » : mesures du registre différentes de celles de l'adoption"
         return None
     exp = origin.get("metadata", {}).get("experiment_id")
     record = journal.experiments().get(exp) if exp else None
@@ -198,4 +202,6 @@ def attest(
         return f"« {origin['name']} » : l'artefact du registre n'est pas celui de l'expérience"
     if not promotion.get("promoted") or promotion.get("registry_index") != origin["index"]:
         return f"« {origin['name']} » : l'expérience n'a pas consigné cette promotion"
+    if judged.get("candidate_reports") != origin.get("reports"):
+        return f"« {origin['name']} » : mesures du registre différentes de celles du Judge au journal"
     return None

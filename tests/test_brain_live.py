@@ -123,6 +123,39 @@ def test_a_champion_whose_promotion_is_missing_from_the_journal_is_not_attested(
     assert not champion["attested"] and "consigné" in champion["attestation_problem"]
 
 
+def test_a_registry_rewritten_with_its_chain_recomputed_is_not_attested(
+    loop_dir: Path, tmp_path: Path
+) -> None:
+    """Attaque du cycle 2 (C2.2) : mesures du champion réécrites dans le registre ET chaîne de
+    hachage recalculée (elle n'a pas de clé). La chaîne ne voit rien ; l'attestation compare les
+    mesures du registre à celles que le Judge a consignées au journal."""
+    from apex.neural.loop.controller import LoopController
+    from apex.neural.registry import GENESIS, RegistryCorruptedError, _digest
+    from tests import loop_support as support
+
+    copy = tmp_path / "copy"
+    shutil.copytree(loop_dir, copy)
+    assert BrainWorkdir(copy).state()["champion"]["attested"]
+    path = copy / "registry.jsonl"
+    entries = [json.loads(line) for line in path.read_text().splitlines()]
+    champion = [e for e in entries if e["promoted"]][-1]
+    champion["reports"]["heldout"]["value"] += 0.5
+    prev = GENESIS
+    for entry in entries:
+        entry["prev"], entry["hash"] = prev, None
+        entry["hash"] = prev = _digest(entry)
+    path.write_text("".join(json.dumps(e, sort_keys=True, ensure_ascii=False) + "\n" for e in entries))
+    try:
+        state = BrainWorkdir(copy).state()
+    except RegistryCorruptedError:  # la chaîne recalculée doit rester valide, sinon le test est vide
+        pytest.fail("chaîne recalculée refusée : l'attaque n'a pas été reproduite")
+    assert not state["champion"]["attested"]
+    assert "mesures du registre" in state["champion"]["attestation_problem"]
+    ctrl = LoopController(copy, support.world(), log=lambda _m: None)
+    problem = ctrl.attest(ctrl.registry.current())  # type: ignore[arg-type]
+    assert problem is not None and "Judge" in problem
+
+
 def test_missing_sources_are_reported_as_not_available(tmp_path: Path) -> None:
     assert BrainWorkdir(tmp_path / "absent").state()["status"] == "not_available"
     empty = tmp_path / "empty"

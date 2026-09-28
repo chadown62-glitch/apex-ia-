@@ -364,3 +364,24 @@ Conséquences, sans aucune modification du Judge (conformément à 5.1) :
 - ce n'est pas une raison d'affaiblir le Judge après coup. Proposition (à pré-enregistrer à part,
   NON appliquée) : une tolérance par suite fondée sur l'écart A/A mesuré, et un oubli déclaré
   seulement s'il se reproduit sur la réplique.
+
+### 6.5 Cycle 2 — attaques à échelle réelle
+
+**C2.2 Registre réécrit, chaîne recalculée** (copie du monde P3 ; `heldout` du champion présenté
+PIRE de 0,5 BPB pour qu'un candidat paraisse meilleur) :
+- la chaîne de hachage ne détecte RIEN (elle n'a pas de clé) : `status` accepte le registre — prédit ;
+- le Judge REFUSE : contrôle `baseline_unchanged` en échec (re-mesure du checkpoint ≠ registre),
+  cause `baseline_changed`, « expérience invalide, pas une réfutation » — prédit ;
+- faille trouvée à côté : l'interface affichait ce champion « ATTESTÉ » avec les mesures forgées
+  (l'attestation vérifiait la promotion au journal, pas les mesures). **Corrigé** dans
+  `journal.attest` (partagé par la boucle et APEX Live) : les mesures du registre doivent être
+  exactement celles que le Judge (ou l'adoption) a consignées au journal. Vérifié sur les registres
+  réels honnêtes (P3, cycle 1 : identiques) et forgé (différent) ; test ajouté (chaîne recalculée).
+  Limite restante (INFERRED) : un attaquant qui réécrit AUSSI le journal et recalcule ses deux
+  chaînes reste indétectable par les fichiers seuls ; seule la re-mesure du Judge l'arrête. Une
+  signature à clé hors du répertoire serait nécessaire.
+
+**C2.1 Interruption puis reprise** : première tentative INVALIDE (défaut du script d'attaque : le
+déclencheur « pas 700 » lisait la télémétrie de l'expérience P3 copiée, l'arrêt a eu lieu avant le
+début ; la boucle a d'ailleurs refusé proprement l'expérience, « arrêt demandé »). Relancée
+corrigée : résultat en 6.5 bis.
