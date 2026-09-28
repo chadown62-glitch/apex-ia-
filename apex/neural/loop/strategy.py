@@ -397,13 +397,41 @@ class StrategyPolicy:
             # Les domaines entraînés sont déjà dans le mélange : on protège par le REJEU des autres
             # domaines dégradés (s'il n'y en a pas, tous les domaines dégradés).
             replayed = (regressed - trained) or regressed
-            if replayed:
-                current = domain_share(parent.mix, replayed)
+
+            def passes(domain: str, mix: dict[str, float]) -> float:
+                # Fois où le tirage de la recette parcourt les données UNIQUES du domaine.
+                return parent.tokens * domain_share(mix, {domain}) / max(world.domain_tokens(domain), 1)
+
+            # Rejouer davantage un domaine dont les données uniques sont épuisées n'ajoute que de la
+            # répétition (constat P3.5 : `stdlib`, 76 k jetons tirés 32 fois, BPB 2,67 -> 3,44).
+            saturated = sorted(d for d in replayed if passes(d, parent.mix) > self.max_passes)
+            if saturated:
+                base.append(
+                    "ESTABLISHED : données uniques épuisées pour "
+                    + ", ".join(
+                        f"{d} ({world.domain_tokens(d)} jetons, tirés {passes(d, parent.mix):.1f} fois)"
+                        for d in saturated
+                    )
+                    + f" (seuil {self.max_passes}) : augmenter leur part n'ajouterait que de la répétition"
+                )
+            usable = replayed - set(saturated)
+            protected_by_replay = False
+            if usable:
+                current = domain_share(parent.mix, usable)
                 for level in self.protect_levels:
                     if level > current:
-                        mix = raise_share(parent.mix, replayed, level, list(world.spec.domains))
+                        mix = raise_share(parent.mix, usable, level, list(world.spec.domains))
+                        if any(passes(d, mix) > self.max_passes for d in usable):
+                            if not saturated:
+                                saturated = sorted(d for d in usable if passes(d, mix) > self.max_passes)
+                                base.append(
+                                    f"ESTABLISHED : au palier {int(level * 100)} %, {saturated} serait "
+                                    f"tiré plus de {self.max_passes} fois : palier écarté"
+                                )
+                            break
+                        protected_by_replay = True
                         change = (
-                            f"porter la part des domaines dégradés {sorted(replayed)} à "
+                            f"porter la part des domaines dégradés {sorted(usable)} à "
                             f"{int(level * 100)} % du mélange (contrainte de diversité) : {mix}"
                         )
                         out.append(
@@ -420,6 +448,11 @@ class StrategyPolicy:
                                 ],
                             )
                         )
+            if saturated and not protected_by_replay:
+                lower_lr(
+                    "INFERRED : le rejeu ne peut plus protéger ces domaines sans répétition ; "
+                    "pas d'apprentissage plus petit à la place"
+                )
         elif cause in (
             FailureCause.NO_SIGNIFICANT_EFFECT.value,
             FailureCause.NO_CHANGE.value,

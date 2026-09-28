@@ -674,3 +674,48 @@ def test_policy_remembers_which_lever_helped_which_suite_along_the_chain(tmp_pat
     assert fourth.recipe.mix == p3.recipe.mix and fourth.recipe.lr == p3.recipe.lr / 2
     assert any("a déjà réduit l'oubli de ['heldout:apex_docs']" in r for r in fourth.rationale)
     assert p1.experiment_id != p2.experiment_id
+
+
+def test_policy_never_protects_a_domain_by_repeating_its_exhausted_data(tmp_path: Path) -> None:
+    """Constat du cycle 3 réel (P3.5) : la politique a porté `stdlib` (76 k jetons uniques) à 25 %
+    d'un tirage de 9,6 M jetons, soit 32 relectures : BPB `stdlib` 2,67 -> 3,44, rejet du Judge.
+    Protéger un domaine en répétant des données épuisées n'est pas du rejeu."""
+    world = support.world()
+    stdlib = world.domain_tokens("stdlib")
+    encode = world.tokenizer.encode
+    docs = world.train_candidates("stdlib")
+    assert stdlib == sum(len(encode(c.text, add_bos=True, add_eos=True)) for c in docs)
+    obs = _observation(world)
+
+    def second_decision(tokens: int, first_mix: dict[str, float] | None) -> StrategyDecision:
+        journal = ExperimentJournal(tmp_path / f"{tokens}-{bool(first_mix)}.jsonl")
+        policy = StrategyPolicy(finetune_tokens=tokens, max_tokens=4 * tokens, max_steps=400)
+        first = policy.decide(obs, world, journal, exhausted=set())
+        assert first is not None and first.baseline_recipe is not None
+        recipe = replace(first.recipe, mix=first_mix) if first_mix else first.recipe
+        plan = ExperimentPlan(
+            world.fingerprint,
+            {"name": "c", "artifact": obs.champion.artifact},  # type: ignore[union-attr]
+            first.baseline_recipe,
+            recipe,
+            first.hypothesis,
+            Budget(400, 4 * tokens, 60.0),
+        )
+        _record(journal, plan, "protected_regression", regressed=["heldout:stdlib"])
+        decision = policy.decide(obs, world, journal, exhausted=set())
+        assert decision is not None
+        return decision
+
+    # Données suffisantes : le rejeu reste le levier (comportement inchangé).
+    small = second_decision(10_000, None)
+    assert small.strategy == "protect_domains" and small.recipe.mix == {"apex_docs": 0.75, "stdlib": 0.25}
+    # 25 % de 1 M jetons relirait `stdlib` plus de 4 fois : aucun palier de rejeu, pas plus petit.
+    large = 1_000_000
+    assert 0.25 * large / stdlib > 4
+    blocked = second_decision(large, None)
+    assert blocked.strategy == "lower_lr" and blocked.recipe.mix == {"apex_docs": 1.0}
+    assert any("palier écarté" in line for line in blocked.rationale)
+    # Domaine DÉJÀ relu plus de 4 fois par la recette précédente : jamais davantage.
+    saturated = second_decision(large, {"apex_docs": 0.75, "stdlib": 0.25})
+    assert saturated.strategy == "lower_lr" and saturated.recipe.mix == {"apex_docs": 0.75, "stdlib": 0.25}
+    assert any(f"stdlib ({stdlib} jetons" in line for line in saturated.rationale)

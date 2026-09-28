@@ -269,6 +269,7 @@ class World:
                 if self.domain_of(candidate.source_id) is None:
                     raise ValueError(f"source hors de tout domaine déclaré : {candidate.source_id}")
         self.benchmarks = self._benchmarks()
+        self._domain_tokens: dict[str, int] = {}
 
     # -- construction --------------------------------------------------------
 
@@ -460,6 +461,15 @@ class World:
 
     def train_candidates(self, domain: str) -> tuple[TrainingCandidate, ...]:
         return tuple(c for c in self.dataset.splits[Split.TRAIN] if self.domain_of(c.source_id) == domain)
+
+    def domain_tokens(self, domain: str) -> int:
+        """Jetons UNIQUES d'entraînement d'un domaine (split train) : au-delà, un tirage répète."""
+        if domain not in self._domain_tokens:
+            self._domain_tokens[domain] = sum(
+                len(self.tokenizer.encode(c.text, add_bos=True, add_eos=True))
+                for c in self.train_candidates(domain)
+            )
+        return self._domain_tokens[domain]
 
     def token_stream(
         self, mix: dict[str, float], total_tokens: int, *, seed: int

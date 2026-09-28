@@ -290,3 +290,16 @@ Deux goulots observés, deux laboratoires à modèle SPÉCIALISTE neuf (architec
    (IC bas > 0,10) -> interpolation possible, l'échec est une EXTRAPOLATION au-delà de la longueur
    entraînée ; `interp` échoue en 4 alors qu'il réussit 5 -> gabarits par longueur, pas même
    d'interpolation. Profondeur 6 : extrapolation depuis 5.
+
+### 5.6 Cycle 3b — la politique corrigée rejoue sa décision (pré-enregistré avant exécution)
+
+Défaut trouvé par le cycle 3 réel (voir 6.4) : la politique relevait la part d'un domaine dégradé
+sans regarder ses données UNIQUES (`stdlib` : 75 966 jetons ; 25 % de 9,6 M = 32 relectures).
+Correction (même politique, même seuil `max_passes` = 4 appliqué par domaine) : un domaine déjà tiré
+plus de 4 fois n'est jamais relevé ; un palier qui le ferait dépasser est écarté ; si le rejeu ne peut
+plus protéger, pas d'apprentissage divisé par deux. Décision de la politique corrigée sur le journal
+RÉEL du bras R (à blanc, sans entraînement) : `protect_domains`, `reasoning_tasks` 25 %,
+`stdlib` inchangé à 7,5 %, avec le fait consigné. Protocole : `run` depuis une copie du bras R, une
+expérience, échelle 6 000 pas / 9,6 M jetons, Judge et critères inchangés. Prédiction écrite
+d'avance : l'oubli de `program_trace` diminue sans doute encore un peu mais l'acquisition de
+`dependency_order` reste minime ; un REJET reste l'issue la plus probable.
