@@ -157,3 +157,38 @@ def test_api_serves_the_engine_state_and_never_masks_a_broken_chain(
     for path in ("/api/v1/brain", "/api/v1/brain/events"):
         broken = client.get(path).json()
         assert broken["status"] == "unknown" and "intégrité" in broken["detail"]
+
+
+def test_the_loop_is_running_only_while_its_lock_is_held(loop_dir: Path, tmp_path: Path) -> None:
+    """Verrou `flock` RÉEL (comme `LoopController`) : le pid laissé dans `loop.lock` après l'arrêt ne
+    compte pas, un verrou pris sur un AUTRE fichier non plus ; seul le détenteur du verrou compte."""
+    import fcntl
+    import os
+
+    copy = tmp_path / "copy"
+    shutil.copytree(loop_dir, copy)
+    (copy / "loop.lock").write_text(str(os.getpid()))  # pid vivant, verrou libre
+    with (tmp_path / "unrelated.lock").open("w") as other:
+        fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        assert BrainWorkdir(copy).state()["loop"]["state"] == "idle"
+        with (copy / "loop.lock").open("w") as handle:
+            fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            loop = BrainWorkdir(copy).state()["loop"]
+            assert loop["state"] == "running" and loop["pid"] == os.getpid()
+            assert loop["resources"]["status"] == "real" and loop["resources"]["rss_mb"] > 0
+    assert BrainWorkdir(copy).state()["loop"]["state"] == "idle"
+
+
+def test_experiment_summaries_carry_the_judge_measures(loop_dir: Path) -> None:
+    judged = {e["experiment_id"]: e["result"] for e in _journal(loop_dir) if e["event"] == "judged"}
+    for summary in BrainWorkdir(loop_dir).state()["experiments"]:
+        result = judged[summary["experiment_id"]]
+        assert summary["decision"] == result["decision"] or summary["decision"] == "reject"
+        assert summary["forgotten"] == [
+            f["suite"] for f in result.get("forgetting", []) if f["status"] == "forgotten"
+        ]
+        target = next(c for c in result["comparisons"] if c["suite"] == summary["target"])
+        assert (summary["target_before"], summary["target_after"]) == (
+            target["baseline_bpb"],
+            target["candidate_bpb"],
+        )

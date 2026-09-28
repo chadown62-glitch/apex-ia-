@@ -7,6 +7,9 @@ taille de lot, même fenêtre : même nombre de jetons vus) :
 - `explicit`   : chaque étape recopie l'instruction exécutée avant sa valeur (`a=3>3,b=a+4>7,…=4`) :
   la fin de trace et la dépendance à lire sont explicites dans le texte déjà écrit ;
 - `curriculum` : une part des problèmes d'entraînement est de profondeur 4.
+- `interp`     : une part des problèmes d'entraînement est de profondeur 5 (la 4 reste jamais vue) :
+  distingue l'interpolation de longueur (profondeur 4, DANS la plage entraînée) de l'extrapolation
+  (profondeur 6, AU-DELÀ).
 
 Évaluation (mêmes problèmes pour tous les bras) : profondeur 3 = suite held-out protégée du
 benchmark, profondeur 4 = suite `deeper` protégée, profondeur 5 = 200 problèmes neufs (forme
@@ -41,7 +44,7 @@ from apex.neural.model import ApexLM, generate_batch
 from apex.neural.training import TokenBatcher, TrainingEngine
 from apex.stattest import StatTest
 
-ARMS = ("base", "big", "explicit", "curriculum")
+ARMS = ("base", "big", "explicit", "curriculum", "interp")
 _EXPLICIT = re.compile(r"((?:[a-z]=[^,>]+>-?\d+,)*[a-z]=[^,>]+>-?\d+)=(-?\d+)")
 
 
@@ -112,13 +115,21 @@ def main() -> int:
             known.add(p.canonical)
             depth5.append(p)
     evaluated[5] = tuple(depth5)
+    rng6 = random.Random("p4-depth6")  # noqa: S311 - même profondeur 6 pour tous les bras
+    depth6: list[Problem] = []
+    while len(depth6) < 200:
+        p = generate(6, rng6)
+        if p.canonical not in known:
+            known.add(p.canonical)
+            depth6.append(p)
+    evaluated[6] = tuple(depth6)
 
     train = list(bench.pool)
-    if args.arm == "curriculum":
-        drng = random.Random(f"p4-curriculum-{args.seed}")  # noqa: S311
+    if args.arm in ("curriculum", "interp"):
+        drng = random.Random(f"p4-{args.arm}-{args.seed}")  # noqa: S311
         extra: list[Problem] = []
         while len(extra) < len(train) // 4:
-            p = generate(4, drng)
+            p = generate(4 if args.arm == "curriculum" else 5, drng)
             if p.canonical not in known:
                 known.add(p.canonical)
                 extra.append(p)

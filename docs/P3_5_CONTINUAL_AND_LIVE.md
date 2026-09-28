@@ -69,6 +69,52 @@ suite (`code_repair:validation`, 18 fonctions) était déclarée oubliée dans p
 Avant de chercher un autre mécanisme, il faut savoir si ce blocage est un oubli réel ou un artefact
 de mesure (faiblesses 3–5 de l'audit). D'où l'ordre : lignée reconstruite -> A/A -> cycles.
 
+## 4. P3.6 — APEX Live (IMPLEMENTED, TESTED, REAL E2E)
+
+Architecture (aucun second moteur, aucun état simulé) :
+
+```
+boucle (LoopController) ──► journal.jsonl      décisions (chaîne de hachage) — inchangé
+          │               ──► registry.jsonl     versions / champion (chaîne de hachage)
+          └─ execute ─────► runs/<exp>/telemetry.jsonl   travail EN COURS (nouveau)
+                                   │
+apex.neural.live (lecture seule) ◄─┘  + world.json (résumé) + /proc/locks (verrou de boucle)
+          │
+GET /api/v1/brain, /brain/events?after=<seq>   (répertoire fixé côté serveur : APEX_BRAIN_WORKDIR)
+          │
+BrainLivePage (/brain) : usePolling 2 s (état) + useEventStream (journal incrémental)
+```
+
+- **Télémétrie** : `training_started`, `dataset_ready` (jetons tirés, documents), `training_progress`
+  (pas, perte, lr : les points mêmes de la courbe consignée), `training_completed`, `judge_started`,
+  `replication_started` puis la progression de la réplique marquée `run: "replica"`. Émise par le
+  contrôleur existant via UN crochet de `execute` ; n'influe sur aucun calcul.
+- **Pourquoi pas dans le journal** : la reprise après interruption repart du nom du dernier événement
+  du journal ; y écrire la progression casserait la reprise.
+- **Étiquettes** (du journal, le nom d'origine reste visible) : `LOOP_STARTED`, `CYCLE_STARTED`,
+  `STRATEGY_SELECTED` (stratégie + justification ESTABLISHED/INFERRED), `EXPERIMENT_STARTED`,
+  `TRAINING_COMPLETED` / `EXECUTION_FAILED`, `JUDGE_ACCEPT|REJECT|INCONCLUSIVE` (+ régressions : suite,
+  avant, après, IC, tolérance), `CAUSE_ANALYSIS`, `REPLICATION_*`, `NEW_CHAMPION` / `NOT_PROMOTED`,
+  `CHAMPION_ADOPTED`, `ROLLBACK`, `LOOP_STOPPED`.
+- **Honnêteté** : champion affiché ATTESTÉ seulement si le journal justifie sa promotion (sinon la
+  raison) ; boucle « en cours » seulement si un processus DÉTIENT le verrou `flock` (pas le pid
+  resté dans le fichier) ; chaîne de hachage rompue -> `unknown` + « intégrité rompue », jamais
+  masquée ; toute source absente -> `not_available` + raison.
+- **N'existe pas (non simulé)** : phases INTERNES du Judge (rejeu, re-mesure) — seul son début est
+  publié ; pas de canal poussé (WebSocket/SSE) : relecture HTTP toutes les 2 s d'un journal
+  append-only avec curseur ; pas d'état de la sandbox par exécution.
+
+Vérifications :
+- tests (boucle RÉELLE réduite) : état = fichiers du moteur ; événements dans l'ordre du journal
+  (défaut trouvé et corrigé : le curseur par défaut perdait l'événement n° 0) ; télémétrie = courbe
+  réelle consignée ; réplique marquée ; champion non attesté si la promotion manque au journal ;
+  journal falsifié -> API `unknown` ; verrou réel tenu / libre / verrou d'un autre fichier ;
+  2 tests d'interface (jsdom) dont l'état « non disponible » ;
+- **E2E réel** : API (uvicorn) + interface (Vite) + Chromium sur la boucle P2 EN COURS : pid, mémoire
+  (1,1 Go), CPU, expérience courante et sa perte, ACCEPT du Judge avec son IC, chronologie — tout lu
+  dans les fichiers du moteur. L'E2E a révélé un manque : la réplique ne publiait aucune
+  progression (l'écran restait à 400/400) ; corrigé.
+
 ## 5. Expériences PRÉ-ENREGISTRÉES (texte commité avant exécution)
 
 Lignée : les champions P2/P3 perdus sont RECONSTRUITS avec le code actuel (P2 : `init-world
