@@ -408,3 +408,26 @@ Lectures liées : dans la lignée (cycle 1), l'ordre n'était trouvé qu'à 50�
 s'acquérait : même en format explicite, rien ne garantit qu'un affinage DEPUIS le champion y
 parvienne (UNVERIFIED). Réplication à graine indépendante des deux bras : 6.6 bis.
 Temps d'entraînement non comparables entre bras (le bras `base` a partagé le CPU avec des tests).
+
+### 6.7 P4 — profondeur de `program_trace` : interpolation (MEASURED, critère 5.5)
+
+Monde P3 reconstruit, spécialiste neuf, graine 0 ; `interp` = 25 % du réservoir remplacé par des
+problèmes NEUFS de profondeur 5 (la 4 reste jamais vue).
+
+| bras | prof. 3 | prof. 4 (jamais vue, DANS la plage) | prof. 5 | prof. 6 (au-delà) | valeurs écrites en prof. 4 |
+|---|---|---|---|---|---|
+| `base` (1-3) | 0,803 [0,760 ; 0,847] | 0,0 | 0,0 | 0,0 | 4 valeurs : 199/200 |
+| `interp` (1-3 + 5) | 0,847 (+0,043, IC [0,003 ; 0,087]) | **0,0** | **0,435** [0,370 ; 0,505] (entraînée) | 0,0 (6 valeurs : 197/200) | 3 ou 6 valeurs, JAMAIS les 5 attendues |
+
+Lecture pré-enregistrée : `interp` réussit la 5 et échoue en 4 -> **gabarits par longueur, pas
+même d'interpolation** (MEASURED). Le modèle choisit le nombre d'étapes parmi les longueurs vues,
+indépendamment du programme ; au-delà, il réutilise le plus long gabarit. Avec les résultats P4
+précédents (`big` 0,997 en prof. 3 et 0,0 au-delà ; `explicit` et `curriculum` en échec), les
+paramètres, la copie de l'instruction et le curriculum sont écartés pour la longueur. Le goulot est
+la REPRÉSENTATION de la fin de trace (positionnelle, non liée au contenu). Piste suivante à
+pré-enregistrer : fin de trace explicitement dictée par le programme (instructions restantes).
+
+**Synthèse P4 (MEASURED, deux goulots, aucun n'est la taille)** : le modèle apprend des procédures
+LOCALES et POSITIONNELLES. Rendre la dépendance locale dans le texte écrit (`explicit`) débloque
+`dependency_order` (0,11 -> 0,76) ; la longueur, elle, reste un gabarit. Passer à l'échelle
+(paramètres) n'est justifié par aucune de ces mesures.
