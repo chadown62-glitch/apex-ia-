@@ -328,3 +328,10 @@ La règle de sur-apprentissage de la politique (`max_passes`) ne regardait que l
 Expérience 2 (politique d'origine, déjà lancée) : le levier précédent jugé sans effet est annulé,
 puis `code` + `reasoning_tasks` + `stdlib` à 75 % — de nouveau `stdlib` à 25 %. Prédiction écrite
 avant son verdict : nouvel effondrement de `heldout:stdlib`.
+
+**Verdict (`exp-ab8d938c516f`) : REJETÉE ; prédiction CONFIRMÉE** — `heldout:stdlib` 2,672 -> **3,325**
+(IC [−0,691 ; −0,631]), texte 1,863 -> 2,001, `program_trace:heldout` 0,48 -> 0,64 (oubliés) ;
+`dependency_order` : 0,99, aucun gain (NONE) ; `code_repair:transfer` 0,806 -> 0,722 (TRANSFER
+significatif, sans valeur ici puisque le reste est détruit). **Fin du cycle 3 : 2 expériences
+choisies par la boucle, 2 rejets, aucune promotion.** Le défaut de la politique s'est reproduit
+deux fois de suite à l'échelle réelle : c'est lui, pas le hasard, qui produit l'effondrement.
