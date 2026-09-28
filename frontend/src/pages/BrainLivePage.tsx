@@ -132,7 +132,7 @@ function ProtectionsPanel({ protections }: { protections: BrainProtection[] | No
   );
 }
 
-function CurrentPanel({ current }: { current: BrainCurrent | null }) {
+function CurrentPanel({ current, running }: { current: BrainCurrent | null; running: boolean }) {
   if (current === null) {
     return (
       <Panel title="Expérience en cours">
@@ -143,7 +143,13 @@ function CurrentPanel({ current }: { current: BrainCurrent | null }) {
   const progress = current.progress;
   const ratio = progress?.step && progress.of ? progress.step / progress.of : null;
   return (
-    <Panel title={`Expérience en cours : ${current.experiment_id}`}>
+    <Panel title={`${running ? "Expérience en cours" : "Expérience inachevée"} : ${current.experiment_id}`}>
+      {!running && (
+        <p>
+          <span className="brain-tag brain-tag--bad">INTERROMPUE</span> aucun processus ne tient le verrou de la
+          boucle : elle reprendra au prochain lancement, depuis le dernier événement du journal.
+        </p>
+      )}
       <p>
         Étape du journal : <strong>{current.journal_status}</strong> — phase télémétrie :{" "}
         <strong>{current.phase ?? "aucune télémétrie"}</strong>
@@ -266,7 +272,7 @@ export function BrainLivePage() {
       <div className="brain-grid">
         <LoopPanel loop={brain.loop} world={brain.world} />
         <ChampionPanel champion={brain.champion} />
-        <CurrentPanel current={brain.current} />
+        <CurrentPanel current={brain.current} running={brain.loop.status === "real" && brain.loop.state === "running"} />
         <ProtectionsPanel protections={brain.protections} />
       </div>
       <ExperimentsPanel experiments={brain.experiments} />

@@ -114,12 +114,23 @@ describe("BrainLivePage", () => {
     expect(screen.getByText(/pas 100 \/ 400/)).toBeInTheDocument();
     expect(screen.getByText(/aucune version promue : aucune ancre/)).toBeInTheDocument();
     expect(screen.getByText("EN COURS")).toBeInTheDocument();
+    expect(screen.queryByText("INTERROMPUE")).not.toBeInTheDocument();
     expect(screen.getByText("code_repair : GENERALIZATION+TRANSFER")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("JUDGE_REJECT")).toBeInTheDocument());
     expect(screen.getByText(/RÉGRESSION text \/ heldout:stdlib/)).toBeInTheDocument();
     // Le journal numérote à partir de 0 : la première lecture ne doit perdre aucun événement.
     const urls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0]));
     expect(urls.some((u) => u.includes("/brain/events?after=-1"))).toBe(true);
+  });
+
+  it("does not present an unfinished experiment of a stopped loop as running", async () => {
+    const idle = { status: "not_available" as const, reason: "aucune boucle en cours" };
+    const stopped: BrainState = { ...state, loop: { status: "real", state: "idle", pid: null, last_event: null, resources: idle } };
+    mockBackend({ status: "real", data: stopped, detail: null }, { status: "real", data: [], detail: null });
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/Expérience inachevée : exp-2/)).toBeInTheDocument());
+    expect(screen.getByText("INTERROMPUE")).toBeInTheDocument();
+    expect(screen.queryByText("EN COURS")).not.toBeInTheDocument();
   });
 
   it("says the brain is not available instead of showing a simulated state", async () => {
