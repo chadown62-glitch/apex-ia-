@@ -431,3 +431,31 @@ pré-enregistrer : fin de trace explicitement dictée par le programme (instruct
 LOCALES et POSITIONNELLES. Rendre la dépendance locale dans le texte écrit (`explicit`) débloque
 `dependency_order` (0,11 -> 0,76) ; la longueur, elle, reste un gabarit. Passer à l'échelle
 (paramètres) n'est justifié par aucune de ces mesures.
+
+### 6.8 Cycle 3b — politique corrigée, à échelle réelle (JUDGED) + reprise après arrêt brutal
+
+Décision prise par la boucle (politique corrigée, identique au passage à blanc de 5.6) :
+`protect_domains`, `reasoning_tasks` 25 %, `stdlib` NON relevé (fait consigné : 75 966 jetons tirés
+10,1 fois). `exp-0a5e051d5eb1` : **REJETÉE** (prédiction de 5.6 confirmée) :
+
+| suite | champion P3 | 3b (corrigée) | C3a (d'origine) | R (main) |
+|---|---|---|---|---|
+| `dependency_order:heldout` | 1,000 | 0,970 (sign., GENERALIZATION) | 0,990 | 0,980 |
+| `program_trace:heldout` | 0,480 | **0,710 (OUBLIÉ)** | 0,710 | 0,743 |
+| `heldout:stdlib` (BPB) | 2,672 | **2,634 (amélioré)** | 3,439 | 2,690 |
+| texte `heldout` (BPB) | 1,863 | **1,829 (amélioré)** | 2,036 | 1,841 |
+| `code_repair:transfer` | 0,806 | 0,681 (TRANSFER) | 0,826 | 0,806 |
+
+Comparaisons appariées candidat contre candidat : 3b bat C3a sur tout le texte (`stdlib` écart
+[0,768 ; 0,837]) et `code_repair:transfer` ([0,076 ; 0,222]), égal sur `program_trace` ; 3b bat R
+sur le texte (`stdlib` [0,047 ; 0,078], au-delà de l'écart A/A de même recette, n.s.), égal ailleurs.
+**La correction supprime l'effondrement du texte (JUDGED) ; elle ne résout pas l'oubli de
+`program_trace`** (0,48 -> 0,71 dans les trois variantes à 20–25 % de rejeu) : c'est le seul oubli
+restant, et le rejeu à ce niveau ne le traite pas.
+
+**Reprise après arrêt BRUTAL** (le conteneur a été redémarré pendant le rejeu du Judge, pas 4 550 /
+6 000 ; aucun `STOP`) : l'interface a affiché la boucle « À L'ARRÊT » malgré le pid resté dans
+`loop.lock` et l'expérience « INTERROMPUE » (vérifié par l'API et capture) ; `run` a consigné
+`recovered` (depuis `executed`), l'événement `EXPERIMENT_RECOVERED` est apparu en direct, le Judge a
+repris son rejeu depuis son point de reprise et obtenu un checkpoint **identique bit à bit** au
+candidat (`sha256:2b1d330072cc…`). Reprise après interruption : REAL E2E.
