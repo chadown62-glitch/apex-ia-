@@ -190,6 +190,7 @@ def test_experiment_summaries_carry_the_judge_measures(loop_dir: Path) -> None:
         assert summary["forgotten"] == [
             f["suite"] for f in result.get("forgetting", []) if f["status"] == "forgotten"
         ]
+        assert summary["learning"] == {c: v["kinds"] for c, v in result.get("learning", {}).items()}
         target = next(c for c in result["comparisons"] if c["suite"] == summary["target"])
         assert (summary["target_before"], summary["target_after"]) == (
             target["baseline_bpb"],

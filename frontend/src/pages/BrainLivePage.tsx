@@ -180,6 +180,7 @@ function ExperimentsPanel({ experiments }: { experiments: BrainExperiment[] }) {
               <th>avant → après</th>
               <th>Judge</th>
               <th>oubli</th>
+              <th>apprentissage (Judge)</th>
               <th>cause</th>
             </tr>
           </thead>
@@ -197,6 +198,11 @@ function ExperimentsPanel({ experiments }: { experiments: BrainExperiment[] }) {
                   {e.promoted ? " · PROMU" : ""}
                 </td>
                 <td>{e.forgotten.join(", ") || "—"}</td>
+                <td>
+                  {Object.entries(e.learning ?? {})
+                    .map(([cap, kinds]) => `${cap} : ${kinds.join("+")}`)
+                    .join(" · ") || "—"}
+                </td>
                 <td>{e.cause ?? "—"}</td>
               </tr>
             ))}

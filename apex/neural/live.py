@@ -355,6 +355,8 @@ def _experiment_summary(record: ExperimentRecord) -> dict[str, Any]:
         "promoted": record.promoted,
         "cause": (record.analysis or {}).get("cause"),
         "forgotten": [f["suite"] for f in judged.get("forgetting", []) if f["status"] == "forgotten"],
+        # Nature du gain par capacité, établie par le Judge (généralisation, transfert, mémorisation).
+        "learning": {cap: v.get("kinds", []) for cap, v in (judged.get("learning") or {}).items()},
         "reasons": judged.get("reasons", [])[:5],
         "started_at": record.events[0]["at"] if record.events else None,
         "ended_at": record.events[-1]["at"] if record.finished else None,

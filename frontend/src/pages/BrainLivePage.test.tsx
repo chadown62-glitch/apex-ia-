@@ -56,7 +56,27 @@ const state: BrainState = {
     progress: { t: 1, phase: "training_progress", step: 100, of: 400, loss: 3.2109, lr: 0.001 },
     telemetry: [],
   },
-  experiments: [],
+  experiments: [
+    {
+      experiment_id: "exp-1",
+      status: "concluded",
+      finished: true,
+      strategy: "directed",
+      modification: null,
+      target: "cap:code_repair:heldout",
+      target_before: 0.97,
+      target_after: 0.94,
+      target_verdict: "significant",
+      decision: "accept",
+      promoted: true,
+      cause: null,
+      forgotten: [],
+      learning: { code_repair: ["GENERALIZATION", "TRANSFER"] },
+      reasons: [],
+      started_at: null,
+      ended_at: null,
+    },
+  ],
 };
 
 const events: BrainEvent[] = [
@@ -94,6 +114,7 @@ describe("BrainLivePage", () => {
     expect(screen.getByText(/pas 100 \/ 400/)).toBeInTheDocument();
     expect(screen.getByText(/aucune version promue : aucune ancre/)).toBeInTheDocument();
     expect(screen.getByText("EN COURS")).toBeInTheDocument();
+    expect(screen.getByText("code_repair : GENERALIZATION+TRANSFER")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("JUDGE_REJECT")).toBeInTheDocument());
     expect(screen.getByText(/RÉGRESSION text \/ heldout:stdlib/)).toBeInTheDocument();
     // Le journal numérote à partir de 0 : la première lecture ne doit perdre aucun événement.

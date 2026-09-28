@@ -869,6 +869,7 @@ export interface BrainExperiment {
   promoted: boolean;
   cause: string | null;
   forgotten: string[];
+  learning: Record<string, string[]>;
   reasons: string[];
   started_at: string | null;
   ended_at: string | null;
