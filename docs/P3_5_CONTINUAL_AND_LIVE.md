@@ -335,3 +335,32 @@ avant son verdict : nouvel effondrement de `heldout:stdlib`.
 significatif, sans valeur ici puisque le reste est détruit). **Fin du cycle 3 : 2 expériences
 choisies par la boucle, 2 rejets, aucune promotion.** Le défaut de la politique s'est reproduit
 deux fois de suite à l'échelle réelle : c'est lui, pas le hasard, qui produit l'effondrement.
+
+### 6.2 A/A — deux modèles de même recette (MEASURED, JUDGED)
+
+Champion P3, sa recette (`code` 0,45 / `reasoning_tasks` 0,40 / `stdlib` 0,15), 1 500 pas, 2,4 M
+jetons ; graines : celle du monde (A, `exp-8d3086d8d8dc`) et 1 000 003 (B, `exp-810720deb49e`).
+
+| suite | champion | A | B | A contre B (IC 95 %) |
+|---|---|---|---|---|
+| `program_trace:heldout` | 0,480 | **0,403** (gain sign., GENERALIZATION) | **0,507** (n.s.) | **[−0,153 ; −0,057] : différents** |
+| `program_trace:train` | 0,470 | 0,425 | 0,500 | [−0,130 ; −0,025] : différents |
+| `code_repair:train` | 0,765 | 0,762 | 0,718 | [0,003 ; 0,092] : différents |
+| `code_repair:validation` (n = 18) | 0,735 | 0,796 (« oublié ») | 0,735 | n.s. |
+| `heldout:stdlib` (BPB) | 2,672 | 2,708 (« oublié ») | 2,690 (« oublié ») | n.s. |
+| texte `heldout` (BPB) | 1,8632 | 1,8631 (« oublié » : IC par document [−0,007 ; −0,0002]) | 1,8592 | n.s. |
+
+Règle pré-enregistrée (≥ 2 suites significativement différentes entre deux modèles de même recette)
+: **3 suites sur 12 -> l'IC par élément sous-estime la variance d'entraînement (MEASURED).**
+Conséquences, sans aucune modification du Judge (conformément à 5.1) :
+- un gain « significatif » d'un seul entraînement n'est pas fiable : le gain de A sur
+  `program_trace` (0,48 -> 0,40, étiqueté GENERALIZATION) disparaît avec l'autre graine ; la
+  RÉPLIQUE à graine indépendante, déjà exigée avant promotion, est la protection qui compte ;
+- **faux rejets** : les deux continuations de la recette du champion sont REJETÉES pour « oubli »
+  (`heldout:stdlib` +0,017 et +0,036 BPB pour une tolérance de 0,01 ; A aussi pour le texte, alors
+  que la valeur agrégée s'AMÉLIORE de 0,0001, et pour `code_repair:validation` sur 18 éléments). Avec
+  ces règles, depuis ce champion, AUCUN affinage qui n'améliore pas `stdlib` ne peut être promu :
+  l'objectif P3.5 est structurellement bloqué ici, quel que soit le mélange ;
+- ce n'est pas une raison d'affaiblir le Judge après coup. Proposition (à pré-enregistrer à part,
+  NON appliquée) : une tolérance par suite fondée sur l'écart A/A mesuré, et un oubli déclaré
+  seulement s'il se reproduit sur la réplique.
