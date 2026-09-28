@@ -497,7 +497,7 @@ APEX Live 10/10 (1 survivant au premier passage : le curseur par défaut de l'AP
 tué), politique « données épuisées » + télémétrie du rejeu 6/6, attestation des mesures 2/2.
 
 **Hypothèses confirmées** : le Judge refuse « gain + destruction » à chaque fois (5 expériences
-visant `dependency_order` : NR, R, C3 ×2, 3b — 5 rejets, 4 d'entre elles avec un gain significatif
+visant `dependency_order` : NR, R, C3 ×2, 3b — 5 rejets, 3 d'entre elles avec un gain significatif
 sur la cible ; plus les 2 A/A) ; le rejeu réduit l'oubli de `program_trace`
 (0,94 -> 0,71–0,74) ; relever la part d'un domaine épuisé l'effondre (prédit puis vérifié deux
 fois) ; la politique corrigée supprime cet effondrement (JUDGED) ; reprise après arrêt et après arrêt
