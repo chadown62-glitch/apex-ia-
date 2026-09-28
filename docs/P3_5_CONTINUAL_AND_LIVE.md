@@ -168,3 +168,32 @@ reprise après arrêt (petite échelle), journal d'un autre monde. Attaques ajou
   (déjà dans la boucle) ; gain de `dependency_order:heldout` comparé à l'écart A/A entre deux modèles
   de même recette ; gains sur les suites non vues de la capacité (transfert / profondeur) ; aucune
   suite de garde hors tolérance. Un succès qui ne dépasse pas l'écart A/A n'est pas un succès.
+
+## 6. Résultats
+
+### 6.1 Lignée reconstruite (MEASURED, JUDGED)
+
+Mondes et champions perdus avec l'ancien conteneur : reconstruits avec le code actuel. Le benchmark
+se reproduit bit à bit, pas le monde (corpus tiré de la bibliothèque standard de l'hôte) : ce sont
+d'AUTRES modèles, comparés aux mesures documentées.
+
+- **P2** (monde `sha256:872103c5…`, boucle autonome, 5 expériences) : amorçage promu (BPB 3,879 ->
+  3,258) ; `target_only` REJETÉ (oubli de `heldout:stdlib`) ; `protect_domains` non concluant ;
+  `more_steps` REJETÉ (gain significatif sur `code_repair` MAIS oubli de `heldout:stdlib`) ;
+  `more_data` ACCEPTÉ, répliqué, promu (`code_repair:heldout` 0,971 -> 0,942 ; BPB 2,302). Le Judge
+  refuse encore « gain + destruction ». Champion plus faible que le P2 documenté (BPB 2,151,
+  `code_repair:heldout` 0,749).
+- **P3** (monde `sha256:8370944b…`, + `program_trace`, champion P2 adopté, même expérience dirigée
+  de 6 000 pas) : ACCEPTÉ, répliqué, promu.
+
+| suite | champion P2 adopté | candidat (promu) | réplique (graine 1 000 003) | P3 documenté (cand. / répl.) |
+|---|---|---|---|---|
+| `program_trace:heldout` | 1,000 | **0,480** | **0,317** | 0,283 / 0,253 |
+| `program_trace:deeper` (prof. 4) | 1,000 | 1,000 | 1,000 | 1,0 / 1,0 |
+| `code_repair:heldout` | 0,942 | 0,840 (sign.) | 0,827 (sign.) | n.s. / n.s. |
+| texte `heldout` (BPB) | 2,302 | 1,863 | 1,849 | 1,801 / 1,807 |
+
+Reproduit (qualitatif) : la capacité s'acquiert et généralise (GENERALIZATION établie par le Judge),
+aucun oubli, échec total en profondeur 4. Non reproduit : l'ampleur (0,48 contre 0,28) — parent plus
+faible (INFERRED). **Écart entre deux graines d'une même recette : 0,480 contre 0,317** sur la même
+suite de 300 problèmes : la variance d'entraînement est grande devant l'IC par élément (voir 6.2).
