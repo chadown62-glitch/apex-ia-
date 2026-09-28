@@ -416,7 +416,22 @@ Recopier l'instruction avant sa valeur rend la lecture locale et la tâche s'app
 
 Lectures liées : dans la lignée (cycle 1), l'ordre n'était trouvé qu'à 50–60 % et rien ne
 s'acquérait : même en format explicite, rien ne garantit qu'un affinage DEPUIS le champion y
-parvienne (UNVERIFIED). Réplication à graine indépendante des deux bras : 6.6 bis.
+parvienne (UNVERIFIED).
+
+**Réplication (graine 1, mêmes réglages)** :
+
+| bras | graine 0 | graine 1 |
+|---|---|---|
+| `base` | 0,107 [0,073 ; 0,143] (non acquis) | **0,193 [0,153 ; 0,240] (acquis au seuil 0,10)** |
+| `explicit` | 0,763 [0,713 ; 0,807] | 0,583 [0,523 ; 0,637] |
+| écart apparié explicit − base | +0,657 [0,600 ; 0,713] | **+0,390 [0,323 ; 0,453]** |
+| ordre trouvé (base / explicit) | 95 % / 99 % | 94 % / 94 % |
+
+Lecture honnête : l'effet du format explicite est grand, de même sens et significatif dans les deux
+graines (RÉPLIQUÉ) ; la condition stricte « `base` n'acquiert pas » ne se réplique PAS (0,193 avec la
+graine 1). Conclusion révisée : la liaison non locale implicite est le goulot DOMINANT (+0,39 à +0,66
+d'exactitude à modèle, données et budget égaux), pas une impossibilité ; l'ampleur varie fortement
+avec la graine (0,58 à 0,76 pour le même bras), ce qui recoupe la variance mesurée par l'A/A (6.2).
 Temps d'entraînement non comparables entre bras (le bras `base` a partagé le CPU avec des tests).
 
 ### 6.7 P4 — profondeur de `program_trace` : interpolation (MEASURED, critère 5.5)
