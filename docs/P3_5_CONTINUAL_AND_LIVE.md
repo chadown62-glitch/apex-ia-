@@ -270,3 +270,23 @@ Lecture (INFERRED jusqu'à l'A/A) : dans un budget fixe, chaque part de rejeu es
 domaines ; 20 % de traces réduisent l'oubli des traces d'environ 40 % sans l'annuler, et la nouvelle
 capacité n'apprend presque rien dans les deux bras (0,97–0,98) : le goulot principal n'est pas
 l'oubli mais l'ACQUISITION de `dependency_order` à cette échelle.
+
+### 5.5 P4 — chercher le goulot réel (pré-enregistré, avant exécution ; pas de passage à l'échelle)
+
+Deux goulots observés, deux laboratoires à modèle SPÉCIALISTE neuf (architecture du cerveau,
+6 000 pas, lots 32 × 256), critères écrits dans les scripts avant exécution :
+
+1. **`dependency_order` ne s'acquiert pas** (`scripts/p4_order_lab.py`, monde du cycle 1). Détails
+   du Judge sur le bras R : sorties bien formées 100 %, ordre juste 50 %, ordre textuel 1 %, valeurs
+   justes rares (2 % résolus ; la plupart n'ont que l'étape 1). Bras `base` (format standard) et
+   `explicit` (l'instruction exécutée est recopiée avant sa valeur). Acquis si IC 95 % bas de
+   l'exactitude held-out > 0,10. Lecture fixée : `base` acquis -> l'architecture suffit, l'échec du
+   cycle 1 vient de l'entraînement depuis le champion (part, budget, interférence) ; `base` non acquis
+   et `explicit` acquis avec écart apparié excluant 0 -> la liaison non locale implicite est le goulot
+   (représentation / format), pas les paramètres ; aucun des deux -> ni l'un ni l'autre, hypothèse
+   suivante : capacité.
+2. **Profondeur 4 de `program_trace` à 1,0** (`scripts/p4_depth_lab.py`, monde P3 reconstruit) :
+   bras `base` et `interp` (25 % de profondeur 5, la 4 jamais vue). `interp` réussit la profondeur 4
+   (IC bas > 0,10) -> interpolation possible, l'échec est une EXTRAPOLATION au-delà de la longueur
+   entraînée ; `interp` échoue en 4 alors qu'il réussit 5 -> gabarits par longueur, pas même
+   d'interpolation. Profondeur 6 : extrapolation depuis 5.
