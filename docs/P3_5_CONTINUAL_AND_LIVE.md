@@ -496,6 +496,14 @@ vérifié, sources restaurées et vérifiées par empreinte) : 18 mutants valide
 APEX Live 10/10 (1 survivant au premier passage : le curseur par défaut de l'API, test ajouté puis
 tué), politique « données épuisées » + télémétrie du rejeu 6/6, attestation des mesures 2/2.
 
+**Tests complets** (sandbox Linux, CPU ; ne valide pas la machine de l'utilisateur) : backend
+**2 529 réussis, 5 échecs, 175 ignorés** (34 min). Les 4 échecs de `test_runtime_packaging.py`
+échouent À L'IDENTIQUE au commit de départ 56db9bb (worktree isolé : migration Alembic
+`dfd9571d6020` qui cite `apex.metalearner`) — préexistants, hors du périmètre de cette mission,
+non modifiés. `test_learning_orchestrator::TestCancellation` a échoué une fois sous la charge de la
+suite complète ; il passe 3/3 isolé sur HEAD et sur 56db9bb (il dépend d'un `time.sleep(0.05)`) ;
+aucun fichier qu'il couvre n'a été modifié. Frontend : **109/109** (vitest), `tsc` sans erreur.
+
 **Hypothèses confirmées** : le Judge refuse « gain + destruction » à chaque fois (5 expériences
 visant `dependency_order` : NR, R, C3 ×2, 3b — 5 rejets, 3 d'entre elles avec un gain significatif
 sur la cible ; plus les 2 A/A) ; le rejeu réduit l'oubli de `program_trace`
