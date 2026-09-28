@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -158,3 +159,43 @@ class ExperimentJournal:
 
     def loop_events(self, event: str | None = None) -> list[dict[str, Any]]:
         return [e for e in self.entries() if e["kind"] == "loop" and (event is None or e["event"] == event)]
+
+
+def attest(
+    entries: list[dict[str, Any]],
+    journal: ExperimentJournal,
+    entry: dict[str, Any],
+    *,
+    judge_id: str,
+    parent_world: str | None,
+    artifact_exists: Callable[[str], bool],
+) -> str | None:
+    """Une entrée du registre est attestée si elle a été promue PAR CETTE BOUCLE : une expérience
+    du journal, jugée ACCEPT par le Judge indépendant, dont l'artefact exécuté est celui du registre
+    et dont l'événement de promotion pointe sur cette entrée ; ou une adoption consignée du champion
+    du monde parent déclaré. Renvoie le problème, ou None."""
+    origin = entries[int(entry.get("restores", entry["index"]))]
+    if origin.get("kind") == "adoption":
+        adopted = [e for e in journal.loop_events("adopted") if e["registry_index"] == origin["index"]]
+        if not adopted:
+            return f"« {origin['name']} » : adoption absente du journal"
+        event = adopted[-1]
+        if event["parent_world"] != parent_world:
+            return f"« {origin['name']} » : adoptée d'un autre monde que le parent déclaré"
+        if event["artifact"] != origin.get("artifact") or not artifact_exists(str(origin["artifact"])):
+            return f"« {origin['name']} » : l'artefact adopté n'est pas celui du registre"
+        return None
+    exp = origin.get("metadata", {}).get("experiment_id")
+    record = journal.experiments().get(exp) if exp else None
+    if record is None:
+        return f"« {origin['name']} » : aucune expérience du journal ne l'a produite"
+    judged = record.payload("judged") or {}
+    executed = record.payload("executed") or {}
+    promotion = record.payload("promotion") or {}
+    if record.decision != "accept" or judged.get("result", {}).get("judge_id") != judge_id:
+        return f"« {origin['name']} » : pas d'ACCEPT du Judge indépendant au journal"
+    if executed.get("artifact") != origin.get("artifact"):
+        return f"« {origin['name']} » : l'artefact du registre n'est pas celui de l'expérience"
+    if not promotion.get("promoted") or promotion.get("registry_index") != origin["index"]:
+        return f"« {origin['name']} » : l'expérience n'a pas consigné cette promotion"
+    return None

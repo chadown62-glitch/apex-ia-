@@ -9,6 +9,7 @@
  */
 
 import { AgentsPage } from "../pages/AgentsPage";
+import { BrainLivePage } from "../pages/BrainLivePage";
 import { ChatPage } from "../pages/ChatPage";
 import { CodeIntelligencePage } from "../pages/CodeIntelligencePage";
 import { DashboardPage } from "../pages/DashboardPage";
@@ -46,6 +47,7 @@ const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   skills: SkillsPage,
   weaknesses: WeaknessesPage,
   "experiment-lab": ExperimentLabPage,
+  "brain-live": BrainLivePage,
 };
 
 export const SPECIALTIES: Specialty[] = SPECIALTY_DEFINITIONS.map((def) => ({

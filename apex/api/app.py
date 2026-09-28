@@ -84,6 +84,7 @@ from apex.api.routes import (
     agent_templates,
     agents,
     audit,
+    brain,
     capability,
     conversations,
     evals,
@@ -216,6 +217,7 @@ def create_app() -> FastAPI:
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, learning.router, population.router,
         learning_sessions.router, gauntlets.router, learning_feedback.router, capability.router,
+        brain.router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 

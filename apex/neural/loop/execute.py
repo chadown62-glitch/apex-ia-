@@ -26,6 +26,7 @@ from apex.errors import TimeoutExceeded
 from apex.neural.checkpoint import load_checkpoint, save_checkpoint
 from apex.neural.config import OptimizerSpec, SchedulerSpec, TrainingConfig
 from apex.neural.evaluation import EvalReport, evaluate
+from apex.neural.loop import telemetry
 from apex.neural.loop.plan import ExperimentPlan
 from apex.neural.loop.world import PRIMARY, World
 from apex.neural.model import ApexLM
@@ -127,12 +128,17 @@ def execute(
     stop_file: Path | None = None,
     checkpoint_every: int = 50,
     on_step: Callable[[int], None] | None = None,
+    on_event: Callable[..., None] | None = None,
 ) -> ExecutionResult:
+    """`on_event(phase, **champs)` : télémétrie du travail en cours (jeu de données prêt, points de
+    la courbe) ; n'influe sur aucun calcul."""
     started = time.monotonic()
     recipe = plan.recipe
     run_dir.mkdir(parents=True, exist_ok=True)
     resume_path = run_dir / "resume.pt"
     stream, used_ids = world.token_stream(recipe.mix, recipe.tokens, seed=recipe.seed)
+    if on_event is not None:
+        on_event(telemetry.DATASET_READY, tokens=len(stream), documents=len(used_ids), mix=recipe.mix)
     batcher = TokenBatcher(
         stream, window=world.spec.context_length, batch_size=recipe.batch_size, seed=recipe.seed
     )
@@ -182,6 +188,8 @@ def execute(
         result = engine.train_step(batcher)
         if result.step == 1 or result.step % 25 == 0 or result.step == recipe.steps:
             curve.append({"step": result.step, "loss": round(result.loss, 4), "lr": result.lr})
+            if on_event is not None:
+                on_event(telemetry.TRAINING_PROGRESS, of=recipe.steps, **curve[-1])
         if on_step is not None:
             on_step(result.step)
         if result.step % checkpoint_every == 0 and result.step < recipe.steps:

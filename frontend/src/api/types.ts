@@ -791,3 +791,115 @@ export interface DesignPackage {
 export interface DesignSubmitInput {
   request: string;
 }
+
+// -- cerveau natif (GET /brain) : lecture des fichiers du moteur, jamais simulée -----------
+
+export interface NotAvailable {
+  status: "not_available";
+  reason: string;
+}
+
+export interface BrainEvent {
+  seq: number;
+  at: string;
+  kind: "loop" | "experiment";
+  event: string;
+  experiment_id: string | null;
+  label: string;
+  summary: string;
+  target?: string;
+  rationale?: string[];
+  regressions?: { group: string; suite: string; before: number; after: number; gain_ci: [number, number]; tolerance: number }[];
+}
+
+export interface BrainChampion {
+  status: "real";
+  name: string;
+  index: number;
+  kind: string;
+  artifact: string | null;
+  at: string | null;
+  attested: boolean;
+  attestation_problem: string | null;
+  reports: Record<string, number>;
+  metrics: Record<string, string>;
+  versions: number;
+  promotions: number;
+}
+
+export interface BrainProtection {
+  group: string;
+  suites: string[];
+  anchor_index: number;
+  anchor_name: string;
+  anchor_values: Record<string, number>;
+}
+
+export interface BrainTelemetry {
+  t: number;
+  phase: string;
+  step?: number;
+  of?: number;
+  loss?: number;
+  lr?: number;
+  run?: string;
+  [key: string]: unknown;
+}
+
+export interface BrainCurrent {
+  experiment_id: string;
+  journal_status: string;
+  phase: string | null;
+  phase_at: number | null;
+  progress: BrainTelemetry | null;
+  telemetry: BrainTelemetry[];
+}
+
+export interface BrainExperiment {
+  experiment_id: string;
+  status: string;
+  finished: boolean;
+  strategy: string | null;
+  modification: string | null;
+  target: string | null;
+  target_before: number | null;
+  target_after: number | null;
+  target_verdict: string | null;
+  decision: string | null;
+  promoted: boolean;
+  cause: string | null;
+  forgotten: string[];
+  reasons: string[];
+  started_at: string | null;
+  ended_at: string | null;
+}
+
+export interface BrainLoop {
+  status: "real" | "not_available";
+  state?: "running" | "idle";
+  pid?: number | null;
+  reason?: string;
+  last_event: BrainEvent | null;
+  resources?: { status: "real"; rss_mb: number | null; cpu_seconds: number; loadavg: string[] } | NotAvailable;
+}
+
+export interface BrainWorld {
+  status: "real";
+  fingerprint: string;
+  parent: string | null;
+  capabilities: string[];
+  domains: string[];
+  architecture: Record<string, number | null>;
+  train_documents: number;
+}
+
+export interface BrainState {
+  status: "real";
+  workdir: string;
+  world: BrainWorld | NotAvailable;
+  loop: BrainLoop;
+  champion: BrainChampion | NotAvailable;
+  protections: BrainProtection[] | NotAvailable;
+  current: BrainCurrent | null;
+  experiments: BrainExperiment[];
+}

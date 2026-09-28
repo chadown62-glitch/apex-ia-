@@ -6,8 +6,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useEventStream } from "../realtime/useEventStream";
 import { usePolling } from "../realtime/usePolling";
 import {
+  getBrainEvents,
+  getBrainState,
   cancelLearningCycle,
   cancelMission,
   createAgentTeam,
@@ -572,4 +575,16 @@ export function useEvolvePopulation(specialty: string) {
       queryClient.invalidateQueries({ queryKey: ["population", specialty] });
     },
   });
+}
+
+/** Cerveau natif : état relu toutes les 2 s (fichiers du moteur), événements du journal en flux
+ * incrémental. Aucune donnée locale : tout vient de GET /brain et GET /brain/events. */
+export const BRAIN_REFRESH_MS = 2_000;
+
+export function useBrainState() {
+  return usePolling(["brain"], getBrainState, BRAIN_REFRESH_MS);
+}
+
+export function useBrainEvents() {
+  return useEventStream(getBrainEvents, BRAIN_REFRESH_MS);
 }

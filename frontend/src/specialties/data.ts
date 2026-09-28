@@ -226,6 +226,16 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     category: "cognition",
   },
   {
+    id: "brain-live",
+    label: "Cerveau natif (live)",
+    icon: "🧠",
+    description: "État RÉEL du modèle natif : champion attesté, expérience en cours (télémétrie), décisions du Judge, régressions, stratégies — lu dans les fichiers du moteur (GET /brain, GET /brain/events).",
+    path: "/brain",
+    status: "real",
+    devStage: "connected",
+    category: "cognition",
+  },
+  {
     id: "experiment-lab",
     label: "Experiment Lab",
     icon: "🧪",

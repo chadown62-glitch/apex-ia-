@@ -6,6 +6,8 @@
 
 import { fetchEnvelope } from "./client";
 import type {
+  BrainEvent,
+  BrainState,
   Agent,
   AgentExecution,
   AgentTeam,
@@ -339,4 +341,12 @@ export function evolvePopulation(specialty: string): Promise<DataEnvelope<Evolut
   return fetchEnvelope<EvolutionGeneration>(`/population/${encodeURIComponent(specialty)}/evolve`, {
     method: "POST",
   });
+}
+
+export function getBrainState(): Promise<DataEnvelope<BrainState>> {
+  return fetchEnvelope<BrainState>("/brain");
+}
+
+export function getBrainEvents(after: number, limit = 500): Promise<DataEnvelope<BrainEvent[]>> {
+  return fetchEnvelope<BrainEvent[]>(`/brain/events?after=${after}&limit=${limit}`);
 }

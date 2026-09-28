@@ -27,6 +27,7 @@ from typing import Any
 
 from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
 from apex.neural.evaluation import EvalReport, JudgeDecision
+from apex.neural.loop import telemetry
 from apex.neural.loop.execute import (
     StopRequested,
     execute,
@@ -37,7 +38,7 @@ from apex.neural.loop.execute import (
     reports_to_dict,
 )
 from apex.neural.loop.failure import INTEGRITY_CAUSES, analyze_exception, analyze_judgement
-from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord
+from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord, attest
 from apex.neural.loop.judge import JUDGE_ID, IndependentJudge, JudgeResult
 from apex.neural.loop.observe import Observation, observe
 from apex.neural.loop.plan import (
@@ -49,6 +50,7 @@ from apex.neural.loop.plan import (
     Weakness,
 )
 from apex.neural.loop.strategy import DIRECTED, RETRYABLE, StrategyDecision, StrategyPolicy
+from apex.neural.loop.telemetry import Telemetry
 from apex.neural.loop.world import PRIMARY, World
 from apex.neural.protection import Protection, protections
 from apex.neural.registry import ModelRegistry, Proposal
@@ -334,38 +336,15 @@ class LoopController:
         }
 
     def attest(self, entry: dict[str, Any]) -> str | None:
-        """Vérifie que la version en service a été promue PAR CETTE BOUCLE :
-        une expérience du journal, jugée ACCEPT par le Judge indépendant,
-        dont l'artefact exécuté est celui du registre et dont l'événement de
-        promotion pointe sur cette entrée. Renvoie le problème, ou None."""
-        origin = self.registry.entries()[int(entry.get("restores", entry["index"]))]
-        if origin.get("kind") == "adoption":
-            return self._attest_adoption(origin)
-        exp = origin.get("metadata", {}).get("experiment_id")
-        record = self.journal.experiments().get(exp) if exp else None
-        if record is None:
-            return f"« {origin['name']} » : aucune expérience du journal ne l'a produite"
-        judged = record.payload("judged") or {}
-        executed = record.payload("executed") or {}
-        promotion = record.payload("promotion") or {}
-        if record.decision != "accept" or judged.get("result", {}).get("judge_id") != JUDGE_ID:
-            return f"« {origin['name']} » : pas d'ACCEPT du Judge indépendant au journal"
-        if executed.get("artifact") != origin.get("artifact"):
-            return f"« {origin['name']} » : l'artefact du registre n'est pas celui de l'expérience"
-        if not promotion.get("promoted") or promotion.get("registry_index") != origin["index"]:
-            return f"« {origin['name']} » : l'expérience n'a pas consigné cette promotion"
-        return None
-
-    def _attest_adoption(self, origin: dict[str, Any]) -> str | None:
-        adopted = [e for e in self.journal.loop_events("adopted") if e["registry_index"] == origin["index"]]
-        if not adopted:
-            return f"« {origin['name']} » : adoption absente du journal"
-        event = adopted[-1]
-        if event["parent_world"] != self.world.spec.parent:
-            return f"« {origin['name']} » : adoptée d'un autre monde que le parent déclaré"
-        if event["artifact"] != origin.get("artifact") or not self.store.exists(str(origin["artifact"])):
-            return f"« {origin['name']} » : l'artefact adopté n'est pas celui du registre"
-        return None
+        """Vérifie que la version en service a été promue PAR CETTE BOUCLE (voir `attest`)."""
+        return attest(
+            self.registry.entries(),
+            self.journal,
+            entry,
+            judge_id=JUDGE_ID,
+            parent_world=self.world.spec.parent,
+            artifact_exists=self.store.exists,
+        )
 
     def adopt(self, parent_workdir: Path, *, reason: str) -> dict[str, Any]:
         """Monde ENFANT : le champion attesté du parent devient le point de départ, re-mesuré sur
@@ -527,6 +506,14 @@ class LoopController:
         if from_event in ("planned", "started", "interrupted", "recovered"):
             self.journal.experiment(exp, "started", run_dir=str(self._run_dir(exp)))
             progress = {"step": 0}
+            live = Telemetry(self._run_dir(exp))
+            live.emit(
+                telemetry.TRAINING_STARTED,
+                steps=plan.recipe.steps,
+                tokens=plan.recipe.tokens,
+                lr=plan.recipe.lr,
+                mix=plan.recipe.mix,
+            )
             try:
                 result = execute(
                     plan,
@@ -537,6 +524,7 @@ class LoopController:
                     stop_file=self.stop_file,
                     checkpoint_every=self.limits.checkpoint_every,
                     on_step=lambda step: progress.__setitem__("step", step),
+                    on_event=live.emit,
                 )
             except StopRequested as stop:
                 self.journal.experiment(exp, "interrupted", detail=str(stop))
@@ -555,6 +543,7 @@ class LoopController:
                 self.journal.experiment(exp, "aborted", reason=failure.cause.value)
                 self.log(f"[{exp}] échec d'exécution : {failure.cause.value}")
                 return self.journal.experiments()[exp]
+            live.emit(telemetry.TRAINING_COMPLETED, steps=result.steps, duration_s=result.duration_s)
             self.journal.experiment(
                 exp,
                 "executed",
@@ -584,6 +573,7 @@ class LoopController:
                     )
                     return self.journal.experiments()[exp]
                 stored = {n: EvalReport.from_dict(r) for n, r in current["reports"].items()}
+            Telemetry(self._run_dir(exp)).emit(telemetry.JUDGE_STARTED)
             try:
                 verdict = self.judge.judge(
                     candidate_artifact=executed["artifact"],
@@ -662,6 +652,8 @@ class LoopController:
             experiment_id=f"{plan.experiment_id}-replica",
         )
         run_dir = self._run_dir(plan.experiment_id) / "replica"
+        live = Telemetry(self._run_dir(plan.experiment_id))
+        live.emit(telemetry.REPLICATION_STARTED, seed=replica_plan.recipe.seed)
         result = execute(
             replica_plan,
             self.world,
@@ -670,6 +662,7 @@ class LoopController:
             stop=self.stop,
             stop_file=self.stop_file,
             checkpoint_every=self.limits.checkpoint_every,
+            on_event=lambda phase, **fields: live.emit(phase, run="replica", **fields),
         )
         current = self.registry.current()
         stored = (
