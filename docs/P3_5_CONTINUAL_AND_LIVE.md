@@ -138,9 +138,10 @@ les tests adversariaux et mutants existants.
 
 *Écart de procédure (consigné AVANT tout résultat A/A)* : le validateur de plan a refusé la première
 tentative — une recette identique à la référence est « une expérience sans objet » (protection
-voulue, conservée). La référence déclarée est donc 1 400 pas / 2,24 M jetons ; la recette des DEUX
+voulue, conservée) ; la deuxième aussi (pas ET jetons changés : « 2 modifications, attribution
+impossible »). La référence déclarée est donc 1 400 pas / 2,4 M jetons ; la recette des DEUX
 candidats reste exactement celle ci-dessus (1 500 pas, 2,4 M jetons). La mesure A/A (candidat contre
-candidat) n'en dépend pas. Conséquence d'ordre : le cycle 1 s'exécute avant l'A/A.
+candidat) n'en dépend pas. Conséquence d'ordre : cycles 1 et 3 s'exécutent avant l'A/A et C2.
 
 ### 5.2 Cycle 1 — apprendre `dependency_order` en conservant le reste
 
