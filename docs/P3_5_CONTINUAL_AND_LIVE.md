@@ -147,3 +147,23 @@ mélange) :
 significative de l'erreur `dependency_order:heldout`, aucune suite oubliée contre les ancres), sa
 réplique (graine indépendante) aussi, donc PROMU ; NR sert de témoin de l'oubli. Toute autre issue
 est rapportée telle quelle (dont : R apprend mais est refusé pour oubli ; R n'apprend pas).
+
+### 5.3 Cycle 2 — attaques (pré-enregistrées avant tout résultat du cycle 1)
+
+Ce qui est déjà couvert par des tests adversariaux (non refait ici) : capacité oubliée, dérive
+cumulée, capacité rare (dégradation agrégée au-delà de la tolérance sans significativité),
+contamination / fuite du benchmark, métriques falsifiées, promotion sans Judge, champion corrompu,
+reprise après arrêt (petite échelle), journal d'un autre monde. Attaques ajoutées, à ÉCHELLE RÉELLE :
+
+- **C2.1 Interruption puis reprise** : le bras A de l'A/A rejoué dans une copie neuve du monde P3,
+  arrêt (`STOP`) pendant l'entraînement, reprise par `run`. Prédiction : même identifiant
+  d'expérience, candidat identique bit à bit à celui de l'A/A, même décision, mêmes comparaisons.
+  Toute différence = échec.
+- **C2.2 Registre réécrit avec chaîne de hachage recalculée** (attaquant qui connaît le format) :
+  mesures du champion modifiées dans une copie, chaîne recalculée, puis une courte expérience
+  dirigée. Prédiction : la chaîne ne détecte RIEN (pas de clé) ; la re-mesure du champion par le
+  Judge (`baseline_unchanged`) ou l'observation d'intégrité doit refuser. Si rien ne refuse = faille.
+- **C2.3 Réfutation d'un succès du cycle 1** (s'il y en a un) : réplique à graine indépendante
+  (déjà dans la boucle) ; gain de `dependency_order:heldout` comparé à l'écart A/A entre deux modèles
+  de même recette ; gains sur les suites non vues de la capacité (transfert / profondeur) ; aucune
+  suite de garde hors tolérance. Un succès qui ne dépasse pas l'écart A/A n'est pas un succès.
