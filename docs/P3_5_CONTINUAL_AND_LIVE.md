@@ -203,3 +203,20 @@ Reproduit (qualitatif) : la capacité s'acquiert et généralise (GENERALIZATION
 aucun oubli, échec total en profondeur 4. Non reproduit : l'ampleur (0,48 contre 0,28) — parent plus
 faible (INFERRED). **Écart entre deux graines d'une même recette : 0,480 contre 0,317** sur la même
 suite de 300 problèmes : la variance d'entraînement est grande devant l'IC par élément (voir 6.2).
+
+### 5.4 Cycle 3 — amélioration : la boucle choisit (pré-enregistré avant le verdict du bras R)
+
+Constat déjà mesuré (bras NR, 6.3) : REJETÉ pour oubli de `program_trace` ; cause établie
+`protected_regression`, modification impliquée : le mélange. La règle EXISTANTE de la politique
+(`protect_domains`, palier 25 %) proposerait `reasoning_tasks` à 25 % — presque le mélange R écrit à
+la main : la stratégie de la boucle et celle de l'opérateur coïncident (MEASURED sur le code, pas un
+résultat d'expérience).
+
+Protocole : la BOUCLE AUTONOME (`run`, politique inchangée) repart d'une copie du répertoire du bras
+R (journal compris : rejet, cause, promotion éventuelle), échelle de référence 6 000 pas / 9,6 M
+jetons, au plus 2 expériences, 1 cycle. Elle choisit seule faiblesse, stratégie et recette ; rien
+n'est choisi à la main. Variantes comparées : NR, R, choix de la boucle — sur qualité (cible),
+généralisation (classification du Judge), oubli (lignes d'oubli contre les ancres), coût (pas,
+durée), stabilité (réplique) et reproductibilité (rejeu bit à bit). Une variante n'est dite
+meilleure qu'une autre que si l'écart dépasse l'écart A/A de même recette (5.1). Aucun changement
+de règle du Judge.
