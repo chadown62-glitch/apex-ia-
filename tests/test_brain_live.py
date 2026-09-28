@@ -88,12 +88,17 @@ def test_telemetry_reports_the_real_training_curve(loop_dir: Path) -> None:
         phases = [r["phase"] for r in rows]
         assert phases[:2] == [telemetry.TRAINING_STARTED, telemetry.DATASET_READY]
         assert telemetry.TRAINING_COMPLETED in phases and telemetry.JUDGE_STARTED in phases
-        progress = [
-            {k: r[k] for k in ("step", "loss", "lr")}
-            for r in rows
-            if r["phase"] == telemetry.TRAINING_PROGRESS
-        ]
-        assert progress[: len(event["curve"])] == event["curve"]
+
+        def curve(run: str | None, rows: list[dict] = rows) -> list[dict]:
+            return [
+                {k: r[k] for k in ("step", "loss", "lr")}
+                for r in rows
+                if r["phase"] == telemetry.TRAINING_PROGRESS and r.get("run") == run
+            ]
+
+        assert curve(None) == event["curve"]
+        # Le rejeu du Judge publie sa progression, marquée : même recette, donc même courbe.
+        assert curve("replay") == event["curve"]
     # Une promotion exige une réplique : son entraînement publie aussi sa progression, marquée.
     promoted = {
         e["experiment_id"] for e in _journal(loop_dir) if e["event"] == "promotion" and e["promoted"]

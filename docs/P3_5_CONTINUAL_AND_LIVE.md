@@ -100,8 +100,9 @@ BrainLivePage (/brain) : usePolling 2 s (état) + useEventStream (journal incré
   raison) ; boucle « en cours » seulement si un processus DÉTIENT le verrou `flock` (pas le pid
   resté dans le fichier) ; chaîne de hachage rompue -> `unknown` + « intégrité rompue », jamais
   masquée ; toute source absente -> `not_available` + raison.
-- **N'existe pas (non simulé)** : phases INTERNES du Judge (rejeu, re-mesure) — seul son début est
-  publié ; pas de canal poussé (WebSocket/SSE) : relecture HTTP toutes les 2 s d'un journal
+- **Rejeu du Judge** : sa progression est publiée, marquée `run: "replay"` (`replica_replay` pour la
+  réplique) ; le test vérifie qu'elle reproduit la courbe consignée pas à pas.
+- **N'existe pas (non simulé)** : re-mesures internes du Judge (seul son début est publié) ; pas de canal poussé (WebSocket/SSE) : relecture HTTP toutes les 2 s d'un journal
   append-only avec curseur ; pas d'état de la sandbox par exécution.
 
 Vérifications :

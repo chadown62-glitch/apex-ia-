@@ -132,6 +132,12 @@ function ProtectionsPanel({ protections }: { protections: BrainProtection[] | No
   );
 }
 
+const RUN_LABELS: Record<string, string> = {
+  replay: "Rejeu du Judge (provenance du candidat)",
+  replica: "Réplique (graine indépendante)",
+  replica_replay: "Rejeu du Judge sur la réplique",
+};
+
 function CurrentPanel({ current, running }: { current: BrainCurrent | null; running: boolean }) {
   if (current === null) {
     return (
@@ -160,7 +166,7 @@ function CurrentPanel({ current, running }: { current: BrainCurrent | null; runn
             <div className="brain-progress__bar" style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }} />
           </div>
           <p>
-            {progress.run === "replica" ? "Réplique (graine indépendante) — " : ""}pas {progress.step} / {progress.of} — perte{" "}
+            {progress.run ? `${RUN_LABELS[progress.run] ?? progress.run} — ` : ""}pas {progress.step} / {progress.of} — perte{" "}
             {fmt(progress.loss, 4)} — lr {progress.lr?.toExponential(2)}
           </p>
         </>

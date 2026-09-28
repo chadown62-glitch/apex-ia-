@@ -53,7 +53,7 @@ const state: BrainState = {
     journal_status: "started",
     phase: "training_progress",
     phase_at: 1,
-    progress: { t: 1, phase: "training_progress", step: 100, of: 400, loss: 3.2109, lr: 0.001 },
+    progress: { t: 1, phase: "training_progress", step: 100, of: 400, loss: 3.2109, lr: 0.001, run: "replay" },
     telemetry: [],
   },
   experiments: [
@@ -111,7 +111,7 @@ describe("BrainLivePage", () => {
     renderPage();
     await waitFor(() => expect(screen.getByText(/Champion en service : exp-1/)).toBeInTheDocument());
     expect(screen.getByText(/NON ATTESTÉ/)).toBeInTheDocument();
-    expect(screen.getByText(/pas 100 \/ 400/)).toBeInTheDocument();
+    expect(screen.getByText(/Rejeu du Judge \(provenance du candidat\) — pas 100 \/ 400/)).toBeInTheDocument();
     expect(screen.getByText(/aucune version promue : aucune ancre/)).toBeInTheDocument();
     expect(screen.getByText("EN COURS")).toBeInTheDocument();
     expect(screen.queryByText("INTERROMPUE")).not.toBeInTheDocument();

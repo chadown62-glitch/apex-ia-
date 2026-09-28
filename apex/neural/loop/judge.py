@@ -34,6 +34,7 @@ jamais ceux proposés par le plan."""
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -177,9 +178,12 @@ class IndependentJudge:
         stop: threading.Event | None,
         stop_file: Path | None,
         check: Any,
+        on_event: Callable[..., None] | None = None,
     ) -> None:
         try:
-            replayed = execute(plan, self.world, self.store, replay_dir, stop=stop, stop_file=stop_file)
+            replayed = execute(
+                plan, self.world, self.store, replay_dir, stop=stop, stop_file=stop_file, on_event=on_event
+            )
         except StopRequested:
             raise
         except TimeoutExceeded as exc:
@@ -212,11 +216,13 @@ class IndependentJudge:
         stop: threading.Event | None = None,
         stop_file: Path | None = None,
         protections: list[Protection] | None = None,
+        on_event: Callable[..., None] | None = None,
     ) -> JudgeResult:
         """`plan` + `replay_dir` activent le contrôle de provenance par
         rejeu. Un arrêt demandé pendant le rejeu lève `StopRequested` (le
         rejeu reprend depuis son dernier checkpoint au jugement suivant).
-        `protections` : ancres des capacités acquises (registre) ; oubli mesuré contre elles."""
+        `protections` : ancres des capacités acquises (registre) ; oubli mesuré contre elles.
+        `on_event` : télémétrie du rejeu (progression), sans effet sur le jugement."""
         checks: dict[str, dict[str, Any]] = {}
 
         def check(name: str, ok: bool, detail: str, cause: str | None = None) -> bool:
@@ -318,7 +324,7 @@ class IndependentJudge:
                 else "les documents déclarés ne sont pas ceux que la recette tire du split train",
             )
             if replay_dir is not None:
-                self._replay(plan, candidate_artifact, replay_dir, stop, stop_file, check)
+                self._replay(plan, candidate_artifact, replay_dir, stop, stop_file, check, on_event)
 
         # 6. Oubli, contre l'ancre de chaque groupe protégé (re-mesurée si ce n'est pas le champion).
         forgotten_rows: list[dict[str, Any]] = []

@@ -573,7 +573,8 @@ class LoopController:
                     )
                     return self.journal.experiments()[exp]
                 stored = {n: EvalReport.from_dict(r) for n, r in current["reports"].items()}
-            Telemetry(self._run_dir(exp)).emit(telemetry.JUDGE_STARTED)
+            live = Telemetry(self._run_dir(exp))
+            live.emit(telemetry.JUDGE_STARTED)
             try:
                 verdict = self.judge.judge(
                     candidate_artifact=executed["artifact"],
@@ -589,6 +590,7 @@ class LoopController:
                     stop=self.stop,
                     stop_file=self.stop_file,
                     protections=self._protections(),
+                    on_event=lambda phase, **fields: live.emit(phase, run="replay", **fields),
                 )
             except StopRequested as stop:
                 # Rien n'est consigné : l'expérience reste « executed » et sera re-jugée.
@@ -682,6 +684,7 @@ class LoopController:
             stop=self.stop,
             stop_file=self.stop_file,
             protections=self._protections(),
+            on_event=lambda phase, **fields: live.emit(phase, run="replica_replay", **fields),
         )
         return {
             "seed": replica_plan.recipe.seed,
