@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
+import shutil
 from dataclasses import replace
 from pathlib import Path
 
@@ -203,6 +204,19 @@ def test_adopted_champion_is_attested_remeasured_and_trainable(
     entry = ctrl.adopt(parent_dir, reason="test de continuité")
     assert entry["kind"] == "adoption" and entry["artifact"] == parent_champion["artifact"]
     assert ctrl.attest(entry) is None
+    # Mesures de l'adoption réécrites dans une COPIE du registre, chaîne recalculée : non attestée.
+    from apex.neural.registry import GENESIS, _digest
+
+    forged_dir = tmp_path / "forged_child"
+    shutil.copytree(workdir, forged_dir)
+    (forged,) = [json.loads(line) for line in (forged_dir / "registry.jsonl").read_text().splitlines()]
+    forged["reports"]["heldout"]["value"] += 0.5
+    forged["prev"] = GENESIS
+    forged["hash"] = _digest(forged)
+    line = json.dumps(forged, sort_keys=True, ensure_ascii=False)
+    (forged_dir / "registry.jsonl").write_text(line + "\n")
+    tampered = LoopController(forged_dir, child, log=lambda _m: None)
+    assert "adoption" in (tampered.attest(tampered.registry.current()) or "")  # type: ignore[arg-type]
     # Re-mesuré dans le monde enfant ; le benchmark de capacité est le même : valeurs identiques.
     for suite in (suite_name("heldout"), suite_name("transfer")):
         assert entry["reports"][suite]["scores"] == parent_champion["reports"][suite]["scores"]
