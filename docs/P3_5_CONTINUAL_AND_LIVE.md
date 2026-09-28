@@ -384,7 +384,17 @@ PIRE de 0,5 BPB pour qu'un candidat paraisse meilleur) :
 **C2.1 Interruption puis reprise** : première tentative INVALIDE (défaut du script d'attaque : le
 déclencheur « pas 700 » lisait la télémétrie de l'expérience P3 copiée, l'arrêt a eu lieu avant le
 début ; la boucle a d'ailleurs refusé proprement l'expérience, « arrêt demandé »). Relancée
-corrigée : résultat en 6.5 bis.
+corrigée : **RÉUSSIE** (REAL E2E) — `STOP` au pas 707 / 1 500, journal `interrupted` puis
+`recovered`, reprise depuis le pas 707 : checkpoint final **identique bit à bit** à celui de l'A/A
+bras A non interrompu (`sha256:3f4d2227…`), comparaisons, lignes d'oubli et mesures du Judge
+identiques, même décision. Complété par la reprise après arrêt BRUTAL du conteneur (6.8).
+
+Bilan du cycle 2 : protections tenues sur fuite/contamination/métriques/promotion forcée (tests
+existants) et sur reprise, arrêt brutal, registre réécrit (échelle réelle). Défauts trouvés et
+corrigés : attestation aveugle aux mesures du registre (C2.2) ; « données répétées / capacité rare »
+côté POLITIQUE (le Judge refusait, mais la boucle recommençait l'erreur : 6.4, corrigé en 5.6).
+Défaut trouvé NON corrigé (décision : ne pas changer le Judge après coup) : variance
+d'entraînement non modélisée -> faux rejets et gains non reproductibles (6.2).
 
 ### 6.6 P4 — le goulot de `dependency_order` (MEASURED, critère pré-enregistré en 5.5)
 
