@@ -385,3 +385,26 @@ PIRE de 0,5 BPB pour qu'un candidat paraisse meilleur) :
 déclencheur « pas 700 » lisait la télémétrie de l'expérience P3 copiée, l'arrêt a eu lieu avant le
 début ; la boucle a d'ailleurs refusé proprement l'expérience, « arrêt demandé »). Relancée
 corrigée : résultat en 6.5 bis.
+
+### 6.6 P4 — le goulot de `dependency_order` (MEASURED, critère pré-enregistré en 5.5)
+
+Modèle spécialiste neuf (724 864 paramètres, architecture du cerveau), réservoir d'entraînement de
+la capacité seul (30 000 problèmes, 52 passages), 6 000 pas × 32 × 256 ; évaluation sur les 300
+problèmes held-out PROTÉGÉS du monde (jamais entraînés). Graine 0 :
+
+| bras | exact held-out (IC 95 %) | acquis | ordre trouvé | 4 étapes justes |
+|---|---|---|---|---|
+| `base` (`a3,b7,c4=4`) | 0,107 [0,073 ; 0,143] | non | **95 %** | 32 / 300 |
+| `explicit` (`a=3>3,b=a+4>7,…`) | **0,763** [0,713 ; 0,807] | **oui** | 99 % | 229 / 300 |
+
+Écart apparié explicit − base : **+0,657, IC [0,600 ; 0,713]** (229 contre 32 résolus). Critère
+pré-enregistré ATTEINT : **la liaison non locale implicite est le goulot** — pas les paramètres (les
+mêmes), pas les données (les mêmes problèmes), pas l'oubli (modèle neuf), pas la planification
+(l'ordre est trouvé à 95 % même en `base`). Ce qui manque en `base` : calculer une étape dont
+l'instruction est AILLEURS dans le texte mélangé (ex. `a=d-9` avec d = 15 -> le modèle écrit 23).
+Recopier l'instruction avant sa valeur rend la lecture locale et la tâche s'apprend.
+
+Lectures liées : dans la lignée (cycle 1), l'ordre n'était trouvé qu'à 50–60 % et rien ne
+s'acquérait : même en format explicite, rien ne garantit qu'un affinage DEPUIS le champion y
+parvienne (UNVERIFIED). Réplication à graine indépendante des deux bras : 6.6 bis.
+Temps d'entraînement non comparables entre bras (le bras `base` a partagé le CPU avec des tests).
