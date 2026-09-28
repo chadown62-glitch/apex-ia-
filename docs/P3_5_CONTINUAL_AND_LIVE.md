@@ -220,3 +220,52 @@ généralisation (classification du Judge), oubli (lignes d'oubli contre les anc
 durée), stabilité (réplique) et reproductibilité (rejeu bit à bit). Une variante n'est dite
 meilleure qu'une autre que si l'écart dépasse l'écart A/A de même recette (5.1). Aucun changement
 de règle du Judge.
+
+### 6.3 Cycle 1 — apprendre `dependency_order` (monde `sha256:1bb2b62d…`, champion P3 adopté)
+
+Référence : champion P3 adopté, erreur 1,000 sur les trois suites `dependency_order` (n = 300 en
+held-out). Même budget pour les deux bras : 6 000 pas, 9,6 M jetons tirés (24,6 M vus, 2,6 passages),
+≈ 1 470 s d'entraînement ; rejeu du Judge identique bit à bit dans les deux cas (provenance prouvée).
+
+**Bras NR (sans rejeu des traces) — REJETÉ** (JUDGED) :
+
+| suite | champion P3 | NR | IC 95 % du gain | statut |
+|---|---|---|---|---|
+| `dependency_order:heldout` (cible) | 1,000 | 0,970 | [0,013 ; 0,050] | gain significatif mais minime |
+| `program_trace:heldout` | 0,480 | **0,943** | [−0,523 ; −0,403] | **OUBLIÉ** (ancre #0) |
+| `program_trace:validation` / `train` | 0,525 / 0,470 | 0,945 / 0,950 | exclut 0 | OUBLIÉS |
+| `code_repair:heldout` | 0,840 | 0,794 | [−0,082 ; 0,185] | bruit |
+| `code_repair:train` | 0,765 | **0,003** | [0,676 ; 0,848] | MEMORIZATION (Judge) : solutions vues, rien en held-out |
+| texte `heldout` (BPB) | 1,863 | 1,790 | [0,070 ; 0,082] | amélioré |
+
+Analyse de cause (moteur) : `protected_regression`, attribution `single_modification` (le mélange).
+Décision correcte du Judge : gain réel sur la cible + destruction d'une capacité = REJET.
+
+**Bras R (20 % de rejeu des traces) — REJETÉ** (JUDGED) :
+
+| suite | champion P3 | R | statut contre l'ancre |
+|---|---|---|---|
+| `dependency_order:heldout` (cible) | 1,000 | 0,980 | gain significatif, minime (IC [0,007 ; 0,037]) |
+| `program_trace:heldout` | 0,480 | **0,743** | **OUBLIÉ** (IC [−0,333 ; −0,193]) |
+| `heldout:stdlib` (BPB) | 2,672 | 2,690 | **OUBLIÉ** (IC [−0,043 ; −0,008], tolérance 0,01) |
+| `code_repair:train` | 0,765 | 0,003 | MEMORIZATION |
+| texte `heldout` (BPB) | 1,863 | 1,841 | amélioré |
+
+**Critère de succès P3.5 (5.2) : NON ATTEINT.** R est refusé ; aucune promotion ; le champion P3
+reste en service. Rien n'a été ajusté pour obtenir un autre verdict.
+
+Comparaison appariée NR contre R, candidat contre candidat (mesures par élément consignées par le
+Judge, aucune re-mesure) — le rejeu est un COMPROMIS, pas un gain gratuit :
+
+| suite | NR | R | IC 95 % (NR − R) |
+|---|---|---|---|
+| `program_trace:heldout` | 0,943 | 0,743 | [0,153 ; 0,250] : R protège |
+| `heldout:stdlib` (BPB) | 2,528 | 2,690 | [−0,181 ; −0,153] : R coûte |
+| texte `heldout` (BPB) | 1,790 | 1,841 | [−0,066 ; −0,053] : R coûte |
+| `code_repair:validation` / `transfer` | 0,543 / 0,743 | 0,611 / 0,806 | significatif : R coûte |
+| `dependency_order:heldout` | 0,970 | 0,980 | [−0,03 ; 0,01] : indistinguable |
+
+Lecture (INFERRED jusqu'à l'A/A) : dans un budget fixe, chaque part de rejeu est prise aux autres
+domaines ; 20 % de traces réduisent l'oubli des traces d'environ 40 % sans l'annuler, et la nouvelle
+capacité n'apprend presque rien dans les deux bras (0,97–0,98) : le goulot principal n'est pas
+l'oubli mais l'ACQUISITION de `dependency_order` à cette échelle.
