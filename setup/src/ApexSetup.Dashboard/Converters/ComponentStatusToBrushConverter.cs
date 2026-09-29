@@ -5,20 +5,37 @@ using Avalonia.Media;
 
 namespace ApexSetup.Dashboard.Converters;
 
-/// <summary>Couleur du point d'état — purement présentationnel, ne participe à aucune décision (voir <see cref="ComponentStatus"/> pour le vocabulaire réel).</summary>
+/// <summary>Couleur du point d'état — purement présentationnel, ne participe à aucune décision.</summary>
 public sealed class ComponentStatusToBrushConverter : IValueConverter
 {
     public static readonly ComponentStatusToBrushConverter Instance = new();
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
     {
-        ComponentStatus.Running => Brushes.LimeGreen,
-        ComponentStatus.Starting => Brushes.Orange,
-        ComponentStatus.Stopped => Brushes.Gray,
+        ComponentStatus.Ready => Brushes.LimeGreen,
+        ComponentStatus.Starting => Brushes.DeepSkyBlue,
+        ComponentStatus.Degraded => Brushes.Orange,
+        ComponentStatus.Offline => Brushes.Gray,
         ComponentStatus.Error => Brushes.Crimson,
-        ComponentStatus.NotInstalled => Brushes.DimGray,
-        ComponentStatus.Unavailable => Brushes.SlateGray,
         _ => Brushes.Goldenrod,
+    };
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
+/// <summary>Couleur du verdict global (nul = aucune mesure encore : neutre, jamais vert).</summary>
+public sealed class VerdictToBrushConverter : IValueConverter
+{
+    public static readonly VerdictToBrushConverter Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value switch
+    {
+        PanelVerdict.Ready => Brushes.LimeGreen,
+        PanelVerdict.Degraded => Brushes.Orange,
+        PanelVerdict.VersionMismatch => Brushes.MediumOrchid,
+        PanelVerdict.NotReady => Brushes.Crimson,
+        _ => Brushes.Gray,
     };
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>

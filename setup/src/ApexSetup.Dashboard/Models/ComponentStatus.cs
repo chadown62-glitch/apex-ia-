@@ -1,35 +1,27 @@
 namespace ApexSetup.Dashboard.Models;
 
 /// <summary>
-/// Vocabulaire EXACT exigé par la mission (§4) pour le tableau « System
-/// Status » — sept valeurs, jamais une huitième inventée ni une valeur
-/// devinée. <see cref="Running"/> n'est JAMAIS attribué simplement parce
-/// qu'une commande de démarrage a été envoyée : chaque valeur ici est
-/// dérivée d'une mesure réelle (un check <c>apex doctor</c>/<c>apex
-/// gate</c> déjà exécuté, ou une requête HTTP réellement effectuée) —
-/// voir <see cref="Services.IRuntimeStatusService"/>/<see cref="Services.IApiHealthChecker"/>,
-/// jamais une supposition optimiste après l'envoi d'une commande.
+/// Vocabulaire EXACT du Panel — six valeurs, jamais une septième. <see cref="Ready"/> n'est attribué
+/// que sur une mesure réelle positive (une réponse HTTP authentifiée du backend, ou l'état qu'IL a
+/// mesuré pour un service) — jamais sur une configuration, un fichier présent ou un processus lancé.
 /// </summary>
 public enum ComponentStatus
 {
-    /// <summary>Mesure réelle confirmant un fonctionnement correct.</summary>
-    Running,
+    /// <summary>Mesure réelle positive.</summary>
+    Ready,
 
-    /// <summary>Une action de démarrage est en cours ; aucune confirmation réelle de disponibilité encore obtenue.</summary>
+    /// <summary>Démarrage observé (enregistrement de découverte récent, processus vivant) mais pas encore de réponse.</summary>
     Starting,
 
-    /// <summary>Mesure réelle confirmant l'arrêt (ex. conteneur absent, port fermé).</summary>
-    Stopped,
+    /// <summary>Mesure réelle d'absence : arrêté, non démarré, connexion refusée, non configuré.</summary>
+    Offline,
 
-    /// <summary>Mesure réelle d'un échec (ex. check Doctor en FAIL, HTTP 500, connexion refusée).</summary>
+    /// <summary>Répond, mais incomplet (ex. Ollama sans modèle, backend qui renvoie une erreur).</summary>
+    Degraded,
+
+    /// <summary>Répond mal, ou mesure impossible pour une raison anormale (jeton refusé, délai dépassé, autre programme sur le port).</summary>
     Error,
 
-    /// <summary>Le composant n'est pas installé sur cette machine (ex. Docker absent du PATH).</summary>
-    NotInstalled,
-
-    /// <summary>Le composant est installé mais ne peut pas être mesuré dans les conditions actuelles (ex. GPU absent — n'est jamais une erreur en soi sur une machine CPU-only).</summary>
-    Unavailable,
-
-    /// <summary>Aucune mesure n'a encore pu être obtenue (ex. Runtime injoignable) — jamais interprété comme un état positif ou négatif par défaut.</summary>
+    /// <summary>Non mesuré (ex. le backend est injoignable : les services derrière lui ne sont pas mesurables d'ici).</summary>
     Unknown,
 }

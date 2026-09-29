@@ -12,6 +12,7 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\apex.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,14 +31,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Même frontière que ApexSetup.Gui/ApexSetup.Launcher : jamais de
-         référence à ApexSetup.Core directement (voir setup/docs/
-         LAUNCHER_ARCHITECTURE.md, « Frontière — réutilisation, jamais de
-         duplication »). Le détail Doctor/Gate nécessaire au tableau de
-         statut par composant passe par les deux méthodes ajoutées à
-         ISetupApplicationService (GetDoctorDetailAsync/GetGateDetailAsync)
-         plutôt que de contourner cette frontière. -->
-    <ProjectReference Include="..\ApexSetup.Application\ApexSetup.Application.csproj" />
+    <!-- Icône réelle d'APEX : exécutable (et donc raccourci Bureau), fenêtre, installateur.
+         Source : packaging/branding/apex.svg -> make_icon.sh. -->
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="ApexSetup.Dashboard.Tests" />
   </ItemGroup>
 
 </Project>

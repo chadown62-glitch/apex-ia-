@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from apex.api import discovery
+from apex import discovery
 from apex.obs import component_checks as cc
 from tests.api_test_support import TEST_API_TOKEN, authed_client
 
@@ -240,4 +240,43 @@ def test_serve_publishes_discovery_while_serving_and_removes_it_after(
         and record["port"] == 8765
         and record["project_root"] == str(tmp_path.resolve())
     )
+    assert not discovery.discovery_path().exists()
+
+
+def test_serving_keeps_the_start_time_of_its_own_starting_announcement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv(discovery.DISCOVERY_DIR_ENV, str(tmp_path))
+    assert discovery.main(["starting", "--pid", str(os.getpid()), "--port", "8000"]) == 0
+    started = json.loads(discovery.discovery_path().read_text(encoding="utf-8"))
+    assert started["phase"] == "starting"
+
+    discovery.write_discovery("127.0.0.1", 8000, tmp_path, phase="serving")
+    serving = json.loads(discovery.discovery_path().read_text(encoding="utf-8"))
+    assert serving["phase"] == "serving" and serving["started_at"] == started["started_at"]
+
+    # Un autre pid ne réutilise jamais l'heure d'un démarrage qui n'est pas le sien.
+    discovery.main(["starting", "--pid", "1", "--port", "8000"])
+    discovery.write_discovery("127.0.0.1", 8000, tmp_path, phase="serving")
+    assert json.loads(discovery.discovery_path().read_text(encoding="utf-8"))["pid"] == os.getpid()
+    with pytest.raises(ValueError):
+        discovery.record("127.0.0.1", 8000, tmp_path, phase="autre")
+
+
+def test_a_gate_refusal_withdraws_the_starting_announcement(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import types
+
+    from apex.cli.main import main
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(discovery.DISCOVERY_DIR_ENV, str(tmp_path / "runtime"))
+    discovery.write_discovery(
+        "127.0.0.1", 8000, tmp_path, phase="starting"
+    )  # annonce de launch.sh (même pid)
+    refused = types.SimpleNamespace(phase_2_authorized=False, write=lambda _path: None)
+    monkeypatch.setattr("apex.gate.runner.run_gate", lambda **_k: refused)
+
+    assert main(["serve"]) == 1
     assert not discovery.discovery_path().exists()

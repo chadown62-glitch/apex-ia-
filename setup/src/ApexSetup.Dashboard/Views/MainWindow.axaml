@@ -6,35 +6,41 @@
         x:Class="ApexSetup.Dashboard.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="APEX"
-        Width="900" Height="680" MinWidth="720" MinHeight="560">
+        Icon="/Assets/apex.ico"
+        Width="920" Height="720" MinWidth="720" MinHeight="560">
 
     <Panel>
-        <!-- Tableau de bord principal -->
         <DockPanel Margin="20">
-            <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,16">
-                <TextBlock Text="APEX" FontSize="28" FontWeight="Bold" />
-                <TextBlock Text="{Binding StatusHeadline}" FontSize="13" Opacity="0.75" />
-            </StackPanel>
+            <!-- Verdict global : jamais vert sans mesure (nul = gris). -->
+            <Border DockPanel.Dock="Top" CornerRadius="6" Padding="14" Margin="0,0,0,12"
+                    BorderThickness="2" BorderBrush="{Binding Verdict, Converter={x:Static conv:VerdictToBrushConverter.Instance}}">
+                <StackPanel Spacing="6">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding PanelVersion}" Opacity="0.6" VerticalAlignment="Center" />
+                        <TextBlock Name="HeadlineText" Text="{Binding Headline}" FontSize="26" FontWeight="Bold"
+                                   Foreground="{Binding Verdict, Converter={x:Static conv:VerdictToBrushConverter.Instance}}" />
+                    </DockPanel>
+                    <TextBlock Name="GuidanceText" Text="{Binding Guidance}" TextWrapping="Wrap" FontSize="14" />
+                </StackPanel>
+            </Border>
 
-            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,16">
-                <!-- IsEnabled lié à IsBusy (partagé par les 4 commandes), jamais au IsRunning individuel de chaque commande —
-                     voir MainWindowViewModel : deux opérations de cycle de vie incompatibles (ex. Lancer + Arrêter) ne
-                     doivent jamais pouvoir s'exécuter en parallèle (mission §3). -->
-                <Button Content="LANCER APEX" Command="{Binding LaunchCommand}" IsEnabled="{Binding !IsBusy}" />
-                <Button Content="ARRÊTER APEX" Command="{Binding StopCommand}" IsEnabled="{Binding !IsBusy}" />
-                <Button Content="REDÉMARRER" Command="{Binding RestartCommand}" IsEnabled="{Binding !IsBusy}" />
-                <Button Content="RÉPARER" Command="{Binding RepairCommand}" IsEnabled="{Binding !IsBusy}" />
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
                 <Button Content="Rafraîchir" Command="{Binding RefreshCommand}" />
-                <Button Content="Paramètres" Command="{Binding OpenSettingsCommand}" HorizontalAlignment="Right" />
+                <Button Content="Diagnostic" Command="{Binding ShowDiagnosticCommand}" />
+                <Button Content="Paramètres" Command="{Binding OpenSettingsCommand}" />
+                <TextBlock VerticalAlignment="Center" Opacity="0.7">
+                    <Run Text="Dernière vérification : " /><Run Text="{Binding LastChecked}" />
+                    <Run Text=" · mise à jour automatique toutes les 5 s" />
+                </TextBlock>
             </StackPanel>
 
-            <Border DockPanel.Dock="Bottom" BorderThickness="1" BorderBrush="Gray" CornerRadius="4" Height="220" Margin="0,16,0,0">
+            <Border DockPanel.Dock="Bottom" BorderThickness="1" BorderBrush="Gray" CornerRadius="4" Height="170" Margin="0,12,0,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Text="Journal" FontWeight="Bold" Margin="8,4" />
                     <ListBox ItemsSource="{Binding LogLines}" Background="Transparent" BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Formatted}" FontFamily="Consolas,Monospace" FontSize="12" />
+                                <TextBlock Text="{Binding Formatted}" FontFamily="Consolas,Monospace" FontSize="12" TextWrapping="Wrap" />
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -43,16 +49,16 @@
 
             <Border BorderThickness="1" BorderBrush="Gray" CornerRadius="4" Padding="12">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="System Status" FontWeight="Bold" Margin="0,0,0,8" />
-                    <ItemsControl ItemsSource="{Binding ComponentStates}">
+                    <TextBlock DockPanel.Dock="Top" Text="État des composants" FontWeight="Bold" Margin="0,0,0,8" />
+                    <ItemsControl Name="ComponentList" ItemsSource="{Binding Components}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="models:ComponentState">
-                                <Grid ColumnDefinitions="16,140,90,*" Margin="0,4">
+                                <Grid ColumnDefinitions="16,110,100,*" Margin="0,5">
                                     <Ellipse Grid.Column="0" Width="12" Height="12"
                                              Fill="{Binding Status, Converter={x:Static conv:ComponentStatusToBrushConverter.Instance}}" />
                                     <TextBlock Grid.Column="1" Text="{Binding Label}" FontWeight="SemiBold" />
                                     <TextBlock Grid.Column="2" Text="{Binding Status, Converter={x:Static conv:ComponentStatusToLabelConverter.Instance}}" />
-                                    <TextBlock Grid.Column="3" Text="{Binding Detail}" Opacity="0.7" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Grid.Column="3" Text="{Binding Detail}" Opacity="0.75" TextWrapping="Wrap" />
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -61,39 +67,34 @@
             </Border>
         </DockPanel>
 
-        <!-- Paramètres (recouvre le tableau de bord quand ouvert) -->
+        <!-- Diagnostic (texte réel de la dernière mesure, sans secret) -->
+        <Border IsVisible="{Binding IsDiagnosticVisible}" Background="#DD1E1E1E">
+            <Border Margin="40" Background="#FF2A2A2A" CornerRadius="6" Padding="16">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Diagnostic" FontSize="18" FontWeight="Bold" Margin="0,0,0,8" />
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+                        <Button Content="Copier le diagnostic" Command="{Binding CopyDiagnosticCommand}" />
+                        <Button Content="Fermer" Command="{Binding HideDiagnosticCommand}" />
+                        <TextBlock Text="{Binding CopyMessage}" VerticalAlignment="Center" Opacity="0.8" />
+                    </StackPanel>
+                    <TextBox Name="DiagnosticBox" Text="{Binding DiagnosticText}" IsReadOnly="True" TextWrapping="Wrap"
+                             FontFamily="Consolas,Monospace" FontSize="12" AcceptsReturn="True" />
+                </DockPanel>
+            </Border>
+        </Border>
+
+        <!-- Paramètres (facultatifs : tout est découvert automatiquement) -->
         <Border IsVisible="{Binding IsSettingsVisible}" Background="#DD1E1E1E">
-            <Border Width="480" Background="#FF2A2A2A" CornerRadius="6" Padding="20"
+            <Border Width="520" Background="#FF2A2A2A" CornerRadius="6" Padding="20"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     x:DataType="vm:SettingsViewModel" DataContext="{Binding Settings}">
                 <StackPanel Spacing="10">
                     <TextBlock Text="Paramètres" FontSize="18" FontWeight="Bold" />
-
-                    <TextBlock Text="Distribution WSL (vide = par défaut)" FontSize="11" Opacity="0.7" />
-                    <TextBox Text="{Binding WslDistro}" />
-
-                    <TextBlock Text="Chemin du projet APEX (WSL)" FontSize="11" Opacity="0.7" />
-                    <TextBox Text="{Binding ProjectPathWsl}" Watermark="{Binding SuggestedProjectPathWsl}" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Utiliser la suggestion" Command="{Binding UseSuggestedPathCommand}" />
-                        <Button Content="Vérifier" Command="{Binding VerifyPathCommand}" />
-                    </StackPanel>
-                    <TextBlock Text="{Binding VerificationMessage}" TextWrapping="Wrap" FontSize="12" />
-
-                    <TextBlock Text="Hôte / port API" FontSize="11" Opacity="0.7" />
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <TextBox Text="{Binding ApiHost}" Width="200" />
-                        <NumericUpDown Value="{Binding ApiPort}" Minimum="1" Maximum="65535" Width="140" FormatString="0" />
-                    </StackPanel>
-
-                    <TextBlock Text="Port Web Panel" FontSize="11" Opacity="0.7" />
-                    <NumericUpDown Value="{Binding WebPanelPort}" Minimum="1" Maximum="65535" Width="140" FormatString="0" />
-
-                    <TextBlock Text="URL Ollama" FontSize="11" Opacity="0.7" />
-                    <TextBox Text="{Binding OllamaUrl}" />
-
-                    <CheckBox Content="Lancer APEX au démarrage de Windows" IsChecked="{Binding LaunchOnWindowsStartup}" />
-
+                    <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
+                               Text="Rien n'est à configurer en temps normal : le Panel trouve lui-même le backend démarré par launch.sh (port, dossier du projet, jeton). Il ne démarre jamais WSL ni le backend." />
+                    <TextBlock Text="Distribution WSL (vide = distribution par défaut)" FontSize="11" Opacity="0.7" />
+                    <TextBox Text="{Binding WslDistro}" Watermark="par défaut" />
+                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12" />
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
                         <Button Content="Enregistrer" Command="{Binding SaveCommand}" />
                         <Button Content="Fermer" Command="{Binding CloseCommand}" />

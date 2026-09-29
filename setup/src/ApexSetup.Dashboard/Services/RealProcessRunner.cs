@@ -66,25 +66,6 @@ public sealed class RealProcessRunner : IProcessRunner
         };
     }
 
-    public ITrackedProcess? Start(string executable, IReadOnlyList<string> arguments)
-    {
-        var process = BuildProcess(executable, arguments, redirect: false);
-        try
-        {
-            if (!process.Start())
-            {
-                process.Dispose();
-                return null;
-            }
-        }
-        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
-        {
-            process.Dispose();
-            return null;
-        }
-        return new RealTrackedProcess(process);
-    }
-
     private static Process BuildProcess(string executable, IReadOnlyList<string> arguments, bool redirect)
     {
         var startInfo = new ProcessStartInfo
@@ -95,6 +76,14 @@ public sealed class RealProcessRunner : IProcessRunner
             RedirectStandardError = redirect,
             CreateNoWindow = true,
         };
+        if (redirect)
+        {
+            // Jamais la page de code de la console (indéfinie pour une application graphique Windows) :
+            // un chemin WSL non ASCII (ex. /home/josé) doit arriver intact. La sortie UTF-16 de
+            // `wsl.exe -l -v` reste lisible par WslStatusParser (octets nuls retirés).
+            startInfo.StandardOutputEncoding = Encoding.UTF8;
+            startInfo.StandardErrorEncoding = Encoding.UTF8;
+        }
         foreach (var arg in arguments)
         {
             startInfo.ArgumentList.Add(arg);
@@ -114,35 +103,6 @@ public sealed class RealProcessRunner : IProcessRunner
         catch (InvalidOperationException)
         {
             // Déjà sorti entre le test et l'appel — pas une erreur.
-        }
-    }
-
-    private sealed class RealTrackedProcess(Process process) : ITrackedProcess
-    {
-        public bool HasExited => process.HasExited;
-        public int? ExitCode => process.HasExited ? process.ExitCode : null;
-
-        public void Kill()
-        {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-            }
-            catch (InvalidOperationException)
-            {
-            }
-        }
-
-        public Task WaitForExitAsync(CancellationToken cancellationToken = default) =>
-            process.WaitForExitAsync(cancellationToken);
-
-        public ValueTask DisposeAsync()
-        {
-            process.Dispose();
-            return ValueTask.CompletedTask;
         }
     }
 }

@@ -611,6 +611,47 @@ run_gate() {
     return "${status}"
 }
 
+# -- Annonce au Panel APEX (sous-commande `serve` seulement) -----------------
+#
+# Le Panel Windows (`APEX.exe`) lit `~/.apex/runtime/backend.json` pour savoir qu'un backend
+# démarre, sur quel port, et où se trouve le jeton (jamais le jeton lui-même). `serve` l'écrit en
+# phase `starting` dès que Python est trouvé — AVANT compose/doctor/gate, les étapes longues — sinon
+# le Panel dirait « non démarré » pendant tout le préflight. Le format a UN seul écrivain
+# (`python -m apex.discovery`, jamais recopié ici). Meilleur effort : un échec n'arrête jamais le
+# lancement. Retiré si le préflight échoue (trap EXIT) ; après `exec`, `apex serve` (même pid) le
+# réécrit en phase `serving` et le retire à l'arrêt.
+ANNOUNCE_STARTING=0
+SERVE_HOST="127.0.0.1"
+SERVE_PORT="8000"
+
+# Mêmes défauts qu'`apex serve` ; seules --host/--port sont lues, le reste est ignoré ici.
+parse_serve_address() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --port) SERVE_PORT="${2:-${SERVE_PORT}}"; shift 2 || shift ;;
+            --port=*) SERVE_PORT="${1#--port=}"; shift ;;
+            --host) SERVE_HOST="${2:-${SERVE_HOST}}"; shift 2 || shift ;;
+            --host=*) SERVE_HOST="${1#--host=}"; shift ;;
+            *) shift ;;
+        esac
+    done
+}
+
+announce_starting() {
+    [[ "${ANNOUNCE_STARTING}" == "1" ]] || return 0
+    if (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery starting \
+            --pid "$$" --host "${SERVE_HOST}" --port "${SERVE_PORT}") >/dev/null 2>&1; then
+        trap withdraw_starting EXIT
+        log_info "démarrage annoncé au Panel APEX (~/.apex/runtime/backend.json)."
+    else
+        log_warn "annonce du démarrage au Panel impossible — il indiquera « non démarré » jusqu'à l'écoute de l'API."
+    fi
+}
+
+withdraw_starting() {
+    (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery remove --pid "$$") >/dev/null 2>&1 || true
+}
+
 # -- Préflight environnement --------------------------------------------------
 #
 # Factorisé hors de `main` (N+15) pour être réutilisé identiquement par
@@ -636,6 +677,7 @@ run_preflight() {
         exit "${EXIT_PYTHON_MISSING}"
     fi
     log_info "interpréteur retenu : ${PYTHON_BIN}"
+    announce_starting
 
     if ! compose_up "${PROJECT_ROOT}"; then
         exit "${EXIT_DOCKER_FAIL}"
@@ -671,9 +713,12 @@ main() {
 # `wsl.exe -- bash apex-launch.sh serve` attend ainsi la fin réelle
 # d'`apex serve`, pas seulement celle du préflight.
 cmd_serve() {
+    ANNOUNCE_STARTING=1
+    parse_serve_address "$@"
     run_preflight
     log_info "préflight OK — démarrage d'APEX (apex serve)."
     cd -- "${PROJECT_ROOT}"
+    trap - EXIT  # l'enregistrement passe à `apex serve` (même pid après `exec`)
     exec "${PYTHON_BIN}" -m apex.cli.main serve "$@"
 }
 

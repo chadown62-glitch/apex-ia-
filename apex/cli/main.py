@@ -193,6 +193,9 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     )
     report.write(DEFAULT_REPORT_PATH)
     if not report.phase_2_authorized:
+        from apex.discovery import remove_discovery
+
+        remove_discovery()  # annonce « en démarrage » de launch.sh (même pid) : ce démarrage n'aura pas lieu
         print("erreur : apex gate refuse l'autorisation — APEX ne démarre pas.", file=sys.stderr)
         print(f"  rapport machine-lisible : {DEFAULT_REPORT_PATH}", file=sys.stderr)
         return 1
@@ -208,16 +211,20 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         return 1
 
     from apex.api.app import create_app
-    from apex.api.discovery import remove_discovery, write_discovery
+    from apex.discovery import remove_discovery, write_discovery
 
     log.info("démarrage d'APEX (apex serve)", host=args.host, port=args.port)
-    # Découverte par le Panel Windows (`APEX.exe`) : écrite AVANT l'écoute (le Panel voit « en
-    # démarrage »), retirée à l'arrêt. Aucun secret dedans — voir apex/api/discovery.py.
+    # Découverte par le Panel Windows (`APEX.exe`) : phase `serving` écrite AVANT l'écoute (le
+    # Panel voit « en démarrage » jusqu'à la première réponse), retirée à l'arrêt. Aucun secret
+    # dedans — voir apex/discovery.py.
     try:
-        discovery = write_discovery(args.host, args.port, Path.cwd().resolve())
+        discovery = write_discovery(args.host, args.port, Path.cwd().resolve(), phase="serving")
         log.info("enregistrement de découverte écrit", path=str(discovery))
     except OSError as exc:
         log.warning("découverte impossible — le Panel ne trouvera pas ce backend", error=str(exc))
+    from apex.obs.component_checks import warm_up
+
+    warm_up()
     try:
         uvicorn.run(
             create_app(), host=args.host, port=args.port, log_level=(args.log_level or "info").lower()

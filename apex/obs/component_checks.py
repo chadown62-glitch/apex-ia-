@@ -220,3 +220,15 @@ def collect(
     finally:
         pool.shutdown(wait=False, cancel_futures=True)
     return out
+
+
+def warm_up() -> threading.Thread:
+    """Lance en arrière-plan les checks lents (détection du sandbox, import et attestation du
+    cerveau) au démarrage d'`apex serve`, pour que la PREMIÈRE requête du Panel ne les voie pas
+    dépasser le budget (mesuré : 3,8 s à froid pour le cerveau, 0,03 s ensuite). N'influence aucun
+    état : le résultat de ce préchauffage n'est jamais renvoyé."""
+    thread = threading.Thread(
+        target=lambda: (check_sandbox(), check_brain()), name="apex-status-warmup", daemon=True
+    )
+    thread.start()
+    return thread

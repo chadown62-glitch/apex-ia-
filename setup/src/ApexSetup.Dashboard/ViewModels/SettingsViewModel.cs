@@ -4,43 +4,28 @@ using ApexSetup.Dashboard.Services;
 
 namespace ApexSetup.Dashboard.ViewModels;
 
-/// <summary>Mission §16 — jamais de secret exposé (voir <see cref="DashboardSettings"/>) ; §7 — chemin projet jamais codé en dur, vérifié avant sauvegarde.</summary>
+/// <summary>
+/// Paramètres facultatifs. Le seul réglage proposé est la distribution WSL, pour les PC qui en ont
+/// plusieurs ; port, chemin du projet et jeton sont découverts automatiquement et ne sont jamais
+/// demandés. Le port de repli (<see cref="DashboardSettings.ApiPort"/>) éventuellement présent dans
+/// le fichier est conservé tel quel.
+/// </summary>
 public sealed class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settingsStore;
-    private readonly IWslProbe _wslProbe;
+    private readonly DashboardSettings _initial;
+    private string _wslDistro;
+    private string? _message;
 
-    private string _wslDistro = string.Empty;
-    private string _projectPathWsl = string.Empty;
-    private string _apiHost = "127.0.0.1";
-    private int _apiPort = 8000;
-    private int _webPanelPort = 5173;
-    private string _ollamaUrl = "http://127.0.0.1:11434";
-    private bool _launchOnWindowsStartup;
-    private string? _verificationMessage;
-    private bool? _pathVerified;
-
-    public SettingsViewModel(ISettingsStore settingsStore, IWslProbe wslProbe, DashboardSettings initial)
+    public SettingsViewModel(ISettingsStore settingsStore, DashboardSettings initial)
     {
         _settingsStore = settingsStore;
-        _wslProbe = wslProbe;
-        LoadFrom(initial);
-
-        VerifyPathCommand = new AsyncRelayCommand(VerifyPathAsync, () => !string.IsNullOrWhiteSpace(ProjectPathWsl));
+        _initial = initial;
+        _wslDistro = initial.WslDistro ?? string.Empty;
         SaveCommand = new AsyncRelayCommand(SaveAsync);
-        UseSuggestedPathCommand = new RelayCommand(() => ProjectPathWsl = DashboardSettings.SuggestedProjectPathWsl);
         CloseCommand = new RelayCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
-
-        // BUG RÉEL (finalisation APEX.exe 1/2, voir Mvvm/RelayCommand.cs et
-        // MainWindowViewModel) : une exception inattendue (ex. Enregistrer
-        // échoue — disque plein, dossier %AppData%\Apex refusé) aurait fermé
-        // APEX.exe. Réutilise VerificationMessage, déjà affiché à l'écran,
-        // plutôt qu'une nouvelle propriété — aucune UI supplémentaire requise.
-        VerifyPathCommand.Faulted += (_, ex) => VerificationMessage = $"Vérification impossible : {ex.Message}";
-        SaveCommand.Faulted += (_, ex) => VerificationMessage = $"Enregistrement impossible : {ex.Message}";
+        SaveCommand.Faulted += (_, ex) => Message = $"Enregistrement impossible : {ex.Message}";
     }
-
-    public string SuggestedProjectPathWsl => DashboardSettings.SuggestedProjectPathWsl;
 
     public string WslDistro
     {
@@ -48,106 +33,32 @@ public sealed class SettingsViewModel : ObservableObject
         set => SetProperty(ref _wslDistro, value);
     }
 
-    public string ProjectPathWsl
+    public string? Message
     {
-        get => _projectPathWsl;
-        set
-        {
-            if (SetProperty(ref _projectPathWsl, value))
-            {
-                PathVerified = null;
-                VerificationMessage = null;
-            }
-        }
+        get => _message;
+        private set => SetProperty(ref _message, value);
     }
 
-    public string ApiHost
-    {
-        get => _apiHost;
-        set => SetProperty(ref _apiHost, value);
-    }
-
-    public int ApiPort
-    {
-        get => _apiPort;
-        set => SetProperty(ref _apiPort, value);
-    }
-
-    public int WebPanelPort
-    {
-        get => _webPanelPort;
-        set => SetProperty(ref _webPanelPort, value);
-    }
-
-    public string OllamaUrl
-    {
-        get => _ollamaUrl;
-        set => SetProperty(ref _ollamaUrl, value);
-    }
-
-    public bool LaunchOnWindowsStartup
-    {
-        get => _launchOnWindowsStartup;
-        set => SetProperty(ref _launchOnWindowsStartup, value);
-    }
-
-    public string? VerificationMessage
-    {
-        get => _verificationMessage;
-        private set => SetProperty(ref _verificationMessage, value);
-    }
-
-    /// <summary><c>null</c> = jamais vérifié depuis la dernière modification — voir mission §7, un chemin non vérifié n'est jamais traité comme valide.</summary>
-    public bool? PathVerified
-    {
-        get => _pathVerified;
-        private set => SetProperty(ref _pathVerified, value);
-    }
-
-    public AsyncRelayCommand VerifyPathCommand { get; }
     public AsyncRelayCommand SaveCommand { get; }
-    public RelayCommand UseSuggestedPathCommand { get; }
     public RelayCommand CloseCommand { get; }
 
     public event EventHandler<DashboardSettings>? Saved;
     public event EventHandler? CloseRequested;
 
-    private async Task VerifyPathAsync(CancellationToken cancellationToken)
-    {
-        var exists = await _wslProbe.PathExistsAsync(
-            string.IsNullOrWhiteSpace(WslDistro) ? null : WslDistro, ProjectPathWsl, cancellationToken).ConfigureAwait(false);
-        PathVerified = exists;
-        VerificationMessage = exists
-            ? $"Vérifié — « {ProjectPathWsl} » existe dans WSL."
-            : $"Introuvable — « {ProjectPathWsl} » n'existe pas dans la distribution WSL sélectionnée.";
-    }
+    public DashboardSettings ToSettings() =>
+        _initial with { WslDistro = string.IsNullOrWhiteSpace(WslDistro) ? null : WslDistro.Trim() };
 
     private async Task SaveAsync(CancellationToken cancellationToken)
     {
+        var distro = WslDistro.Trim();
+        if (distro.Length > 64 || distro.Any(c => char.IsControl(c) || c is '"' or '\\' or '/'))
+        {
+            Message = "Nom de distribution invalide.";
+            return;
+        }
         var settings = ToSettings();
         await _settingsStore.SaveAsync(settings, cancellationToken).ConfigureAwait(false);
+        Message = null;
         Saved?.Invoke(this, settings);
     }
-
-    private void LoadFrom(DashboardSettings settings)
-    {
-        _wslDistro = settings.WslDistro ?? string.Empty;
-        _projectPathWsl = settings.ProjectPathWsl ?? string.Empty;
-        _apiHost = settings.ApiHost;
-        _apiPort = settings.ApiPort;
-        _webPanelPort = settings.WebPanelPort;
-        _ollamaUrl = settings.OllamaUrl;
-        _launchOnWindowsStartup = settings.LaunchOnWindowsStartup;
-    }
-
-    public DashboardSettings ToSettings() => new()
-    {
-        WslDistro = string.IsNullOrWhiteSpace(WslDistro) ? null : WslDistro,
-        ProjectPathWsl = string.IsNullOrWhiteSpace(ProjectPathWsl) ? null : ProjectPathWsl,
-        ApiHost = ApiHost,
-        ApiPort = ApiPort,
-        WebPanelPort = WebPanelPort,
-        OllamaUrl = OllamaUrl,
-        LaunchOnWindowsStartup = LaunchOnWindowsStartup,
-    };
 }

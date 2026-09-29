@@ -43,7 +43,22 @@ public class CliCommandTests
         using var doc = JsonDocument.Parse(result.Stdout);
         var setupVersion = doc.RootElement.GetProperty("setup_version").GetString();
         Assert.NotEqual("1.0.0.0", setupVersion);
-        Assert.StartsWith("0.1.0", setupVersion);
+        Assert.StartsWith(CentralSetupVersion(), setupVersion);
+    }
+
+    /// <summary>La valeur de <c>SetupProductVersion</c> lue dans <c>setup/Directory.Build.props</c> — la source unique.</summary>
+    private static string CentralSetupVersion()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Directory.Build.props")))
+        {
+            dir = dir.Parent;
+        }
+        Assert.NotNull(dir);
+        var props = System.Xml.Linq.XDocument.Load(Path.Combine(dir!.FullName, "Directory.Build.props"));
+        var version = props.Descendants("SetupProductVersion").Single().Value;
+        Assert.Matches(@"^\d+\.\d+\.\d+$", version);
+        return version;
     }
 
     [Fact]

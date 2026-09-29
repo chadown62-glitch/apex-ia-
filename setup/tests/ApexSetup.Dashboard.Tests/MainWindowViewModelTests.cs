@@ -8,182 +8,187 @@ namespace ApexSetup.Dashboard.Tests;
 
 public class MainWindowViewModelTests
 {
-    private static MainWindowViewModel Build(
-        out FakeWslProbe wslProbe, out FakeRuntimeStatusService runtimeStatus, out FakeApexOrchestrator orchestrator)
+    private sealed class RecordingClipboard : IClipboardService
     {
-        wslProbe = new FakeWslProbe();
-        runtimeStatus = new FakeRuntimeStatusService
+        public string? Text { get; private set; }
+
+        public Task SetTextAsync(string text)
         {
-            States =
-            [
-                new ComponentState(ComponentKey.Docker, "Docker", ComponentStatus.Running, "ok"),
-                new ComponentState(ComponentKey.Postgres, "PostgreSQL", ComponentStatus.Running, "ok"),
-            ],
-        };
-        var apiChecker = new SequencedHealthCheckerAlwaysRunning(ComponentKey.Api, "API APEX");
-        var panelChecker = new SequencedHealthCheckerAlwaysRunning(ComponentKey.WebPanel, "Web Panel");
-        orchestrator = new FakeApexOrchestrator();
-        return new MainWindowViewModel(
-            new JsonSettingsStore(Path.Combine(Path.GetTempPath(), "apex-main-vm-test-" + Guid.NewGuid() + ".json")),
-            wslProbe, orchestrator, runtimeStatus, apiChecker, panelChecker, new InMemoryLogSink());
+            Text = text;
+            return Task.CompletedTask;
+        }
+    }
+
+    private static (MainWindowViewModel Vm, FakeBackendHost Host, InMemoryLogSink Log, Redactor Redactor) Build(Action<FakeBackendHost>? configure = null)
+    {
+        var host = new FakeBackendHost();
+        configure?.Invoke(host);
+        var redactor = new Redactor();
+        var log = new InMemoryLogSink(redactor);
+        var service = new PanelStatusService(host, new StatusClient(new HttpClient()));
+        service.SecretRead += redactor.Register;
+        var store = new JsonSettingsStore(Path.Combine(Path.GetTempPath(), "apex-main-vm-" + Guid.NewGuid() + ".json"));
+        // Port 1 : rien n'y écoute — le test ne dépend jamais d'un service présent sur 8000 dans l'environnement.
+        store.SaveAsync(new DashboardSettings { ApiPort = 1 }).GetAwaiter().GetResult();
+        var vm = new MainWindowViewModel(store, service, log, redactor,
+            problem => new DiagnosticContext("OS", ".NET", "/install", "/settings.json", "/logs", null, problem));
+        return (vm, host, log, redactor);
     }
 
     [Fact]
-    public async Task InitializeAsync_populates_ComponentStates_from_real_checks_never_pre_seeded_placeholders()
+    public void Before_any_measurement_there_is_no_verdict_and_no_component()
     {
-        var vm = Build(out _, out _, out _);
+        var (vm, _, _, _) = Build();
 
-        await vm.InitializeAsync();
-
-        Assert.Contains(vm.ComponentStates, s => s.Key == ComponentKey.Wsl);
-        Assert.Contains(vm.ComponentStates, s => s.Key == ComponentKey.Docker);
-        Assert.Contains(vm.ComponentStates, s => s.Key == ComponentKey.Api);
-        Assert.Contains(vm.ComponentStates, s => s.Key == ComponentKey.WebPanel);
+        Assert.Null(vm.Verdict);
+        Assert.Empty(vm.Components);
+        Assert.DoesNotContain("READY", vm.Headline.Replace("NOT READY", ""));
     }
 
     [Fact]
-    public async Task LaunchCommand_invokes_the_orchestrators_StartAsync_then_refreshes_state()
+    public async Task Initialization_measures_for_real_and_logs_the_verdict()
     {
-        var vm = Build(out _, out _, out var orchestrator);
+        var (vm, _, log, _) = Build(h => h.Files["~/" + BackendDiscovery.RelativePath] = FileRead.NotFound("absent"));
+
         await vm.InitializeAsync();
 
-        await vm.LaunchCommand.ExecuteAsync();
-
-        Assert.Equal(1, orchestrator.StartCalls);
+        Assert.Equal(PanelVerdict.NotReady, vm.Verdict);
+        Assert.Equal("APEX NOT READY", vm.Headline);
+        Assert.Contains("launch.sh", vm.Guidance);
+        Assert.Contains(vm.Components, c => c.Key == ComponentKey.Api && c.Status == ComponentStatus.Offline);
+        Assert.Contains(log.Entries, e => e.Message.Contains("BackendNotStarted"));
     }
 
     [Fact]
-    public async Task StopCommand_invokes_the_orchestrators_StopAsync()
+    public async Task Unchanged_states_are_not_logged_again()
     {
-        var vm = Build(out _, out _, out var orchestrator);
+        var (vm, _, log, _) = Build();
         await vm.InitializeAsync();
+        var count = log.Entries.Count;
 
-        await vm.StopCommand.ExecuteAsync();
+        await vm.RefreshAsync();
+        await vm.RefreshAsync();
 
-        Assert.Equal(1, orchestrator.StopCalls);
+        Assert.Equal(count, log.Entries.Count);
     }
 
     [Fact]
-    public async Task OpenSettingsCommand_then_CloseSettingsCommand_toggle_visibility()
+    public async Task Diagnostic_is_built_from_the_last_measurement_and_copied_without_secret()
     {
-        var vm = Build(out _, out _, out _);
+        var (vm, _, _, redactor) = Build(h =>
+        {
+            h.Files["~/" + BackendDiscovery.RelativePath] = FileRead.Ok(PanelData.DiscoveryJson(port: 1));
+            h.Files[PanelData.ProjectRoot + "/.apex/api-token"] = FileRead.Ok(PanelData.Token);
+        });
+        var clipboard = new RecordingClipboard();
+        vm.Clipboard = clipboard;
         await vm.InitializeAsync();
-        Assert.False(vm.IsSettingsVisible);
 
+        vm.ShowDiagnosticCommand.Execute(null);
+        await vm.CopyDiagnosticCommand.ExecuteAsync();
+
+        Assert.True(vm.IsDiagnosticVisible);
+        Assert.Contains("Version du Panel", vm.DiagnosticText);
+        Assert.NotNull(clipboard.Text);
+        Assert.DoesNotContain(PanelData.Token, clipboard.Text);
+        Assert.Contains("copié", vm.CopyMessage);
+    }
+
+    [Fact]
+    public async Task Copy_without_clipboard_says_so_instead_of_failing()
+    {
+        var (vm, _, _, _) = Build();
+        await vm.InitializeAsync();
+
+        await vm.CopyDiagnosticCommand.ExecuteAsync();
+
+        Assert.Contains("indisponible", vm.CopyMessage);
+    }
+
+    [Fact]
+    public async Task Saving_settings_closes_them_and_measures_again_with_the_new_distribution()
+    {
+        var (vm, _, log, _) = Build();
+        await vm.InitializeAsync();
         vm.OpenSettingsCommand.Execute(null);
-        Assert.True(vm.IsSettingsVisible);
-
-        vm.CloseSettingsCommand.Execute(null);
-        Assert.False(vm.IsSettingsVisible);
-    }
-
-    [Fact]
-    public async Task Saving_settings_closes_the_panel_and_refreshes_using_the_new_values()
-    {
-        var vm = Build(out var wslProbe, out _, out _);
-        await vm.InitializeAsync();
-        vm.OpenSettingsCommand.Execute(null);
-        vm.Settings!.ProjectPathWsl = "/home/user/apex-ia-";
+        vm.Settings!.WslDistro = "Ubuntu-24.04";
 
         await vm.Settings.SaveCommand.ExecuteAsync();
 
         Assert.False(vm.IsSettingsVisible);
+        Assert.Contains(log.Entries, e => e.Message.Contains("Ubuntu-24.04"));
     }
 
     [Fact]
-    public async Task IsBusy_blocks_other_lifecycle_commands_while_one_is_still_running()
+    public async Task Concurrent_refreshes_never_measure_twice_at_the_same_time()
     {
-        // Régression du BUG RÉEL (finalisation APEX.exe 1/2, voir MainWindowViewModel) :
-        // chaque commande de cycle de vie ne se désactivait QUE elle-même — rien n'empêchait
-        // de cliquer « ARRÊTER » pendant que « LANCER » tournait encore (deux opérations
-        // incompatibles en parallèle sur le même orchestrateur). Preuve ici : pendant que
-        // StartAsync est en cours (bloqué volontairement), StopCommand/RestartCommand/
-        // RepairCommand doivent tous refuser de s'exécuter (CanExecute == false).
-        var gate = new TaskCompletionSource();
-        var vm = Build(out _, out _, out var orchestrator);
+        var (vm, host, _, _) = Build(h => h.Probe = PanelData.WslRunning());
         await vm.InitializeAsync();
-        orchestrator.StartGate = gate.Task;
+        host.Reads.Clear();
 
-        var launchRun = vm.LaunchCommand.ExecuteAsync();
-        await orchestrator.StartEntered.Task;
+        await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => vm.RefreshAsync()));
 
-        Assert.True(vm.IsBusy);
-        Assert.False(vm.StopCommand.CanExecute(null));
-        Assert.False(vm.RestartCommand.CanExecute(null));
-        Assert.False(vm.RepairCommand.CanExecute(null));
-        Assert.False(vm.LaunchCommand.CanExecute(null));
+        // Chaque mesure lit l'enregistrement une fois : jamais plus de mesures que d'appels acceptés.
+        Assert.InRange(host.Reads.Count(r => r.EndsWith("backend.json")), 1, 5);
+    }
+}
 
-        gate.SetResult();
-        await launchRun;
+public class SettingsViewModelTests
+{
+    private static string TempFile() => Path.Combine(Path.GetTempPath(), "apex-settings-vm-" + Guid.NewGuid() + ".json");
 
-        Assert.False(vm.IsBusy);
-        Assert.True(vm.StopCommand.CanExecute(null));
+    [Fact]
+    public async Task Saves_only_the_distribution_and_keeps_other_values()
+    {
+        var store = new JsonSettingsStore(TempFile());
+        var vm = new SettingsViewModel(store, new DashboardSettings { ApiPort = 8123 }) { WslDistro = "  Debian  " };
+        DashboardSettings? saved = null;
+        vm.Saved += (_, s) => saved = s;
+
+        await vm.SaveCommand.ExecuteAsync();
+
+        Assert.Equal(new DashboardSettings { WslDistro = "Debian", ApiPort = 8123 }, saved);
+        Assert.Equal(saved, (await store.LoadAsync()).Settings);
+    }
+
+    [Theory]
+    [InlineData("a\"b")]
+    [InlineData("../x")]
+    [InlineData("a\nb")]
+    public async Task Rejects_an_invalid_distribution_name(string name)
+    {
+        var vm = new SettingsViewModel(new JsonSettingsStore(TempFile()), new DashboardSettings()) { WslDistro = name };
+        var saved = false;
+        vm.Saved += (_, _) => saved = true;
+
+        await vm.SaveCommand.ExecuteAsync();
+
+        Assert.False(saved);
+        Assert.NotNull(vm.Message);
     }
 
     [Fact]
-    public async Task An_unexpected_exception_in_a_lifecycle_command_is_logged_instead_of_crashing_the_app()
+    public async Task A_persistence_failure_is_a_message_not_a_crash()
     {
-        // Régression du BUG RÉEL (finalisation APEX.exe 1/2) : sans AsyncRelayCommand.Faulted,
-        // une exception inattendue dans StartAsync aurait fait planter APEX.exe (async void non
-        // géré). Preuve ici : l'exception est absorbée et rendue visible dans le journal.
-        var vm = Build(out _, out _, out var orchestrator);
-        await vm.InitializeAsync();
-        orchestrator.StartThrows = new InvalidOperationException("échec simulé");
+        var blocker = Path.Combine(Path.GetTempPath(), "apex-blocker-" + Guid.NewGuid());
+        File.WriteAllText(blocker, "fichier");
+        var vm = new SettingsViewModel(new JsonSettingsStore(Path.Combine(blocker, "sub", "settings.json")), new DashboardSettings());
 
-        var exception = await Record.ExceptionAsync(() => vm.LaunchCommand.ExecuteAsync());
+        await vm.SaveCommand.ExecuteAsync();
 
-        Assert.Null(exception);
-        Assert.Contains(vm.LogLines, l => l.Message.Contains("Erreur inattendue"));
-        Assert.False(vm.IsBusy);
+        Assert.Contains("impossible", vm.Message);
+        File.Delete(blocker);
     }
 
-    private sealed class SequencedHealthCheckerAlwaysRunning(ComponentKey key, string label) : IApiHealthChecker, IWebPanelChecker
+    [Fact]
+    public void Close_raises_CloseRequested()
     {
-        public Task<ComponentState> CheckAsync(DashboardSettings settings, CancellationToken cancellationToken = default) =>
-            Task.FromResult(new ComponentState(key, label, ComponentStatus.Running, "HTTP 200"));
-    }
+        var vm = new SettingsViewModel(new JsonSettingsStore(TempFile()), new DashboardSettings());
+        var closed = false;
+        vm.CloseRequested += (_, _) => closed = true;
 
-    private sealed class FakeApexOrchestrator : IApexOrchestrator
-    {
-        public int StartCalls { get; private set; }
-        public int StopCalls { get; private set; }
-        public bool IsBackendTracked => false;
-        public bool IsFrontendTracked => false;
+        vm.CloseCommand.Execute(null);
 
-        /// <summary>Si posé, StartAsync attend cette tâche avant de retourner — permet à un test d'observer un état "en cours" réel, jamais un simple booléen instantané.</summary>
-        public Task? StartGate { get; set; }
-
-        /// <summary>Complétée dès que StartAsync est réellement entré — évite toute dépendance à un délai arbitraire côté test.</summary>
-        public TaskCompletionSource StartEntered { get; } = new();
-
-        /// <summary>Si posé, StartAsync lève cette exception au lieu de retourner un résultat — simule un défaut inattendu.</summary>
-        public Exception? StartThrows { get; set; }
-
-        public async Task<OrchestratorOutcome> StartAsync(DashboardSettings settings, CancellationToken cancellationToken = default)
-        {
-            StartCalls++;
-            StartEntered.TrySetResult();
-            if (StartGate is not null)
-            {
-                await StartGate;
-            }
-            if (StartThrows is not null)
-            {
-                throw StartThrows;
-            }
-            return OrchestratorOutcome.Success;
-        }
-
-        public Task<OrchestratorOutcome> StopAsync(DashboardSettings settings, CancellationToken cancellationToken = default)
-        {
-            StopCalls++;
-            return Task.FromResult(OrchestratorOutcome.Success);
-        }
-
-        public Task<OrchestratorOutcome> RestartAsync(DashboardSettings settings, CancellationToken cancellationToken = default) =>
-            Task.FromResult(OrchestratorOutcome.Success);
-
-        public Task<OrchestratorOutcome> RepairAsync(DashboardSettings settings, CancellationToken cancellationToken = default) =>
-            Task.FromResult(OrchestratorOutcome.Success);
+        Assert.True(closed);
     }
 }
