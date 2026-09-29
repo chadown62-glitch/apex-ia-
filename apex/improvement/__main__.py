@@ -79,6 +79,11 @@ CAPABILITIES: dict[str, CapabilityEntry] = {
         adapter_class="NativeLearningAdapter",
         judge_id="ci-judge:native-learning",
     ),
+    "desktop_distribution": CapabilityEntry(
+        module="apex.improvement.capabilities.desktop_distribution",
+        adapter_class="DesktopDistributionAdapter",
+        judge_id="ci-judge:desktop-distribution",
+    ),
 }
 
 
