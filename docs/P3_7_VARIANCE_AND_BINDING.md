@@ -289,3 +289,41 @@ Nouvelle capacité : 0,927 / 0,930 / 0,930, Δ −0,071 ± 0,021 (IMPROVEMENT, m
 non concluant) ; `heldout:stdlib` +0,030 ± 0,024 (m 0,016) et `code_repair:validation` +0,056 ± 0,075 :
 VARIANCE_INCONCLUSIVE. Avec les règles mono-graines, la graine 0 seule aurait conclu à l'« oubli » de
 `stdlib` et de `code_repair:validation`.
+
+**Bras C — rejeu adaptatif (`stdlib` plafonné par `max_passes`, `reasoning_tasks` relevé) :
+INCONCLUSIVE, 3 graines.** Les deux premières graines sont chacune ACCEPTÉES par le Judge mono-artefact
+(aucun oubli) ; le verdict multi-graines demande une 3e graine puis reste non concluant sur deux suites
+`code_repair` (`heldout` Δ −0,003 ± 0,066 ; `validation` Δ −0,008 ± 0,112 ; marge 0,05). Tout le reste :
+texte IMPROVEMENT reproduite (`heldout` 1,863 -> 1,754 / 1,749 / 1,742 ; `heldout:stdlib` 2,672 ->
+2,407 / 2,404 / 2,403) ; `program_trace:heldout` 0,313 / 0,410 / 0,280, Δ −0,146 ± 0,122 IMPROVEMENT
+(train et validation aussi) ; nouvelle capacité 0,923 / 0,850 / 0,857, Δ −0,123 ± 0,052 IMPROVEMENT
+mais borne 0,929 > 0,90 : **non acquise**. Même sans les deux suites douteuses, C serait REJETÉ pour
+acquisition insuffisante : aucune promotion n'était possible.
+
+**Hypothèses** : H1 (acquisition sur ≥ 2 graines) — atteinte par le SEUL bras A, au prix de 8
+régressions reproduites ; aucun bras n'acquiert la capacité SANS destruction -> **critère P3.7 non
+atteint**. H2 (le rejeu réduit les régressions reproduites) — **CONFIRMÉE** : A 8, B 0, C 0.
+H3 (C protège `program_trace` mieux que B) — **CONFIRMÉE**, graine par graine (mêmes graines dans les
+deux bras, bootstrap apparié candidat contre candidat) : `program_trace:heldout` meilleur avec C sur
+les 3 graines, significatif sur 2 ; `heldout:stdlib` et `heldout` meilleurs sur les 3 graines,
+significatifs sur les 3 ; nouvelle capacité meilleure sur 2 graines sur 3 ; `code_repair` sans
+différence démontrée. H4 (le témoin ne régresse pas) — **REJETÉE** (`stdlib`, 19 relectures).
+
+### 6.1 Cycle 3 — comparaison des variantes (même budget, mêmes graines)
+
+| | A (seule) | B (rejeu fixe) | C (rejeu adaptatif) | D (témoin) |
+|---|---|---|---|---|
+| nouvelle capacité, erreur held-out (moyenne ± U) | **0,828 ± 0,049 acquise** | 0,929 ± 0,021 | 0,877 ± 0,052 | 1,000 |
+| mémorisation (train − held-out) | forte (0,55 contre 0,83) | faible | faible | — |
+| régressions reproduites | **8** | 0 | 0 | 1 (`stdlib`) |
+| suites améliorées de façon démontrée | cible seule | texte ×2, `code_repair:train` | texte ×4, `program_trace` ×3 | `heldout:code`, `program_trace:train` |
+| suites non concluantes | 3 | 7 | 2 | 5 |
+| graines nécessaires | 2 | 3 | 3 | 2 |
+| entraînement par graine | 1 071 s | 1 052 s | 1 154 s | 1 615 s (CPU partagé) |
+| coût total (graines + jugements, rejeux compris) | 1,3 h | 2,0 h | 2,1 h | 1,4 h |
+| rejeu bit à bit (provenance) | 2/2 | 3/3 | 3/3 | 2/2 |
+
+Lecture (INFERRED à partir de ces mesures) : la variable qui sépare protection et destruction ici est
+la RELECTURE des petits domaines (`stdlib` : 19 relectures -> régression reproduite, 11 -> douteux,
+3,8 -> amélioration reproduite) et la présence de rejeu ; le prix de la protection est l'acquisition de
+la nouvelle capacité (A 0,83 ; C 0,88 ; B 0,93) : à 40 % du budget, elle reste sous le seuil.
