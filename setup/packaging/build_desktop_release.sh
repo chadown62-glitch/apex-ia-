@@ -32,6 +32,11 @@ log "commit $COMMIT (modifications non commitées dans setup/apex/scripts : $DIR
 # 1. Publication + contrôles (PE, aucun .pdb, aucun chemin de développement)
 bash "$SCRIPT_DIR/publish_dashboard.sh" "$OUT/publish"
 PUBLISH_DIR="$OUT/publish/apex-dashboard-${VERSION}-win-x64"
+# Reproductibilité : l'installateur enregistre la date de chaque fichier ; un build propre donne des
+# dates neuves. Toutes les dates sont ramenées à celle du commit (convention SOURCE_DATE_EPOCH).
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$REPO_ROOT" log -1 --format=%ct)}"
+find "$PUBLISH_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
+log "dates des fichiers publiés ramenées à SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
 
 # 2. Compilateur
 if [[ -n "${ISCC:-}" ]]; then
