@@ -892,6 +892,59 @@ class LoopController:
         )
         self.log(f"[{exp}] promotion : {'OUI' if entry['promoted'] else 'NON'}")
 
+    def verify(self) -> dict[str, Any]:
+        """Vérification COMPLÈTE d'un répertoire, en lecture seule (après un arrêt, un redémarrage,
+        une copie) : monde relu (empreintes), chaînes du journal et du registre, journal produit sur
+        ce monde, attestation de chaque version promue, contenu de CHAQUE artefact référencé
+        (champion, candidats, graines) re-haché, expériences inachevées à reprendre."""
+        problems: list[str] = []
+        entries = self.registry.entries()  # lève si la chaîne est rompue
+        journal = self.journal.entries()  # idem
+        started = [e for e in journal if e["kind"] == "loop" and e["event"] == "started"]
+        if any(e["world_fingerprint"] != self.world.fingerprint for e in started):
+            problems.append("journal produit sur un autre monde")
+        for entry in entries:
+            if entry["promoted"]:
+                problem = self.attest(entry)
+                if problem:
+                    problems.append(f"version #{entry['index']} non attestée : {problem}")
+        artifacts: dict[str, str] = {}
+        for entry in entries:
+            if entry.get("artifact"):
+                artifacts[entry["artifact"]] = f"registre #{entry['index']}"
+        for record in self.journal.experiments().values():
+            executed = record.payload("executed") or {}
+            if executed.get("artifact"):
+                artifacts.setdefault(executed["artifact"], f"{record.experiment_id} (graine 0)")
+            for replica in record.replications:
+                if replica.get("artifact"):
+                    artifacts.setdefault(
+                        replica["artifact"],
+                        f"{record.experiment_id} (graine {replica.get('seed_index', 1)})",
+                    )
+        missing = 0
+        for artifact, origin in sorted(artifacts.items()):
+            try:
+                self.store.get(artifact)  # re-hache le contenu
+            except LookupError:
+                missing += 1
+                problems.append(f"artefact absent : {artifact[:19]}… ({origin})")
+            except Exception as exc:
+                problems.append(f"artefact altéré : {artifact[:19]}… ({origin}) : {exc.__class__.__name__}")
+        current = self.registry.current()
+        return {
+            "ok": not problems,
+            "problems": problems,
+            "world": self.world.fingerprint,
+            "parent_world": self.world.spec.parent,
+            "champion": current["name"] if current else None,
+            "registry_entries": len(entries),
+            "journal_entries": len(journal),
+            "artifacts_checked": len(artifacts),
+            "artifacts_missing": missing,
+            "unfinished": [r.experiment_id for r in self.journal.unfinished()],
+        }
+
     def import_replications(self, sources: list[Path]) -> dict[str, Any]:
         """Historique de variance IMPORTÉ d'autres répertoires (lignée) : pour chaque recette
         affinée depuis un champion, les valeurs par suite de ses graines (candidat, répliques, ou

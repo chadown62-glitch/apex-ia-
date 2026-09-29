@@ -371,6 +371,14 @@ def directed(args: argparse.Namespace) -> int:
     return 0
 
 
+def verify(args: argparse.Namespace) -> int:
+    """Intégrité complète d'un répertoire (monde, chaînes, attestations, artefacts), lecture seule."""
+    world = World.load(args.workdir / "world.json")  # vérifie toutes les empreintes du monde
+    report = LoopController(args.workdir, world).verify()
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+    return 0 if report["ok"] else 1
+
+
 def import_replications(args: argparse.Namespace) -> int:
     """Historique de variance importé de la lignée (P3.7) : consigné au journal, avec provenance."""
     world = World.load(args.workdir / "world.json")
@@ -567,6 +575,9 @@ def main() -> int:
     p.add_argument("--seed", type=int, default=None, help="graine de la référence (réplication)")
     _seed_args(p)
     p.set_defaults(fn=directed)
+    p = sub.add_parser("verify", help="intégrité complète d'un répertoire (lecture seule)")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.set_defaults(fn=verify)
     p = sub.add_parser("import-replications", help="historique de variance importé de la lignée")
     p.add_argument("--workdir", type=Path, required=True)
     p.add_argument("--source", type=Path, action="append", required=True)

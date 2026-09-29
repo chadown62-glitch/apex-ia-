@@ -153,7 +153,11 @@ def test_memorization_and_inconclusive_ask_for_the_right_thing() -> None:
     assert three["decision"] == INCONCLUSIVE and not three["need_more_seeds"]  # k = 3 : on s'arrête
 
 
-def test_the_promoted_artifact_must_not_itself_exceed_the_margin() -> None:
+def test_a_seed_far_beyond_the_margin_never_leads_to_acceptance() -> None:
+    """Propriété vérifiée par le RÉSULTAT : avec k >= 2, l'incertitude inclut l'écart observé entre
+    graines, donc une graine au-delà de la marge rend déjà la ligne REGRESSION ou
+    VARIANCE_INCONCLUSIVE ; la condition explicite sur l'artefact promu est une défense en
+    profondeur (mutant équivalent, documenté)."""
     # Graine 0 (l'artefact promu) très dégradée, graine 1 très bonne : la moyenne passe, pas l'artefact.
     result = _verdict([60, 70], [95, 20], prior={"cap:g:heldout": 0.0})
     assert result["decision"] != ACCEPT

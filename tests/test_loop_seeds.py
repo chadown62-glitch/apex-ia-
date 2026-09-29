@@ -194,3 +194,25 @@ def test_an_invalid_replica_invalidates_the_whole_experiment(
     assert verdict["decision"] == "invalid" and "training_replayed#1" in verdict["reasons"]
     assert record.replications[0]["invalid"] == ["training_replayed"]
     assert not record.promoted and record.analysis["cause"] == "undeclared_training"  # type: ignore[index]
+
+
+def test_verify_checks_the_whole_directory_after_a_copy(seeded: LoopController, tmp_path: Path) -> None:
+    import shutil
+
+    copy = tmp_path / "copy"
+    shutil.copytree(seeded.workdir, copy)
+    (copy / "loop.lock").unlink(missing_ok=True)
+    clean = LoopController(copy, seeded.world, log=lambda _m: None).verify()
+    assert clean["ok"] and clean["artifacts_checked"] >= 3 and clean["unfinished"] == []
+    champion = seeded.registry.current()
+    assert champion is not None
+    digest = champion["artifact"].split(":")[1]
+    blob = next(p for p in (copy / "artifacts").rglob(digest) if p.is_file())  # le contenu, pas .meta.json
+    data = bytearray(blob.read_bytes())
+    data[len(data) // 2] ^= 0xFF  # un octet inversé au milieu (la fin d'un zip vaut souvent déjà 0)
+    blob.write_bytes(bytes(data))
+    corrupted = LoopController(copy, seeded.world, log=lambda _m: None).verify()
+    assert not corrupted["ok"] and any("altéré" in p for p in corrupted["problems"])
+    blob.unlink()
+    missing = LoopController(copy, seeded.world, log=lambda _m: None).verify()
+    assert missing["artifacts_missing"] >= 1 and any("absent" in p for p in missing["problems"])
