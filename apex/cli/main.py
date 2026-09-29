@@ -12,6 +12,7 @@ import argparse
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any, Sequence
 
 from apex.config.dotenv import apply_dotenv
@@ -207,9 +208,22 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         return 1
 
     from apex.api.app import create_app
+    from apex.api.discovery import remove_discovery, write_discovery
 
     log.info("démarrage d'APEX (apex serve)", host=args.host, port=args.port)
-    uvicorn.run(create_app(), host=args.host, port=args.port, log_level=(args.log_level or "info").lower())
+    # Découverte par le Panel Windows (`APEX.exe`) : écrite AVANT l'écoute (le Panel voit « en
+    # démarrage »), retirée à l'arrêt. Aucun secret dedans — voir apex/api/discovery.py.
+    try:
+        discovery = write_discovery(args.host, args.port, Path.cwd().resolve())
+        log.info("enregistrement de découverte écrit", path=str(discovery))
+    except OSError as exc:
+        log.warning("découverte impossible — le Panel ne trouvera pas ce backend", error=str(exc))
+    try:
+        uvicorn.run(
+            create_app(), host=args.host, port=args.port, log_level=(args.log_level or "info").lower()
+        )
+    finally:
+        remove_discovery()
     return 0
 
 

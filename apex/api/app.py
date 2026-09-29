@@ -102,6 +102,7 @@ from apex.api.routes import (
     projects,
     registry,
     scheduler,
+    status,
 )
 from apex.version import __version__
 
@@ -217,7 +218,7 @@ def create_app() -> FastAPI:
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, learning.router, population.router,
         learning_sessions.router, gauntlets.router, learning_feedback.router, capability.router,
-        brain.router,
+        brain.router, status.router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 
