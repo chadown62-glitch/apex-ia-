@@ -427,3 +427,19 @@ est elle-même destructrice pour `stdlib` (H4 rejetée).
 acquisition / protection est une question de budget à part égale de rejeu — protocole pré-enregistré
 avec la répartition de C (le meilleur protecteur mesuré) et un budget de nouvelle capacité doublé
 (12 000 pas, même part de rejeu), sur 2 à 3 graines ; critère : borne < 0,90 SANS REGRESSION.
+
+## 12. Tests (état final, après `d6e705d`)
+
+- Backend, suite complète (`pytest tests`, une seule passe) : **2 554 réussis, 4 échoués, 175 ignorés**
+  (669 sous-tests réussis), 25 min. Les 4 échecs sont tous dans `tests/test_runtime_packaging.py`
+  (`test_migrations_never_reference_a_research_module`, `test_clean_artifact_passes`,
+  `test_anti_leak_still_passes_on_a_worktree_build`,
+  `test_doctor_json_from_worktree_build_includes_the_phase1_contract_fields`) : PRÉEXISTANTS,
+  identiques sur `56db9bb` avant tout travail P3.7 (construction d'artefact / anti-fuite, sans lien
+  avec `apex/neural`). `TestCancellation` (sensible au temps, échoué une fois sous charge CPU lors
+  d'une passe précédente) réussit ici. Ignorés : PostgreSQL réel absent du bac à sable, extras
+  optionnels.
+- Frontend : `vitest` **111 / 111** (19 fichiers) ; `tsc --noEmit` sans erreur.
+- Nouveaux tests P3.7 : `test_variance.py` (10), `test_loop_seeds.py` (9, boucle RÉELLE réduite),
+  `test_dependency_order_explicit.py` (4), ajouts à `test_brain_live.py`, `test_loop_components.py`
+  et `BrainLivePage.test.tsx`.
