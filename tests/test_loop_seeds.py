@@ -154,3 +154,43 @@ def test_the_registry_refuses_a_reproduced_regression_whatever_the_caller_claims
         )
     )
     assert not entry["promoted"] and any("régression reproduite" in r for r in entry["reasons"])
+
+
+def test_an_invalid_replica_invalidates_the_whole_experiment(
+    seeded: LoopController, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Injection de faute : le rejeu de la graine 1 échoue (provenance non prouvée). Aucune graine
+    invalide n'est « compensée » par une autre : l'expérience est INVALIDE, jamais promue."""
+    import shutil
+    from dataclasses import replace
+
+    from apex.neural.loop.judge import IndependentJudge
+
+    copy = tmp_path / "copy"
+    shutil.copytree(seeded.workdir, copy)
+    (copy / "loop.lock").unlink(missing_ok=True)
+    ctrl = LoopController(
+        copy,
+        seeded.world,
+        limits=replace(seeded.limits, max_total_experiments=5, max_total_steps=10_000),
+        policy=seeded.policy,
+        log=lambda _m: None,
+    )
+    original = IndependentJudge.judge
+
+    def judge(self: IndependentJudge, **kwargs: object):  # type: ignore[no-untyped-def]
+        result = original(self, **kwargs)  # type: ignore[arg-type]
+        plan = kwargs.get("plan")
+        if plan is not None and plan.experiment_id.endswith("-replica"):  # type: ignore[attr-defined]
+            return replace(
+                result, checks={**result.checks, "training_replayed": {"ok": False, "detail": "injecté"}}
+            )
+        return result
+
+    monkeypatch.setattr(IndependentJudge, "judge", judge)
+    target = ctrl._observe_with_integrity().weaknesses[0].benchmark
+    record = ctrl.run_directed({"steps": 90}, target=target, reason="graine 1 invalide (injection)")
+    verdict = record.payload("seed_verdict")["result"]  # type: ignore[index]
+    assert verdict["decision"] == "invalid" and "training_replayed#1" in verdict["reasons"]
+    assert record.replications[0]["invalid"] == ["training_replayed"]
+    assert not record.promoted and record.analysis["cause"] == "undeclared_training"  # type: ignore[index]
