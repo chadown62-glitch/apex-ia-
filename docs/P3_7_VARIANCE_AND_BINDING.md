@@ -203,3 +203,36 @@ ACCEPTÉS, la lignée continue avec le premier dans l'ordre fixé B, C, A (jamai
 **Arrêt** : 3 graines au plus par bras ; aucun bras ajouté à ce protocole après les résultats ; toute
 variante nouvelle (cycle 3) fera l'objet d'un pré-enregistrement séparé. Si aucun bras n'est accepté :
 AUCUNE promotion, le champion P3 reste en service.
+
+## 4. Cycle 2 sur les mécanismes (pendant l'exécution des bras)
+
+**Mutation testing** (worktree isolé, PYTHONPATH vérifié, sources restaurées et vérifiées par
+empreinte ; un mutant n'est tué que si un test ÉCHOUE avec lui) : **17 mutants, 16 tués**. Tués :
+marge calculée sur les graines du candidat, variance entre graines retirée de U, pas de graine
+supplémentaire en cas de doute, seuil d'acquisition retiré, mémorisation ignorée, graines invalides
+ignorées, doute traité comme acceptation, décision sur UNE graine, mesures de la réplique non
+consignées, intégrité de la réplique ignorée, recalcul du registre contourné, réponse explicite au
+format implicite, instructions recopiées non vérifiées, format du benchmark non vérifié au chargement,
+états RECOVERING / INTERRUPTED jamais affichés. **Survivant : ÉQUIVALENT** (« condition sur l'artefact
+promu » retirée) — pour k ≥ 2, U contient l'écart observé entre graines (U ≳ 0,98·|d₀ − d₁|), donc
+`moyenne + U ≤ marge` implique d₁ > d₀, incompatible avec d₀ au-delà de la marge : aucune entrée ne
+peut distinguer le mutant. La condition reste (défense en profondeur, pré-enregistrée).
+
+**Attaques couvertes par des tests** : réplique invalide (rejeu en échec injecté) -> expérience
+INVALIDE, cause `undeclared_training`, jamais promue ; contrôleur qui annonce ACCEPT avec des
+graines montrant une régression reproduite -> le REGISTRE, qui recalcule, refuse ; benchmark
+explicite forgé (format retiré d'un problème) ou chargé par la mauvaise capacité -> refusé ;
+réponse au mauvais format ou instruction mal recopiée -> coût 1.
+
+**Persistance** (audit §1) : tout ce qui doit survivre tient dans le répertoire de travail —
+`world.json` (monde, benchmarks, empreintes), `journal.jsonl`, `registry.jsonl`, `artifacts/`
+(checkpoints adressés par contenu : champion, candidats, graines), `runs/*/resume.pt` (reprise d'un
+entraînement en cours). Après adoption, un monde enfant est autonome (le checkpoint du parent est
+recopié dans son store, l'adoption est consignée au journal). Ajout : `verify` (lecture seule) —
+monde relu avec ses empreintes, chaînes, journal produit sur ce monde, attestation de chaque version
+promue, CHAQUE artefact référencé re-haché, expériences à reprendre. Testé (copie propre -> OK ; octet
+inversé dans le checkpoint du champion -> « altéré » ; fichier supprimé -> « absent ») et essayé sur
+les répertoires réels de P3.5 (P3 et 3b : OK ; le registre forgé de C2.2 : non attesté). Survivre à
+la perte du CONTENEUR exige que ce répertoire soit sur un disque persistant : dans ce bac à sable,
+seul git persiste et les artefacts (≈ 9 Mo par checkpoint, monde ≈ 32 Mo) n'y ont pas leur place —
+BLOCKED ici, à configurer par l'opérateur (répertoire de travail sur disque persistant).
