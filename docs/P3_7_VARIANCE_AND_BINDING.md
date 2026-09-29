@@ -236,3 +236,26 @@ les répertoires réels de P3.5 (P3 et 3b : OK ; le registre forgé de C2.2 : no
 la perte du CONTENEUR exige que ce répertoire soit sur un disque persistant : dans ce bac à sable,
 seul git persiste et les artefacts (≈ 9 Mo par checkpoint, monde ≈ 32 Mo) n'y ont pas leur place —
 BLOCKED ici, à configurer par l'opérateur (répertoire de travail sur disque persistant).
+
+## 5. Boucle autonome : scénario « mauvaise stratégie » (PRÉ-ENREGISTRÉ, avant exécution)
+
+**Constat préalable (MEASURED, passage à blanc, aucun entraînement)** : sur le monde explicite
+vierge, le premier choix de la politique est `target_only` (`order_explicit_tasks` 1,0) — plan
+IDENTIQUE à celui du bras A (même recette, même graine, même référence ; comparaison des recettes
+consignées). L'entraînement étant déterministe (reprise et rejeu bit à bit démontrés en P3.5 et par le
+Judge à chaque graine), le résultat réel du bras A EST le résultat de ce premier choix : REJETÉ, 8 suites
+en REGRESSION reproduite sur 2 graines. Le scénario reprend donc la boucle depuis ce journal.
+
+**Défaut trouvé par ce passage à blanc, corrigé avant exécution** (`4018d64`) : après ce rejet, la
+politique renonçait au rejeu (pas d'apprentissage divisé par deux) parce qu'UN domaine épuisé
+(`stdlib`) aurait dépassé `max_passes` ; désormais le domaine épuisé est écarté et les autres domaines
+dégradés sont rejoués. Choix de la politique corrigée (à blanc) : `protect_domains`,
+`order_explicit_tasks` 0,75, `code` 0,125, `reasoning_tasks` 0,125 (`stdlib` écarté : > 4 relectures).
+
+**Protocole** : copie du répertoire du bras A ; `run` (politique inchangée depuis `4018d64`, protocole
+multi-graines : 2 graines, 3 au plus), 1 cycle, 1 expérience, échelle 6 000 pas / 9,6 M jetons /
+lr 1e-3. **Critères** : (a) la boucle ne répète pas sa stratégie rejetée et en choisit une justifiée par
+la cause établie (vérifié par le journal) ; (b) moins de suites en REGRESSION reproduite que le bras A
+(8). Promotion uniquement par le verdict de §2. **Prédiction écrite avant** : acquisition probable de
+la nouvelle capacité (75 % du mélange) ; `stdlib`, non rejoué, sans doute encore en REGRESSION ;
+`program_trace` partiellement protégé ; issue la plus probable : REJECT.
