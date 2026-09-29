@@ -719,3 +719,38 @@ def test_policy_never_protects_a_domain_by_repeating_its_exhausted_data(tmp_path
     saturated = second_decision(large, {"apex_docs": 0.75, "stdlib": 0.25})
     assert saturated.strategy == "lower_lr" and saturated.recipe.mix == {"apex_docs": 0.75, "stdlib": 0.25}
     assert any(f"stdlib ({stdlib} jetons" in line for line in saturated.rationale)
+
+
+def test_one_exhausted_domain_does_not_deprive_the_others_of_replay(tmp_path: Path) -> None:
+    """Constat P3.7 (passage à blanc sur le rejet réel du bras A) : `stdlib`, épuisé, bloquait le
+    rejeu de TOUS les domaines dégradés et la politique renonçait au rejeu. Le domaine épuisé est
+    écarté ; les autres domaines dégradés restent protégés."""
+    from apex.neural.loop.observe import ChampionState
+    from tests import capability_support as cap
+
+    world = cap.world()
+    tokens = 200_000
+    assert (
+        0.125 * tokens / world.domain_tokens("stdlib") > 4 >= 0.125 * tokens / world.domain_tokens("code")
+    )
+    weak = Weakness("heldout:code", "code", 3.0, 2.0, 1.0, 20, "mesure")
+    champion = ChampionState("c", 0, "sha256:" + "c" * 64, {"mix": {"code_tasks": 1.0}}, {}, True, "ok")
+    obs = Observation(world.fingerprint, sorted(world.benchmarks), champion, [weak])
+    policy = StrategyPolicy(finetune_tokens=tokens, max_tokens=4 * tokens, max_steps=400)
+    journal = ExperimentJournal(tmp_path / "j.jsonl")
+    first = policy.decide(obs, world, journal, exhausted=set())
+    assert first is not None and first.baseline_recipe is not None
+    recipe = replace(first.recipe, mix={"code_tasks": 1.0})
+    plan = ExperimentPlan(
+        world.fingerprint,
+        {"name": "c", "artifact": champion.artifact},
+        first.baseline_recipe,
+        recipe,
+        first.hypothesis,
+        Budget(400, 4 * tokens, 60.0),
+    )
+    _record(journal, plan, "protected_regression", regressed=["heldout:stdlib", "heldout:code"])
+    decision = policy.decide(obs, world, journal, exhausted=set())
+    assert decision is not None and decision.strategy == "protect_domains"
+    assert decision.recipe.mix.get("code", 0) >= 0.25 and "stdlib" not in decision.recipe.mix
+    assert any("écarté du rejeu" in line for line in decision.rationale)

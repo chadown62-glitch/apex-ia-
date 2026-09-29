@@ -421,17 +421,26 @@ class StrategyPolicy:
                 for level in self.protect_levels:
                     if level > current:
                         mix = raise_share(parent.mix, usable, level, list(world.spec.domains))
-                        if any(passes(d, mix) > self.max_passes for d in usable):
-                            if not saturated:
-                                saturated = sorted(d for d in usable if passes(d, mix) > self.max_passes)
-                                base.append(
-                                    f"ESTABLISHED : au palier {int(level * 100)} %, {saturated} serait "
-                                    f"tiré plus de {self.max_passes} fois : palier écarté"
-                                )
-                            break
+                        over = sorted(d for d in usable if passes(d, mix) > self.max_passes)
+                        # Un domaine qui serait relu au-delà de `max_passes` à ce palier est ÉCARTÉ du
+                        # rejeu (constat P3.7 : un seul domaine épuisé ne doit pas priver les autres
+                        # de protection) ; sans domaine restant, le palier est abandonné.
+                        kept = usable - set(over)
+                        if over:
+                            saturated = sorted({*saturated, *over})
+                            base.append(
+                                f"ESTABLISHED : au palier {int(level * 100)} %, {over} serait tiré plus de "
+                                f"{self.max_passes} fois : "
+                                + ("écarté du rejeu" if kept else "palier écarté")
+                            )
+                            if not kept:
+                                break
+                            mix = raise_share(parent.mix, kept, level, list(world.spec.domains))
+                            if any(passes(d, mix) > self.max_passes for d in kept):
+                                break
                         protected_by_replay = True
                         change = (
-                            f"porter la part des domaines dégradés {sorted(usable)} à "
+                            f"porter la part des domaines dégradés {sorted(kept)} à "
                             f"{int(level * 100)} % du mélange (contrainte de diversité) : {mix}"
                         )
                         out.append(
