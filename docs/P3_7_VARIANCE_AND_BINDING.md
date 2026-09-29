@@ -327,3 +327,69 @@ Lecture (INFERRED à partir de ces mesures) : la variable qui sépare protection
 la RELECTURE des petits domaines (`stdlib` : 19 relectures -> régression reproduite, 11 -> douteux,
 3,8 -> amélioration reproduite) et la présence de rejeu ; le prix de la protection est l'acquisition de
 la nouvelle capacité (A 0,83 ; C 0,88 ; B 0,93) : à 40 % du budget, elle reste sous le seuil.
+
+## 7. Résultats du scénario « mauvaise stratégie » (§5, JUDGED, 2 graines)
+
+**Choix de la boucle (OBSERVED, journal)** : après le rejet consigné du plan `target_only` (bras A),
+la boucle ne le répète pas ; elle planifie `exp-1d2d5875d253`, `protect_domains` : mélange
+`order_explicit_tasks` 0,75, `code` 0,125, `reasoning_tasks` 0,125 (`stdlib` écarté du rejeu : > 4
+relectures) — exactement le choix annoncé à blanc et justifié par la cause établie
+(`protected_regression` sur les domaines `code` / `reasoning_tasks` / texte). **Critère (a) atteint.**
+
+**Verdict : REJECT, 2 graines** (rejeu bit à bit réussi pour les deux graines).
+- Nouvelle capacité : held-out 0,830 / 0,853, Δ −0,158 ± 0,048, borne 0,89 < 0,90 : **acquise,
+  répliquée** ; train 0,770 / 0,765 (écart train / held-out bien plus faible qu'en A : 0,55 contre 0,83).
+- Texte : aucune régression (`heldout:stdlib` IMPROVEMENT, 2,672 -> 2,433 / 2,444, alors que `stdlib`
+  n'est PAS rejoué) ; `code_repair` : 3 suites VARIANCE_INCONCLUSIVE, `transfer` NO_REGRESSION.
+- **`program_trace` : REGRESSION reproduite** — held-out 0,48 -> 0,703 / 0,833 (Δ +0,288 ± 0,143),
+  train idem ; validation VARIANCE_INCONCLUSIVE. Cause consignée : `protected_regression`.
+- **Critère (b) atteint** : 2 suites en REGRESSION reproduite contre 8 pour le bras A. La prédiction
+  écrite avant (« `stdlib` sans doute encore en REGRESSION ») est **réfutée** : le texte s'améliore ; la
+  destruction se déplace sur `program_trace` (12,5 % de `reasoning_tasks` ne suffisent pas à le
+  protéger face à 75 % de nouvelle capacité).
+
+Lecture : la boucle DÉTECTE sa mauvaise stratégie depuis des résultats réels (le rejet de A), change de
+stratégie pour une raison consignée, réduit les dégâts, et le verdict multi-graines refuse encore la
+promotion parce qu'une capacité protégée est oubliée de façon reproduite. Aucune promotion.
+
+## 8. Crash / reprise en conditions réelles (REAL E2E, boucle L)
+
+Deux interruptions pendant la même expérience, toutes deux sur le vrai répertoire, sans simulation :
+1. **Perte du conteneur** (redémarrage de l'environnement, non provoqué) juste après `executed` de la
+   graine 0 : `verify` OK (1 expérience inachevée signalée) ; relance de la MÊME commande -> événement
+   `recovered` (`from_event: executed`), Judge exécuté (rejeu bit à bit de la graine 0 réussi).
+2. **`kill -9` contrôlé** au pas 1 500 de l'entraînement de la graine 1 (déclencheur sur la télémétrie
+   de cette expérience seulement) : `verify` OK ; relance -> `recovered` (`from_event: judged`) ;
+   l'entraînement de la réplique reprend de son checkpoint (`resume.pt`) au pas 1 525, puis le Judge
+   REJOUE la graine 1 depuis zéro : bit à bit identique (`invalid = []`). La reprise ne laisse donc
+   aucune trace dans le résultat.
+`verify` final : OK — chaînes du journal (seq 11–26) et du registre intactes, chaque artefact re-haché,
+champion inchangé (P3 adopté), lignée identique. Le registre n'a reçu aucune promotion.
+
+## 9. Vulnérabilité démontrée dans le calcul de la marge, et correction
+
+**Constat (MEASURED, boucle L)** : la marge du texte y valait 0,097 (`heldout`), contre 0,010 dans les
+bras. Cause : `σ_prior` regroupait AUSSI les expériences multi-graines du journal lui-même ; or la
+boucle L reprend le journal du bras A, dont les graines DÉTRUITES divergent fortement (texte 5,73
+contre 6,00 BPB). Une expérience destructrice élargissait donc la marge — et l'incertitude, puisque
+σ = max(σ_prior, s_obs) — des expériences suivantes : dans la boucle L (U ≈ 0,13), une régression de
+texte reproduite ne pouvait être déclarée REGRESSION qu'au-delà d'environ +0,23 BPB (D̄ − U > m) ;
+en deçà, au mieux VARIANCE_INCONCLUSIVE. Dans l'autre sens, la même mise en commun RÉDUISAIT la marge de
+`program_trace` (0,079 contre 0,097). La règle §2 (« historique des réplications ») n'excluait pas
+explicitement ce cas : c'est une faille de la règle, pas de son implémentation.
+
+**Correction (règle modifiée, applicable aux seules expériences PLANIFIÉES après ce commit ; aucun
+verdict consigné n'est réécrit — chacun reste recalculable avec le `variance_prior` figé dans son
+`planned`)** : σ_prior provient UNIQUEMENT de l'historique de réplications IMPORTÉ explicitement
+(`import-replications`, consigné avec sa provenance). La dispersion des graines d'une expérience ne
+compte que pour ELLE (s_obs dans U), jamais dans la marge des suivantes. Tests : l'a priori est
+exactement `pooled_sigma` de l'historique importé ; adversarial — une expérience destructrice aux
+graines très dispersées ajoutée au journal ne change pas l'a priori. Mutant « réintroduire la mise en
+commun du journal » : **tué** (les deux tests échouent).
+
+**Recalcul ILLUSTRATIF de la boucle L avec la règle corrigée** (ne remplace pas le verdict consigné) :
+toujours **REJECT** (`program_trace:heldout` et `:train` en REGRESSION, marges 0,097 et 0,073) ; le
+texte passe de NO_REGRESSION à **IMPROVEMENT** (`heldout` Δ −0,104 ± 0,012, marge 0,010) — la faille
+masquait ici des améliorations, pas une régression. Bras A : inchangé (son a priori ne contenait que
+l'historique importé). Limite qui demeure : l'import est une action d'opérateur ; importer un
+répertoire destructeur élargirait la marge. Il est consigné et vérifiable, mais pas filtré.

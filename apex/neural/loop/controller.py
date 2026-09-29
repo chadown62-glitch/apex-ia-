@@ -1031,9 +1031,14 @@ class LoopController:
         return prints
 
     def _variance_prior(self) -> tuple[dict[str, float], list[dict[str, Any]]]:
-        """sigma par suite, groupé sur l'HISTORIQUE des réplications : groupes importés (événement
-        `replication_history`) et expériences multi-graines de ce journal ; affinages depuis un
-        champion seulement, suites dont le benchmark a l'empreinte de ce monde."""
+        """sigma par suite, groupé sur l'HISTORIQUE des réplications IMPORTÉ (événement
+        `replication_history`), suites dont le benchmark a l'empreinte de ce monde.
+
+        Les expériences multi-graines de ce journal n'y entrent PAS : une expérience destructrice
+        a des graines très dispersées sur les suites qu'elle détruit, et les regrouper élargissait
+        la marge des expériences suivantes (vulnérabilité démontrée en P3.7, boucle L : marge
+        texte 0,097 au lieu de 0,010). Leur dispersion reste prise en compte, expérience par
+        expérience, dans l'incertitude (s_obs), jamais dans la marge."""
         prints = self._suite_fingerprints()
         groups: list[dict[str, list[float]]] = []
         sources: list[dict[str, Any]] = []
@@ -1047,15 +1052,6 @@ class LoopController:
                 if values:
                     groups.append(values)
                     sources.append(group["source"])
-        for record in self.journal.experiments().values():
-            stored = record.payload("seed_verdict")
-            if stored is None or record.plan.get("recipe", {}).get("init") != "champion":
-                continue
-            rows = stored["result"].get("rows", [])
-            values = {r["suite"]: r["seeds"] for r in rows if len(r["seeds"]) >= 2}
-            if values:
-                groups.append(values)
-                sources.append({"experiment_id": record.experiment_id, "journal": "ce monde"})
         return pooled_sigma(groups), sources
 
     def _judge_from_journal(self, record: ExperimentRecord) -> JudgeResult:

@@ -15,7 +15,7 @@ from apex.neural.loop.controller import LoopController, LoopLimits
 from apex.neural.loop.plan import ExperimentPlan
 from apex.neural.loop.strategy import StrategyPolicy
 from apex.neural.registry import ModelRegistry, Proposal
-from apex.neural.variance import seed_verdict
+from apex.neural.variance import pooled_sigma, seed_verdict
 from tests import loop_support as support
 
 
@@ -96,10 +96,48 @@ def test_promotion_goes_through_the_registry_recomputation(seeded: LoopControlle
         assert promotion["reason"].startswith("verdict sur")
 
 
-def test_the_history_of_replications_grows_with_each_multi_seed_experiment(seeded: LoopController) -> None:
-    prior, sources = seeded._variance_prior()
-    assert any(s.get("experiment_id") == _finetune(seeded).experiment_id for s in sources)
-    assert prior and all(v >= 0 for v in prior.values())
+def test_the_margin_prior_comes_only_from_the_imported_history(
+    seeded: LoopController, tmp_path: Path
+) -> None:
+    """Les expériences de ce journal n'alimentent pas la marge ; l'historique importé, si."""
+    import shutil
+
+    assert seeded._variance_prior() == ({}, [])  # rien d'importé : aucune marge tirée du journal
+    copy = tmp_path / "copy"
+    shutil.copytree(seeded.workdir, copy)
+    (copy / "loop.lock").unlink(missing_ok=True)
+    ctrl = LoopController(copy, seeded.world, log=lambda _m: None)
+    imported = ctrl.import_replications([seeded.workdir])
+    assert imported["groups"] >= 1
+    groups = [g["values"] for e in ctrl.journal.loop_events("replication_history") for g in e["groups"]]
+    prior, sources = ctrl._variance_prior()
+    assert prior == pooled_sigma(groups) and prior
+    assert all("experiment_id" not in s for s in sources)
+
+
+def test_a_destructive_noisy_experiment_does_not_widen_the_margin(
+    seeded: LoopController, tmp_path: Path
+) -> None:
+    """Adversarial (vulnérabilité démontrée sur la boucle L) : une expérience destructrice dont les
+    graines divergent énormément, consignée dans le journal, ne doit pas élargir la marge des
+    expériences suivantes."""
+    import shutil
+
+    copy = tmp_path / "copy"
+    shutil.copytree(seeded.workdir, copy)
+    (copy / "loop.lock").unlink(missing_ok=True)
+    ctrl = LoopController(copy, seeded.world, log=lambda _m: None)
+    ctrl.import_replications([seeded.workdir])
+    before = ctrl._variance_prior()
+    plan = _finetune(seeded).plan
+    suites = list(before[0]) or [next(iter(seeded.world.benchmarks))]
+    ctrl.journal.experiment("destructive", "planned", plan=plan)
+    ctrl.journal.experiment(
+        "destructive",
+        "seed_verdict",
+        result={"decision": "reject", "rows": [{"suite": s, "seeds": [0.0, 9.0, 4.0]} for s in suites]},
+    )
+    assert ctrl._variance_prior() == before
 
 
 def test_the_registry_refuses_a_reproduced_regression_whatever_the_caller_claims(
