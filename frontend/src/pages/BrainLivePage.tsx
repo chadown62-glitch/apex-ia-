@@ -190,6 +190,14 @@ const RUN_LABELS: Record<string, string> = {
   replica_replay: "Rejeu du Judge sur la réplique",
 };
 
+/** Graines supplémentaires du protocole multi-graines : `replica` (graine 1), `replica2`, … */
+function runLabel(run: string): string {
+  if (RUN_LABELS[run]) return RUN_LABELS[run];
+  const seed = /^replica(\d+)(_replay)?$/.exec(run);
+  if (seed) return seed[2] ? `Rejeu du Judge sur la graine ${seed[1]}` : `Graine ${seed[1]} (indépendante)`;
+  return run;
+}
+
 function CurrentPanel({ current, running }: { current: BrainCurrent | null; running: boolean }) {
   if (current === null) {
     return (
@@ -218,7 +226,7 @@ function CurrentPanel({ current, running }: { current: BrainCurrent | null; runn
             <div className="brain-progress__bar" style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }} />
           </div>
           <p>
-            {progress.run ? `${RUN_LABELS[progress.run] ?? progress.run} — ` : ""}pas {progress.step} / {progress.of} — perte{" "}
+            {progress.run ? `${runLabel(progress.run)} — ` : ""}pas {progress.step} / {progress.of} — perte{" "}
             {fmt(progress.loss, 4)} — lr {progress.lr?.toExponential(2)}
           </p>
         </>

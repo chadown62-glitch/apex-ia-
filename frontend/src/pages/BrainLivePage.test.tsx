@@ -151,6 +151,16 @@ describe("BrainLivePage", () => {
     await waitFor(() => expect(screen.getByText("REPRISE EN COURS")).toBeInTheDocument());
   });
 
+  it("names the extra seeds of the multi-seed protocol", async () => {
+    const third: BrainState = {
+      ...state,
+      current: { ...(state.current as NonNullable<BrainState["current"]>), progress: { t: 1, phase: "training_progress", step: 10, of: 60, loss: 1.5, lr: 0.001, run: "replica2" } },
+    };
+    mockBackend({ status: "real", data: third, detail: null }, { status: "real", data: [], detail: null });
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/Graine 2 \(indépendante\) — pas 10 \/ 60/)).toBeInTheDocument());
+  });
+
   it("does not present an unfinished experiment of a stopped loop as running", async () => {
     const idle = { status: "not_available" as const, reason: "aucune boucle en cours" };
     const stopped: BrainState = { ...state, loop: { status: "real", state: "idle", pid: null, last_event: null, resources: idle } };
