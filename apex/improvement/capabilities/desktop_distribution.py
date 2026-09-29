@@ -64,6 +64,17 @@ _PANEL_METRICS: dict[str, str] = {
     "port_conflict_detected": "autre programme sur le port : PortConflict",
     "no_secret_in_outputs": "le jeton n'apparaît dans aucun journal, sortie JSON ni diagnostic",
 }
+#: Chemins Windows impossibles à exécuter ici : mesurés par les tests du Panel (MOCK : wsl.exe simulé).
+_WINDOWS_MOCK_METRICS: dict[str, tuple[str, str]] = {
+    "wsl_any_language": (
+        "WslLocalizationTests",
+        "MOCK : WSL en marche vu en marche quelle que soit la langue de Windows (sortie traduite)",
+    ),
+    "wsl_backend_in_other_distro": (
+        "MultiDistroDiscoveryTests",
+        "MOCK : backend lancé dans une distribution non par défaut, trouvé sans aucun réglage",
+    ),
+}
 _INSTALLER_METRICS: dict[str, str] = {
     "installer_builds": "build_desktop_release.sh produit l'installateur, son SHA256 et son manifeste",
     "installer_reproducible": "deux builds successifs donnent le même SHA256 d'installateur",
@@ -99,6 +110,7 @@ SPEC = CapabilitySpec(
     metrics=(
         *(MetricSpec(name, description, True) for name, description in _PANEL_METRICS.items()),
         *(MetricSpec(name, description, True) for name, description in _INSTALLER_METRICS.items()),
+        *(MetricSpec(name, description, True) for name, (_, description) in _WINDOWS_MOCK_METRICS.items()),
     ),
     success_criteria=("toutes les métriques déterministes à 1.0", "aucune régression"),
     risks=(
@@ -513,6 +525,26 @@ def _starting_scenario(panel: Path, box: Sandbox, port: int) -> tuple[int, Any]:
         launcher.wait(timeout=30)
 
 
+# -- chemins Windows (MOCK) -------------------------------------------------------------------------
+
+
+def dotnet_test_class(test_class: str) -> tuple[float, str]:
+    """Exécute une classe de tests du Panel (dans l'arbre MESURÉ) : 1.0 si elle passe entièrement."""
+    project = SETUP / "tests" / "ApexSetup.Dashboard.Tests"
+    selector = f"FullyQualifiedName~ApexSetup.Dashboard.Tests.{test_class}"
+    done = subprocess.run(
+        ["dotnet", "test", str(project), "--nologo", "--filter", selector],
+        capture_output=True,
+        text=True,
+        timeout=1800,
+        env={**os.environ, "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1"},
+    )
+    lines = done.stdout.splitlines()
+    summary = next((line.strip() for line in lines if "Passed!" in line or "Failed!" in line), "")
+    ok = done.returncode == 0 and summary.startswith("Passed!")
+    return (1.0 if ok else 0.0), summary or (done.stdout + done.stderr)[-300:]
+
+
 # -- installateur (WINE E2E) ----------------------------------------------------------------------
 
 
@@ -591,6 +623,13 @@ class DesktopDistributionAdapter:
             # rendrait BLOQUÉ par construction tout cycle dont la baseline n'a pas de backend).
             if latencies:
                 notes.append(f"durée de --status-json (backend en marche, 5 mesures) : {latencies} s")
+        for metric, (test_class, _) in _WINDOWS_MOCK_METRICS.items():
+            if shutil.which("dotnet") is None:
+                blocked[metric] = "dotnet absent"
+                continue
+            value, observed = dotnet_test_class(test_class)
+            samples[metric] = (value,)
+            notes.append(f"{metric}: {'OK' if value else 'ÉCHEC'} — {observed}")
         values, installer_blocked, installer_notes, seconds = installer_measure()
         samples.update({k: (v,) for k, v in values.items()})
         blocked.update(installer_blocked)
@@ -776,6 +815,16 @@ def _probe_installer_policy() -> ProbeOutcome:
     )
 
 
+def _mock_probe(metric: str) -> Callable[[], ProbeOutcome]:
+    test_class, description = _WINDOWS_MOCK_METRICS[metric]
+
+    def run() -> ProbeOutcome:
+        value, observed = dotnet_test_class(test_class)
+        return ProbeOutcome(value < 1.0, observed, description, JudgeSeverity.HIGH)
+
+    return run
+
+
 _F, _A, _I = CycleKind.FUNCTIONALITY, CycleKind.ADVERSARIAL, CycleKind.IMPROVEMENT
 _ALL = frozenset({_F, _A, _I})
 
@@ -814,6 +863,20 @@ _PROBES: tuple[tuple[str, JudgeDimension, str, Callable[[], ProbeOutcome], str],
         "commande WSL passée par un shell",
         _probe_no_shell_in_wsl_commands,
         "setup/tests/ApexSetup.Dashboard.Tests/BackendHostTests.cs",
+    ),
+    (
+        "wsl_localized_output",
+        JudgeDimension.EDGE_CASES,
+        "WSL mal lu sur un Windows non anglais (MOCK)",
+        _mock_probe("wsl_any_language"),
+        "setup/tests/ApexSetup.Dashboard.Tests/WslRobustnessTests.cs",
+    ),
+    (
+        "backend_in_other_distro",
+        JudgeDimension.EDGE_CASES,
+        "backend d'une autre distribution introuvable (MOCK)",
+        _mock_probe("wsl_backend_in_other_distro"),
+        "setup/tests/ApexSetup.Dashboard.Tests/WslRobustnessTests.cs",
     ),
     (
         "installer_policy",
