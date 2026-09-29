@@ -139,3 +139,21 @@ toutes les graines avant d'inscrire une promotion. Limites connues : σ_prior re
 ajouter une graine après avoir vu les deux premières est une procédure séquentielle (prévue ici,
 bornée à 3). Les règles seront aussi appliquées, à titre d'ILLUSTRATION seulement, aux expériences
 P3.5 déjà faites : ce résultat ne servira à régler aucun seuil.
+
+### 2.1 Précision d'interprétation (écrite avant toute expérience P3.7)
+
+Cas non couvert littéralement par l'ordre des décisions : si aucune suite n'est
+VARIANCE_INCONCLUSIVE mais que le seuil d'acquisition (ou la condition sur l'artefact promu) n'est
+pas atteint, la décision est REJECT (une graine de plus ne changerait pas une condition déjà
+tranchée sans ambiguïté). Implémentation : `apex/neural/variance.py` (fonction pure), consignée par
+le contrôleur (`seed_verdict` au journal, historique de variance figé dans l'événement `planned`),
+RECALCULÉE par le registre avant toute promotion.
+
+### 2.2 Illustration sur l'A/A de P3.5 (ne règle aucun seuil)
+
+Les deux continuations A/A (même recette, graines 0 et 1 000 003), jugées à l'origine REJECT toutes
+deux pour « oubli » par la règle mono-graine, donnent avec les règles de §2 : **INCONCLUSIVE**
+(`heldout:stdlib` +0,027 ± 0,024 pour une marge de 0,016 ; `program_trace:heldout` −0,025 ± 0,142 ;
+`code_repair:validation` +0,031 ± 0,076) — le protocole demanderait une troisième graine. Ni oubli
+confirmé, ni le gain « GENERALIZATION » de la seule graine A. Circularité connue : la paire A/A fait
+partie de l'historique σ utilisé ici ; c'est pourquoi ce n'est qu'une illustration.

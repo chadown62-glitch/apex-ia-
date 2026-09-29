@@ -37,7 +37,12 @@ from apex.neural.loop.execute import (
     measure_with_details,
     reports_to_dict,
 )
-from apex.neural.loop.failure import INTEGRITY_CAUSES, analyze_exception, analyze_judgement
+from apex.neural.loop.failure import (
+    INTEGRITY_CAUSES,
+    analyze_exception,
+    analyze_judgement,
+    analyze_seed_verdict,
+)
 from apex.neural.loop.journal import ExperimentJournal, ExperimentRecord, attest
 from apex.neural.loop.judge import JUDGE_ID, IndependentJudge, JudgeResult
 from apex.neural.loop.observe import Observation, observe
@@ -54,6 +59,7 @@ from apex.neural.loop.telemetry import Telemetry
 from apex.neural.loop.world import PRIMARY, World
 from apex.neural.protection import Protection, protections
 from apex.neural.registry import ModelRegistry, Proposal
+from apex.neural.variance import ACCEPT, INVALID, failed_integrity, pooled_sigma, seed_verdict
 
 #: Décalage de graine de la réplique d'une promotion (graine indépendante, déterministe).
 REPLICA_SEED_OFFSET = 1_000_003
@@ -87,6 +93,12 @@ class LoopLimits:
     #: Une promotion exige qu'une RÉPLIQUE (même plan, graine indépendante) soit elle aussi
     #: acceptée par le Judge : un gain qui tient à la graine n'est pas un apprentissage.
     replicate_promotions: bool = True
+    #: Protocole MULTI-GRAINES (P3.7) : toute expérience depuis un champion est entraînée sur au
+    #: moins `seeds` graines indépendantes avant toute décision ; une graine de plus (jusqu'à
+    #: `max_seeds`) si la variance ne permet pas de conclure. `seeds = 1` : ancien protocole
+    #: (réplique seulement après un ACCEPT), choix explicite consigné au journal.
+    seeds: int = 2
+    max_seeds: int = 3
 
     def __post_init__(self) -> None:
         for name, value in asdict(self).items():
@@ -94,6 +106,8 @@ class LoopLimits:
                 continue
             if value <= 0:
                 raise ValueError(f"borne « {name} » doit être strictement positive (reçu {value})")
+        if self.max_seeds < self.seeds:
+            raise ValueError(f"max_seeds ({self.max_seeds}) < seeds ({self.seeds})")
 
 
 @contextmanager
@@ -492,11 +506,16 @@ class LoopController:
                 )
         if self._steps_used() + plan.recipe.steps > self.limits.max_total_steps:
             raise _LoopStop(f"budget de calcul insuffisant pour {plan.recipe.steps} pas")
+        prior, sources = self._variance_prior()
         self.journal.experiment(
             plan.experiment_id,
             "planned",
             plan=plan.to_dict(),
             decision=decision.to_dict(),
+            # Historique de variance FIGÉ à la planification : un résultat ultérieur ne change jamais
+            # les règles appliquées à cette expérience.
+            variance_prior=prior,
+            variance_sources=sources,
         )
         self.log(f"[{plan.experiment_id}] {plan.hypothesis.strategy} : {plan.hypothesis.modification}")
         return self._conclude(plan, "planned")
@@ -609,6 +628,13 @@ class LoopController:
             judged = verdict
         else:
             judged = self._judge_from_journal(record)
+        record = self.journal.experiments()[exp]
+        if (
+            self.limits.seeds >= 2
+            and plan.baseline.get("artifact")
+            and (from_event in ("judged", "replicated") or record.payload("seed_verdict") is not None)
+        ):
+            return self._conclude_seeds(plan, from_event)
         if from_event == "judged" and judged.accepted and self.limits.replicate_promotions:
             try:
                 replica = self._replicate(plan)
@@ -645,17 +671,20 @@ class LoopController:
             self._promote(plan, record=self.journal.experiments()[exp], judged=judged)
         return self.journal.experiments()[exp]
 
-    def _replicate(self, plan: ExperimentPlan) -> dict[str, Any]:
-        """Même plan, graine indépendante : entraînement réel puis jugement complet (rejeu
-        compris) contre la MÊME référence. Seul ACCEPT confirme la promotion."""
+    def _replicate(self, plan: ExperimentPlan, index: int = 1) -> dict[str, Any]:
+        """Même plan, graine indépendante n° `index` : entraînement réel puis jugement complet
+        (rejeu compris) contre la MÊME référence. Ses mesures par élément sont consignées : elles
+        entrent dans le verdict multi-graines et dans l'historique de variance."""
+        suffix = "" if index == 1 else str(index)
         replica_plan = replace(
             plan,
-            recipe=replace(plan.recipe, seed=plan.recipe.seed + REPLICA_SEED_OFFSET),
-            experiment_id=f"{plan.experiment_id}-replica",
+            recipe=replace(plan.recipe, seed=plan.recipe.seed + index * REPLICA_SEED_OFFSET),
+            experiment_id=f"{plan.experiment_id}-replica{suffix}",
         )
-        run_dir = self._run_dir(plan.experiment_id) / "replica"
+        run_dir = self._run_dir(plan.experiment_id) / f"replica{suffix}"
+        tag = f"replica{suffix}"
         live = Telemetry(self._run_dir(plan.experiment_id))
-        live.emit(telemetry.REPLICATION_STARTED, seed=replica_plan.recipe.seed)
+        live.emit(telemetry.REPLICATION_STARTED, seed=replica_plan.recipe.seed, seed_index=index)
         result = execute(
             replica_plan,
             self.world,
@@ -664,7 +693,7 @@ class LoopController:
             stop=self.stop,
             stop_file=self.stop_file,
             checkpoint_every=self.limits.checkpoint_every,
-            on_event=lambda phase, **fields: live.emit(phase, run="replica", **fields),
+            on_event=lambda phase, **fields: live.emit(phase, run=tag, **fields),
         )
         current = self.registry.current()
         stored = (
@@ -684,16 +713,297 @@ class LoopController:
             stop=self.stop,
             stop_file=self.stop_file,
             protections=self._protections(),
-            on_event=lambda phase, **fields: live.emit(phase, run="replica_replay", **fields),
+            on_event=lambda phase, **fields: live.emit(phase, run=f"{tag}_replay", **fields),
         )
         return {
             "seed": replica_plan.recipe.seed,
+            "seed_index": index,
             "artifact": result.artifact,
             "decision": verdict.decision,
             "accepted": verdict.accepted,
             "reasons": verdict.reasons[:3],
             "comparisons": verdict.to_dict()["comparisons"],
+            "candidate_reports": reports_to_dict(verdict.candidate_reports),
+            "invalid": failed_integrity(verdict.checks),
         }
+
+    # -- protocole multi-graines (P3.7) ----------------------------------------------------
+
+    def _conclude_seeds(self, plan: ExperimentPlan, from_event: str) -> ExperimentRecord:
+        exp = plan.experiment_id
+        record = self.journal.experiments()[exp]
+        if from_event in ("judged", "replicated"):
+            verdict = self._seed_verdict(plan, record)
+            while verdict["decision"] != INVALID and verdict["need_more_seeds"]:
+                index = len(record.replications) + 1
+                try:
+                    replica = self._replicate(plan, index)
+                except StopRequested as stop:
+                    # Rien n'est consigné : la graine sera refaite à la reprise.
+                    raise _LoopStop(
+                        "arrêt demandé pendant une graine supplémentaire (reprise possible)"
+                    ) from stop
+                except Exception as exc:  # une graine qui échoue invalide l'expérience
+                    replica = {
+                        "seed": plan.recipe.seed + index * REPLICA_SEED_OFFSET,
+                        "seed_index": index,
+                        "artifact": None,
+                        "decision": "error",
+                        "accepted": False,
+                        "reasons": [f"{exc.__class__.__name__}: {exc}"],
+                        "comparisons": [],
+                        "candidate_reports": None,
+                        "invalid": ["replica_error"],
+                    }
+                self.journal.experiment(exp, "replicated", **replica)
+                self.log(f"[{exp}] graine {index} ({replica['seed']}) : {replica['decision']}")
+                record = self.journal.experiments()[exp]
+                verdict = self._seed_verdict(plan, record)
+            self.journal.experiment(exp, "seed_verdict", result=verdict)
+            self.log(
+                f"[{exp}] verdict sur {verdict['k']} graines : {verdict['decision']} "
+                f"— {verdict['reasons'][:1]}"
+            )
+            from_event = "seed_verdict"
+        record = self.journal.experiments()[exp]
+        stored = record.payload("seed_verdict")
+        assert stored is not None
+        verdict = stored["result"]
+        if from_event == "seed_verdict":
+            judged = record.payload("judged") or {}
+            analysis = analyze_seed_verdict(plan, verdict, judged.get("result", {}).get("checks", {}))
+            self.journal.experiment(
+                exp,
+                "analyzed",
+                analysis=analysis.to_dict() if analysis else {"cause": None, "accepted": True},
+            )
+            from_event = "analyzed"
+        if from_event == "analyzed":
+            self._promote_seeds(plan, record=self.journal.experiments()[exp], verdict=verdict)
+        return self.journal.experiments()[exp]
+
+    def _variance_settings(self, plan: ExperimentPlan) -> dict[str, Any]:
+        target = self.judge.primary_for(plan)
+        capability = self.world.capability_of_suite(target)
+        memorization = (
+            self.world.capabilities[capability][0].contract.memorization_suite if capability else None
+        )
+        return {
+            "target": target,
+            "memorization_suite": memorization,
+            "capability_target": capability is not None,
+            "max_seeds": self.limits.max_seeds,
+            "tolerances": {
+                **self.world.metric_tolerances,
+                "bits_per_byte": self.judge.max_guard_regression_bpb,
+            },
+        }
+
+    def _seed_reports(self, record: ExperimentRecord) -> tuple[list[dict[str, EvalReport]], list[str]]:
+        judged = record.payload("judged") or {}
+        seeds = [{n: EvalReport.from_dict(r) for n, r in judged.get("candidate_reports", {}).items()}]
+        invalid = [f"{c}#0" for c in failed_integrity(judged.get("result", {}).get("checks", {}))]
+        for i, replica in enumerate(record.replications, start=1):
+            invalid += [f"{c}#{i}" for c in replica.get("invalid") or []]
+            if replica.get("candidate_reports"):
+                seeds.append({n: EvalReport.from_dict(r) for n, r in replica["candidate_reports"].items()})
+            elif not replica.get("invalid"):
+                invalid.append(f"graine sans mesures par élément#{i}")
+        return seeds, invalid
+
+    def _seed_verdict(self, plan: ExperimentPlan, record: ExperimentRecord) -> dict[str, Any]:
+        seeds, invalid = self._seed_reports(record)
+        planned = record.payload("planned") or {}
+        prior = planned.get("variance_prior")
+        if prior is None:  # expérience planifiée avant P3.7 : historique calculé à la reprise
+            prior = self._variance_prior()[0]
+        if not invalid and len(seeds) < self.limits.seeds:
+            return {
+                "decision": "pending",
+                "k": len(seeds),
+                "need_more_seeds": True,
+                "reasons": [],
+                "rows": [],
+            }
+        settings = self._variance_settings(plan)
+        return {
+            **seed_verdict(
+                seeds=seeds,
+                protections=self._protections(),
+                tolerances=settings["tolerances"],
+                prior=prior,
+                target=settings["target"],
+                memorization_suite=settings["memorization_suite"],
+                new_capability=settings["capability_target"],
+                invalid=invalid,
+                max_seeds=self.limits.max_seeds,
+            ),
+            "prior": prior,
+        }
+
+    def _promote_seeds(
+        self, plan: ExperimentPlan, *, record: ExperimentRecord, verdict: dict[str, Any]
+    ) -> None:
+        exp = plan.experiment_id
+        if verdict["decision"] != ACCEPT:
+            self.journal.experiment(
+                exp,
+                "promotion",
+                promoted=False,
+                reason=f"verdict sur {verdict['k']} graines : {verdict['decision']} "
+                f"— {'; '.join(verdict['reasons'][:2])}",
+            )
+            return
+        executed = record.payload("executed")
+        judged = record.payload("judged")
+        assert executed is not None and judged is not None
+        seeds, _ = self._seed_reports(record)
+        settings = self._variance_settings(plan)
+        existing = next(
+            (e for e in self.registry.entries() if e.get("metadata", {}).get("experiment_id") == exp), None
+        )
+        entry = existing or self.registry.propose(
+            Proposal(
+                name=exp,
+                checkpoint_sha256=executed["checkpoint_sha256"],
+                dataset_fingerprint=self.world.dataset.fingerprint,
+                reports=seeds[0],
+                in_run_decision=ACCEPT,
+                artifact=executed["artifact"],
+                primary=settings["target"],
+                metadata={
+                    "experiment_id": exp,
+                    "recipe": plan.recipe.to_dict(),
+                    "plan_fingerprint": plan.fingerprint,
+                    "judge_id": judged["result"].get("judge_id"),
+                    "world": self.world.fingerprint,
+                    "seeds": len(seeds),
+                },
+                seed_reports=tuple(seeds[1:]),
+                variance={**settings, "prior": verdict["prior"]},
+            )
+        )
+        self.journal.experiment(
+            exp,
+            "promotion",
+            promoted=entry["promoted"],
+            registry_index=entry["index"],
+            reason="; ".join(entry["reasons"]),
+        )
+        self.log(f"[{exp}] promotion : {'OUI' if entry['promoted'] else 'NON'}")
+
+    def import_replications(self, sources: list[Path]) -> dict[str, Any]:
+        """Historique de variance IMPORTÉ d'autres répertoires (lignée) : pour chaque recette
+        affinée depuis un champion, les valeurs par suite de ses graines (candidat, répliques, ou
+        expériences de même recette ne différant que par la graine), avec leurs empreintes de
+        benchmark et leur provenance. Graines identiques dédupliquées (un rejeu déterministe n'est
+        pas une nouvelle graine). Chaînes vérifiées ; rien n'est modifié dans les sources."""
+        seeds: dict[str, dict[int, dict[str, Any]]] = {}
+        origin: dict[str, dict[str, Any]] = {}
+        for source in sources:
+            journal = ExperimentJournal(source / "journal.jsonl")
+            entries = journal.entries()  # vérifie la chaîne
+            head = entries[-1]["hash"] if entries else None
+            for record in journal.experiments().values():
+                judged = record.payload("judged")
+                recipe = dict(record.plan.get("recipe", {}))
+                if (
+                    judged is None
+                    or recipe.get("init") != "champion"
+                    or not judged.get("candidate_reports")
+                ):
+                    continue
+                seed = int(recipe.pop("seed"))
+                key = repr(
+                    (
+                        record.plan.get("world_fingerprint"),
+                        record.plan.get("baseline", {}).get("artifact"),
+                        sorted(recipe.items()),
+                    )
+                )
+                reports = judged["candidate_reports"]
+                group = seeds.setdefault(key, {})
+                group.setdefault(
+                    seed,
+                    {
+                        "values": {s: r["value"] for s, r in reports.items()},
+                        "fingerprints": {s: r["benchmark_fingerprint"] for s, r in reports.items()},
+                        "from": f"{record.experiment_id}@{source}",
+                    },
+                )
+                for replica in record.replications:
+                    if replica.get("invalid") or replica.get("artifact") is None:
+                        continue
+                    measured = replica.get("candidate_reports")
+                    values = (
+                        {s: r["value"] for s, r in measured.items()}
+                        if measured
+                        else {c["suite"]: c["candidate_value"] for c in replica.get("comparisons", [])}
+                    )
+                    group.setdefault(
+                        int(replica["seed"]),
+                        {
+                            "values": values,
+                            "fingerprints": {s: r["benchmark_fingerprint"] for s, r in reports.items()},
+                            "from": f"{record.experiment_id}#réplique@{source}",
+                        },
+                    )
+                origin.setdefault(key, {"workdir": str(source), "journal_head": head})
+        groups = []
+        for key, by_seed in seeds.items():
+            if len(by_seed) < 2:
+                continue
+            members = list(by_seed.values())
+            suites = set.intersection(*(set(m["values"]) for m in members))
+            groups.append(
+                {
+                    "source": {
+                        **origin[key],
+                        "seeds": sorted(by_seed),
+                        "members": [m["from"] for m in members],
+                    },
+                    "values": {s: [m["values"][s] for m in members] for s in sorted(suites)},
+                    "fingerprints": {s: members[0]["fingerprints"][s] for s in sorted(suites)},
+                }
+            )
+        with self._lock():
+            self.journal.loop("replication_history", groups=groups)
+        prior, _ = self._variance_prior()
+        return {"groups": len(groups), "sources": [g["source"] for g in groups], "prior": prior}
+
+    def _suite_fingerprints(self) -> dict[str, str]:
+        prints = {name: bench.fingerprint for name, bench in self.world.benchmarks.items()}
+        for capability, data in self.world.capabilities.values():
+            prints.update(capability.suite_fingerprints(data))
+        return prints
+
+    def _variance_prior(self) -> tuple[dict[str, float], list[dict[str, Any]]]:
+        """sigma par suite, groupé sur l'HISTORIQUE des réplications : groupes importés (événement
+        `replication_history`) et expériences multi-graines de ce journal ; affinages depuis un
+        champion seulement, suites dont le benchmark a l'empreinte de ce monde."""
+        prints = self._suite_fingerprints()
+        groups: list[dict[str, list[float]]] = []
+        sources: list[dict[str, Any]] = []
+        for event in self.journal.loop_events("replication_history"):
+            for group in event["groups"]:
+                values = {
+                    s: v
+                    for s, v in group["values"].items()
+                    if group["fingerprints"].get(s) == prints.get(s)
+                }
+                if values:
+                    groups.append(values)
+                    sources.append(group["source"])
+        for record in self.journal.experiments().values():
+            stored = record.payload("seed_verdict")
+            if stored is None or record.plan.get("recipe", {}).get("init") != "champion":
+                continue
+            rows = stored["result"].get("rows", [])
+            values = {r["suite"]: r["seeds"] for r in rows if len(r["seeds"]) >= 2}
+            if values:
+                groups.append(values)
+                sources.append({"experiment_id": record.experiment_id, "journal": "ce monde"})
+        return pooled_sigma(groups), sources
 
     def _judge_from_journal(self, record: ExperimentRecord) -> JudgeResult:
         judged = self._first_judgement(record)

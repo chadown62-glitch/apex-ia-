@@ -8,6 +8,7 @@ import type {
   BrainProtection,
   BrainWorld,
   NotAvailable,
+  SeedVerdict,
 } from "../api/types";
 import { ErrorState, LoadingState } from "../components/common/EmptyState";
 import { Panel } from "../components/common/Panel";
@@ -30,6 +31,55 @@ function fmt(value: number | null | undefined, digits = 3): string {
   return value === null || value === undefined ? "—" : value.toFixed(digits);
 }
 
+const LIFECYCLE: Record<string, string> = {
+  RUNNING: "EN COURS",
+  RECOVERING: "REPRISE EN COURS",
+  INTERRUPTED: "INTERROMPUE",
+  COMPLETED: "TERMINÉE",
+  IDLE: "À L'ARRÊT",
+};
+
+function SeedVerdictTable({ experimentId, verdict }: { experimentId: string; verdict: SeedVerdict }) {
+  return (
+    <div className="brain-verdict">
+      <p>
+        <strong>{experimentId}</strong> — verdict sur {verdict.k} graines : <strong>{verdict.decision.toUpperCase()}</strong>{" "}
+        <span className="brain-muted">{verdict.reasons.join(" ; ")}</span>
+      </p>
+      {verdict.rows.length > 0 && (
+        <table className="brain-table">
+          <thead>
+            <tr>
+              <th>capacité</th>
+              <th>suite</th>
+              <th>référence (ancre)</th>
+              <th>graines</th>
+              <th>écart moyen</th>
+              <th>incertitude</th>
+              <th>marge</th>
+              <th>statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {verdict.rows.map((r) => (
+              <tr key={r.suite}>
+                <td>{r.group}</td>
+                <td>{r.suite}</td>
+                <td>{fmt(r.reference)}</td>
+                <td>{r.seeds.map((v) => fmt(v)).join(" · ")}</td>
+                <td>{r.delta >= 0 ? "+" : ""}{fmt(r.delta, 4)}</td>
+                <td>± {fmt(r.uncertainty, 4)}</td>
+                <td>{fmt(r.margin, 4)}</td>
+                <td>{r.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
 function LoopPanel({ loop, world }: { loop: BrainLoop; world: BrainWorld | NotAvailable }) {
   return (
     <Panel title="Boucle et monde">
@@ -37,7 +87,9 @@ function LoopPanel({ loop, world }: { loop: BrainLoop; world: BrainWorld | NotAv
         <NotAvailableNote value={{ status: "not_available", reason: loop.reason ?? "" }} />
       ) : (
         <p>
-          <span className={`brain-tag brain-tag--${loop.state}`}>{loop.state === "running" ? "EN COURS" : "À L'ARRÊT"}</span>
+          <span className={`brain-tag brain-tag--${loop.state}`}>
+            {LIFECYCLE[loop.lifecycle ?? (loop.state === "running" ? "RUNNING" : "IDLE")]}
+          </span>
           {loop.pid ? ` pid ${loop.pid}` : ""}
           {loop.resources && !isNA(loop.resources)
             ? ` — ${fmt(loop.resources.rss_mb, 0)} Mo, ${fmt(loop.resources.cpu_seconds, 0)} s CPU, charge ${loop.resources.loadavg.join(" ")}`
@@ -221,6 +273,11 @@ function ExperimentsPanel({ experiments }: { experiments: BrainExperiment[] }) {
           </tbody>
         </table>
       )}
+      {experiments
+        .filter((e) => e.seed_verdict)
+        .map((e) => (
+          <SeedVerdictTable key={e.experiment_id} experimentId={e.experiment_id} verdict={e.seed_verdict as SeedVerdict} />
+        ))}
     </Panel>
   );
 }

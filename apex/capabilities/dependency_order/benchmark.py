@@ -33,16 +33,19 @@ SUITE_SIZES = {"train": 200, "validation": 200, "heldout": 300}
 BENCHMARK_FORMAT = 1
 
 
-def suite_name(split: str) -> str:
-    return f"cap:{CAPABILITY}:{split}"
+def suite_name(split: str, capability: str = CAPABILITY) -> str:
+    return f"cap:{capability}:{split}"
 
 
 @dataclass(frozen=True)
 class OrderProblem:
-    """Programme ordonné (`base`) et ordre de présentation de ses instructions."""
+    """Programme ordonné (`base`) et ordre de présentation de ses instructions. `explicit` :
+    format de réponse à LIAISON EXPLICITE (P3.7) — chaque instruction exécutée est recopiée avant sa
+    valeur (`a=3>3,b=a+4>7,c=b-a>4=4`) ; seule la réponse change, jamais l'entrée."""
 
     base: Problem
     order: tuple[int, ...]
+    explicit: bool = False
 
     @property
     def statements(self) -> list[str]:
@@ -63,7 +66,11 @@ class OrderProblem:
 
     @property
     def answer(self) -> str:
-        return self.base.answer
+        if not self.explicit:
+            return self.base.answer
+        steps = self.base.program.split(";")
+        items = ",".join(f"{s}>{v}" for s, v in zip(steps, self.base.values, strict=True))
+        return f"{items}={self.base.values[-1]}"
 
     @property
     def document(self) -> str:
@@ -74,20 +81,26 @@ class OrderProblem:
         return self.base.canonical
 
     def to_dict(self) -> dict[str, Any]:
-        return {**self.base.to_dict(), "order": list(self.order)}
+        # Le format implicite n'écrit pas la clé : empreintes des benchmarks existants inchangées.
+        return {
+            **self.base.to_dict(),
+            "order": list(self.order),
+            **({"explicit": True} if self.explicit else {}),
+        }
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> OrderProblem:
-        return cls(Problem.from_dict(data), tuple(data["order"]))
+        base = {k: v for k, v in data.items() if k != "explicit"}
+        return cls(Problem.from_dict(base), tuple(data["order"]), bool(data.get("explicit", False)))
 
 
-def shuffled(problem: Problem, rng: random.Random) -> OrderProblem:
+def shuffled(problem: Problem, rng: random.Random, *, explicit: bool = False) -> OrderProblem:
     """Ordre de présentation tiré au hasard, jamais l'ordre d'exécution."""
     size = problem.depth + 1
     order = list(range(size))
     while order == sorted(order):
         rng.shuffle(order)
-    return OrderProblem(problem, tuple(order))
+    return OrderProblem(problem, tuple(order), explicit)
 
 
 def resolve(shown: str) -> Problem:
@@ -197,7 +210,8 @@ class DependencyOrderBenchmark:
             raise BenchmarkBuildError("problème évalué par program_trace présent dans le benchmark")
         if set(self.seen) & set(eval_canonical):
             raise BenchmarkBuildError("problème d'évaluation déjà entraîné par program_trace")
-        if not set(self.suites[suite_name("train")].problems) <= set(self.pool):
+        train = next(s for s in self.suites.values() if s.split == "train")
+        if not set(train.problems) <= set(self.pool):
             raise BenchmarkBuildError("la suite train doit être prise dans le réservoir d'entraînement")
         for name, suite in self.suites.items():
             depth = EVAL_DEPTHS.get(suite.split, TRAIN_DEPTH)
@@ -239,6 +253,8 @@ def build_benchmark(
     seed: str = "apex-dependency-order",
     pool_size: int = 30_000,
     sizes: dict[str, int] | None = None,
+    capability: str = CAPABILITY,
+    explicit: bool = False,
 ) -> DependencyOrderBenchmark:
     sizes = {**SUITE_SIZES, **(sizes or {})}
     rng = random.Random(seed)  # noqa: S311 - tirage reproductible, pas de cryptographie
@@ -254,7 +270,7 @@ def build_benchmark(
             if problem.canonical in seen_set:
                 rejected["excluded"] += 1
             elif problem.canonical not in canonical:
-                candidate = shuffled(problem, rng)
+                candidate = shuffled(problem, rng, explicit=explicit)
                 # Même règle que le monde : une séquence de 12 jetons de code partagée avec un
                 # document d'entraînement de program_trace (préfixe identique, noms compris).
                 if (document_grams(candidate) | document_grams(problem)) & seen_grams:  # type: ignore[arg-type]
@@ -276,7 +292,7 @@ def build_benchmark(
         elif problem.canonical in canonical:
             rejected["canonical" if problem.canonical not in evaluated_set else "excluded"] += 1
         else:
-            candidate = shuffled(problem, rng)
+            candidate = shuffled(problem, rng, explicit=explicit)
             if document_grams(candidate) & protected:  # type: ignore[arg-type]
                 rejected["ngram"] += 1
                 continue
@@ -289,9 +305,13 @@ def build_benchmark(
     if wrong:
         raise BenchmarkBuildError(f"le générateur diffère de l'exécution réelle : {wrong[:3]}")
     report["sandbox_verified"] = len(everything)
-    suites = {suite_name("train"): OrderSuite(suite_name("train"), "train", tuple(train))}
+    suites = {
+        suite_name("train", capability): OrderSuite(suite_name("train", capability), "train", tuple(train))
+    }
     for split, problems in eval_suites.items():
-        suites[suite_name(split)] = OrderSuite(suite_name(split), split, tuple(problems))
+        suites[suite_name(split, capability)] = OrderSuite(
+            suite_name(split, capability), split, tuple(problems)
+        )
     report["counts"] = {n: len(s.problems) for n, s in suites.items()} | {"pool": len(pool)}
     report["pool_depths"] = {d: sum(p.depth == d for p in pool) for d in POOL_DEPTHS}
     bench = DependencyOrderBenchmark(

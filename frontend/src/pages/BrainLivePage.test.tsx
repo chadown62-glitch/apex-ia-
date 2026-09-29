@@ -72,6 +72,23 @@ const state: BrainState = {
       cause: null,
       forgotten: [],
       learning: { code_repair: ["GENERALIZATION", "TRANSFER"] },
+      seed_verdict: {
+        decision: "inconclusive",
+        k: 3,
+        reasons: ["variance : conclusion impossible sur ['cap:program_trace:heldout']"],
+        rows: [
+          {
+            group: "program_trace",
+            suite: "cap:program_trace:heldout",
+            reference: 0.48,
+            seeds: [0.55, 0.41, 0.6],
+            delta: 0.0533,
+            uncertainty: 0.1301,
+            margin: 0.0966,
+            status: "VARIANCE_INCONCLUSIVE",
+          },
+        ],
+      },
       reasons: [],
       started_at: null,
       ended_at: null,
@@ -116,11 +133,22 @@ describe("BrainLivePage", () => {
     expect(screen.getByText("EN COURS")).toBeInTheDocument();
     expect(screen.queryByText("INTERROMPUE")).not.toBeInTheDocument();
     expect(screen.getByText("code_repair : GENERALIZATION+TRANSFER")).toBeInTheDocument();
+    // Verdict multi-graines : tel que consigné par le moteur (aucune valeur calculée côté interface).
+    expect(screen.getByText("VARIANCE_INCONCLUSIVE")).toBeInTheDocument();
+    expect(screen.getByText("0.550 · 0.410 · 0.600")).toBeInTheDocument();
+    expect(screen.getByText("INCONCLUSIVE")).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText("JUDGE_REJECT")).toBeInTheDocument());
     expect(screen.getByText(/RÉGRESSION text \/ heldout:stdlib/)).toBeInTheDocument();
     // Le journal numérote à partir de 0 : la première lecture ne doit perdre aucun événement.
     const urls = (globalThis.fetch as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((c) => String(c[0]));
     expect(urls.some((u) => u.includes("/brain/events?after=-1"))).toBe(true);
+  });
+
+  it("shows a recovery as such, from the engine's lifecycle", async () => {
+    const recovering: BrainState = { ...state, loop: { ...state.loop, lifecycle: "RECOVERING" } };
+    mockBackend({ status: "real", data: recovering, detail: null }, { status: "real", data: [], detail: null });
+    renderPage();
+    await waitFor(() => expect(screen.getByText("REPRISE EN COURS")).toBeInTheDocument());
   });
 
   it("does not present an unfinished experiment of a stopped loop as running", async () => {

@@ -133,7 +133,9 @@ def derive_world(args: argparse.Namespace) -> int:
 
     parent = World.load(args.parent / "world.json")
     added = [c for c in dict.fromkeys(args.add_capability) if c not in parent.spec.capabilities]
-    unsupported = [c for c in added if c not in ("program_trace", "dependency_order")]
+    unsupported = [
+        c for c in added if c not in ("program_trace", "dependency_order", "dependency_order_explicit")
+    ]
     if unsupported:
         print(f"capacités non dérivables par cette commande : {unsupported}", file=sys.stderr)
         return 2
@@ -148,27 +150,34 @@ def derive_world(args: argparse.Namespace) -> int:
         capability_data["program_trace"] = build_benchmark(sandbox_provider())
         domains[TASKS_DOMAIN] = TASKS_PREFIX
         train_only.append(TASKS_DOMAIN)
-    if "dependency_order" in added:
+    for name in ("dependency_order", "dependency_order_explicit"):
+        if name not in added:
+            continue
         from apex.capabilities.dependency_order import benchmark as order
-        from apex.capabilities.dependency_order.capability import TASKS_DOMAIN as ORDER_DOMAIN
-        from apex.capabilities.dependency_order.capability import TASKS_PREFIX as ORDER_PREFIX
         from apex.capabilities.program_trace.benchmark import document_grams
-        from apex.capabilities.registry import sandbox_provider
+        from apex.capabilities.registry import get_capability, sandbox_provider
 
         trace = capability_data.get("program_trace")
         if trace is None and "program_trace" in parent.capabilities:
             _, trace = parent.capabilities["program_trace"]
         if trace is None:
-            print("dependency_order exige program_trace (parent ou ajouté ici)", file=sys.stderr)
+            print(f"{name} exige program_trace (parent ou ajouté ici)", file=sys.stderr)
             return 2
-        capability_data["dependency_order"] = order.build_benchmark(
+        capability = get_capability(name)
+        explicit = name == "dependency_order_explicit"
+        capability_data[name] = order.build_benchmark(
             sandbox_provider(),
             seen={p.canonical for p in trace.pool},
             evaluated={p.canonical for p in trace.eval_problems()},
             seen_grams=frozenset(g for p in trace.pool for g in document_grams(p)),
+            # Graine propre : des problèmes neufs, indépendants du benchmark implicite.
+            seed="apex-dependency-order-explicit" if explicit else "apex-dependency-order",
+            capability=name,
+            explicit=explicit,
         )
-        domains[ORDER_DOMAIN] = ORDER_PREFIX
-        train_only.append(ORDER_DOMAIN)
+        domain = capability.contract.training_domains[0]
+        domains[domain] = capability.tasks_prefix  # type: ignore[attr-defined]
+        train_only.append(domain)
     spec = replace(
         parent.spec,
         parent=parent.fingerprint,
@@ -285,6 +294,8 @@ def run(args: argparse.Namespace) -> int:
         max_steps_per_experiment=args.max_steps_per_experiment,
         max_tokens_per_experiment=args.max_tokens_per_experiment,
         experiment_timeout_s=args.timeout,
+        seeds=args.seeds,
+        max_seeds=args.max_seeds,
     )
     policy = StrategyPolicy(
         finetune_steps=args.finetune_steps,
@@ -319,6 +330,8 @@ def directed(args: argparse.Namespace) -> int:
         max_steps_per_experiment=args.max_steps_per_experiment,
         max_tokens_per_experiment=args.max_tokens_per_experiment,
         experiment_timeout_s=args.timeout,
+        seeds=args.seeds,
+        max_seeds=args.max_seeds,
     )
     changes: dict[str, object] = {}
     if args.mix:
@@ -355,6 +368,14 @@ def directed(args: argparse.Namespace) -> int:
             ensure_ascii=False,
         )
     )
+    return 0
+
+
+def import_replications(args: argparse.Namespace) -> int:
+    """Historique de variance importé de la lignée (P3.7) : consigné au journal, avec provenance."""
+    world = World.load(args.workdir / "world.json")
+    summary = LoopController(args.workdir, world).import_replications(list(args.source))
+    print(json.dumps(summary, indent=2, ensure_ascii=False))
     return 0
 
 
@@ -475,6 +496,18 @@ def rollback(args: argparse.Namespace) -> int:
     return 0
 
 
+def _min_two(text: str) -> int:
+    value = int(text)
+    if value < 2:
+        raise argparse.ArgumentTypeError("au moins 2 graines : une seule graine ne décide jamais (P3.7)")
+    return value
+
+
+def _seed_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--seeds", type=_min_two, default=2, help="graines indépendantes par expérience (≥ 2)")
+    p.add_argument("--max-seeds", type=_min_two, default=3, help="graines au plus si la variance l'exige")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -505,6 +538,7 @@ def main() -> int:
     p.add_argument("--finetune-lr", type=float, default=1e-3)
     p.add_argument("--timeout", type=float, default=900.0)
     p.add_argument("--seed", type=int, default=0)
+    _seed_args(p)
     p.set_defaults(fn=run)
     p = sub.add_parser("directed", help="une expérience posée par l'opérateur, jugée par la boucle")
     p.add_argument("--workdir", type=Path, required=True)
@@ -531,7 +565,12 @@ def main() -> int:
     p.add_argument("--warmup-steps", type=int, default=None)
     p.add_argument("--timeout", type=float, default=1800.0)
     p.add_argument("--seed", type=int, default=None, help="graine de la référence (réplication)")
+    _seed_args(p)
     p.set_defaults(fn=directed)
+    p = sub.add_parser("import-replications", help="historique de variance importé de la lignée")
+    p.add_argument("--workdir", type=Path, required=True)
+    p.add_argument("--source", type=Path, action="append", required=True)
+    p.set_defaults(fn=import_replications)
     p = sub.add_parser("derive-world", help="monde enfant : hérite splits, tokenizer, architecture")
     p.add_argument("--workdir", type=Path, required=True)
     p.add_argument("--parent", type=Path, required=True)

@@ -100,9 +100,14 @@ def score_output(problem: OrderProblem, text: str) -> dict[str, Any]:
     }
 
 
-def solve(model: ApexLM, tokenizer: ByteBPETokenizer, problems: tuple[OrderProblem, ...]) -> list[str]:
+def solve(
+    model: ApexLM,
+    tokenizer: ByteBPETokenizer,
+    problems: tuple[OrderProblem, ...],
+    max_new_tokens: int = MAX_NEW_TOKENS,
+) -> list[str]:
     prompts = [tokenizer.encode(p.prompt, add_bos=True) for p in problems]
-    outputs = generate_batch(model, prompts, MAX_NEW_TOKENS, eos_id=tokenizer.eos_id)
+    outputs = generate_batch(model, prompts, max_new_tokens, eos_id=tokenizer.eos_id)
     return [tokenizer.decode(ids) for ids in outputs]
 
 
@@ -122,9 +127,24 @@ def suite_report(suite: OrderSuite, results: list[dict[str, Any]], model: ApexLM
 
 class DependencyOrderCapability(Capability):
     contract = CONTRACT
+    tasks_prefix = TASKS_PREFIX
+    max_new_tokens = MAX_NEW_TOKENS
+    #: Format de réponse attendu de TOUS les problèmes du benchmark (liaison explicite ou non).
+    explicit = False
+
+    def score(self, problem: OrderProblem, text: str) -> dict[str, Any]:
+        return score_output(problem, text)
 
     def load(self, payload: dict[str, Any]) -> DependencyOrderBenchmark:
-        return DependencyOrderBenchmark.from_dict(payload)
+        bench = DependencyOrderBenchmark.from_dict(payload)
+        problems = [*bench.pool, *(p for s in bench.suites.values() for p in s.problems)]
+        if any(p.explicit != self.explicit for p in problems):
+            raise ValueError(
+                f"benchmark {self.contract.name} : format de réponse différent de celui de la capacité"
+            )
+        if any(not name.startswith(f"cap:{self.contract.name}:") for name in bench.suites):
+            raise ValueError(f"benchmark {self.contract.name} : suites d'une autre capacité")
+        return bench
 
     def dump(self, data: DependencyOrderBenchmark) -> dict[str, Any]:
         return data.to_dict()
@@ -143,13 +163,13 @@ class DependencyOrderCapability(Capability):
     def train_documents(self, data: DependencyOrderBenchmark) -> list[TrainingCandidate]:
         return [
             TrainingCandidate(
-                candidate_id=f"{TASKS_PREFIX}{index:05d}",
+                candidate_id=f"{self.tasks_prefix}{index:05d}",
                 text=p.document,
-                source_id=f"{TASKS_PREFIX}{index:05d}",
+                source_id=f"{self.tasks_prefix}{index:05d}",
                 content_hash="sha256:" + hashlib.sha256(p.document.encode()).hexdigest(),
                 license_status="free",
                 quality="high_value",
-                origin="capability:dependency_order:pool",
+                origin=f"capability:{self.contract.name}:pool",
             )
             for index, p in enumerate(data.pool)
         ]
@@ -162,7 +182,7 @@ class DependencyOrderCapability(Capability):
                 if tokenizer.encode(p.document, add_bos=True)[: len(prompt)] != prompt:
                     raise ValueError(f"tokenizer : l'invite {p.prompt!r} n'est pas un préfixe du document")
                 longest = max(longest, len(prompt))
-        return MAX_NEW_TOKENS + longest
+        return self.max_new_tokens + longest
 
     def evaluate(
         self,
@@ -175,10 +195,10 @@ class DependencyOrderCapability(Capability):
         reports = {}
         details = {}
         for name, suite in sorted(data.suites.items()):
-            texts = solve(model, tokenizer, suite.problems)
+            texts = solve(model, tokenizer, suite.problems, self.max_new_tokens)
             results = []
             for pid, p, text in zip(suite.ids(), suite.problems, texts, strict=True):
-                score = score_output(p, text)
+                score = self.score(p, text)
                 solved = score.pop("exact")
                 results.append({"instance": pid, "solved": solved, "output": text[:80], **score})
             reports[name] = suite_report(suite, results, model)

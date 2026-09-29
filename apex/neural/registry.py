@@ -45,6 +45,11 @@ class Proposal:
     #: Suite principale PRÉ-ENREGISTRÉE par l'expérience (cible de son plan) ;
     #: retenue seulement si le registre la connaît comme suite d'acceptation.
     primary: str | None = None
+    #: Mesures du Judge sur les AUTRES graines de la même recette (protocole multi-graines P3.7) :
+    #: le registre recalcule lui-même le verdict depuis toutes les graines avant de promouvoir.
+    seed_reports: tuple[dict[str, EvalReport], ...] = ()
+    #: Réglages du verdict fixés à la planification (historique de variance, cible, mémorisation).
+    variance: dict[str, Any] | None = None
 
 
 def _digest(entry: dict[str, Any]) -> str:
@@ -102,6 +107,31 @@ class ModelRegistry:
                 else f"première version non promue : verdict de son expérience {proposal.in_run_decision}"
             ]
             suites: list[dict[str, Any]] = []
+        elif proposal.seed_reports:
+            # Protocole multi-graines : verdict RECALCULÉ ici depuis les mesures de toutes les graines
+            # et les ancres de CE registre ; la décision du contrôleur n'est jamais recopiée.
+            from apex.neural.variance import ACCEPT, seed_verdict
+
+            settings = proposal.variance or {}
+            recomputed = seed_verdict(
+                seeds=[proposal.reports, *proposal.seed_reports],
+                protections=protections(entries, self.protected_groups),
+                tolerances={**self.tolerances, BPB: 0.01},
+                prior=dict(settings.get("prior") or {}),
+                target=primary,
+                memorization_suite=settings.get("memorization_suite"),
+                new_capability=bool(settings.get("capability_target")),
+                invalid=[],
+                max_seeds=int(settings.get("max_seeds", 3)),
+            )
+            promoted = recomputed["decision"] == ACCEPT
+            decision = JudgeDecision.ACCEPT.value if promoted else JudgeDecision.REJECT.value
+            reasons = [
+                f"verdict recalculé par le registre, {recomputed['k']} graines : {recomputed['decision']}",
+                *recomputed["reasons"],
+            ]
+            suites = []
+            rows = recomputed["rows"]
         else:
             baseline = {name: EvalReport.from_dict(r) for name, r in current["reports"].items()}
             verdict = NeuralJudge(primary=primary, tolerances=self.tolerances).judge(

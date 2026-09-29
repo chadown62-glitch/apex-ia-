@@ -61,8 +61,12 @@ class ExperimentRecord:
 
     @property
     def decision(self) -> str | None:
-        """Décision FINALE : celle du Judge, sauf si la réplique (graine indépendante) ne l'a pas
-        confirmée ; une acceptation non répliquée est un rejet."""
+        """Décision FINALE : le verdict MULTI-GRAINES quand il existe (accept, reject, inconclusive,
+        invalid) ; sinon celle du Judge, sauf si la réplique (graine indépendante) ne l'a pas
+        confirmée — une acceptation non répliquée est un rejet."""
+        verdict = self._last("seed_verdict")
+        if verdict is not None:
+            return str(verdict["result"]["decision"])
         judged = self._last("judged")
         if judged is None:
             return None
@@ -83,6 +87,11 @@ class ExperimentRecord:
 
     def payload(self, event: str) -> dict[str, Any] | None:
         return self._last(event)
+
+    @property
+    def replications(self) -> list[dict[str, Any]]:
+        """Graines supplémentaires, dans l'ordre (graine 1, puis 2)."""
+        return [e for e in self.events if e["event"] == "replicated"]
 
 
 class ExperimentJournal:

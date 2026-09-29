@@ -810,6 +810,27 @@ export interface BrainEvent {
   target?: string;
   rationale?: string[];
   regressions?: { group: string; suite: string; before: number; after: number; gain_ci: [number, number]; tolerance: number }[];
+  rows?: SeedVerdictRow[];
+  seed_index?: number;
+}
+
+/** Ligne du verdict multi-graines (P3.7), telle que consignée par le moteur. */
+export interface SeedVerdictRow {
+  group: string;
+  suite: string;
+  reference: number;
+  seeds: number[];
+  delta: number;
+  uncertainty: number;
+  margin: number;
+  status: "REGRESSION" | "IMPROVEMENT" | "NO_REGRESSION" | "VARIANCE_INCONCLUSIVE";
+}
+
+export interface SeedVerdict {
+  decision: "accept" | "reject" | "inconclusive" | "invalid";
+  k: number;
+  reasons: string[];
+  rows: SeedVerdictRow[];
 }
 
 export interface BrainChampion {
@@ -870,6 +891,7 @@ export interface BrainExperiment {
   cause: string | null;
   forgotten: string[];
   learning: Record<string, string[]>;
+  seed_verdict?: SeedVerdict | null;
   reasons: string[];
   started_at: string | null;
   ended_at: string | null;
@@ -878,6 +900,7 @@ export interface BrainExperiment {
 export interface BrainLoop {
   status: "real" | "not_available";
   state?: "running" | "idle";
+  lifecycle?: "RUNNING" | "RECOVERING" | "INTERRUPTED" | "COMPLETED" | "IDLE";
   pid?: number | null;
   reason?: string;
   last_event: BrainEvent | null;

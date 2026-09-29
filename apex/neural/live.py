@@ -28,6 +28,7 @@ LOOP_LABELS = {
     "rollback": "ROLLBACK",
     "target_exhausted": "TARGET_EXHAUSTED",
     "plan_refused": "PLAN_REFUSED",
+    "replication_history": "REPLICATION_HISTORY_IMPORTED",
 }
 EXPERIMENT_LABELS = {
     "planned": "STRATEGY_SELECTED",
@@ -171,6 +172,7 @@ class BrainWorkdir:
         return {
             "status": "real",
             "state": "running" if running else "idle",
+            "lifecycle": _lifecycle(running, journal, events),
             "pid": holder if running else None,
             "last_event": last,
             "resources": _resources(holder) if running else not_available("aucune boucle en cours"),
@@ -228,6 +230,30 @@ class BrainWorkdir:
             if len(rows) >= limit:
                 break
         return rows
+
+
+def _lifecycle(running: bool, journal: ExperimentJournal | None, events: list[dict[str, Any]]) -> str:
+    """RUNNING / RECOVERING / INTERRUPTED / COMPLETED / IDLE, déduit du verrou RÉELLEMENT détenu et
+    du journal : jamais d'un pid resté dans un fichier."""
+    unfinished = journal.unfinished() if journal is not None else []
+    if running:
+        recovering = any(
+            any(e["event"] == "recovered" for e in r.events)
+            and not any(
+                e["event"] in ("judged", "seed_verdict") and e["seq"] > _last_recovery(r) for e in r.events
+            )
+            for r in unfinished
+        )
+        return "RECOVERING" if recovering else "RUNNING"
+    if unfinished:
+        return "INTERRUPTED"
+    if events and events[-1]["event"] == "stopped":
+        return "COMPLETED"
+    return "IDLE"
+
+
+def _last_recovery(record: ExperimentRecord) -> int:
+    return max((e["seq"] for e in record.events if e["event"] == "recovered"), default=-1)
 
 
 def _lock_holder(lock: Path) -> int | None:
@@ -323,8 +349,22 @@ def _label_experiment(raw: dict[str, Any]) -> dict[str, Any]:
         analysis = raw["analysis"]
         return _base(raw, "CAUSE_ANALYSIS", f"{analysis.get('cause')} ({analysis.get('status')})")
     if event == "replicated":
+        index = raw.get("seed_index", 1)
+        invalid = raw.get("invalid") or []
+        summary = f"graine {index} ({raw.get('seed')})" + (f" INVALIDE : {invalid}" if invalid else "")
         return _base(
-            raw, f"REPLICATION_{str(raw.get('decision')).upper()}", "; ".join(raw.get("reasons", [])[:2])
+            raw,
+            f"REPLICATION_{str(raw.get('decision')).upper()}",
+            "; ".join([summary, *raw.get("reasons", [])[:2]]),
+            seed_index=index,
+        )
+    if event == "seed_verdict":
+        result = raw["result"]
+        return _base(
+            raw,
+            f"SEED_VERDICT_{str(result['decision']).upper()}",
+            f"{result.get('k')} graines — " + "; ".join(result.get("reasons", [])[:2]),
+            rows=[_verdict_row(r) for r in result.get("rows", [])],
         )
     if event == "promotion":
         promoted = bool(raw.get("promoted"))
@@ -332,6 +372,11 @@ def _label_experiment(raw: dict[str, Any]) -> dict[str, Any]:
     return _base(
         raw, EXPERIMENT_LABELS.get(event, event.upper()), str(raw.get("reason") or raw.get("detail") or "")
     )
+
+
+def _verdict_row(row: dict[str, Any]) -> dict[str, Any]:
+    keys = ("group", "suite", "reference", "seeds", "delta", "uncertainty", "margin", "status")
+    return {k: row.get(k) for k in keys}
 
 
 def _experiment_summary(record: ExperimentRecord) -> dict[str, Any]:
@@ -358,6 +403,21 @@ def _experiment_summary(record: ExperimentRecord) -> dict[str, Any]:
         # Nature du gain par capacité, établie par le Judge (généralisation, transfert, mémorisation).
         "learning": {cap: v.get("kinds", []) for cap, v in (judged.get("learning") or {}).items()},
         "reasons": judged.get("reasons", [])[:5],
+        # Verdict MULTI-GRAINES (P3.7), tel que consigné par le moteur ; None pour l'ancien protocole.
+        "seed_verdict": _seed_summary(record),
         "started_at": record.events[0]["at"] if record.events else None,
         "ended_at": record.events[-1]["at"] if record.finished else None,
+    }
+
+
+def _seed_summary(record: ExperimentRecord) -> dict[str, Any] | None:
+    stored = record.payload("seed_verdict")
+    if stored is None:
+        return None
+    result = stored["result"]
+    return {
+        "decision": result["decision"],
+        "k": result.get("k"),
+        "reasons": result.get("reasons", []),
+        "rows": [_verdict_row(r) for r in result.get("rows", [])],
     }

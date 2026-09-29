@@ -39,6 +39,10 @@ class FailureCause(StrEnum):
     NOT_REPRODUCIBLE = "not_reproducible"
     CORRUPT_CHECKPOINT = "corrupt_checkpoint"
     DIVERGED = "diverged"
+    #: Verdict multi-graines : gain sur la suite train sans gain held-out.
+    MEMORIZATION = "memorization"
+    #: Verdict multi-graines : la variance entre graines empêche de conclure, graines épuisées.
+    VARIANCE_INCONCLUSIVE = "variance_inconclusive"
     TIMEOUT = "timeout"
     STOPPED = "stopped"
     UNKNOWN = "unknown"
@@ -242,6 +246,92 @@ def analyze_judgement(
         mods,
         refuted="prédiction d'un gain significatif : effet non distinguable du bruit",
         reusable=["aucune régression significative : la modification n'est pas nuisible à ce budget"],
+    )
+
+
+def analyze_seed_verdict(
+    plan: ExperimentPlan, verdict: dict[str, Any], checks: dict[str, dict[str, Any]]
+) -> FailureAnalysis | None:
+    """Cause établie par le verdict MULTI-GRAINES (`apex.neural.variance`) : seules les régressions
+    REPRODUITES au-delà de la marge sont des « suites dégradées » que la politique cherche à protéger ;
+    une suite seulement douteuse n'en est pas une."""
+    decision = verdict["decision"]
+    if decision == "accept":
+        return None
+    attribution, mods = _attribution(plan)
+    rows = verdict.get("rows", [])
+    evidence = [
+        f"{r['suite']} : {r['reference']} -> {r['seeds']} (écart moyen {r['delta']:+.4f} "
+        f"± {r['uncertainty']:.4f}, marge {r['margin']}, {r['status']})"
+        for r in rows
+        if r["status"] != "NO_REGRESSION" or r["suite"] == verdict["target"]
+    ]
+    if decision == "invalid":
+        failed = [c for c in verdict.get("reasons", []) if c in checks] or verdict.get("reasons", [])
+        name = str(failed[0]).split("#")[0] if failed else ""
+        first = checks.get(name, {})
+        cause = (
+            FailureCause(first["cause"])
+            if "cause" in first
+            else _CHECK_CAUSES.get(name, FailureCause.UNKNOWN)
+        )
+        return FailureAnalysis(
+            cause,
+            "established",
+            [str(r) for r in verdict.get("reasons", [])],
+            "none",
+            [],
+            refuted="aucune (expérience invalide, pas une réfutation)",
+        )
+    regressed = sorted(r["suite"] for r in rows if r["status"] == "REGRESSION")
+    if verdict.get("status") == "MEMORIZATION":
+        return FailureAnalysis(
+            FailureCause.MEMORIZATION,
+            "established",
+            evidence,
+            attribution,
+            mods,
+            refuted="la capacité n'est pas généralisée : gain limité aux exemples d'entraînement",
+        )
+    if decision == "inconclusive":
+        return FailureAnalysis(
+            FailureCause.VARIANCE_INCONCLUSIVE,
+            "established",
+            evidence,
+            attribution,
+            mods,
+            refuted="aucune : la variance entre graines ne permet ni de confirmer ni de réfuter",
+        )
+    if verdict["target"] in regressed:
+        return FailureAnalysis(
+            FailureCause.TARGET_REGRESSION,
+            "established",
+            evidence,
+            attribution,
+            mods,
+            refuted="prédiction principale : la cible s'est dégradée, reproductiblement",
+            regressed_suites=regressed,
+        )
+    if regressed:
+        return FailureAnalysis(
+            FailureCause.PROTECTED_REGRESSION,
+            "established",
+            evidence,
+            attribution,
+            mods,
+            refuted="« sans dégrader les suites protégées » : régression reproduite au-delà de la marge",
+            interpretation=_interpret_tradeoff(mods, regressed)
+            if attribution == "single_modification"
+            else None,
+            regressed_suites=regressed,
+        )
+    return FailureAnalysis(
+        FailureCause.NO_SIGNIFICANT_EFFECT,
+        "established",
+        evidence or list(verdict.get("reasons", [])),
+        attribution,
+        mods,
+        refuted="; ".join(verdict.get("reasons", [])) or "aucun gain démontré sur les graines",
     )
 
 

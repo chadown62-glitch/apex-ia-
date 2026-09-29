@@ -222,9 +222,21 @@ def test_the_loop_is_running_only_while_its_lock_is_held(loop_dir: Path, tmp_pat
 
 def test_experiment_summaries_carry_the_judge_measures(loop_dir: Path) -> None:
     judged = {e["experiment_id"]: e["result"] for e in _journal(loop_dir) if e["event"] == "judged"}
+    verdicts = {e["experiment_id"]: e["result"] for e in _journal(loop_dir) if e["event"] == "seed_verdict"}
+    assert verdicts, "la boucle réduite doit exercer le protocole multi-graines (P3.7)"
     for summary in BrainWorkdir(loop_dir).state()["experiments"]:
         result = judged[summary["experiment_id"]]
-        assert summary["decision"] == result["decision"] or summary["decision"] == "reject"
+        verdict = verdicts.get(summary["experiment_id"])
+        if verdict is not None:
+            # Décision finale = verdict multi-graines consigné, tel quel, avec ses lignes.
+            assert summary["decision"] == verdict["decision"]
+            assert summary["seed_verdict"]["k"] == verdict["k"]
+            assert [(r["suite"], r["status"]) for r in summary["seed_verdict"]["rows"]] == [
+                (r["suite"], r["status"]) for r in verdict["rows"]
+            ]
+        else:
+            assert summary["seed_verdict"] is None
+            assert summary["decision"] == result["decision"] or summary["decision"] == "reject"
         assert summary["forgotten"] == [
             f["suite"] for f in result.get("forgetting", []) if f["status"] == "forgotten"
         ]
@@ -234,3 +246,26 @@ def test_experiment_summaries_carry_the_judge_measures(loop_dir: Path) -> None:
             target["baseline_bpb"],
             target["candidate_bpb"],
         )
+
+
+def test_lifecycle_states_come_from_the_lock_and_the_journal(loop_dir: Path, tmp_path: Path) -> None:
+    """COMPLETED / INTERRUPTED / RECOVERING / RUNNING : verrou réellement détenu + journal."""
+    import fcntl
+
+    from apex.neural.loop.journal import ExperimentJournal
+
+    assert BrainWorkdir(loop_dir).state()["loop"]["lifecycle"] == "COMPLETED"
+    copy = tmp_path / "copy"
+    shutil.copytree(loop_dir, copy)
+    lines = (copy / "journal.jsonl").read_text().splitlines()
+    last_promotion = max(i for i, line in enumerate(lines) if json.loads(line)["event"] == "promotion")
+    (copy / "journal.jsonl").write_text("\n".join(lines[:last_promotion]) + "\n")
+    assert BrainWorkdir(copy).state()["loop"]["lifecycle"] == "INTERRUPTED"
+    with (copy / "loop.lock").open("w") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        assert BrainWorkdir(copy).state()["loop"]["lifecycle"] == "RUNNING"
+        unfinished = ExperimentJournal(copy / "journal.jsonl").unfinished()[-1]
+        ExperimentJournal(copy / "journal.jsonl").experiment(
+            unfinished.experiment_id, "recovered", from_event="x"
+        )
+        assert BrainWorkdir(copy).state()["loop"]["lifecycle"] == "RECOVERING"
