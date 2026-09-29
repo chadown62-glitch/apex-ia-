@@ -211,7 +211,7 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         return 1
 
     from apex.api.app import create_app
-    from apex.discovery import remove_discovery, write_discovery
+    from apex.discovery import cleanup_on_shutdown, remove_discovery, write_discovery
 
     log.info("démarrage d'APEX (apex serve)", host=args.host, port=args.port)
     # Découverte par le Panel Windows (`APEX.exe`) : phase `serving` écrite AVANT l'écoute (le
@@ -227,7 +227,10 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     warm_up()
     try:
         uvicorn.run(
-            create_app(), host=args.host, port=args.port, log_level=(args.log_level or "info").lower()
+            cleanup_on_shutdown(create_app()),
+            host=args.host,
+            port=args.port,
+            log_level=(args.log_level or "info").lower(),
         )
     finally:
         remove_discovery()

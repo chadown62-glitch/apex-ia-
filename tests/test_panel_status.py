@@ -280,3 +280,60 @@ def test_a_gate_refusal_withdraws_the_starting_announcement(
 
     assert main(["serve"]) == 1
     assert not discovery.discovery_path().exists()
+
+
+_SERVER = """
+import sys
+from pathlib import Path
+
+import uvicorn
+
+from apex.discovery import cleanup_on_shutdown, write_discovery
+
+async def app(scope, receive, send):
+    if scope["type"] == "lifespan":
+        while True:
+            message = await receive()
+            if message["type"] == "lifespan.startup":
+                await send({"type": "lifespan.startup.complete"})
+            elif message["type"] == "lifespan.shutdown":
+                await send({"type": "lifespan.shutdown.complete"})
+                return
+
+port = int(sys.argv[1])
+write_discovery("127.0.0.1", port, Path("."))
+served = cleanup_on_shutdown(app) if sys.argv[2] == "wrapped" else app
+uvicorn.run(served, host="127.0.0.1", port=port, log_level="warning")
+"""
+
+
+@pytest.mark.parametrize(("sig", "wrapped"), [("SIGTERM", True), ("SIGINT", True), ("SIGTERM", False)])
+def test_a_signal_stopped_server_leaves_no_record_only_with_the_shutdown_hook(
+    tmp_path: Path, sig: str, wrapped: bool
+) -> None:
+    """Vrai processus uvicorn, vrai signal. Sans l'enveloppe, l'enregistrement RESTE (uvicorn relance
+    le signal après l'arrêt : le `finally` ne s'exécute jamais) — c'est le défaut constaté en E2E."""
+    import signal
+    import subprocess
+    import sys
+
+    port = _free_port()
+    env = dict(os.environ, **{discovery.DISCOVERY_DIR_ENV: str(tmp_path)})
+    repo = Path(__file__).resolve().parent.parent
+    proc = subprocess.Popen(
+        [sys.executable, "-c", _SERVER, str(port), "wrapped" if wrapped else "plain"], cwd=repo, env=env
+    )
+    try:
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            with socket.socket() as probe:
+                if probe.connect_ex(("127.0.0.1", port)) == 0:
+                    break
+            time.sleep(0.1)
+        record = tmp_path / "backend.json"
+        assert json.loads(record.read_text(encoding="utf-8"))["pid"] == proc.pid
+        proc.send_signal(getattr(signal, sig))
+        proc.wait(timeout=30)
+    finally:
+        proc.kill()
+    assert record.exists() is (not wrapped)

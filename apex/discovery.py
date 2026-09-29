@@ -95,6 +95,26 @@ def remove_discovery(pid: int | None = None) -> bool:
     return False
 
 
+def cleanup_on_shutdown(app: Any) -> Any:
+    """Enveloppe ASGI : retire l'enregistrement quand le serveur signale la FIN de son arrêt
+    (`lifespan.shutdown.complete`). Nécessaire parce qu'uvicorn (>= 0.29) relance le signal reçu
+    (Ctrl+C, SIGTERM) APRÈS l'arrêt propre : le processus meurt alors du signal et un `finally`
+    autour d'`uvicorn.run` ne s'exécute jamais (constaté : enregistrement laissé après SIGTERM)."""
+
+    async def wrapped(scope: dict[str, Any], receive: Any, send: Any) -> Any:
+        if scope.get("type") != "lifespan":
+            return await app(scope, receive, send)
+
+        async def send_and_cleanup(message: dict[str, Any]) -> None:
+            if message.get("type") in ("lifespan.shutdown.complete", "lifespan.shutdown.failed"):
+                remove_discovery()
+            await send(message)
+
+        return await app(scope, receive, send_and_cleanup)
+
+    return wrapped
+
+
 def _read(path: Path) -> dict[str, Any] | None:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
