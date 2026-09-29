@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from apex.improvement.judge import ExternalJudge, FunctionProbe, ProbeOutcome
-from apex.improvement.model import BenchmarkSnapshot, CapabilitySpec, CycleKind, MetricKind, MetricSpec
+from apex.improvement.model import BenchmarkSnapshot, CapabilitySpec, CycleKind, MetricSpec
 from apex.metalearner.judge_model import JudgeDimension, JudgeSeverity
 
 CAPABILITY_ID = "desktop_distribution"
@@ -99,13 +99,6 @@ SPEC = CapabilitySpec(
     metrics=(
         *(MetricSpec(name, description, True) for name, description in _PANEL_METRICS.items()),
         *(MetricSpec(name, description, True) for name, description in _INSTALLER_METRICS.items()),
-        MetricSpec(
-            "status_seconds",
-            "durée de --status-json contre un backend en marche",
-            False,
-            MetricKind.STOCHASTIC,
-            min_samples=5,
-        ),
     ),
     success_criteria=("toutes les métriques déterministes à 1.0", "aucune régression"),
     risks=(
@@ -588,18 +581,16 @@ class DesktopDistributionAdapter:
         blocked: dict[str, str] = {}
         notes: list[str] = []
         if shutil.which("dotnet") is None:
-            blocked.update(dict.fromkeys([*_PANEL_METRICS, "status_seconds"], "dotnet absent"))
+            blocked.update(dict.fromkeys(_PANEL_METRICS, "dotnet absent"))
         else:
             panel = build_panel()
             values, panel_notes, latencies = panel_scenarios(panel)
             samples.update({k: (v,) for k, v in values.items()})
-            if latencies:
-                samples["status_seconds"] = tuple(latencies)
-            else:
-                blocked["status_seconds"] = (
-                    "aucun backend joignable sur cette révision : durée non mesurable"
-                )
             notes.extend(panel_notes)
+            # Durée de --status-json : information, pas une métrique (non mesurable sans backend, elle
+            # rendrait BLOQUÉ par construction tout cycle dont la baseline n'a pas de backend).
+            if latencies:
+                notes.append(f"durée de --status-json (backend en marche, 5 mesures) : {latencies} s")
         values, installer_blocked, installer_notes, seconds = installer_measure()
         samples.update({k: (v,) for k, v in values.items()})
         blocked.update(installer_blocked)
