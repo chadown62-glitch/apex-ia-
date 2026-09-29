@@ -259,3 +259,33 @@ la cause établie (vérifié par le journal) ; (b) moins de suites en REGRESSION
 (8). Promotion uniquement par le verdict de §2. **Prédiction écrite avant** : acquisition probable de
 la nouvelle capacité (75 % du mélange) ; `stdlib`, non rejoué, sans doute encore en REGRESSION ;
 `program_trace` partiellement protégé ; issue la plus probable : REJECT.
+
+## 6. Résultats de l'expérience principale (JUDGED, protocole multi-graines)
+
+Chaque graine : entraînement réel de 6 000 pas, Judge indépendant (re-mesure double, contamination,
+provenance par REJEU bit à bit : réussi pour chaque graine de chaque bras), puis verdict de §2 consigné
+et recalculable. Valeurs : erreur (capacités) ou BPB (texte), plus bas = mieux ; Δ moyen ± U ; m = marge.
+
+**Bras D — témoin (recette du champion, sans nouvelle capacité) : REJECT, 2 graines.**
+`heldout:stdlib` 2,672 -> 2,863 / 2,858 : Δ +0,188 ± 0,032 (m 0,016) **REGRESSION reproduite** ;
+`program_trace:heldout` 0,480 -> 0,343 / 0,343 : Δ −0,137 ± 0,142 (NO_REGRESSION : l'amélioration
+n'est pas DÉMONTRÉE à cette variance, malgré deux graines identiques) ; nouvelle capacité : 1,000 (rien
+à apprendre ici). H4 (« le témoin ne régresse pas ») **REJETÉE** : continuer la recette du champion
+(`stdlib` relu 19 fois) dégrade `stdlib` de façon reproductible — l'allocation « standard » est
+elle-même destructrice.
+
+**Bras A — nouvelle capacité seule : REJECT, 2 graines.**
+Nouvelle capacité : held-out 0,810 / 0,847, Δ −0,172 ± 0,049 (IMPROVEMENT ; borne 0,877 < 0,90 :
+**seuil d'acquisition atteint, répliqué**) ; train 0,535 / 0,570 (écart train/held-out : part de
+mémorisation, étiquetée par le Judge). Mais **8 suites en REGRESSION reproduite** : texte +3,9 à +4,4
+BPB (1,86 -> 5,73 / 6,00), `program_trace` 0,48 -> 1,00 sur les deux graines, `code_repair:validation`
++0,20. « Amélioration + destruction » : REJETÉ.
+
+**Bras B — rejeu fixe (proportions du champion) : INCONCLUSIVE, 3 graines** (la 3e demandée par le
+protocole après deux graines non concluantes).
+Nouvelle capacité : 0,927 / 0,930 / 0,930, Δ −0,071 ± 0,021 (IMPROVEMENT, mais borne 0,95 > 0,90 :
+**non acquise**) ; AUCUNE régression reproduite ; texte `heldout` et `heldout:code` IMPROVEMENT
+(−0,023 ; −0,032) ; `program_trace:heldout` 0,52 / 0,46 / 0,44, Δ −0,004 ± 0,121 (préservé en moyenne,
+non concluant) ; `heldout:stdlib` +0,030 ± 0,024 (m 0,016) et `code_repair:validation` +0,056 ± 0,075 :
+VARIANCE_INCONCLUSIVE. Avec les règles mono-graines, la graine 0 seule aurait conclu à l'« oubli » de
+`stdlib` et de `code_repair:validation`.
