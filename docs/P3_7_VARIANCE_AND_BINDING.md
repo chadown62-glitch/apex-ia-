@@ -440,6 +440,6 @@ avec la répartition de C (le meilleur protecteur mesuré) et un budget de nouve
   d'une passe précédente) réussit ici. Ignorés : PostgreSQL réel absent du bac à sable, extras
   optionnels.
 - Frontend : `vitest` **111 / 111** (19 fichiers) ; `tsc --noEmit` sans erreur.
-- Nouveaux tests P3.7 : `test_variance.py` (10), `test_loop_seeds.py` (9, boucle RÉELLE réduite),
+- Nouveaux tests P3.7 : `test_variance.py` (10), `test_loop_seeds.py` (8, boucle RÉELLE réduite),
   `test_dependency_order_explicit.py` (4), ajouts à `test_brain_live.py`, `test_loop_components.py`
   et `BrainLivePage.test.tsx`.
