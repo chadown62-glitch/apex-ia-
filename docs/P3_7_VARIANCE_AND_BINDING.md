@@ -393,3 +393,37 @@ texte passe de NO_REGRESSION à **IMPROVEMENT** (`heldout` Δ −0,104 ± 0,012,
 masquait ici des améliorations, pas une régression. Bras A : inchangé (son a priori ne contenait que
 l'historique importé). Limite qui demeure : l'import est une action d'opérateur ; importer un
 répertoire destructeur élargirait la marge. Il est consigné et vérifiable, mais pas filtré.
+
+## 10. Profondeur (`program_trace:deeper`) — hors périmètre, constat seulement
+
+Aucun passage à l'échelle ni aucune modification ici. MEASURED dans les 5 expériences P3.7 (D, A, B,
+C, L ; 12 graines au total) : `program_trace:deeper` (profondeur 4, jamais entraînée) reste à 1,000
+sur chaque graine, NO_REGRESSION (rien à perdre). Documenté en P3.5 §6.7 (`docs/P3_5_CONTINUAL_AND_LIVE.md`) :
+le modèle apprend des gabarits PAR LONGUEUR (profondeur 5 entraînée réussie, 4 non vue échouée) —
+ni extrapolation, ni même interpolation. Investigation séparée, non commencée.
+
+## 11. Synthèse et décision
+
+**Ce que le moteur sait maintenant faire (IMPLEMENTED, TESTED, MUTATION, REAL E2E)** : décider sur
+k ≥ 2 graines indépendantes, chacune jugée (rejeu bit à bit compris) ; distinguer par suite
+REGRESSION / IMPROVEMENT / NO_REGRESSION / VARIANCE_INCONCLUSIVE, et MEMORIZATION /
+INVALID_EXPERIMENT ; demander une graine de plus en cas de doute (3 au plus) puis conclure
+INCONCLUSIVE ; faire RECALCULER le verdict par le registre avant toute promotion ; consigner
+l'historique de réplications avec sa provenance ; vérifier un répertoire complet (`verify`) ; afficher
+le cycle de vie réel et le verdict par graine dans `/brain`.
+
+**Ce que les expériences montrent (JUDGED, REPLICATED)** : la liaison explicite est apprenable
+(acquise, répliquée, dans A et dans L), mais dans ce modèle et à ce budget, elle ne l'a été qu'au prix
+d'une régression reproduite d'une capacité protégée (A : 8 suites ; L : `program_trace`). Avec rejeu
+(B, C), aucune régression reproduite, mais acquisition sous le seuil (bornes 0,95 et 0,93 > 0,90). Le
+rejeu protège (H2) ; l'allocation adaptative protège mieux (H3) ; la recette « standard » du champion
+est elle-même destructrice pour `stdlib` (H4 rejetée).
+
+**Décision : AUCUNE PROMOTION.** Aucune expérience ne satisfait ensemble les critères 1 à 10
+(acquisition sans régression reproduite). Le champion P3 (`adopted:exp-f0f4ed9a92d6`, artefact
+`sha256:da8bf910…`) reste en service ; les ancres sont inchangées.
+
+**Prochaine étape justifiée par ces mesures (HYPOTHESIS, non testée)** : le compromis
+acquisition / protection est une question de budget à part égale de rejeu — protocole pré-enregistré
+avec la répartition de C (le meilleur protecteur mesuré) et un budget de nouvelle capacité doublé
+(12 000 pas, même part de rejeu), sur 2 à 3 graines ; critère : borne < 0,90 SANS REGRESSION.
