@@ -157,3 +157,49 @@ deux pour « oubli » par la règle mono-graine, donnent avec les règles de §2
 `code_repair:validation` +0,031 ± 0,076) — le protocole demanderait une troisième graine. Ni oubli
 confirmé, ni le gain « GENERALIZATION » de la seule graine A. Circularité connue : la paire A/A fait
 partie de l'historique σ utilisé ici ; c'est pourquoi ce n'est qu'une illustration.
+
+## 3. Expérience principale PRÉ-ENREGISTRÉE (commitée avant l'exécution du premier bras)
+
+**Monde** `sha256:6cd85c74…` : enfant du monde P3 (+ `dependency_order_explicit`, 30 500 problèmes
+vérifiés par exécution sandbox ; held-out 300 problèmes neufs, jamais entraînés ; 744 candidats
+rejetés pour recouvrement de 12-grammes avec l'entraînement `program_trace`, 3 documents retirés
+par la décontamination du monde). Champion P3 ATTESTÉ adopté (`sha256:da8bf910…`), re-mesuré :
+erreur 1,000 sur les trois suites de la nouvelle capacité, autres mesures identiques à P3.
+Historique de variance importé (événement `replication_history`) : exactement §1.1.
+
+**Hypothèses** : H1 (acquisition) au moins un bras qui entraîne la nouvelle capacité atteint le
+seuil d'acquisition sur ≥ 2 graines ; H2 (protection) les bras avec rejeu (B, C) ont moins de suites
+en REGRESSION que A ; H3 (adaptatif) C protège `program_trace` mieux que B (comparaison appariée
+candidat contre candidat, graine par graine, secondaire) ; H4 (témoin) D ne présente aucune
+REGRESSION.
+
+**Bras** — même modèle de départ (champion adopté), même budget : 6 000 pas, lots 16 × 256,
+9,6 M jetons tirés, lr 1e-3 ; une seule modification par rapport à la recette de référence
+(le mélange) ; graines appariées entre bras (graine du monde 0, puis 1 000 003, puis 2 000 006) :
+
+| bras | mélange | relectures tirées par domaine (jetons tirés / jetons uniques) |
+|---|---|---|
+| A — nouvelle capacité seule | `order_explicit_tasks` 1,0 | explicite 7,2 |
+| B — rejeu fixe (proportions du champion) | explicite 0,40 ; code 0,27 ; `reasoning_tasks` 0,24 ; `stdlib` 0,09 | 2,9 ; 2,0 ; 1,2 ; **11,4** |
+| C — rejeu adaptatif (règle ci-dessous) | explicite 0,40 ; `reasoning_tasks` 0,35 ; code 0,22 ; `stdlib` 0,03 | 2,9 ; 1,8 ; 1,6 ; 3,8 |
+| D — témoin, allocation standard du champion, SANS nouvelle capacité | code 0,45 ; `reasoning_tasks` 0,40 ; `stdlib` 0,15 | 3,3 ; 2,0 ; **19,0** |
+
+Règle de C (dérivée des MESURES antérieures, pas des résultats de ce protocole) : même part de
+nouvelle capacité que B (0,40) ; `reasoning_tasks` (domaine de `program_trace`, oublié à 20 % et 25 %
+de rejeu en P3.5) porté au-delà de ces niveaux (0,35) ; `stdlib` plafonné par `max_passes` (≤ 4
+relectures : 0,03) ; le reste au code. B et C ne diffèrent que par la répartition du rejeu.
+
+**Exécution** : chaque bras via `directed` (boucle réelle, Judge indépendant avec rejeu bit à bit,
+protocole multi-graines de §2 : 2 graines, une 3e si VARIANCE_INCONCLUSIVE), chacun dans sa propre
+copie du répertoire (aucune promotion d'un bras n'affecte un autre), dans l'ordre D, A, B, C,
+l'un après l'autre. Métriques primaires : décision multi-graines par bras ; erreur held-out de la
+nouvelle capacité (moyenne ± U). Secondaires : lignes par suite (REGRESSION / NO_REGRESSION /
+IMPROVEMENT / VARIANCE_INCONCLUSIVE), mémorisation (train contre held-out), transfert
+(`code_repair:transfer`, `program_trace`), coût (pas, durée), stabilité (écart entre graines),
+reproductibilité (rejeu bit à bit de chaque graine).
+
+**Promotion** : uniquement par le verdict de §2, recalculé par le registre. Si plusieurs bras sont
+ACCEPTÉS, la lignée continue avec le premier dans l'ordre fixé B, C, A (jamais « le meilleur »).
+**Arrêt** : 3 graines au plus par bras ; aucun bras ajouté à ce protocole après les résultats ; toute
+variante nouvelle (cycle 3) fera l'objet d'un pré-enregistrement séparé. Si aucun bras n'est accepté :
+AUCUNE promotion, le champion P3 reste en service.
