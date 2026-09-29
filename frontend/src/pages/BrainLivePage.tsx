@@ -250,8 +250,8 @@ function ExperimentsPanel({ experiments }: { experiments: BrainExperiment[] }) {
               <th>stratégie</th>
               <th>cible</th>
               <th>avant → après</th>
-              <th>Judge</th>
-              <th>oubli</th>
+              <th>décision</th>
+              <th>oubli signalé (Judge, graine planifiée seule)</th>
               <th>apprentissage (Judge)</th>
               <th>cause</th>
             </tr>
