@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# N+30 — publication win-x64 self-contained d'ApexSetup.Dashboard (APEX.exe).
+# N+30 — publication win-x64 autonome (multi-fichiers) d'ApexSetup.Dashboard (APEX.exe, le Panel).
 #
 # Script SÉPARÉ de publish.sh (Cli/Gui/Launcher) plutôt qu'une extension de
 # ce dernier : publish.sh est déjà testé/documenté pour exactement ces
@@ -28,10 +28,14 @@ rm -rf "$DIST_DIR"
 mkdir -p "$DIST_DIR"
 
 echo "[publish_dashboard.sh] Version : $VERSION"
-echo "[publish_dashboard.sh] Publication ApexSetup.Dashboard (win-x64, self-contained, fichier unique, APEX.exe)..."
+# MULTI-FICHIERS (plus un fichier unique) : mesuré — le fichier unique ne démarre pas sous Wine
+# (CoreCLR ne projette pas System.Private.CoreLib depuis le bundle, 0x8007046C) alors que le
+# multi-fichiers démarre ; l'installateur copie de toute façon un dossier, et un démarrage sans
+# extraction est plus rapide. Avalonia recommande aussi cette forme (DLL natives Skia/ANGLE).
+echo "[publish_dashboard.sh] Publication ApexSetup.Dashboard (win-x64, autonome, multi-fichiers, APEX.exe)..."
 dotnet publish "$SETUP_ROOT/src/ApexSetup.Dashboard/ApexSetup.Dashboard.csproj" \
   -c Release -r win-x64 --self-contained true \
-  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true \
+  -p:PublishSingleFile=false \
   -o "$DIST_DIR"
 
 EXE="$DIST_DIR/APEX.exe"
@@ -70,13 +74,17 @@ if command -v strings >/dev/null 2>&1; then
   # d'Avalonia elles-mêmes compilées ailleurs (ex. MicroCom.Runtime,
   # Tmds.DBus) — un faux positif permanent, sans rapport avec une fuite du
   # chemin de CE dépôt ou de CETTE machine.
-  strings_output=$(strings "$EXE")
-  if grep -qE "$SETUP_ROOT|$HOME/|/root/" <<< "$strings_output"; then
-    echo "[publish_dashboard.sh] ERREUR : $EXE embarque un chemin absolu de développement :" >&2
-    grep -E "$SETUP_ROOT|$HOME/|/root/" <<< "$strings_output" >&2
-    exit 1
-  fi
-  echo "[publish_dashboard.sh] Vérifié : $EXE ne contient aucun chemin absolu de développement"
+  # Tous les binaires compilés depuis CE dépôt (l'exécutable et les assemblies APEX/ApexSetup).
+  for built in "$EXE" "$DIST_DIR"/APEX.dll "$DIST_DIR"/ApexSetup.*.dll; do
+    [[ -f "$built" ]] || continue
+    strings_output=$(strings "$built")
+    if grep -qE "$SETUP_ROOT|$HOME/|/root/" <<< "$strings_output"; then
+      echo "[publish_dashboard.sh] ERREUR : $built embarque un chemin absolu de développement :" >&2
+      grep -E "$SETUP_ROOT|$HOME/|/root/" <<< "$strings_output" >&2
+      exit 1
+    fi
+    echo "[publish_dashboard.sh] Vérifié : $(basename "$built") ne contient aucun chemin absolu de développement"
+  done
 fi
 
 if find "$DIST_DIR" -name "*.pdb" | grep -q .; then

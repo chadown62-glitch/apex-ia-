@@ -71,7 +71,7 @@ public static class StatusEngine
                     "WSL n'est pas démarré. Ouvrez votre distribution Linux (WSL), placez-vous dans le dossier APEX et lancez le launch.sh dédié : "
                     + LaunchCommand + ". Le Panel ne démarre jamais WSL lui-même.",
                 NotReadyCause.WslNotInstalled =>
-                    "WSL n'est pas disponible sur ce PC : " + m.Host.Detail + ". Installez WSL 2 et une distribution Linux (documentation Microsoft), puis le backend APEX.",
+                    m.Host.Detail + ". Installez WSL 2 et une distribution Linux (documentation Microsoft : « wsl --install »), puis le backend APEX dans cette distribution.",
                 _ => "WSL ne répond pas (" + m.Host.Detail + "). Redémarrez WSL (wsl --shutdown puis rouvrez la distribution).",
             });
         }

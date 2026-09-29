@@ -1,79 +1,112 @@
-; N+30 — Installateur Windows d'APEX.exe (le Dashboard, mission §18).
+; Installateur Windows du Panel APEX (APEX.exe) — construit par setup/packaging/build_desktop_release.sh.
 ;
-; NE PAS CONFONDRE avec ApexSetup.Gui.exe (l'assistant d'installation
-; existant, qui provisionne l'environnement APEX lui-même — WSL/Docker/
-; Ollama/modèles — voir setup/docs/GUI_ARCHITECTURE.md). Ce script produit
-; un SECOND artefact, distinct et complémentaire : un installateur natif
-; Windows classique qui copie APEX.exe (le tableau de bord quotidien) dans
-; Program Files, avec raccourcis et désinstalleur — jamais une troisième
-; réimplémentation de la logique d'installation d'APEX elle-même.
+; Ce que fait cet installateur, et seulement cela :
+;   - installe APEX.exe (Panel, .NET autonome multi-fichiers) POUR L'UTILISATEUR COURANT, sans droits
+;     administrateur, dans %LOCALAPPDATA%\Programs\APEX ;
+;   - crée le raccourci Bureau « APEX » et l'entrée du menu Démarrer (icône APEX réelle) ;
+;   - vérifie l'installation (APEX.exe --version) et propose de lancer le Panel ;
+;   - s'enregistre dans « Applications installées » avec un désinstalleur.
+; Ce qu'il ne fait JAMAIS : installer ou démarrer WSL, Docker, le backend, Ollama ; lire ou écrire
+; dans une distribution WSL ; demander un chemin, un port ou un jeton.
 ;
-; COMPILATION : nécessite Inno Setup (ISCC.exe), disponible UNIQUEMENT sous
-; Windows (ou via Wine) — non disponible dans le bac à sable Linux où ce
-; dépôt est développé. Commande exacte, à exécuter sur une machine Windows
-; avec Inno Setup 6 installé, après avoir publié APEX.exe :
+; Mise à jour : relancer un installateur plus récent (même AppId) remplace le programme dans le même
+; dossier et conserve la configuration et les journaux (hors du dossier d'installation). Un Panel en
+; cours d'exécution est détecté (AppMutex) et doit être fermé avant remplacement. Aucun
+; [InstallDelete] : il effacerait aussi le journal de désinstallation (unins000.dat) que la mise à
+; jour réutilise ; un fichier d'une version antérieure resté dans le dossier n'est pas chargé
+; (.NET charge ce que liste APEX.deps.json).
 ;
-;   setup\packaging\publish_dashboard.sh   (ou son équivalent .bat/CI)
-;   "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup\packaging\ApexSetup.iss
+; Désinstallation — politique (voir docs/DESKTOP_DISTRIBUTION.md) :
+;   SUPPRIMÉ  : le dossier d'installation (fichiers installés), le raccourci Bureau, le menu Démarrer,
+;               l'entrée « Applications installées » ;
+;   CONSERVÉ  : %APPDATA%\APEX (paramètres), %LOCALAPPDATA%\APEX\logs (journaux), et TOUT ce qui vit
+;               dans WSL (dépôt APEX, .apex/, jeton, volumes Docker, cerveau) — jamais touché.
 ;
-; Produit : setup\dist\installer\APEX-Setup.exe
-;
-; AUCUNE opération destructive : cet installateur ne supprime jamais les
-; données APEX (.apex/, volumes Docker) — seul le contenu qu'IL a lui-même
-; installé (APEX.exe et ses fichiers) est retiré à la désinstallation,
-; jamais les données utilisateur qui vivent dans WSL2.
+; Compilation : ISCC.exe (Inno Setup 6.4.3). Sous Linux, via Wine (voir build_desktop_release.sh).
+;   ISCC /DApexVersion=0.2.0 /DPublishDir=<dossier publié> /DIconFile=<apex.ico> /O<sortie> ApexSetup.iss
 
-#define ApexVersion "0.1.0"
+#ifndef ApexVersion
+  #error ApexVersion doit être fourni (/DApexVersion=x.y.z) — jamais une version implicite.
+#endif
+#ifndef PublishDir
+  #error PublishDir doit être fourni (/DPublishDir=...) — dossier produit par publish_dashboard.sh.
+#endif
+#ifndef IconFile
+  #define IconFile "..\src\ApexSetup.Dashboard\Assets\apex.ico"
+#endif
+
 #define ApexPublisher "APEX"
 #define ApexExeName "APEX.exe"
-; Chemin de publication attendu — produit par publish_dashboard.sh.
-#define PublishDir "..\dist\apex-dashboard-" + ApexVersion + "-win-x64"
+; Même nom que SingleInstanceGuard.MutexName côté Panel.
+#define ApexMutex "APEX.Panel.SingleInstance"
 
 [Setup]
 AppId={{6C6B2B0E-3E0C-4E2E-9D6A-3B1E7B7B6B10}
 AppName=APEX
 AppVersion={#ApexVersion}
+AppVerName=APEX {#ApexVersion}
 AppPublisher={#ApexPublisher}
-DefaultDirName={autopf}\APEX
+VersionInfoVersion={#ApexVersion}.0
+VersionInfoProductName=APEX
+VersionInfoDescription=Installateur du Panel APEX
+; Par utilisateur, sans élévation, dans %LOCALAPPDATA%\Programs\APEX — écrit explicitement plutôt que
+; {autopf} : même dossier sous Windows (FOLDERID_UserProgramFiles), mais {autopf} n'est pas résolu par
+; Wine (SHGetKnownFolderPath 0x80070057, « Failed to expand shell folder constant autopf ») et
+; l'installateur ne pourrait pas y être testé.
+PrivilegesRequired=lowest
+DefaultDirName={localappdata}\Programs\APEX
+DisableDirPage=yes
 DefaultGroupName=APEX
 DisableProgramGroupPage=yes
-; Élévation seulement pour l'INSTALLATION (Program Files) — jamais pour
-; APEX.exe lui-même à chaque lancement (voir app.manifest, asInvoker).
-PrivilegesRequired=admin
-OutputDir=..\dist\installer
-OutputBaseFilename=APEX-Setup
-Compression=lzma2
-SolidCompression=yes
-ArchitecturesInstallIn64BitMode=x64
+DisableWelcomePage=no
+AppMutex={#ApexMutex}
+CloseApplications=yes
+RestartApplications=no
+; WSL 2 exige Windows 10 1903 (build 18362) ou plus récent.
+MinVersion=10.0.18362
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
+SetupIconFile={#IconFile}
 UninstallDisplayIcon={app}\{#ApexExeName}
-; Aucun certificat de signature disponible dans ce dépôt — même limite
-; assumée que packaging/publish.sh pour Cli/Gui/Launcher, voir docs/PACKAGING.md.
+UninstallDisplayName=APEX
+OutputBaseFilename=APEX-Setup-x64-v{#ApexVersion}
+Compression=lzma2/max
+SolidCompression=yes
+; Journal d'installation : %TEMP%\Setup Log AAAA-MM-JJ #NNN.txt (diagnostic d'une installation).
+SetupLogging=yes
+; Aucun certificat de signature disponible : binaire non signé (voir docs/PACKAGING.md).
 
 [Languages]
 Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
-[Tasks]
-; Décoché par défaut — mission §18 : raccourci bureau OPTIONNEL, jamais imposé.
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-; Décoché par défaut — mission §17 : démarrage automatique JAMAIS activé sans consentement explicite.
-Name: "startupicon"; Description: "Lancer APEX au démarrage de Windows"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-
 [Files]
-Source: "{#PublishDir}\{#ApexExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; Le dossier publié entier (Panel .NET autonome, multi-fichiers).
+Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\APEX"; Filename: "{app}\{#ApexExeName}"
-Name: "{group}\{cm:UninstallProgram,APEX}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\APEX"; Filename: "{app}\{#ApexExeName}"; Tasks: desktopicon
-Name: "{userstartup}\APEX"; Filename: "{app}\{#ApexExeName}"; Tasks: startupicon
+Name: "{autodesktop}\APEX"; Filename: "{app}\{#ApexExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#ApexExeName}"; Comment: "Panel APEX"
+Name: "{autoprograms}\APEX"; Filename: "{app}\{#ApexExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#ApexExeName}"; Comment: "Panel APEX"
 
 [Run]
 Filename: "{app}\{#ApexExeName}"; Description: "{cm:LaunchProgram,APEX}"; Flags: nowait postinstall skipifsilent
 
-; Désinstallation propre : Inno Setup supprime par défaut UNIQUEMENT les
-; fichiers listés dans [Files] (ici : APEX.exe seul) — jamais les données
-; utilisateur (paramètres du Dashboard dans %AppData%\Apex\, .apex/ côté
-; WSL, volumes Docker). Aucune section [UninstallDelete] destructive
-; n'est ajoutée : une désinstallation propre retire le programme, jamais
-; les données APEX.
+[Code]
+{ Validation de l'installation : le programme installé doit réellement démarrer et répondre. }
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  if CurStep = ssPostInstall then
+  begin
+    if Exec(ExpandConstant('{app}\{#ApexExeName}'), '--version', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)
+       and (ResultCode = 0) then
+      Log('APEX: validation OK (APEX.exe --version)')
+    else
+    begin
+      Log(Format('APEX: VALIDATION EN ÉCHEC (APEX.exe --version, code %d)', [ResultCode]));
+      SuppressibleMsgBox('APEX est installé mais ne démarre pas correctement (vérification « APEX.exe --version » en échec). ' +
+        'Consultez le journal d''installation dans %TEMP%.', mbError, MB_OK, IDOK);
+    end;
+  end;
+end;

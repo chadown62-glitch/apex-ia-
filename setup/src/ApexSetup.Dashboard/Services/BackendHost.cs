@@ -83,8 +83,10 @@ public sealed class WslBackendHost(IProcessRunner processRunner) : IBackendHost
         var result = await processRunner.RunAsync("wsl.exe", ["-l", "-v"], ProbeTimeout, cancellationToken).ConfigureAwait(false);
         if (!result.Started)
         {
+            // Détail court pour l'utilisateur ; la raison système complète (souvent un message .NET
+            // long) n'apporte rien de plus que « wsl.exe introuvable ».
             return new HostProbe(true, ComponentStatus.Error, false,
-                $"WSL n'est pas installé (wsl.exe introuvable : {result.FailureReason})", preferredDistro, NotReadyCause.WslNotInstalled);
+                "WSL n'est pas installé (wsl.exe introuvable)", preferredDistro, NotReadyCause.WslNotInstalled);
         }
         if (result.TimedOut)
         {
