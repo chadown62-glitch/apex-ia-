@@ -82,3 +82,60 @@ jamais en déplaçant l'ancre.
   vérification d'intégrité ; états de l'interface.
 - À NE PAS modifier : le Judge par artefact (intégrité, contamination, rejeu, re-mesure) ; le
   choix des ancres (§1.2) ; les tolérances du monde ; `max_passes` ; aucun second moteur.
+
+## 2. Règles statistiques PRÉ-ENREGISTRÉES (commitées avant leur implémentation et avant toute expérience P3.7)
+
+Unité expérimentale : une RECETTE entraînée avec k graines indépendantes (k = 2 au départ ; 3 au
+plus). Chaque graine produit un artefact réel, jugé par le Judge existant (intégrité, contamination,
+rejeu bit à bit, re-mesure) ; seules les mesures par élément du Judge entrent dans les calculs.
+
+Pour chaque suite s d'un groupe protégé (`world.protected_groups`), référence R = l'ancre du groupe
+(mécanisme existant, inchangé : un artefact réel promu et attesté, benchmarks gelés) :
+- D_i = valeur(C_i) − valeur(R) pour la graine i (métriques « plus bas = mieux » ; > 0 = pire), avec
+  l'agrégation existante d'`EvalReport` (pondérée par les octets pour le BPB) ; D̄ = moyenne des D_i.
+- Incertitude d'échantillonnage des éléments : bootstrap apparié sur les éléments (2 000 tirages,
+  graine 0) de D̄, recalculé avec la même agrégation ; SE_item = écart-type bootstrap.
+- Variance entre graines : σ_s = max(σ_prior,s ; s_obs,s), où s_obs est l'écart-type (ddof = 1) des
+  D_i de l'expérience et σ_prior l'estimation groupée (Σ carrés des écarts à la moyenne des graines /
+  Σ (k_j − 1)) sur l'HISTORIQUE des réplications disponibles AU MOMENT DE LA PLANIFICATION : paires
+  ou triplets de même recette (même plan, graines différentes), affinages depuis un champion
+  (`init = champion`), benchmarks de même empreinte. L'historique importé pour P3.7 est celui de §1.1
+  (P2 `exp-a10e1cff3488`, P3 `exp-f0f4ed9a92d6`, A/A de P3.5), consigné au journal avec sa provenance.
+- Incertitude totale : U = 1,96 × √(SE_item² + σ_s² / k).
+- Marge de régression ACCEPTABLE (définie ici, avant les résultats) : m_s = max(tolérance du monde
+  pour la métrique ; σ_prior,s). Justification : une dégradation plus petite que l'écart produit par
+  une simple re-graine de la recette du champion n'est pas attribuable à la nouvelle capacité ; les
+  tolérances du monde restent le plancher (jamais abaissées, jamais relevées au-delà de σ mesuré).
+
+Statut par suite :
+- **REGRESSION** : D̄ − U > m_s ET D_i > 0 pour toutes les graines (dégradation au-delà de la marge,
+  reproduite) ;
+- **IMPROVEMENT** : D̄ + U < 0 ;
+- **NO_REGRESSION** : D̄ + U ≤ m_s (toute dégradation éventuelle reste dans la marge, avec confiance) ;
+- **VARIANCE_INCONCLUSIVE** : sinon (l'intervalle chevauche la marge).
+Statut de la capacité visée : **MEMORIZATION** si sa suite train est IMPROVEMENT sans que sa suite
+held-out le soit. **INVALID_EXPERIMENT** si un contrôle d'intégrité du Judge échoue pour UNE graine
+(`candidate_integrity`, `no_contamination`, `candidate_reproducible`, `claimed_metrics_match`,
+`baseline_integrity`, `baseline_unchanged`, `candidate_differs`, `declared_data_matches_recipe`,
+`training_replayed`, contrôles d'ancre).
+
+Décision de l'expérience (dans cet ordre) :
+1. INVALID_EXPERIMENT si une graine est invalide (aucune graine supplémentaire) ;
+2. REJECT si une suite protégée est REGRESSION ou si la capacité visée est MEMORIZATION ;
+3. REJECT si la cible n'est pas IMPROVEMENT alors que l'intervalle l'exclut (D̄ − U ≥ 0 : aucun gain) ;
+4. ACCEPT si la cible est IMPROVEMENT, si toutes les suites protégées sont NO_REGRESSION ou
+   IMPROVEMENT, et si l'ARTEFACT promu (celui de la graine planifiée, jamais « la meilleure graine »)
+   n'est lui-même démontrablement au-delà d'aucune marge (D_0 − 1,96·SE_item,0 ≤ m_s) ;
+5. sinon (au moins un VARIANCE_INCONCLUSIVE) : une graine de plus si k < 3, puis on recalcule ;
+   à k = 3, **INCONCLUSIVE** — aucune promotion.
+Seuil d'ACQUISITION d'une nouvelle capacité (ajouté à la condition 4 quand le plan vise une
+capacité) : borne haute de l'erreur moyenne held-out (moyenne + U) < 0,90, soit une exactitude
+démontrée > 0,10 (même seuil que les laboratoires P4).
+
+Garanties voulues : « une graine gagne » ne promeut jamais (k ≥ 2, cible et gardes sur toutes les
+graines) ; « une graine perd » ne déclare jamais un oubli (REGRESSION exige la reproduction du signe et
+un intervalle au-delà de la marge). Le registre RECALCULE lui-même ce verdict depuis les mesures de
+toutes les graines avant d'inscrire une promotion. Limites connues : σ_prior repose sur 2–3 paires ;
+ajouter une graine après avoir vu les deux premières est une procédure séquentielle (prévue ici,
+bornée à 3). Les règles seront aussi appliquées, à titre d'ILLUSTRATION seulement, aux expériences
+P3.5 déjà faites : ce résultat ne servira à régler aucun seuil.
