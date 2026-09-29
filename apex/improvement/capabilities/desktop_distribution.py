@@ -45,9 +45,25 @@ from apex.improvement.model import BenchmarkSnapshot, CapabilitySpec, CycleKind,
 from apex.metalearner.judge_model import JudgeDimension, JudgeSeverity
 
 CAPABILITY_ID = "desktop_distribution"
+
+
 #: Arbre source MESURÉ (défaut : ce dépôt). `APEX_CI_DESKTOP_REPO` permet de mesurer une autre
 #: révision (worktree) avec la MÊME définition de banc — ex. la baseline d'avant la distribution.
-REPO = Path(os.environ.get("APEX_CI_DESKTOP_REPO") or Path(__file__).resolve().parents[3])
+#: Le juge peut être chargé depuis une révision git dans un fichier temporaire (`--judge-ref`) : la
+#: racine est donc cherchée (module, puis répertoire courant), jamais déduite d'une profondeur fixe
+#: (constaté : `parents[3]` -> IndexError dans le juge en processus séparé, cycle 1).
+def _repo_root() -> Path:
+    configured = os.environ.get("APEX_CI_DESKTOP_REPO")
+    if configured:
+        return Path(configured)
+    for base in (Path(__file__).resolve().parent, Path.cwd().resolve()):
+        for candidate in (base, *base.parents):
+            if (candidate / "setup" / "ApexSetup.sln").exists():
+                return candidate
+    return Path.cwd().resolve()
+
+
+REPO = _repo_root()
 SETUP = REPO / "setup"
 PANEL_PROJECT = SETUP / "src" / "ApexSetup.Dashboard" / "ApexSetup.Dashboard.csproj"
 
