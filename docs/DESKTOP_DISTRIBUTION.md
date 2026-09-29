@@ -101,3 +101,122 @@ Gauntlet `desktop_distribution`.
    contre un VRAI backend ; le transport `wsl.exe` n'est testé qu'avec un double (MOCK TEST).
 8. **Gauntlet** : capacité `desktop_distribution` dans `apex/improvement` (mesures réelles du build,
    de l'installateur sous Wine, du Panel contre un vrai backend ; sondes adversariales) + release gate.
+
+## 1. Architecture retenue (IMPLEMENTED)
+
+```
+Windows (utilisateur, sans administrateur)
+│
+├── APEX-Setup-x64-v<version>.exe      Inno Setup 6.4.3, par utilisateur
+│     ├── %LOCALAPPDATA%\Programs\APEX\APEX.exe (+ runtime .NET autonome, multi-fichiers)
+│     ├── Bureau\APEX.lnk, Menu Démarrer\APEX.lnk (icône APEX)
+│     ├── validation : APEX.exe --version
+│     └── désinstalleur (programme + raccourcis ; données utilisateur et WSL conservées)
+│
+└── APEX.exe = Panel (observateur)
+      │  wsl.exe -l -v            (état de la distribution — ne démarre rien)
+      │  wsl.exe --exec cat …     (seulement si la distribution tourne déjà)
+      │     ~/.apex/runtime/backend.json   <- écrit par launch.sh serve (starting) puis apex serve (serving)
+      │     /proc/<pid>/cmdline            <- le processus annoncé vit-il ?
+      │     <projet>/.apex/api-token       <- jeton, en mémoire seulement
+      │  HTTP 127.0.0.1:<port> (redirection localhost WSL2)
+      ▼
+    WSL ── scripts/apex-launch.sh serve ── apex serve ── GET /api/v1/status
+                                                        database / redis / ollama / sandbox / brain
+```
+
+Principes : le Panel ne remplace pas launch.sh et ne démarre ni WSL ni le backend ; READY n'est
+attribué que sur une réponse authentifiée au bon protocole ; aucun secret côté Windows ; aucun
+chemin, port ou jeton demandé à l'utilisateur.
+
+## 2. Validation — ce qui a réellement été exécuté
+
+### 2.1 REAL E2E (Linux, ce conteneur) — binaire Panel réel + backend APEX réel
+
+Panel `linux-x64` compilé depuis les sources ; `apex serve` réel (worktree de validation, Gate
+autorisé par exceptions datées propres à ce conteneur, jamais commitées) ; PostgreSQL et Redis
+réels (conteneurs Docker, images `mirror.gcr.io`) ; cerveau P3 réel (champion attesté).
+
+| Scénario (mission) | Verdict du Panel (mesuré) |
+|---|---|
+| rien de démarré (#5) | APEX NOT READY — BackendNotStarted — Backend OFFLINE, API OFFLINE, services UNKNOWN (code 2) |
+| `launch.sh serve` réel en préflight (#3) | Backend STARTING (BackendStarting), puis NOT READY après l'échec réel de compose (image MinIO introuvable ici) : annonce retirée |
+| `apex serve` réel (#6 backend lancé après le Panel) | APEX DEGRADED : Backend, API, Database, Redis, Sandbox, Brain READY ; Ollama OFFLINE (absent ici — vrai) |
+| Redis arrêté puis relancé (#29) | Redis OFFLINE puis READY, le reste inchangé |
+| jeton refusé (#9) | NOT READY — TokenRejected, API ERROR |
+| backend figé, SIGSTOP (#14, #15) | NOT READY — ApiTimeout ; rétabli après SIGCONT |
+| `kill -9` du backend (#7, #30) | NOT READY — BackendStopped (enregistrement périmé, pid mort) |
+| Ctrl+C sur `apex serve` | NOT READY — BackendNotStarted ; enregistrement retiré |
+| autre programme sur le port (#13) | NOT READY — PortConflict |
+| fenêtre réelle (Xvfb) | capture : APEX DEGRADED, 7 lignes, journal des transitions |
+
+Défauts trouvés par ces E2E et corrigés : (1) STARTING jamais visible pendant le préflight de
+launch.sh -> annonce `starting` par launch.sh (`9218af8`) ; (2) enregistrement laissé après SIGTERM
+/ Ctrl+C (uvicorn relance le signal après l'arrêt, le `finally` ne s'exécute jamais) -> retrait sur
+`lifespan.shutdown.complete` (`29c8ba8`, test de processus réel + témoin qui reproduit le défaut) ;
+(3) Brain UNKNOWN à la première requête (import à froid 3,8 s) -> préchauffage dans `apex serve` ;
+(4) consigne « dans WSL » affichée sur un hôte Linux -> consignes selon l'hôte. Deux défauts du
+banc de test lui-même (pid d'un sous-shell au lieu de Python ; hypothèse fausse sur le jeton) ont
+été identifiés et corrigés avant de conclure.
+
+### 2.2 WINE E2E — installateur Windows réel sous Wine 9 (pas Windows)
+
+`setup/packaging/wine_installer_e2e.sh`, préfixe neuf : **18/18** — installation silencieuse (5,7 s),
+215 fichiers, raccourci Bureau vers `%LOCALAPPDATA%\Programs\APEX\APEX.exe`, menu Démarrer, entrée
+HKCU de désinstallation, validation post-installation, double-clic depuis `/tmp`, instance unique,
+verdict sans WSL (WslNotInstalled), installation refusée pendant que le Panel tourne, relance après
+`kill -9`, journal, réinstallation, **mise à jour 0.2.0 -> 0.2.1** (raccourci et paramètres
+conservés), désinstallation (programme, raccourcis, entrée retirés ; paramètres et journaux
+conservés), réinstallation après désinstallation, installation interrompue (84 fichiers copiés)
+puis relancée. Défauts trouvés sous Wine : `{autopf}` non résolu en mode utilisateur ->
+`{localappdata}\Programs` explicite ; `APEX.exe` fichier unique ne démarre pas -> multi-fichiers.
+
+### 2.3 PACKAGING TEST
+
+Build (`build_desktop_release.sh`, 43 s) : installateur PE32, SHA256, manifeste, journal. Fichiers
+publiés bit-identiques après un build propre ; installateur bit-identique après normalisation des
+dates (`SOURCE_DATE_EPOCH`) — mesuré sur deux builds dont un propre, à une minute d'intervalle.
+
+### 2.4 MOCK TEST (chemins Windows impossibles ici)
+
+`wsl.exe` simulé : argv (`--exec`, jamais de shell), distributions arrêtées jamais touchées, sortie
+UTF-16, chemins hostiles refusés avant tout processus. Ne prouve pas le comportement d'un vrai WSL.
+
+## 3. Performance (MEASURED, Linux, rendu logiciel sous Xvfb)
+
+| Mesure | Valeur |
+|---|---|
+| installation silencieuse (Wine) | 4,8 à 5,7 s |
+| lancement du Panel -> premier verdict | 1,25 s |
+| `--status-json` contre un backend en marche | 0,38 à 0,42 s (5 mesures) ; 0,24 s sans backend |
+| mémoire résidente du Panel | 141 Mo |
+| CPU au repos (rafraîchissement 5 s) | 2,8 % d'un cœur |
+| build complet de l'installateur | 43 s |
+
+## 4. Sécurité (audit)
+
+- **Privilèges** : installateur `PrivilegesRequired=lowest`, `APEX.exe` `asInvoker` ; aucune élévation.
+- **Processus** : le Panel ne lance que `wsl.exe`, en commandes courtes et bornées, avec `ArgumentList`
+  et `--exec` (jamais le shell Linux) ; chemins issus de l'enregistrement validés (absolus, sans `..`,
+  sans caractère de contrôle, jamais une option) ; nom de distribution validé. Il n'exécute jamais une
+  commande reçue du backend : la réponse n'est que des données, affichées comme texte.
+- **Secrets** : jeton lu dans WSL, gardé en mémoire, jamais écrit côté Windows ; masqué dans les
+  journaux (`Redactor` : valeurs lues et en-têtes `Bearer`) et le diagnostic ; l'enregistrement de
+  découverte ne contient aucun secret (dossier `~/.apex/runtime` en 700).
+- **Fichiers** : paramètres sans secret, fichier corrompu toléré et signalé ; journaux par jour,
+  14 conservés, 5 Mo max par fichier ; aucune écriture hors `%APPDATA%\APEX` et `%LOCALAPPDATA%\APEX`.
+- **DLL / chemins** : application autonome chargée depuis son dossier d'installation, inscriptible par
+  le seul utilisateur (comme toute installation par utilisateur) ; aucun chemin de développement
+  embarqué (vérifié à chaque publication).
+- **Signature** : aucune (pas de certificat) — avertissement SmartScreen attendu.
+
+## 5. Limites et éléments BLOCKED
+
+- **Windows réel : NOT VERIFIED** — vrai `wsl.exe`, redirection localhost WSL2 -> Windows, raccourcis
+  créés par le vrai shell, SmartScreen, redémarrage de Windows, DPI réels.
+- **`minio/minio:latest`** (docker-compose.yml) introuvable dans ce conteneur (Docker Hub :
+  « repository does not exist », quay.io refusé par la politique réseau) : le vrai `launch.sh serve`
+  y échoue à `compose up` (code 2). Sur une machine utilisateur : NOT VERIFIED ; si l'image est
+  réellement retirée de Docker Hub, `launch.sh` échouera partout — à vérifier en priorité.
+- Interface web (Vite) hors de cette distribution : serveur de développement uniquement.
+- Ollama : aucun modèle téléchargeable ici (ollama.com refusé) : au mieux DEGRADED.

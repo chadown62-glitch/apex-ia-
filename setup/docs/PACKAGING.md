@@ -51,25 +51,27 @@ depuis Linux et l'a été :
   ceci à CHAQUE publication (`strings` + recherche de chemins absolus,
   `find -name '*.pdb'`), jamais une seule fois puis oublié.
 
-## Ce qui N'EST PAS fait dans cette phase (honnêteté explicite)
+## Installateur Windows du Panel (mission Desktop Distribution)
 
-- **Aucun `.msi`/`.exe` installeur** (WiX Toolset, Inno Setup, ou
-  équivalent) n'est généré — ces outils nécessitent Windows (ou une
-  intégration CI Windows) pour produire un installeur testé de façon
-  fiable ; les construire à l'aveugle depuis Linux, sans jamais pouvoir
-  vérifier une installation/désinstallation réelle, aurait été une
-  affirmation non vérifiée. `publish.sh` produit la matière première
-  (binaires + structure de répertoire) qu'un futur pipeline CI Windows
-  empaquetterait.
-- **Aucune signature de code** — aucun certificat de signature
-  disponible dans cet environnement (règle explicite : ne jamais
-  inventer une signature). `SignAssembly=false` documenté explicitement
-  dans `Directory.Build.props` ; la structure produite est prête à être
-  signée (`signtool sign /f cert.pfx apex-setup.exe`) le jour où un
-  certificat existe — infrastructure, pas signature.
-- **Désinstallation** : sans installeur MSI réel, il n'existe pas encore
-  de mécanisme de désinstallation dédié — Setup lui-même n'écrit rien
-  hors du répertoire de destination choisi par l'utilisateur (voir
-  `PathSafety`, Phase 2), donc supprimer ce répertoire suffit
-  aujourd'hui ; un vrai désinstalleur Windows (entrée « Programmes et
-  fonctionnalités ») reste un travail futur explicitement hors périmètre.
+Mise à jour : l'installateur EXISTE désormais et est testé autant que cet environnement le permet
+(voir `docs/DESKTOP_DISTRIBUTION.md`).
+
+- `packaging/build_desktop_release.sh` : publication du Panel (`publish_dashboard.sh`, désormais
+  **multi-fichiers** — le fichier unique ne démarre pas sous Wine, mesuré), compilation de
+  `ApexSetup.iss` par Inno Setup 6.4.3 (figé par empreinte, `fetch_innosetup.sh`, exécuté par Wine
+  sous Linux ou directement sous Windows via `ISCC=`), puis `APEX-Setup-x64-v<version>.exe`,
+  `.sha256`, `manifest.json`, `build.log`. Dates des fichiers ramenées à `SOURCE_DATE_EPOCH` :
+  deux builds du même commit donnent le **même SHA256** (mesuré, dont un build propre).
+- Installation **par utilisateur, sans administrateur** (`%LOCALAPPDATA%\Programs\APEX`), raccourcis
+  Bureau et menu Démarrer automatiques, validation post-installation, désinstallation qui conserve les
+  données utilisateur et ne touche jamais WSL.
+- `packaging/wine_installer_e2e.sh` : cycle de vie complet sous Wine (WINE E2E — jamais présenté
+  comme une preuve Windows).
+
+## Toujours non fait (honnêteté explicite)
+
+- **Aucune signature de code** — aucun certificat disponible (règle : ne jamais inventer une
+  signature). Conséquence : avertissement SmartScreen au premier lancement.
+- **Aucune validation sur un Windows réel** dans cet environnement : WSL, redirection localhost
+  WSL2 -> Windows, raccourcis du vrai shell, redémarrage : NOT VERIFIED.
+- `.msi` : non produit (Inno Setup `.exe` retenu, déjà présent dans le dépôt).
