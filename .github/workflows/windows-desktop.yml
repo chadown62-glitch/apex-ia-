@@ -75,71 +75,6 @@ jobs:
           name: windows-facts
           path: ${{ runner.temp }}/facts
 
-  # Chaîne RÉELLE Windows -> wsl.exe -> WSL2 -> launch.sh -> backend APEX, observée par APEX.exe depuis
-  # Windows. Windows Server hébergé (pas le PC de l'utilisateur, pas de redémarrage possible).
-  wsl-backend:
-    runs-on: windows-latest
-    timeout-minutes: 60
-    env:
-      DISTRO: Ubuntu-24.04
-      WSL_UTF8: "1"
-    steps:
-      - name: No CRLF conversion (bash scripts run inside WSL)
-        run: git config --global core.autocrlf false
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-      - name: Publish APEX.exe (win-x64) with the repository script
-        shell: bash
-        run: bash setup/packaging/publish_dashboard.sh "$RUNNER_TEMP/dist"
-      - name: Real WSL2 distribution
-        shell: pwsh
-        run: |
-          wsl.exe --install -d $env:DISTRO --no-launch --web-download
-          wsl.exe --set-default $env:DISTRO
-          wsl.exe -l -v
-      - name: Prepare the distribution like a user's machine (Docker, APEX repo, .venv, .env)
-        shell: pwsh
-        run: |
-          $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
-          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/prepare_wsl_backend.sh" $src apex
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          wsl.exe --terminate $env:DISTRO
-          wsl.exe -d $env:DISTRO --exec bash -lc 'whoami; systemctl is-active docker || true; docker info --format "{{.ServerVersion}}"'
-      - name: Panel before the backend (distribution running, launch.sh not run)
-        shell: pwsh
-        run: |
-          $exe = Get-ChildItem "$env:RUNNER_TEMP\dist" -Recurse -Filter APEX.exe | Select-Object -First 1
-          "APEX_EXE=$($exe.FullName)" | Out-File -Append $env:GITHUB_ENV
-          & $exe.FullName --version
-          & $exe.FullName --status-json; "exit=$LASTEXITCODE"
-      - name: Real launch.sh serve in WSL, observed from Windows
-        shell: pwsh
-        run: |
-          $log = "$env:RUNNER_TEMP\launch.log"
-          $p = Start-Process wsl.exe -ArgumentList @('-d', $env:DISTRO, '--cd', '/home/apex/apex', '--exec', 'bash', 'scripts/apex-launch.sh', 'serve') `
-                 -RedirectStandardOutput $log -RedirectStandardError "$log.err" -PassThru -WindowStyle Hidden
-          $seen = @(); $deadline = (Get-Date).AddMinutes(25)
-          while ((Get-Date) -lt $deadline) {
-            $json = & $env:APEX_EXE --status-json 2>$null | Out-String
-            try { $s = $json | ConvertFrom-Json } catch { $s = $null }
-            $state = if ($s) { "$($s.verdict)/$($s.cause)" } else { 'illisible' }
-            if ($seen.Count -eq 0 -or $seen[-1] -ne $state) { "$(Get-Date -Format HH:mm:ss) Panel: $state"; $seen += $state }
-            if ($s -and ($s.verdict -in 'Ready', 'Degraded')) { break }
-            if ($p.HasExited) { "launch.sh s'est arrêté (code $($p.ExitCode))"; break }
-            Start-Sleep 5
-          }
-          "--- Panel (dernier) ---"; & $env:APEX_EXE --status-json
-          "--- launch.sh (fin) ---"; Get-Content $log -Tail 60; Get-Content "$log.err" -Tail 30 -ErrorAction SilentlyContinue
-          "--- HTTP depuis Windows (sans jeton : 401 attendu si l'API répond) ---"
-          try { Invoke-WebRequest http://127.0.0.1:8000/api/v1/status -UseBasicParsing -TimeoutSec 10 } catch { $_.Exception.Message }
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: wsl-backend-logs
-          path: ${{ runner.temp }}/launch.log*
-
   # Installateurs construits SUR Windows (Inno Setup 6.4.3 figé, natif), puis script de validation
   # setup/packaging/windows/Test-ApexWindows.ps1 exécuté par Windows PowerShell 5.1 — le même script que
   # sur le PC de l'utilisateur — contre un vrai WSL2 et le vrai launch.sh. Windows Server hébergé :
@@ -210,22 +145,3 @@ jobs:
             ${{ runner.temp }}/release-prev/*.exe
             ${{ runner.temp }}/release-prev/manifest.json
 
-  # docker-compose.yml : minio/minio:latest introuvable (constaté sur le runner Windows, run 4 : « pull access
-  # denied … repository does not exist »). Quelles images MinIO officielles existent réellement ?
-  minio-probe:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - name: Try the candidate images (pull + mc present)
-        run: |
-          for img in minio/minio:latest minio/minio:RELEASE.2025-04-22T22-12-26Z \
-                     quay.io/minio/minio:latest quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z \
-                     quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z; do
-            if docker pull -q "$img" >/dev/null 2>&1; then
-              digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$img")
-              mc=$(docker run --rm --entrypoint sh "$img" -c 'command -v mc && mc --version | head -1' 2>&1 | tr '\n' ' ')
-              echo "OK   $img  $digest  mc: $mc"
-            else
-              echo "FAIL $img  $(docker pull "$img" 2>&1 | tail -1)"
-            fi
-          done

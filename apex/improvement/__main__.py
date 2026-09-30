@@ -84,6 +84,11 @@ CAPABILITIES: dict[str, CapabilityEntry] = {
         adapter_class="DesktopDistributionAdapter",
         judge_id="ci-judge:desktop-distribution",
     ),
+    "real_windows": CapabilityEntry(
+        module="apex.improvement.capabilities.real_windows",
+        adapter_class="RealWindowsAdapter",
+        judge_id="ci-judge:real-windows",
+    ),
 }
 
 
