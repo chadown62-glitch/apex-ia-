@@ -41,7 +41,7 @@ from pathlib import Path
 from typing import Any
 
 from apex.improvement.judge import ExternalJudge, FunctionProbe, ProbeOutcome
-from apex.improvement.model import BenchmarkSnapshot, CapabilitySpec, CycleKind, MetricSpec
+from apex.improvement.model import BenchmarkSnapshot, CapabilitySpec, CycleKind, MetricKind, MetricSpec
 from apex.metalearner.judge_model import JudgeDimension, JudgeSeverity
 
 CAPABILITY_ID = "desktop_distribution"
@@ -103,6 +103,14 @@ _INSTALLER_METRICS: dict[str, str] = {
     "installer_lifecycle": "fraction des vérifications WINE E2E réussies (cycle de vie de l'installateur)",
 }
 
+#: Coût au repos du Panel FENÊTRÉ (définition d5, ajoutée AVANT le changement du cycle 3) : % d'un cœur,
+#: stochastique (bruit de l'ordonnanceur), comparé par bootstrap apparié — jamais un gain construit
+#: sur du bruit. Rendu logiciel sous Xvfb : le seul rendu disponible ici, pas celui d'un poste Windows.
+IDLE_CPU_METRIC = "idle_cpu_percent"
+IDLE_WINDOWS = 6
+IDLE_WINDOW_S = 10.0
+IDLE_WARMUP_S = 30.0
+
 SPEC = CapabilitySpec(
     capability_id=CAPABILITY_ID,
     name="Desktop Distribution",
@@ -133,6 +141,14 @@ SPEC = CapabilitySpec(
         *(MetricSpec(name, description, True) for name, description in _PANEL_METRICS.items()),
         *(MetricSpec(name, description, True) for name, description in _INSTALLER_METRICS.items()),
         *(MetricSpec(name, description, True) for name, (_, description) in _WINDOWS_MOCK_METRICS.items()),
+        MetricSpec(
+            IDLE_CPU_METRIC,
+            f"CPU (% d'un cœur) du Panel fenêtré au repos contre un backend réel stable : {IDLE_WINDOWS} "
+            f"fenêtres de {IDLE_WINDOW_S:.0f} s après {IDLE_WARMUP_S:.0f} s (Xvfb, rendu logiciel)",
+            higher_is_better=False,
+            kind=MetricKind.STOCHASTIC,
+            min_samples=IDLE_WINDOWS,
+        ),
     ),
     success_criteria=("toutes les métriques déterministes à 1.0", "aucune régression"),
     risks=(
@@ -567,6 +583,71 @@ def dotnet_test_class(test_class: str) -> tuple[float, str]:
     return (1.0 if ok else 0.0), summary or (done.stdout + done.stderr)[-300:]
 
 
+# -- coût au repos (Panel fenêtré) ----------------------------------------------------------------
+
+
+def _free_display() -> str | None:
+    for number in range(90, 130):
+        if not Path(f"/tmp/.X{number}-lock").exists() and not Path(f"/tmp/.X11-unix/X{number}").exists():  # noqa: S108
+            return f":{number}"
+    return None
+
+
+def _cpu_ticks(pid: int) -> int:
+    fields = Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()
+    return int(fields[11]) + int(fields[12])  # utime + stime (champs 14 et 15 de /proc/pid/stat)
+
+
+def idle_cpu_samples(panel: Path) -> tuple[list[float], str]:
+    """Échantillons (% d'un cœur), ou ([], raison) si la mesure est impossible : jamais inventés."""
+    display = _free_display() if shutil.which("Xvfb") else None
+    if display is None:
+        return [], "Xvfb absent ou aucun écran virtuel libre"
+    xvfb = subprocess.Popen(
+        ["Xvfb", display, "-screen", "0", "1000x780x24", "-nolisten", "tcp"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        time.sleep(1)
+        if xvfb.poll() is not None:
+            return [], f"Xvfb {display} ne démarre pas (code {xvfb.returncode})"
+        with sandbox() as box:
+            port = _free_port()
+            with backend(box, port):
+                backend_status(box, port)
+                env = {**box.panel_env(port), "DISPLAY": display}
+                gui = subprocess.Popen(
+                    [str(panel), "--software-rendering"],
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                try:
+                    time.sleep(IDLE_WARMUP_S)
+                    ticks = os.sysconf("SC_CLK_TCK")
+                    samples: list[float] = []
+                    for _ in range(IDLE_WINDOWS):
+                        if gui.poll() is not None:
+                            return [], f"le Panel fenêtré s'est arrêté (code {gui.returncode})"
+                        before = _cpu_ticks(gui.pid)
+                        time.sleep(IDLE_WINDOW_S)
+                        used = (_cpu_ticks(gui.pid) - before) / ticks
+                        samples.append(round(100 * used / IDLE_WINDOW_S, 3))
+                    return samples, f"{IDLE_WINDOWS} fenêtres de {IDLE_WINDOW_S:.0f} s : {samples}"
+                finally:
+                    gui.terminate()
+                    try:
+                        gui.wait(timeout=20)
+                    except subprocess.TimeoutExpired:
+                        gui.kill()
+    except (OSError, RuntimeError) as exc:
+        return [], f"mesure impossible : {type(exc).__name__}: {exc}"
+    finally:
+        xvfb.terminate()
+        xvfb.wait(timeout=10)
+
+
 # -- installateur (WINE E2E) ----------------------------------------------------------------------
 
 
@@ -635,7 +716,7 @@ class DesktopDistributionAdapter:
         blocked: dict[str, str] = {}
         notes: list[str] = []
         if shutil.which("dotnet") is None:
-            blocked.update(dict.fromkeys(_PANEL_METRICS, "dotnet absent"))
+            blocked.update(dict.fromkeys([*_PANEL_METRICS, IDLE_CPU_METRIC], "dotnet absent"))
         else:
             panel = build_panel()
             values, panel_notes, latencies = panel_scenarios(panel)
@@ -645,6 +726,12 @@ class DesktopDistributionAdapter:
             # rendrait BLOQUÉ par construction tout cycle dont la baseline n'a pas de backend).
             if latencies:
                 notes.append(f"durée de --status-json (backend en marche, 5 mesures) : {latencies} s")
+            idle, idle_note = idle_cpu_samples(panel)
+            if idle:
+                samples[IDLE_CPU_METRIC] = tuple(idle)
+            else:
+                blocked[IDLE_CPU_METRIC] = idle_note
+            notes.append(f"{IDLE_CPU_METRIC}: {idle_note}")
         for metric, (test_class, _) in _WINDOWS_MOCK_METRICS.items():
             if shutil.which("dotnet") is None:
                 blocked[metric] = "dotnet absent"

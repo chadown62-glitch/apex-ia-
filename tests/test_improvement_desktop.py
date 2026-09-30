@@ -15,7 +15,12 @@ def test_capability_is_registered_and_consistent() -> None:
     entry = CAPABILITIES["desktop_distribution"]
     adapter = entry.adapter()
     names = {m.name for m in adapter.spec.metrics}
-    assert names == {*dd._PANEL_METRICS, *dd._INSTALLER_METRICS, *dd._WINDOWS_MOCK_METRICS}
+    assert names == {
+        *dd._PANEL_METRICS,
+        *dd._INSTALLER_METRICS,
+        *dd._WINDOWS_MOCK_METRICS,
+        dd.IDLE_CPU_METRIC,
+    }
     judge = entry.in_process_judge()
     assert judge.judge_id == "ci-judge:desktop-distribution"
     probes = judge.probes_for(CycleKind.ADVERSARIAL)
