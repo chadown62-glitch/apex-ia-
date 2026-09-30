@@ -35,7 +35,9 @@ param(
     [ValidateRange(1, 3)][int]$Repeat = 2,
     [int]$BackendStartTimeoutMin = 20,
     [string]$OutDir,
-    [string]$Label = 'user-pc'
+    [string]$Label = 'user-pc',
+    # Observation MANUELLE (non automatisable) : double-clic sur l'installateur téléchargé avant le script.
+    [ValidateSet('warning', 'no-warning', 'not-tested')][string]$SmartScreen = 'not-tested'
 )
 
 Set-StrictMode -Version 2
@@ -368,6 +370,14 @@ function Test-Install {
         $st = 'FAIL'; if ($r.ExitCode -eq 0 -and (Test-Path $ApexExe)) { $st = 'PASS' }
         $scope = 'HKCU'; if (-not (Test-Path $UninstallKey)) { $scope = 'absente de HKCU' }
         Add-Check 'I01' 'install' 'installation silencieuse sans administrateur' $st ("code $($r.ExitCode) en $([math]::Round($r.Ms/1000,1)) s ; entrée de désinstallation $scope ; données utilisateur antérieures : $hadUserData") @{ admin = $script:Env.is_admin }
+    }
+    Check 'X01' 'install' 'SmartScreen au double-clic sur l''installateur téléchargé (observation manuelle)' {
+        $motw = $script:Env.installer.mark_of_the_web
+        switch ($SmartScreen) {
+            'not-tested' { Add-Check 'X01' 'install' 'SmartScreen (observation manuelle)' 'BLOCKED' "non observé (option -SmartScreen) ; fichier téléchargé marqué Internet : $motw" }
+            'warning' { Add-Check 'X01' 'install' 'SmartScreen (observation manuelle)' 'PASS' "avertissement SmartScreen observé, conforme à un installateur NON SIGNÉ ; marqué Internet : $motw" }
+            default { Add-Check 'X01' 'install' 'SmartScreen (observation manuelle)' 'PASS' "aucun avertissement observé (marqué Internet : $motw ; réputation ou fichier non marqué)" }
+        }
     }
     Check 'I02' 'install' 'répertoire et APEX.exe' {
         $files = @(Get-ChildItem $InstallDir -File -ErrorAction SilentlyContinue).Count
@@ -910,6 +920,9 @@ function Invoke-PostReboot {
         Add-Check 'R04' 'reboot' 'après redémarrage : état réel, aucun READY hérité d''avant' $st "distributions en cours : $($running -join ', ') ; Panel : $($s.Verdict)/$($s.Cause)"
     }
     Stop-AllPanels
+    # Un redémarrage suivant sera vérifié contre CE démarrage-ci (deux redémarrages réels = reproductibilité).
+    $state.last_boot = $script:Env.last_boot
+    [IO.File]::WriteAllText($statePath, ($state | ConvertTo-Json), $Utf8NoBom)
 }
 
 # ------------------------------------------------------------------------------------------------------
@@ -975,11 +988,13 @@ try {
     if (Test-Path $LogsDir) { Copy-Item (Join-Path $LogsDir '*') $Evidence -ErrorAction SilentlyContinue }
     $summary = [ordered]@{ PASS = 0; FAIL = 0; BLOCKED = 0; NOT_APPLICABLE = 0 }
     foreach ($c in $script:Checks) { $summary[$c.status]++ }
-    $result = [ordered]@{ schema = 1; script_version = $ScriptVersion; script_sha256 = (Get-FileHash $PSCommandPath -Algorithm SHA256).Hash.ToLower(); phase = $Phase; repeat = $Repeat
+    $result = [ordered]@{ schema = 1; script_version = $ScriptVersion; smartscreen_observation = $SmartScreen; script_sha256 = (Get-FileHash $PSCommandPath -Algorithm SHA256).Hash.ToLower(); phase = $Phase; repeat = $Repeat
         started_at = $started.ToString('o'); finished_at = (Get-Date).ToString('o')
         options = [ordered]@{ allow_backend_control = [bool]$AllowBackendControl; allow_wsl_shutdown = [bool]$AllowWslShutdown; older_installer = [bool]$OlderInstaller }
         environment = $script:Env; performance = $script:Perf; summary = $summary; checks = $script:Checks }
-    [IO.File]::WriteAllText((Join-Path $OutDir 'results.json'), ($result | ConvertTo-Json -Depth 8), $Utf8NoBom)
+    $resultName = 'results.json'
+    if ($Phase -eq 'PostReboot') { $resultName = 'results-postreboot-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json' }
+    [IO.File]::WriteAllText((Join-Path $OutDir $resultName), ($result | ConvertTo-Json -Depth 8), $Utf8NoBom)
     Stop-Transcript | Out-Null
     $masked = 0
     foreach ($f in (Get-ChildItem $OutDir -Recurse -File | Where-Object { $_.Extension -in '.txt', '.json', '.log', '.err' })) {

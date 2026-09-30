@@ -15,7 +15,9 @@ if [[ ! -f "$pkg" ]]; then
   curl -fsSL -o "$pkg.tmp" "$URL"
   mv "$pkg.tmp" "$pkg"
 fi
-actual=$(sha256sum "$pkg" | cut -d' ' -f1)
+# Entrée standard : sous Git Bash (Windows), « sha256sum <chemin> » préfixe l'empreinte d'un « \ »
+# (échappement GNU des chemins contenant « \ » ; constaté sur le runner Windows).
+actual=$(sha256sum < "$pkg" | cut -d' ' -f1)
 if [[ "$actual" != "$SHA256" ]]; then
   echo "[fetch_innosetup.sh] ERREUR : empreinte inattendue ($actual) — paquet refusé" >&2
   rm -f "$pkg"
