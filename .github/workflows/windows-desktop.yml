@@ -27,7 +27,7 @@ jobs:
             Format-List | Out-String | Tee-Object "$out\os.txt"
           $wsl = Get-Command wsl.exe -ErrorAction SilentlyContinue
           "wsl.exe: $($wsl.Source)" | Tee-Object "$out\wsl_path.txt"
-          foreach ($case in @(@('-l','-v'), @('-l','--running','-q'), @('-l','-q'), @('--status'), @('--version'))) {
+          & { foreach ($case in @(@('-l','-v'), @('-l','--running','-q'), @('-l','-q'), @('--status'), @('--version'))) {
             $name = ($case -join '_') -replace '[^A-Za-z0-9_]', ''
             foreach ($utf8 in @('', '1')) {
               $env:WSL_UTF8 = $utf8
@@ -45,13 +45,32 @@ jobs:
                 "   as UTF-16LE: " + [System.Text.Encoding]::Unicode.GetString($bytes)
               } catch { "== wsl $($case -join ' ') : cannot start ($($_.Exception.Message))" }
             }
-          } *>&1 | Tee-Object "$out\wsl_outputs.txt"
+          } } *>&1 | Tee-Object "$out\wsl_outputs.txt"
           $env:WSL_UTF8 = ''
           Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |
             ForEach-Object { Get-ItemProperty $_.PSPath | Select-Object DistributionName, Version, State } |
             Format-List | Out-String | Tee-Object "$out\lxss.txt"
           "Lxss key exists: $(Test-Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss')" | Tee-Object -Append "$out\lxss.txt"
+      - name: Can this runner host a real WSL2 distribution? (experiment, never assumed)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $out = "$env:RUNNER_TEMP\facts"
+          & {
+            "== wsl --install -d Ubuntu-24.04 --no-launch"
+            wsl.exe --install -d Ubuntu-24.04 --no-launch --web-download; "exit=$LASTEXITCODE"
+            $env:WSL_UTF8 = '1'
+            "== wsl -l -v"; wsl.exe -l -v; "exit=$LASTEXITCODE"
+            "== run a command in the distribution (WSL2 needs virtualization on this VM)"
+            wsl.exe -d Ubuntu-24.04 -u root --exec uname -a; "exit=$LASTEXITCODE"
+            "== wsl -l -v after first start"; wsl.exe -l -v; "exit=$LASTEXITCODE"
+            "== running"; wsl.exe -l --running -q; "exit=$LASTEXITCODE"
+            Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |
+              ForEach-Object { Get-ItemProperty $_.PSPath | Select-Object DistributionName, Version, State, BasePath } | Format-List
+            (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue).DefaultDistribution
+          } *>&1 | Tee-Object "$out\wsl2_experiment.txt"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: windows-facts
           path: ${{ runner.temp }}/facts
