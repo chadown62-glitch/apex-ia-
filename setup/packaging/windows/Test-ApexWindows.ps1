@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Validation RÉELLE d'APEX Desktop sur Windows 10/11 (+ WSL2) : installation, raccourcis, APEX.exe, Panel,
   WSL, backend lancé par launch.sh, diagnostic, sécurité, crash/recovery, redémarrage, performance.
