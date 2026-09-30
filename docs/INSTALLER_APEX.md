@@ -4,6 +4,21 @@ Le Panel APEX est une petite application Windows qui **affiche l'état réel d'A
 (le « backend ») tourne dans Linux, via WSL, et se lance avec le `launch.sh` dédié. Le Panel ne
 démarre jamais WSL ni le backend : il les observe et vous dit quoi faire.
 
+## Prérequis (constatés, jamais installés par APEX Desktop)
+
+- Windows 10 (2004 ou plus récent) ou Windows 11, 64 bits, compte utilisateur normal (pas besoin
+  d'administrateur).
+- WSL 2 avec une distribution Linux (`wsl --install -d Ubuntu` dans PowerShell si besoin).
+- Dans cette distribution : le dépôt APEX, Docker utilisable par votre compte (`docker compose`), et
+  l'environnement Python d'APEX (`.venv`) — c'est-à-dire ce qu'exige déjà `scripts/apex-launch.sh`.
+- Lancez `launch.sh` avec le **même compte Linux** que l'utilisateur WSL par défaut : le Panel lit
+  `~/.apex/runtime/backend.json` dans le dossier personnel de l'utilisateur par défaut.
+- **Attention (constaté le 30/09/2026)** : l'image Docker `minio/minio:latest` utilisée par
+  `docker-compose.yml` n'est plus téléchargeable (Docker Hub : « repository does not exist » ;
+  quay.io : « unauthorized »). Sur une machine qui l'a déjà en cache, `launch.sh` démarre ; sur une
+  machine neuve, `docker compose up` échoue et le Panel affiche « Le backend APEX s'est arrêté » ou
+  « n'est pas démarré ». Solution à décider dans APEX (voir `docs/REAL_WINDOWS_VALIDATION.md`).
+
 ## Installer
 
 1. Téléchargez `APEX-Setup-x64-v<version>.exe` (et, si vous le souhaitez, le fichier `.sha256`

@@ -11,7 +11,9 @@ Exécute RÉELLEMENT chaque vérification (jamais une case cochée sur déclarat
   Gauntlet       verdicts des cycles consignés au ledger (aucun REGRESSED, aucun FAILED)
   documentation  docs/INSTALLER_APEX.md
 
-Verdict : RELEASE_READY seulement si TOUT passe. Les éléments qui exigent un Windows réel (WSL réel,
+Verdict : RELEASE_READY seulement si TOUT passe. Les éléments qui exigent un Windows réel viennent des
+résultats de setup/packaging/windows/Test-ApexWindows.ps1 (--real-windows-results) : PASS seulement sur un
+Windows 10/11 client réel, par le script versionné (pas Wine) ; sinon (WSL réel,
 raccourci du vrai shell, redémarrage de Windows) sont BLOCKED ici : le verdict devient alors
 BLOCKED_ON_REAL_WINDOWS — jamais RELEASE_READY sans preuve Windows.
 
@@ -21,6 +23,7 @@ Usage : python setup/packaging/release_gate.py <sortie> [--upgrade-from-installe
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -64,6 +67,13 @@ def main() -> int:
     parser.add_argument("out", type=Path)
     parser.add_argument(
         "--older-installer", type=Path, help="installateur plus ancien : teste la mise à jour vers celui-ci"
+    )
+    parser.add_argument(
+        "--real-windows-results",
+        type=Path,
+        action="append",
+        default=[],
+        help="results.json de Test-ApexWindows.ps1 exécuté sur un Windows réel (répétable)",
     )
     args = parser.parse_args()
     out: Path = args.out.resolve()
@@ -316,13 +326,75 @@ def main() -> int:
     )
 
     # -- Windows réel ---------------------------------------------------------------------------------
-    for name in (
-        "redémarrage Windows validé",
-        "WSL réel + launch.sh réel vus depuis Windows",
-        "raccourci du vrai shell Windows",
-    ):
-        items.append(Item(name, BLOCKED, "aucune machine Windows dans cet environnement : NOT VERIFIED"))
+    real = [json.loads(p.read_text(encoding="utf-8-sig")) for p in args.real_windows_results]
+    for name, ids in REAL_WINDOWS_ITEMS:
+        items.append(real_windows_item(name, ids, real))
     return finish(out, items, started)
+
+
+#: Éléments qui exigent un Windows réel -> vérifications de setup/packaging/windows/Test-ApexWindows.ps1.
+REAL_WINDOWS_ITEMS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "installation réelle (vierge, seconde, refus, interruption, désinstallation, mise à jour)",
+        ("I01", "I02", "I09", "I10", "I11", "I12", "I13", "I14"),
+    ),
+    ("raccourci du vrai shell Windows et double-clic", ("I04", "I05", "L01", "L02", "L03")),
+    ("WSL réel + launch.sh réel vus depuis Windows", ("W01", "W03", "B02", "B03", "B05", "B06")),
+    ("APEX READY dans une configuration réellement opérationnelle", ("B04",)),
+    (
+        "états réels OFFLINE / STARTING / ERROR et récupération",
+        ("B01", "B07", "B08", "B09", "B10", "B11", "B12", "B13"),
+    ),
+    ("diagnostic et sécurité sur Windows réel", ("I08", "S01", "S02", "S03", "S04", "S05")),
+    ("redémarrage Windows validé", ("R01", "R02", "R03", "R04")),
+)
+
+
+def real_windows_item(name: str, ids: tuple[str, ...], results: list[dict[str, Any]]) -> Item:
+    """PASS seulement sur un Windows 10/11 CLIENT réel, par le script versionné ; un Windows Server
+    hébergé (CI) prouve le comportement mais pas la plateforme cible : BLOCKED, avec ses preuves."""
+    if not results:
+        return Item(
+            name, BLOCKED, "aucun résultat Windows réel fourni (--real-windows-results) : NOT VERIFIED"
+        )
+    script = SETUP / "packaging" / "windows" / "Test-ApexWindows.ps1"
+    expected = hashlib.sha256(script.read_bytes()).hexdigest()
+    seen: dict[str, list[str]] = {}
+    machines = []
+    for result in results:
+        env = result.get("environment", {})
+        if env.get("is_wine") is not False or result.get("script_sha256") != expected:
+            return Item(
+                name,
+                FAIL,
+                f"résultats refusés : Wine={env.get('is_wine')!r}, script versionné="
+                f"{result.get('script_sha256') == expected}",
+            )
+        machines.append(f"{env.get('label')} ({env.get('os_caption')} {env.get('os_build')})")
+        for check in result.get("checks", []):
+            if check["id"] in ids:
+                seen.setdefault(check["id"], []).append(check["status"])
+    evidence = (
+        "; ".join(f"{i}={'/'.join(seen.get(i, ['absent']))}" for i in ids) + " — " + ", ".join(machines)
+    )
+    statuses = [st for i in ids for st in seen.get(i, ["BLOCKED"])]
+    if "FAIL" in statuses:
+        return Item(name, FAIL, evidence)
+    if any(st == "BLOCKED" for st in statuses) or any(i not in seen for i in ids):
+        return Item(name, BLOCKED, evidence)
+    clients = [r for r in results if r.get("environment", {}).get("os_is_server") is False]
+    client_ok = any(
+        all(c["status"] in ("PASS", "NOT_APPLICABLE") for c in r.get("checks", []) if c["id"] in ids)
+        and all(any(c["id"] == i for c in r.get("checks", [])) for i in ids)
+        for r in clients
+    )
+    if not client_ok:
+        return Item(
+            name,
+            BLOCKED,
+            "vérifié sur Windows Server hébergé uniquement ; Windows 10/11 : NOT VERIFIED — " + evidence,
+        )
+    return Item(name, PASS, evidence)
 
 
 def ledger_entries() -> list[dict[str, Any]]:
