@@ -975,7 +975,7 @@ try {
     if (Test-Path $LogsDir) { Copy-Item (Join-Path $LogsDir '*') $Evidence -ErrorAction SilentlyContinue }
     $summary = [ordered]@{ PASS = 0; FAIL = 0; BLOCKED = 0; NOT_APPLICABLE = 0 }
     foreach ($c in $script:Checks) { $summary[$c.status]++ }
-    $result = [ordered]@{ schema = 1; script_version = $ScriptVersion; phase = $Phase; repeat = $Repeat
+    $result = [ordered]@{ schema = 1; script_version = $ScriptVersion; script_sha256 = (Get-FileHash $PSCommandPath -Algorithm SHA256).Hash.ToLower(); phase = $Phase; repeat = $Repeat
         started_at = $started.ToString('o'); finished_at = (Get-Date).ToString('o')
         options = [ordered]@{ allow_backend_control = [bool]$AllowBackendControl; allow_wsl_shutdown = [bool]$AllowWslShutdown; older_installer = [bool]$OlderInstaller }
         environment = $script:Env; performance = $script:Perf; summary = $summary; checks = $script:Checks }

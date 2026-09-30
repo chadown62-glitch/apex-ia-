@@ -209,3 +209,23 @@ jobs:
             ${{ runner.temp }}/release/build.log
             ${{ runner.temp }}/release-prev/*.exe
             ${{ runner.temp }}/release-prev/manifest.json
+
+  # docker-compose.yml : minio/minio:latest introuvable (constaté sur le runner Windows, run 4 : « pull access
+  # denied … repository does not exist »). Quelles images MinIO officielles existent réellement ?
+  minio-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Try the candidate images (pull + mc present)
+        run: |
+          for img in minio/minio:latest minio/minio:RELEASE.2025-04-22T22-12-26Z \
+                     quay.io/minio/minio:latest quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z \
+                     quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z; do
+            if docker pull -q "$img" >/dev/null 2>&1; then
+              digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$img")
+              mc=$(docker run --rm --entrypoint sh "$img" -c 'command -v mc && mc --version | head -1' 2>&1 | tr '\n' ' ')
+              echo "OK   $img  $digest  mc: $mc"
+            else
+              echo "FAIL $img  $(docker pull "$img" 2>&1 | tail -1)"
+            fi
+          done
