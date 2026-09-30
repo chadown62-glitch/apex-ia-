@@ -1034,13 +1034,32 @@ class TestApexDeclaredPorts(LauncherTestCase):
         result = fx.source_and_call('apex_declared_ports "$(pwd)"')
         self.assertEqual(result.stdout.strip(), "")
 
-    def test_c_the_real_apex_compose_file_yields_exactly_the_four_reported_ports(self) -> None:
-        """Contre le VRAI `docker-compose.yml` du dépôt — exactement les 4
-        ports rapportés en conflit (5432/6379/9000/9001)."""
+    def test_c_the_real_apex_compose_file_yields_the_ports_of_the_services_actually_started(self) -> None:
+        """Contre le VRAI `docker-compose.yml` du dépôt. MinIO est FACULTATIF (profil « minio »,
+        docs/MINIO_IMPACT_ANALYSIS.md) : sans profil, seuls postgres/redis (5432/6379) démarrent — vérifier
+        9000/9001 après `up` signalerait à tort un port non publié ; avec le profil, les 4 ports."""
         fx = LauncherFixture(self.tmp)
         shutil.copy2(LAUNCHER.parent.parent / "docker-compose.yml", fx.root / "docker-compose.yml")
-        result = fx.source_and_call('apex_declared_ports "$(pwd)"')
-        self.assertEqual(sorted(result.stdout.split(), key=int), ["5432", "6379", "9000", "9001"])
+        default = fx.source_and_call('apex_declared_ports "$(pwd)"')
+        self.assertEqual(sorted(default.stdout.split(), key=int), ["5432", "6379"])
+        with_minio = fx.source_and_call('apex_declared_ports "$(pwd)"', extra_env={"COMPOSE_PROFILES": "minio"})
+        self.assertEqual(sorted(with_minio.stdout.split(), key=int), ["5432", "6379", "9000", "9001"])
+
+    def test_d_profiles_follow_compose_semantics(self) -> None:
+        """Profils en liste en ligne ou en bloc ; COMPOSE_PROFILES à plusieurs valeurs ; « * » = tous."""
+        fx = LauncherFixture(self.tmp)
+        (fx.root / "docker-compose.yml").write_text(
+            'services:\n  base:\n    ports:\n      - "127.0.0.1:1000:1000"\n'
+            '  inline:\n    ports:\n      - "127.0.0.1:2000:2000"\n    profiles: ["a", "b"]\n'
+            '  block:\n    profiles:\n      - c\n    ports:\n      - "127.0.0.1:3000:3000"\n'
+            'volumes:\n  data:\n'
+        )
+        cases = {None: ["1000"], "b": ["1000", "2000"], "c,a": ["1000", "2000", "3000"], "*": ["1000", "2000", "3000"],
+                 "zzz": ["1000"]}
+        for profiles, expected in cases.items():
+            env = None if profiles is None else {"COMPOSE_PROFILES": profiles}
+            result = fx.source_and_call('apex_declared_ports "$(pwd)"', extra_env=env)
+            self.assertEqual(sorted(result.stdout.split(), key=int), expected, profiles)
 
 
 class TestPortIsOpen(LauncherTestCase):

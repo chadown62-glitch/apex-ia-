@@ -72,6 +72,7 @@ GROUPS: dict[str, tuple[str, tuple[str, ...]]] = {
         "parcours utilisateur : launch.sh lancé par l'utilisateur, double-clic sur APEX, état réel",
         ("U01",),
     ),
+    "minio_optional": ("le backend démarre sans MinIO (profil facultatif inactif)", ("M01",)),
     "ready": ("APEX READY dans une configuration réellement opérationnelle", ("B04",)),
     "offline": ("backend non lancé, crash, arrêt propre", ("B01", "B08", "B10")),
     "starting": ("préflight de launch.sh, interruption pendant le démarrage", ("B02", "B11")),

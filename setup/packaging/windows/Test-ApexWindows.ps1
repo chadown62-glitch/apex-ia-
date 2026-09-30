@@ -44,7 +44,10 @@ param(
     [switch]$Interactive
 )
 
-Set-StrictMode -Version 2
+# Version 1 : variables non initialisées interdites (erreur constatée au run 10) ; les propriétés absentes
+# (sortie illisible, donnée manquante) valent $null et chaque test décide — jamais un plantage du banc
+# présenté comme un échec du produit (constaté avec la version 2 : « erreur du test » sur L02/L04/S01).
+Set-StrictMode -Version 1
 $ErrorActionPreference = 'Stop'
 $ScriptVersion = '1'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
@@ -87,6 +90,11 @@ $script:Checks = New-Object System.Collections.ArrayList
 $script:Run = 0
 $script:Secrets = New-Object System.Collections.ArrayList
 $script:Perf = [ordered]@{}
+$script:KeepAlive = $null
+$script:FailCount = 0
+$script:Launch = $null
+$script:DistroName = $null
+$script:ApexRepo = $null
 
 function Add-Check {
     param([string]$Id, [string]$Category, [string]$Title,
@@ -382,6 +390,11 @@ function Test-Install {
         $scope = 'HKCU'; if (-not (Test-Path $UninstallKey)) { $scope = 'absente de HKCU' }
         Add-Check 'I01' 'install' 'installation silencieuse sans administrateur' $st ("code $($r.ExitCode) en $([math]::Round($r.Ms/1000,1)) s ; entrée de désinstallation $scope ; données utilisateur antérieures : $hadUserData") @{ admin = $script:Env.is_admin }
     }
+    Check 'I00' 'install' 'installation et lancement sans administrateur' {
+        if ($script:Env.is_admin) { Add-Check 'I00' 'install' 'installation et lancement sans administrateur' 'BLOCKED' 'script exécuté en administrateur (ex. runner CI) : l''absence d''élévation ne peut pas être prouvée ici'; return }
+        $st = 'FAIL'; if ((Test-Path $ApexExe) -and (Test-Path $UninstallKey)) { $st = 'PASS' }
+        Add-Check 'I00' 'install' 'installation et lancement sans administrateur' $st "compte non administrateur ; installé dans %LOCALAPPDATA% ; entrée HKCU : $(Test-Path $UninstallKey)"
+    }
     Check 'X01' 'install' 'SmartScreen au double-clic sur l''installateur téléchargé (observation manuelle)' {
         $motw = $script:Env.installer.mark_of_the_web
         switch ($SmartScreen) {
@@ -514,7 +527,7 @@ function Test-Launch {
         $before = Wait-PanelWindow 5
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:USERPROFILE
         Start-Sleep 6
-        $gui = Get-GuiPanels
+        $gui = @(Get-GuiPanels)
         $fg = [ApexWin32]::GetForegroundWindow()
         $focused = ($before -and $fg -eq $before.MainWindowHandle)
         $st = 'FAIL'; if ($gui.Count -eq 1) { $st = 'PASS' }
@@ -532,18 +545,19 @@ function Test-Launch {
         Start-Sleep 2
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
         $p = Wait-PanelWindow 30
-        $st = 'FAIL'; if ($p -and (Get-GuiPanels).Count -eq 1) { $st = 'PASS' }
+        $st = 'FAIL'; if ($p -and @(Get-GuiPanels).Count -eq 1) { $st = 'PASS' }
         Add-Check 'L04' 'recovery' 'arrêt forcé du Panel puis relance' $st "relance après kill : fenêtre $([bool]$p) (aucun verrou d'instance persistant)"
     }
     Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' {
         $p = Wait-PanelWindow 10
         if (-not $p) { Add-Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' 'FAIL' 'Panel absent'; return }
-        $children = Watch-Children $p.Id 30
+        $children = @(Watch-Children $p.Id 30)
         $bad = @($children | Where-Object { -not (Test-AllowedChild $_) })
         $script:Perf["wsl_spawns_per_30s_run$($script:Run)"] = $children.Count
         Save-Text "run$($script:Run)-children.txt" (($children | ForEach-Object { "$($_.name) $($_.cmd)" }) -join "`n")
         $st = 'PASS'; if ($bad.Count -gt 0) { $st = 'FAIL' }
-        Add-Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' $st "$($children.Count) processus enfants vus ; non autorisés : $($bad.Count)"
+        $shown = ($bad | Select-Object -First 3 | ForEach-Object { "[$($_.name)] $($_.cmd)" }) -join ' | '
+        Add-Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' $st "$($children.Count) processus enfants vus ; non autorisés : $($bad.Count) $shown"
     }
     Check 'P01' 'performance' 'mémoire et CPU au repos du Panel (60 s)' {
         $p = Wait-PanelWindow 10
@@ -565,11 +579,21 @@ function Test-Launch {
     }
     Check 'S02' 'security' 'arguments hostiles : aucun plantage, aucun processus lancé' {
         $bad = 0; $details = @()
-        foreach ($a in @(@('--status-json', '; calc.exe'), @('--diagnostic', '$(calc)'), @('--unknown-option'), @('--status-json', ('A' * 5000)))) {
+        foreach ($a in @(@('--status-json', '; calc.exe'), @('--diagnostic', '$(calc)'), @('--status-json', ('A' * 5000)))) {
             $r = Invoke-Native $ApexExe $a 60
             $details += "$($a[0]) -> code $($r.ExitCode)"
-            if ($r.TimedOut) { $bad++ }
+            if ($r.TimedOut -or $r.ExitCode -notin 0, 1, 2, 3) { $bad++ }
         }
+        # Option inconnue : une application graphique Windows l'ignore et ouvre sa fenêtre (constaté run 10) —
+        # vérifié ici : la fenêtre s'ouvre, le processus ne plante pas, puis il est fermé.
+        Stop-AllPanels
+        $gp = Start-Process -FilePath $ApexExe -ArgumentList '--unknown-option', '$(calc)' -PassThru
+        $w = Wait-PanelWindow 30
+        Start-Sleep 3
+        $alive = -not $gp.HasExited
+        $details += "--unknown-option -> fenêtre : $([bool]$w), toujours en vie après 3 s : $alive"
+        if (-not $w -or -not $alive) { $bad++ }
+        Stop-AllPanels
         $calc = @(Get-Process calc, CalculatorApp -ErrorAction SilentlyContinue).Count
         $st = 'FAIL'; if ($bad -eq 0 -and $calc -eq 0) { $st = 'PASS' }
         Add-Check 'S02' 'security' 'arguments hostiles : aucun plantage, aucun processus lancé' $st (($details -join ' ; ') + " ; calculatrice lancée : $calc")
@@ -710,7 +734,7 @@ function Test-Backend {
     if (-not $AllowBackendControl) { $blocked = 'exige -AllowBackendControl (démarre et arrête le backend APEX avec launch.sh)' }
     elseif (-not $script:ApexRepo) { $blocked = 'dépôt APEX introuvable dans la distribution (préciser -ApexPathInWsl)' }
     if ($blocked) {
-        foreach ($id in 'B01', 'B02', 'B03', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'S03', 'S04', 'S05') { Add-Check $id 'backend' 'scénario backend' 'BLOCKED' $blocked }
+        foreach ($id in 'B01', 'B02', 'B03', 'M01', 'B04', 'B05', 'B06', 'B07', 'B08', 'B09', 'B10', 'B11', 'B12', 'B13', 'S03', 'S04', 'S05') { Add-Check $id 'backend' 'scénario backend' 'BLOCKED' $blocked }
         return
     }
     Start-KeepAlive
@@ -771,6 +795,16 @@ function Test-Backend {
         Add-Check 'B03' 'backend' 'backend démarré : le Panel converge vers l''état réel' 'PASS' "$($s.Verdict)/$($s.Cause) en $([math]::Round($sw.ElapsedMilliseconds/1000)) s ; API joignable depuis Windows par localhost (WSL2)"
     }
     Read-BackendSecrets
+    Check 'M01' 'backend' 'MinIO facultatif : le backend démarre sans MinIO (profil « minio » inactif)' {
+        $s = Get-PanelStatus
+        $minio = (Invoke-Wsl 'docker ps --filter name=apex-minio --format "{{.Names}} {{.Status}}" 2>/dev/null' 30).Stdout.Trim()
+        $profiles = (Invoke-Wsl "cd '$($script:ApexRepo)' && grep -E '^COMPOSE_PROFILES=' .env 2>/dev/null" 30).Stdout.Trim()
+        $log = Join-Path $Evidence "run$($script:Run)-start1.launch.log"
+        $doctor = ''; if (Test-Path $log) { $doctor = ((Get-Content $log | Where-Object { $_ -match 'minio' }) | Select-Object -First 2) -join ' | ' }
+        if ($profiles -match 'minio|\*') { Add-Check 'M01' 'backend' 'MinIO facultatif' 'NOT_APPLICABLE' "profil MinIO activé sur cette machine ($profiles) : le démarrage sans MinIO n'est pas le cas testé"; return }
+        $st = 'FAIL'; if ($s.Verdict -in 'Ready', 'Degraded' -and -not $minio) { $st = 'PASS' }
+        Add-Check 'M01' 'backend' 'MinIO facultatif : le backend démarre sans MinIO (profil « minio » inactif)' $st "$($s.Verdict)/$($s.Cause) ; conteneur apex-minio : $(if ($minio) { $minio } else { 'absent' }) ; journal launch.sh (minio) : $doctor"
+    }
     Check 'B04' 'backend' 'APEX READY (tous les composants prêts)' {
         $s = Get-PanelStatus
         if ($s.Verdict -eq 'Ready') { Add-Check 'B04' 'backend' 'APEX READY (tous les composants prêts)' 'PASS' 'verdict Ready'; return }
@@ -865,14 +899,15 @@ function Test-Backend {
         [void](Invoke-Wsl ("mkdir -p ~/.apex/runtime && printf '%s' '" + $hostile + "' > ~/.apex/runtime/backend.json && rm -f /tmp/apex_pwned") 30)
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
         $p = Wait-PanelWindow 30
-        $children = @(); if ($p) { $children = Watch-Children $p.Id 15 }
+        $children = @(); if ($p) { $children = @(Watch-Children $p.Id 15) }
         $s = Get-PanelStatus
         $pwned = (Invoke-Wsl 'test -e /tmp/apex_pwned && echo yes || echo no' 30).Stdout.Trim()
         [void](Invoke-Wsl 'rm -f ~/.apex/runtime/backend.json' 30)
         Stop-AllPanels
         $bad = @($children | Where-Object { -not (Test-AllowedChild $_) })
         $st = 'FAIL'; if ($s.Cause -eq 'DiscoveryInvalid' -and $pwned -eq 'no' -and $bad.Count -eq 0) { $st = 'PASS' }
-        Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; processus non autorisés : $($bad.Count)"
+        $shown = ($bad | Select-Object -First 3 | ForEach-Object { "[$($_.name)] $($_.cmd)" }) -join ' | '
+        Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; processus non autorisés : $($bad.Count) $shown"
     }
     Check 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul' {
         Stop-AllPanels
@@ -920,7 +955,7 @@ function Copy-DiagnosticThroughUi {
 # ------------------------------------------------------------------------------------------------------
 function Invoke-PreReboot {
     $state = [ordered]@{ last_boot = $script:Env.last_boot; distro = $script:DistroName; installed = (Test-Path $ApexExe)
-        backend_running = [bool](Get-DiscoveryRecord); panel_running = ((Get-GuiPanels).Count -gt 0) }
+        backend_running = [bool](Get-DiscoveryRecord); panel_running = (@(Get-GuiPanels).Count -gt 0) }
     [IO.File]::WriteAllText((Join-Path $OutDir 'reboot_state.json'), ($state | ConvertTo-Json), $Utf8NoBom)
     Add-Check 'R00' 'reboot' 'état avant redémarrage enregistré' 'PASS' ("installé : $($state.installed) ; backend : $($state.backend_running) ; Panel ouvert : $($state.panel_running)")
     Write-Host ''
@@ -951,7 +986,7 @@ function Invoke-PostReboot {
         Add-Check 'R02' 'reboot' 'après redémarrage : programme, raccourci et paramètres présents' $st "APEX.exe : $(Test-Path $ApexExe) ; raccourci : $(Test-Path $DesktopLnk) ; journaux : $(Test-Path $LogsDir)"
     }
     Check 'R03' 'reboot' 'après redémarrage : le Panel ne démarre pas tout seul, puis s''ouvre au double-clic' {
-        $auto = (Get-GuiPanels).Count
+        $auto = @(Get-GuiPanels).Count
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
         $p = Wait-PanelWindow 30
         $st = 'FAIL'; if ($auto -eq 0 -and $p) { $st = 'PASS' }
@@ -1042,12 +1077,17 @@ try {
         for ($i = 1; $i -le $Repeat; $i++) {
             $script:Run = $i
             Write-Host "=== Exécution $i / $Repeat ===" -ForegroundColor Cyan
-            Test-Install
-            if ($i -eq 1) { Test-UserWorkflow }
-            Test-InstallLifecycle
-            Test-Launch
-            Test-Wsl
-            Test-Backend
+            # Chaque groupe est isolé : un incident du banc devient un échec EXPLICITE du banc (HARNESS) et la
+            # suite continue ; les résultats et l'archive sont toujours produits.
+            $groups = @(${function:Test-Install}, ${function:Test-UserWorkflow}, ${function:Test-InstallLifecycle},
+                ${function:Test-Launch}, ${function:Test-Wsl}, ${function:Test-Backend})
+            $names = @('Test-Install', 'Test-UserWorkflow', 'Test-InstallLifecycle', 'Test-Launch', 'Test-Wsl', 'Test-Backend')
+            for ($g = 0; $g -lt $groups.Count; $g++) {
+                if ($names[$g] -eq 'Test-UserWorkflow' -and $i -ne 1) { continue }
+                try { & $groups[$g] } catch {
+                    Add-Check ('HARNESS-' + $names[$g]) 'harness' "incident du banc de test dans $($names[$g])" 'FAIL' $_.Exception.Message
+                }
+            }
         }
         if ($Phase -eq 'Full' -and (Ask 'Tester maintenant le redémarrage de Windows (le script redémarre le PC et reprend seul après votre connexion) ?')) {
             $Phase = 'PreReboot'
@@ -1060,12 +1100,13 @@ try {
         }
     }
 } finally {
+    # Chaque étape de nettoyage est isolée : un incident ne doit jamais empêcher résultats et archive.
     if ($Phase -ne 'PreReboot') {
-        Stop-AllPanels
-        if ($AllowBackendControl -and $script:ApexRepo) { try { Stop-Backend } catch { } }
+        try { Stop-AllPanels } catch { Write-Host "nettoyage : $($_.Exception.Message)" }
+        if ($AllowBackendControl -and $script:ApexRepo) { try { Stop-Backend } catch { Write-Host "nettoyage : $($_.Exception.Message)" } }
+        try { if ($script:KeepAlive -and -not $script:KeepAlive.HasExited) { $script:KeepAlive.Kill() } } catch { }
     }
-    if ($script:KeepAlive -and -not $script:KeepAlive.HasExited -and $Phase -ne 'PreReboot') { try { $script:KeepAlive.Kill() } catch { } }
-    if ($settingsBackup) { [IO.File]::WriteAllBytes($settingsFile, $settingsBackup) }
+    try { if ($settingsBackup) { [IO.File]::WriteAllBytes($settingsFile, $settingsBackup) } } catch { Write-Host "restauration des paramètres : $($_.Exception.Message)" }
 
     # Copies des journaux du Panel, puis masquage des secrets et du nom d'utilisateur dans tout le dossier.
     if (Test-Path $LogsDir) { Copy-Item (Join-Path $LogsDir '*') $Evidence -ErrorAction SilentlyContinue }
@@ -1093,4 +1134,6 @@ try {
     Write-Host ("Résultat : {0} PASS, {1} FAIL, {2} BLOCKED, {3} NOT_APPLICABLE" -f $summary.PASS, $summary.FAIL, $summary.BLOCKED, $summary.NOT_APPLICABLE) -ForegroundColor Cyan
     Write-Host "Dossier : $OutDir"
     Write-Host "Archive à transmettre (secrets et nom d'utilisateur masqués) : $zip" -ForegroundColor Cyan
+    $script:FailCount = $summary.FAIL
 }
+if ($script:FailCount -gt 0) { exit 1 }

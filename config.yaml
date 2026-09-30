@@ -404,5 +404,6 @@ routing:
 services:
   postgres: {host: 127.0.0.1, port: 5432, required: true}
   redis:    {host: 127.0.0.1, port: 6379, required: true}
-  minio:    {host: 127.0.0.1, port: 9000, required: true}
+  # MinIO facultatif (profil Compose « minio », docs/MINIO_IMPACT_ANALYSIS.md) : absent = WARN, jamais FAIL.
+  minio:    {host: 127.0.0.1, port: 9000, required: false}
   ollama:   {host: 127.0.0.1, port: 11434, required: false}

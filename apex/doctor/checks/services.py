@@ -68,9 +68,11 @@ def _service_check(name: str, required_default: bool = True):
                           f"{name} joignable sur {endpoint.host}:{endpoint.port}",
                           host=endpoint.host, port=endpoint.port)
         severity = Severity.FAIL if endpoint.required else Severity.WARN
+        # Un service facultatif absent est signalé comme tel : jamais confondu avec une panne bloquante.
+        optional = "" if endpoint.required else " (service optionnel : non bloquant)"
         return result(
             f"service.{name}", CATEGORY_SVC, severity,
-            f"{name} injoignable sur {endpoint.host}:{endpoint.port}",
+            f"{name} injoignable sur {endpoint.host}:{endpoint.port}{optional}",
             remediation=(
                 "docker compose up -d — si le conteneur est déjà démarré et "
                 "« healthy » mais reste injoignable ICI (TCP réellement refusé "

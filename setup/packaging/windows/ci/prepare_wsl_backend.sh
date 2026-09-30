@@ -33,24 +33,9 @@ fi
 for _ in $(seq 1 60); do docker info >/dev/null 2>&1 && break; sleep 1; done
 docker info >/dev/null 2>&1 || { log "Docker ne démarre pas"; tail -20 /var/log/dockerd.log 2>/dev/null; exit 1; }
 
-# minio/minio (image de docker-compose.yml) n'est plus distribuée publiquement (constaté : Docker Hub « repository
-# does not exist », quay.io « unauthorized », même depuis l'infrastructure GitHub). CI UNIQUEMENT : si elle
-# n'est ni en cache ni téléchargeable, elle est construite depuis les sources OFFICIELLES (github.com/minio/minio
-# et github.com/minio/mc, AGPL) sous le même nom, que docker compose utilise alors (pull_policy : missing).
-# Rien n'est changé dans docker-compose.yml : sur un poste sans cette image, launch.sh échoue — défaut signalé.
-if ! docker image inspect minio/minio:latest >/dev/null 2>&1 && ! docker pull -q minio/minio:latest >/dev/null 2>&1; then
-  log "minio/minio:latest indisponible — construction CI depuis les sources officielles"
-  build=$(mktemp -d)
-  cat > "$build/Dockerfile" <<'DOCKERFILE'
-FROM golang:1.24 AS build
-RUN CGO_ENABLED=0 go install github.com/minio/minio@latest && CGO_ENABLED=0 go install github.com/minio/mc@latest
-FROM debian:bookworm-slim
-COPY --from=build /go/bin/minio /go/bin/mc /usr/bin/
-ENTRYPOINT ["minio"]
-DOCKERFILE
-  docker build -q -t minio/minio:latest "$build" >/dev/null
-  log "image construite : $(docker run --rm minio/minio:latest --version 2>&1 | head -1) ; mc : $(docker run --rm --entrypoint mc minio/minio:latest --version 2>&1 | head -1)"
-fi
+# MinIO est FACULTATIF (profil Compose « minio ») : aucune image MinIO n'est préparée ici, exactement comme
+# sur une machine neuve — la validation prouve qu'APEX démarre SANS elle. Le profil est testé à part
+# (build_minio_from_source.sh, étape CI dédiée).
 
 HOME_DIR=$(getent passwd "$USER_NAME" | cut -d: -f6)
 DEST="$HOME_DIR/apex"

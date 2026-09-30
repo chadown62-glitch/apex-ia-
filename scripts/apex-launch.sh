@@ -312,17 +312,73 @@ record_compose_ownership() {
 # Lit les ports HÔTE déclarés dans `docker-compose.yml` (`"ip:host:container"`)
 # — source UNIQUE de vérité, jamais une liste de ports recopiée ici : si le
 # fichier compose change, cette fonction suit sans modification.
+#
+# Seuls les services que Compose DÉMARRE comptent : un service déclaré avec `profiles:` ne démarre que
+# si l'un de ses profils figure dans COMPOSE_PROFILES (séparés par des virgules, « * » = tous), comme
+# dans Compose lui-même. MinIO est facultatif (profil « minio », docs/MINIO_IMPACT_ANALYSIS.md) : sans
+# ce filtre, `verify_declared_ports_after_up` exigerait 9000/9001 d'un service volontairement absent.
 apex_declared_ports() {
     local project_root="$1"
     local compose_file="${project_root}/docker-compose.yml"
     [[ -f "${compose_file}" ]] || return 0
 
-    local line
+    local line in_services=false in_profiles=false service_ports="" service_profiles=""
+    emit_service() {
+        [[ -n "${service_ports}" ]] || return 0
+        if [[ -n "${service_profiles}" ]] && ! apex_profile_active "${service_profiles}"; then
+            return 0
+        fi
+        printf '%s' "${service_ports}"
+    }
     while IFS= read -r line; do
+        if [[ "${line}" =~ ^[A-Za-z] ]]; then            # clé de premier niveau
+            ${in_services} && emit_service
+            service_ports=""; service_profiles=""; in_profiles=false
+            [[ "${line}" =~ ^services: ]] && in_services=true || in_services=false
+            continue
+        fi
+        ${in_services} || continue
+        if [[ "${line}" =~ ^\ \ [A-Za-z0-9_.-]+:[[:space:]]*$ ]]; then   # début d'un service
+            emit_service
+            service_ports=""; service_profiles=""; in_profiles=false
+            continue
+        fi
+        if [[ "${line}" =~ ^\ \ \ \ profiles:[[:space:]]*\[(.*)\] ]]; then
+            service_profiles="${BASH_REMATCH[1]//[\"\' ]/}"; in_profiles=false
+            continue
+        fi
+        if [[ "${line}" =~ ^\ \ \ \ profiles:[[:space:]]*$ ]]; then
+            in_profiles=true
+            continue
+        fi
+        if ${in_profiles} && [[ "${line}" =~ ^\ \ \ \ \ \ -[[:space:]]*[\"\']?([A-Za-z0-9_.-]+) ]]; then
+            service_profiles="${service_profiles:+${service_profiles},}${BASH_REMATCH[1]}"
+            continue
+        fi
+        [[ "${line}" =~ ^\ \ \ \ [A-Za-z] ]] && in_profiles=false
         if [[ "${line}" =~ \"[0-9.]+:([0-9]+):[0-9]+\" ]]; then
-            printf '%s\n' "${BASH_REMATCH[1]}"
+            service_ports+="${BASH_REMATCH[1]}"$'\n'
         fi
     done < "${compose_file}"
+    ${in_services} && emit_service
+    return 0
+}
+
+# Un des profils (liste « a,b ») est-il actif dans COMPOSE_PROFILES ?
+# (Découpage par `read -ra`, jamais une expansion non protégée : « * » y serait développé en noms de
+# fichiers par le shell — constaté par le test.)
+apex_profile_active() {
+    local wanted active
+    local -a actives wanteds
+    IFS=',' read -ra actives <<< "${COMPOSE_PROFILES:-}"
+    IFS=',' read -ra wanteds <<< "$1"
+    for active in "${actives[@]}"; do
+        [[ "${active}" == "*" ]] && return 0
+        for wanted in "${wanteds[@]}"; do
+            [[ "${wanted}" == "${active}" ]] && return 0
+        done
+    done
+    return 1
 }
 
 # Connexion TCP réelle (`/dev/tcp`, fonctionnalité bash native — aucun outil
@@ -518,7 +574,7 @@ compose_up() {
 
     if [[ "${already_running}" == "false" ]]; then
         record_compose_ownership "${project_root}"
-        log_info "infrastructure démarrée par ce launcher (postgres, redis, minio) — 'stop' pourra l'arrêter."
+        log_info "infrastructure démarrée par ce launcher (services Compose actifs : postgres, redis ; minio seulement avec COMPOSE_PROFILES=minio) — 'stop' pourra l'arrêter."
     else
         log_info "infrastructure déjà active avant ce launcher — 'stop' ne l'arrêtera pas automatiquement."
     fi

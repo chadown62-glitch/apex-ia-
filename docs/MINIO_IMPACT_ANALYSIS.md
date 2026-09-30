@@ -1,7 +1,7 @@
 # MinIO — analyse d'impact (aucune modification effectuée)
 
-Date : 2026-09-30. Statut : **DÉCISION REQUISE** (propriétaire du projet). Rien n'a été remplacé, migré,
-supprimé, et `docker-compose.yml` n'est pas modifié.
+Date : 2026-09-30. Statut : **OPTION C APPLIQUÉE** (décision du propriétaire du projet, 30/09/2026) — voir §8.
+Rien n'a été remplacé, migré ni supprimé ; MinIO reste dans le projet, son volume est intact.
 
 ## 1. Constat
 
@@ -108,3 +108,24 @@ sera réellement implémenté, avec migration testée à blanc.
 `setup/packaging/windows/ci/prepare_wsl_backend.sh` construit `minio/minio:latest` depuis les sources
 officielles **dans la distribution WSL jetable du runner GitHub**, pour exercer le vrai `launch.sh`
 dans la CI. Rien dans APEX (compose, config, données) n'est changé ; aucun effet sur votre PC.
+
+## 8. Option C appliquée (30/09/2026)
+
+| Fichier | Changement |
+|---|---|
+| `docker-compose.yml` | service `minio` : `profiles: ["minio"]` (mécanisme natif de Compose). Image, commande, healthcheck, ports, volume `minio-data` : inchangés. |
+| `config.yaml` | `services.minio.required: false` (même convention que `ollama`) |
+| `apex/doctor/checks/services.py` | un service facultatif absent est `WARN` avec la mention « service optionnel : non bloquant » ; un service requis absent reste `FAIL` |
+| `scripts/apex-launch.sh` | `apex_declared_ports` ne retient que les ports des services que Compose démarre (profils, `COMPOSE_PROFILES`, `*`) — sinon la vérification après `up` exigeait 9000/9001 d'un service volontairement absent |
+
+Activer MinIO : `COMPOSE_PROFILES=minio` dans `.env` (ou l'environnement), puis `launch.sh` comme d'habitude.
+L'image `minio/minio:latest` doit alors exister localement (déjà en cache, ou construite depuis les sources
+officielles : `setup/packaging/windows/ci/build_minio_from_source.sh`, utilisé par la CI).
+Arrêt : `launch.sh stop` exécute `docker compose down` avec le même `COMPOSE_PROFILES` (lu depuis `.env`) ;
+si le profil n'a été donné qu'en ligne de commande, le conteneur MinIO n'est pas arrêté par `stop` (jamais
+supprimé ni son volume) — le mettre dans `.env` pour un comportement symétrique.
+
+Tests : `tests/test_minio_optional.py` (fichiers réels + vrai `docker compose config`), `tests/test_launcher.py`
+(ports selon les profils), CI Windows Server + WSL2 : démarrage sans image MinIO (vérification M01) et
+profil `minio` démarré avec healthcheck (Gate M).
+

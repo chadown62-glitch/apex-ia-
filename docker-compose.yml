@@ -102,6 +102,12 @@ services:
     # API compatible S3 dès maintenant, pour qu'un worker distant puisse
     # matérialiser un workspace sans dépendre d'un chemin local.
     image: minio/minio:latest
+    # FACULTATIF (docs/MINIO_IMPACT_ANALYSIS.md, option C) : aucune fonction d'APEX n'utilise MinIO
+    # aujourd'hui (MinioArtifactStore : NotImplementedYet) et l'image minio/minio n'est plus distribuée
+    # publiquement. Démarré seulement avec le profil « minio » : COMPOSE_PROFILES=minio (dans .env ou
+    # l'environnement), lu nativement par Compose et suivi par scripts/apex-launch.sh. Le volume
+    # minio-data est conservé tel quel, jamais supprimé.
+    profiles: ["minio"]
     container_name: apex-minio
     restart: unless-stopped
     # `--address :9000` explicite (au lieu du port API par défaut implicite) :

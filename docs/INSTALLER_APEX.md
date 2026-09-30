@@ -13,11 +13,10 @@ démarre jamais WSL ni le backend : il les observe et vous dit quoi faire.
   l'environnement Python d'APEX (`.venv`) — c'est-à-dire ce qu'exige déjà `scripts/apex-launch.sh`.
 - Lancez `launch.sh` avec le **même compte Linux** que l'utilisateur WSL par défaut : le Panel lit
   `~/.apex/runtime/backend.json` dans le dossier personnel de l'utilisateur par défaut.
-- **Attention (constaté le 30/09/2026)** : l'image Docker `minio/minio:latest` utilisée par
-  `docker-compose.yml` n'est plus téléchargeable (Docker Hub : « repository does not exist » ;
-  quay.io : « unauthorized »). Sur une machine qui l'a déjà en cache, `launch.sh` démarre ; sur une
-  machine neuve, `docker compose up` échoue et le Panel affiche « Le backend APEX s'est arrêté » ou
-  « n'est pas démarré ». Solution à décider dans APEX (voir `docs/REAL_WINDOWS_VALIDATION.md`).
+- MinIO est **facultatif** : l'image `minio/minio` n'est plus distribuée publiquement (constaté le
+  30/09/2026) et aucune fonction d'APEX ne l'utilise aujourd'hui. `launch.sh` démarre sans lui ;
+  `apex doctor` le signale en WARN (« service optionnel : non bloquant »). Pour l'activer :
+  `COMPOSE_PROFILES=minio` dans `.env` (voir `docs/MINIO_IMPACT_ANALYSIS.md`).
 
 ## Installer
 
