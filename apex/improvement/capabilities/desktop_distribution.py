@@ -23,6 +23,7 @@ shell, SmartScreen, redémarrage) restent hors de portée de cette mesure : NOT 
 
 from __future__ import annotations
 
+import atexit
 import contextlib
 import hashlib
 import json
@@ -190,6 +191,9 @@ def build_panel() -> Path:
     if digest in _panel_cache and _panel_cache[digest].exists():
         return _panel_cache[digest]
     out = Path(tempfile.mkdtemp(prefix="apex-ci-panel-"))
+    # Retiré à la sortie du processus : sans cela, chaque mesure laissait ~90 Mo dans /tmp et a fini par
+    # remplir le disque (constaté avant le cycle 3 : installateur à 0/17 faute d'espace pour Wine).
+    atexit.register(shutil.rmtree, out, ignore_errors=True)
     subprocess.run(
         [
             "dotnet",
@@ -651,10 +655,20 @@ def idle_cpu_samples(panel: Path) -> tuple[list[float], str]:
 # -- installateur (WINE E2E) ----------------------------------------------------------------------
 
 
+#: Préfixe Wine (~1,4 Gio) + deux builds de l'installateur + publication : en dessous, BLOQUÉ.
+INSTALLER_MIN_FREE_BYTES = 4 * 2**30
+
+
 def installer_measure() -> tuple[dict[str, float], dict[str, str], list[str], float | None]:
     missing = [tool for tool in ("dotnet", "wine", "Xvfb", "winepath") if shutil.which(tool) is None]
     if missing:
         reason = f"outils absents : {missing}"
+        return {}, dict.fromkeys(_INSTALLER_METRICS, reason), [reason], None
+    free = shutil.disk_usage(tempfile.gettempdir()).free
+    if free < INSTALLER_MIN_FREE_BYTES:
+        # Environnement saturé : ni un succès ni un échec du produit — la mesure n'a pas eu lieu.
+        needed = INSTALLER_MIN_FREE_BYTES / 2**30
+        reason = f"espace disque insuffisant : {free / 2**30:.1f} Gio libres < {needed:.0f} Gio"
         return {}, dict.fromkeys(_INSTALLER_METRICS, reason), [reason], None
     values: dict[str, float] = {}
     notes: list[str] = []
@@ -697,6 +711,10 @@ def installer_measure() -> tuple[dict[str, float], dict[str, str], list[str], fl
         values["installer_lifecycle"] = results["passed"] / results["total"]
         failed = [c["id"] for c in results["checks"] if c["status"] != "PASS"]
         notes.append(f"installer_lifecycle: {results['passed']}/{results['total']} (échecs : {failed})")
+        if failed:
+            notes.append(
+                f"installer_lifecycle: fin de sortie WINE E2E : {(done.stdout + done.stderr)[-600:]}"
+            )
         seconds_file = work / "wine" / "install_seconds"
         seconds = float(seconds_file.read_text()) if seconds_file.exists() else None
         return values, {}, notes, seconds

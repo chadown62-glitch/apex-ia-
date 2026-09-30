@@ -58,3 +58,20 @@ def test_benchmark_fingerprint_ignores_the_measured_tree(tmp_path, monkeypatch) 
     assert dd._repo_root() == tmp_path
     assert dd.WINE_E2E.exists()
     assert dd.DesktopDistributionAdapter().benchmark_fingerprint() == before
+
+
+def test_installer_is_blocked_not_failed_when_the_disk_is_full(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Constaté : disque saturé -> installateur mesuré 0/17 comme si le produit échouait. C'est un
+    environnement qui ne permet pas la mesure : BLOQUÉ avec la raison, jamais un 0."""
+    import shutil
+    from collections import namedtuple
+
+    usage = namedtuple("usage", "total used free")
+    monkeypatch.setattr(shutil, "which", lambda tool: f"/usr/bin/{tool}")
+    monkeypatch.setattr(shutil, "disk_usage", lambda _path: usage(10 * 2**30, 9 * 2**30, 2**30))
+    values, blocked, notes, seconds = dd.installer_measure()
+    assert notes == list(blocked.values())[:1]
+    assert values == {}
+    assert set(blocked) == set(dd._INSTALLER_METRICS)
+    assert all("espace disque insuffisant" in reason for reason in blocked.values())
+    assert seconds is None
