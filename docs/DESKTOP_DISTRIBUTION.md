@@ -274,16 +274,35 @@ Première exécution (HEAD `74fcee5`) : **NOT_RELEASE_READY**, deux FAIL, tous d
   dans le script) : dernier cycle de chaque nature réussi, et dernier cycle mesuré sur le code produit
   actuel ; l'historique complet reste cité comme preuve. D'où le cycle 4.
 
-Exécution finale (HEAD `b0a751b`, `--older-installer` = 0.2.0 de `649e376`) :
-**BLOCKED_ON_REAL_WINDOWS** — les 22 éléments vérifiables ici PASS (build, SHA256, reproductibilité,
-WINE E2E dont mise à jour 0.2.0 -> 0.2.1, détection offline/online, health checks, authentification,
-suite adversariale, diagnostic, journaux, régression .NET et Python, Gauntlet, documentation) ; 3
-éléments BLOCKED faute de Windows réel (redémarrage de Windows, vrai WSL + `launch.sh` vus depuis
-Windows, raccourci créé par le vrai shell). Jamais RELEASE_READY sans preuve Windows.
+Deuxième exécution (HEAD `b0a751b`) : BLOCKED_ON_REAL_WINDOWS (22 PASS, 3 BLOCKED), artefact
+`33f76c20…`. La séquence de robustesse sur cet artefact (ci-dessous) a ensuite trouvé un défaut :
+`APEX.exe --diagnostic > fichier` écrivait les accents dans la page de codes OEM de la console
+(illisibles dans un fichier UTF-8). Corrigé (`9d8d24b` : sortie redirigée en UTF-8 sans BOM, console
+interactive inchangée), séquence ajoutée à la gate (`wine_robustness_e2e.sh`), cycle 5 sur ce code.
 
-Artefact final : `APEX-Setup-x64-v0.2.1.exe`, 32 538 727 octets, SHA256
-`33f76c2077d185168149d4bfc7b20045dddc8bf3ac34f19f204d37e4be195627` (deux builds identiques), commit
-`b0a751b` sans modification locale, 213 fichiers publiés, non signé. L'artefact n'est pas versionné
-dans git (binaire de 32 Mo) : il se reconstruit à l'identique par
-`setup/packaging/build_desktop_release.sh <sortie>` sur ce commit.
+### 6.2 Cycle 5 — après le correctif d'encodage
 
+`v4-b3b1171 -> v5-9d8d24b` (adversarial, juge figé à `9d8d24b`) : **UNCHANGED**, juge **PASS**.
+Observation : `idle_cpu_percent` monte à chaque mesure (V2 1,97 ; V3 2,12 ; V4 2,23 ; V5 2,33 %) sans
+qu'aucune comparaison ne soit significative, alors qu'entre V3 et V5 rien ne touche le Panel fenêtré
+(numéro de version, sortie redirigée) : dérive probable de l'environnement de mesure — INFÉRENCE, non
+mesurée.
+
+### 7.1 Exécution finale
+
+HEAD `4a37092`, `--older-installer` = 0.2.0 propre de `649e376` : **BLOCKED_ON_REAL_WINDOWS** — les
+23 éléments vérifiables ici PASS (build, SHA256, reproductibilité, WINE E2E dont mise à jour 0.2.0 ->
+0.2.1, séquence de robustesse 10/10 — installation, redémarrage de session Wine (pas Windows),
+double-clic, Panel, diagnostic UTF-8 sans secret, fermeture, réouverture, désinstallation vérifiée,
+réinstallation —, détection offline/online, health checks, authentification, suite adversariale,
+diagnostic, journaux, régression .NET 475/475 et Python 129 réussis / 1 ignoré, Gauntlet sur le code
+actuel, documentation) ; 3 éléments BLOCKED faute de Windows réel (redémarrage de Windows, vrai WSL +
+`launch.sh` vus depuis Windows, raccourci créé par le vrai shell). Jamais RELEASE_READY sans preuve
+Windows.
+
+Artefact final : `APEX-Setup-x64-v0.2.1.exe`, 32 540 322 octets, SHA256
+`bf4e54c5161a4f7e04e374b246742e1b5cf8102281ba96dda7e696973f37ec70` (deux builds identiques), commit
+`4a37092` sans modification locale, 213 fichiers publiés, non signé. L'artefact n'est pas versionné
+dans git (binaire de 32 Mo). Il se reconstruit à l'identique par
+`setup/packaging/build_desktop_release.sh <sortie>` **sur le commit `4a37092`** (les dates des fichiers
+sont celles du commit : un commit ultérieur, même de documentation, change l'empreinte).
