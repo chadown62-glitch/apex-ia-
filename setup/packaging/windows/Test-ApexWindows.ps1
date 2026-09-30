@@ -949,6 +949,25 @@ if (-not $script:ApexRepo -and $script:DistroName) {
     }
 }
 $script:Env['distro_under_test'] = $script:DistroName
+# MinIO (docs/MINIO_IMPACT_ANALYSIS.md) : constat en LECTURE SEULE — image en cache, volume, taille, dossiers de
+# premier niveau (= buckets). Volume monté en lecture seule, sans réseau ; rien n'est créé ni modifié.
+if ($script:DistroName) {
+    $minio = Invoke-Wsl @'
+command -v docker >/dev/null || { echo "docker=absent"; exit 0; }
+docker info >/dev/null 2>&1 || { echo "docker=injoignable"; exit 0; }
+echo "image=$(docker image inspect --format '{{.Id}} créée {{.Created}}' minio/minio:latest 2>/dev/null || echo absente)"
+vol=$(docker volume ls -q --filter name=minio-data | head -1); echo "volume=${vol:-absent}"
+[ -n "$vol" ] || exit 0
+for i in minio/minio:latest pgvector/pgvector:pg16 redis:7-alpine; do
+  if docker image inspect "$i" >/dev/null 2>&1; then
+    docker run --rm --network none -v "$vol":/data:ro --entrypoint sh "$i" -c 'echo "taille_ko=$(du -sk /data | cut -f1)"; echo "entrees=$(ls -A /data | tr "\n" " ")"'
+    exit 0
+  fi
+done
+echo "contenu=non lu (aucune image locale pour le lire sans téléchargement)"
+'@ 120
+    $script:Env['minio_readonly_facts'] = @($minio.Stdout -split "`r?`n" | Where-Object { $_ })
+}
 $script:Env['apex_repo_detected'] = [bool]$script:ApexRepo
 Write-Host "Distribution : $($script:DistroName) ; dépôt APEX : $($script:ApexRepo)"
 
