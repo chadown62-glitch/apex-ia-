@@ -83,6 +83,10 @@ public sealed class RealProcessRunner : IProcessRunner
             // `wsl.exe -l -v` reste lisible par WslStatusParser (octets nuls retirés).
             startInfo.StandardOutputEncoding = Encoding.UTF8;
             startInfo.StandardErrorEncoding = Encoding.UTF8;
+            // Observé sur Windows réel (WSL 2.7) : avec WSL_UTF8=1, wsl.exe écrit ses propres messages en
+            // UTF-8 au lieu d'UTF-16LE (accents des messages traduits lisibles). Sans effet sur la sortie
+            // des programmes Linux ; ignoré par les anciens wsl.exe (octets nuls alors retirés).
+            startInfo.Environment["WSL_UTF8"] = "1";
         }
         foreach (var arg in arguments)
         {

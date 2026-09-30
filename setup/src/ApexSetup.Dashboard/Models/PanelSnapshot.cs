@@ -36,6 +36,8 @@ public enum NotReadyCause
     PartialServices,
     BackendTooOld,
     PanelTooOld,
+    /// <summary>Le backend écoute dans WSL, mais Windows ne l'atteint pas par 127.0.0.1 (redirection localhost WSL2).</summary>
+    LocalhostUnreachable,
 }
 
 /// <summary>Versions constatées (jamais supposées) : celle du Panel est la sienne ; celles du backend viennent de sa réponse.</summary>

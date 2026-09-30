@@ -72,11 +72,13 @@ public static class HostPaths
 
 /// <summary>
 /// Hôte WSL (Windows). Toutes les commandes passent par <c>wsl.exe --exec</c> (argv direct, JAMAIS le
-/// shell Linux par défaut — qu'un chemin ne puisse jamais devenir une commande) ; seule
-/// <c>wsl.exe -l -v</c>, qui ne démarre aucune distribution, est lancée avant de savoir si la
-/// distribution tourne.
+/// shell Linux par défaut — qu'un chemin ne puisse jamais devenir une commande) ; seules
+/// <c>wsl.exe -l -v</c> et <c>wsl.exe -l --running -q</c>, qui ne démarrent aucune distribution, sont
+/// lancées avant de savoir si la distribution tourne. Les noms, la distribution par défaut et la version
+/// WSL viennent du registre (<see cref="IWslRegistry"/>) quand il est lisible ; sinon de
+/// <c>wsl.exe -l -v</c>, et seulement s'il a RÉUSSI (code 0).
 /// </summary>
-public sealed class WslBackendHost(IProcessRunner processRunner) : IBackendHost
+public sealed class WslBackendHost(IProcessRunner processRunner, IWslRegistry? registry = null) : IBackendHost
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(10);
@@ -98,15 +100,42 @@ public sealed class WslBackendHost(IProcessRunner processRunner) : IBackendHost
         }
 
         // L'état « en cours » vient de la liste des noms en cours (sortie non traduite), jamais de la
-        // colonne ÉTAT de -l -v (traduite selon la langue de Windows).
+        // colonne ÉTAT de -l -v (traduite selon la langue de Windows). Observé sur Windows réel : code 0
+        // et sortie vide quand rien ne tourne.
         var running = await processRunner.RunAsync("wsl.exe", ["-l", "--running", "-q"], ProbeTimeout, cancellationToken).ConfigureAwait(false);
         var runningOutput = running.Started && !running.TimedOut ? running.Stdout : null;
-        var distros = WslStatusParser.Parse(result.Stdout, runningOutput);
+
+        var registered = registry?.ReadDistributions();
+        var listFailed = result.ExitCode != 0;
+        IReadOnlyList<WslDistroInfo> distros;
+        if (registered is not null)
+        {
+            var runningNames = WslStatusParser.Names(runningOutput ?? string.Empty);
+            distros = registered
+                .Select(d => new WslDistroInfo(d.Name, d.IsDefault, runningNames.Contains(d.Name), d.Version))
+                .ToList();
+        }
+        else
+        {
+            // Défaut W1 (observé sur Windows réel) : sans distribution, `wsl.exe -l -v` sort en -1 avec un
+            // message de plusieurs lignes dont les mots étaient pris pour des noms de distribution. Une
+            // liste en échec n'est JAMAIS analysée.
+            distros = listFailed ? [] : WslStatusParser.Parse(result.Stdout, runningOutput);
+        }
+
+        var reason = Clean(result.Stderr + " " + result.Stdout);
         if (distros.Count == 0)
         {
-            var reason = Clean(result.Stderr + " " + result.Stdout);
             return new HostProbe(true, ComponentStatus.Error, false,
-                $"WSL est présent mais aucune distribution Linux n'est installée ({reason})", preferredDistro, NotReadyCause.WslNotInstalled);
+                "WSL est présent mais aucune distribution Linux n'est installée" + (reason.Length > 0 ? $" (wsl.exe : {Truncate(FirstLine(reason))})" : ""),
+                preferredDistro, NotReadyCause.WslNotInstalled);
+        }
+        if (listFailed)
+        {
+            // Distributions enregistrées mais `wsl.exe -l -v` en échec : WSL ne répond pas correctement.
+            return new HostProbe(true, ComponentStatus.Error, false,
+                $"WSL ne répond pas correctement (wsl.exe -l -v : code {result.ExitCode}{(reason.Length > 0 ? " — " + Truncate(FirstLine(reason)) : "")})",
+                preferredDistro, NotReadyCause.WslUnresponsive);
         }
 
         var selected = string.IsNullOrWhiteSpace(preferredDistro)
@@ -119,11 +148,15 @@ public sealed class WslBackendHost(IProcessRunner processRunner) : IBackendHost
                 preferredDistro, NotReadyCause.WslNotInstalled);
         }
 
-        var runningNames = distros.Where(d => d.IsRunning).Select(d => d.Name).ToList();
+        var runningDistros = distros.Where(d => d.IsRunning).Select(d => d.Name).ToList();
+        var label = selected.Version is { } version ? $"{selected.Name} (WSL {version})" : selected.Name;
         return selected.IsRunning
-            ? new HostProbe(true, ComponentStatus.Ready, true, $"{selected.Name} — en cours d'exécution", selected.Name, NotReadyCause.None, runningNames)
-            : new HostProbe(true, ComponentStatus.Offline, false, $"{selected.Name} — installée, arrêtée", selected.Name, NotReadyCause.WslStopped, runningNames);
+            ? new HostProbe(true, ComponentStatus.Ready, true, $"{label} — en cours d'exécution", selected.Name, NotReadyCause.None, runningDistros)
+            : new HostProbe(true, ComponentStatus.Offline, false, $"{label} — installée, arrêtée", selected.Name, NotReadyCause.WslStopped, runningDistros);
     }
+
+    private static string FirstLine(string text) =>
+        text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? text;
 
     public Task<FileRead> ReadHomeFileAsync(string? distro, string relativePath, CancellationToken cancellationToken = default)
     {

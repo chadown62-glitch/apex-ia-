@@ -101,10 +101,35 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         }
 
         var fetch = await client.FetchAsync(address, port, token.Value, cancellationToken: cancellationToken).ConfigureAwait(false);
-        return Decide(probe, discovery, alive, token, fetch, port, watch);
+        bool? listening = null;
+        if (fetch.Outcome == FetchOutcome.Refused && probe.Applicable && alive == true)
+        {
+            // Refus vu de Windows alors que le processus vit : écoute-t-il DANS la distribution ?
+            listening = false;
+            foreach (var table in new[] { "/proc/net/tcp", "/proc/net/tcp6" })
+            {
+                var read = await host.ReadFileAsync(distroForReads, table, cancellationToken).ConfigureAwait(false);
+                if (read.Kind == FileReadKind.NotFound && table.EndsWith('6'))
+                {
+                    continue; // IPv6 désactivé dans la distribution : pas de table tcp6 (constaté)
+                }
+                if (read.Kind != FileReadKind.Ok)
+                {
+                    listening = null; // illisible : on ne conclut pas
+                    break;
+                }
+                if (ProcNetTcp.IsListening(read.Content, port))
+                {
+                    listening = true;
+                    break;
+                }
+            }
+        }
+        return Decide(probe, discovery, alive, token, fetch, port, watch, listening);
     }
 
     private PanelSnapshot Decide(
-        HostProbe probe, DiscoveryRead discovery, bool? alive, TokenRead token, StatusFetch fetch, int port, Stopwatch watch) =>
-        StatusEngine.Decide(new StatusInputs(probe, discovery, alive, token, fetch, port, _clock(), watch.Elapsed), PanelInfo.Version);
+        HostProbe probe, DiscoveryRead discovery, bool? alive, TokenRead token, StatusFetch fetch, int port, Stopwatch watch,
+        bool? listening = null) =>
+        StatusEngine.Decide(new StatusInputs(probe, discovery, alive, token, fetch, port, _clock(), watch.Elapsed, listening), PanelInfo.Version);
 }

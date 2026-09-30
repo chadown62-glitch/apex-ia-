@@ -174,7 +174,9 @@ public class PanelStatusServiceTests
 
         var snapshot = await service.MeasureAsync(new DashboardSettings());
 
-        Assert.Equal(["~/" + BackendDiscovery.RelativePath, "/proc/4242/cmdline", PanelData.ProjectRoot + "/.apex/api-token"], host.Reads);
+        // Refus + processus vivant sous WSL : la table des sockets de la distribution est lue en plus (W2) ;
+        // illisible ici (absente du double), elle ne permet aucune conclusion.
+        Assert.Equal(["~/" + BackendDiscovery.RelativePath, "/proc/4242/cmdline", PanelData.ProjectRoot + "/.apex/api-token", "/proc/net/tcp"], host.Reads);
         Assert.Equal([PanelData.Token], secrets);
         Assert.Equal(1, snapshot.Backend.Port);
         Assert.NotEqual(PanelVerdict.Ready, snapshot.Verdict);

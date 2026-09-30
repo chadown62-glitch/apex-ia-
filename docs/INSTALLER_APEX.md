@@ -50,7 +50,9 @@ APEX de versions incompatibles).
 
 | Le Panel affiche | Signification | Que faire |
 |---|---|---|
-| « WSL n'est pas installé » | `wsl.exe` absent ou aucune distribution | installer WSL 2 : `wsl --install` dans PowerShell, redémarrer, puis installer APEX dans la distribution |
+| « WSL n'est pas installé » | `wsl.exe` absent | installer WSL 2 : `wsl --install` dans PowerShell, redémarrer, puis installer APEX dans la distribution |
+| « WSL est présent mais aucune distribution Linux n'est installée » | WSL activé, aucune distribution | `wsl --install -d Ubuntu` dans PowerShell, puis installer APEX dans cette distribution |
+| « WSL ne répond pas correctement » | `wsl.exe` répond en erreur (service WSL) | `wsl --shutdown` dans PowerShell, rouvrir la distribution ; sinon redémarrer Windows |
 | « WSL n'est pas démarré » | la distribution est arrêtée | ouvrir la distribution Linux puis lancer `launch.sh` |
 | « Le backend APEX n'est pas démarré » | `launch.sh` n'a pas été lancé | `bash scripts/apex-launch.sh serve` dans le dossier APEX |
 | « Le backend APEX démarre… » | `launch.sh` prépare Docker, doctor, gate | attendre ; le premier lancement peut durer plusieurs minutes |
@@ -58,6 +60,7 @@ APEX de versions incompatibles).
 | « jeton … refusé » / « jeton introuvable » | le Panel ne lit pas le jeton du backend en marche | arrêter les autres backends APEX, relancer `launch.sh` depuis le dossier APEX |
 | « Un autre programme utilise le port 8000 » | port occupé | fermer ce programme, ou `launch.sh serve --port 8010` (le Panel suit) |
 | « ne répond pas à temps » | machine surchargée ou APEX bloqué | attendre ; sinon Ctrl+C puis relancer |
+| « écoute dans WSL … mais Windows ne l'atteint pas par localhost » | APEX tourne, mais la redirection localhost WSL2 -> Windows ne fonctionne pas | vérifier `%UserProfile%\.wslconfig` (pas de `localhostForwarding=false`), couper un VPN ou vérifier le pare-feu, puis `wsl --shutdown` et relancer `launch.sh` |
 | APEX DEGRADED | APEX répond, un service manque | la ligne concernée dit lequel (ex. Ollama sans modèle) |
 | VERSION_MISMATCH | Panel et APEX incompatibles | mettre à jour le Panel **ou** le dépôt APEX, selon le message |
 | Fenêtre noire | pilote graphique | lancer `APEX.exe --software-rendering` (ou variable `APEX_PANEL_RENDERING=software`) |

@@ -11,7 +11,8 @@ public sealed record StatusInputs(
     StatusFetch Fetch,
     int Port,
     DateTimeOffset Now,
-    TimeSpan Duration);
+    TimeSpan Duration,
+    bool? ListeningInHost = null);
 
 /// <summary>
 /// Fonction PURE (aucune E/S) : mesures -> états, verdict et consigne. C'est ici que se décide ce
@@ -168,7 +169,24 @@ public static class StatusEngine
                     $"L'API APEX répond en erreur ({m.Fetch.Detail}). Consultez la sortie de launch.sh {where}.");
         }
 
-        // 4. Rien n'écoute (connexion refusée) ou pas de tentative.
+        // 4. Connexion refusée depuis Windows alors que le processus vit ET écoute DANS WSL (constaté dans
+        //    /proc/net/tcp de la distribution) : ce n'est ni un arrêt ni un blocage du backend, c'est la
+        //    redirection localhost WSL2 -> Windows qui manque (défaut W2 de l'audit).
+        if (m.Host.Applicable && m.Fetch.Outcome == FetchOutcome.Refused && m.BackendProcessAlive == true && m.ListeningInHost == true)
+        {
+            rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Ready,
+                $"écoute dans WSL sur le port {m.Port} (pid {record?.Pid.ToString() ?? "?"})"));
+            rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Error,
+                $"injoignable depuis Windows : 127.0.0.1:{m.Port} refusé"));
+            Services(ComponentStatus.Unknown, "non mesuré : API injoignable depuis Windows");
+            return Snapshot(PanelVerdict.NotReady, NotReadyCause.LocalhostUnreachable,
+                $"Le backend APEX tourne et écoute dans WSL (port {m.Port}), mais Windows ne l'atteint pas par localhost. "
+                + "Vérifiez que la redirection localhost de WSL2 n'est pas désactivée (localhostForwarding=false ou mode réseau "
+                + "particulier dans %UserProfile%\\.wslconfig), et qu'un VPN ou un pare-feu ne la bloque pas ; puis exécutez "
+                + "« wsl --shutdown » dans PowerShell et relancez " + LaunchCommand + ".");
+        }
+
+        // 5. Rien n'écoute (connexion refusée) ou pas de tentative.
         rows.Add(BackendWhenSilent(m));
         rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Offline,
             m.Fetch.Outcome == FetchOutcome.Refused ? $"rien n'écoute sur 127.0.0.1:{m.Port}" : m.Fetch.Detail));

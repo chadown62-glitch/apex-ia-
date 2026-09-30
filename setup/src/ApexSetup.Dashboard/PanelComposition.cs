@@ -27,7 +27,7 @@ public sealed class PanelComposition
         var redactor = new Redactor();
         var log = new FileLogSink(PanelInfo.LogDirectory, redactor);
         IBackendHost host = OperatingSystem.IsWindows()
-            ? new WslBackendHost(new RealProcessRunner())
+            ? new WslBackendHost(new RealProcessRunner(), new WindowsWslRegistry())
             : new LocalBackendHost();
         var status = new PanelStatusService(host, new StatusClient(new HttpClient()));
         status.SecretRead += redactor.Register;

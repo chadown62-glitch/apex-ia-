@@ -1,6 +1,6 @@
 namespace ApexSetup.Dashboard.Services;
 
-public sealed record WslDistroInfo(string Name, bool IsDefault, bool IsRunning);
+public sealed record WslDistroInfo(string Name, bool IsDefault, bool IsRunning, int? Version = null);
 
 /// <summary>
 /// Parseur PUR (aucune E/S) des sorties de <c>wsl.exe</c>, INDÉPENDANT DE LA LANGUE de Windows.
@@ -36,6 +36,10 @@ public static class WslStatusParser
         }
         return distros;
     }
+
+    /// <summary>Noms imprimés par <c>wsl.exe -l --running -q</c> (un par ligne).</summary>
+    public static HashSet<string> Names(string runningQuiet) =>
+        Lines(runningQuiet).Select(l => l.Trim()).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     private static List<string> Lines(string raw) =>
         raw.Replace("\0", string.Empty)
