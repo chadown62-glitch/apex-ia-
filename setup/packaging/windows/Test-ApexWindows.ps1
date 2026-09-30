@@ -93,6 +93,7 @@ $script:Perf = [ordered]@{}
 $script:KeepAlive = $null
 $script:FailCount = 0
 $script:Launch = $null
+$script:BackendDown = $null
 $script:DistroName = $null
 $script:ApexRepo = $null
 
@@ -679,7 +680,42 @@ function Start-Launch([string]$Name, [hashtable]$Env = @{}) {
     $wslArgs = @('-d', $script:DistroName, '--cd', $script:ApexRepo, '--exec')
     if ($Env.Count -gt 0) { $wslArgs += 'env'; foreach ($k in $Env.Keys) { $wslArgs += "$k=$($Env[$k])" } }
     $wslArgs += @('bash', 'scripts/apex-launch.sh', 'serve')
-    Start-Process wsl.exe -ArgumentList $wslArgs -RedirectStandardOutput $log -RedirectStandardError "$log.err" -WindowStyle Hidden -PassThru
+    $p = Start-Process wsl.exe -ArgumentList $wslArgs -RedirectStandardOutput $log -RedirectStandardError "$log.err" -WindowStyle Hidden -PassThru
+    $null = $p.Handle  # sans handle ouvert avant la fin, ExitCode reste vide (Start-Process -PassThru)
+    $p
+}
+
+function Get-PreflightRefusal([string]$Name) {
+    # launch.sh arrêté AVANT `apex serve` par son propre préflight (codes documentés dans apex-launch.sh) :
+    # c'est la machine qui refuse de démarrer le backend, pas le Panel qui se trompe. Constaté au run 11 :
+    # `apex gate` non concluant (code 5) sur le runner CI.
+    if (-not $script:Launch -or -not $script:Launch.HasExited) { return $null }
+    $code = $script:Launch.ExitCode
+    $log = Join-Path $Evidence "$Name.launch.log"
+    $text = ''
+    foreach ($f in $log, "$log.err") { if (Test-Path $f) { $text += [IO.File]::ReadAllText($f) + "`n" } }
+    $reason = $null
+    switch ($code) {
+        1 { if ($text -match '\.env introuvable') { $reason = '.env absent' } }
+        2 { $reason = 'Docker/Compose indisponible ou en échec' }
+        3 { $reason = 'aucun Python 3.12+ utilisable' }
+        4 { $reason = 'apex doctor a renvoyé FAIL' }
+        5 { $reason = 'apex gate non concluant ou en échec (« Phase 2 autorisée : NON »)' }
+    }
+    if (-not $reason) { return $null }
+    $why = @($text -split "`r?`n" | Where-Object { $_ -match 'Bloquants :|Non concluants :|\[ FAIL \]' } |
+        ForEach-Object { $_.Trim() } | Select-Object -First 3)
+    $msg = "launch.sh arrêté par son préflight (code $code : $reason)"
+    if ($why.Count -gt 0) { $msg += ' — ' + ($why -join ' ; ') }
+    $msg
+}
+
+function Skip-IfBackendDown([string]$Id, [string]$Group, [string]$Title, [string]$Extra = '') {
+    # Un scénario qui exige un backend en marche n'est pas évaluable quand la machine a refusé de le démarrer :
+    # BLOCKED avec la cause exacte (jamais un PASS, jamais une cascade de FAIL qui masquerait la vraie cause).
+    if (-not $script:BackendDown) { return $false }
+    Add-Check $Id $Group $Title 'BLOCKED' ("backend jamais démarré sur cette machine (voir B03) : $($script:BackendDown)" + $Extra)
+    return $true
 }
 
 function Send-Signal([string]$Signal, [int]$ProcessId) {
@@ -739,6 +775,7 @@ function Test-Backend {
     }
     Start-KeepAlive
     Stop-Backend
+    $script:BackendDown = $null
 
     Check 'B01' 'backend' 'launch.sh non lancé : BackendNotStarted' {
         $s = Get-PanelStatus
@@ -746,32 +783,52 @@ function Test-Backend {
         Add-Check 'B01' 'backend' 'launch.sh non lancé : BackendNotStarted' $st "$($s.Verdict)/$($s.Cause) — $($s.Guidance)"
     }
     Check 'S05' 'security' 'port occupé par un autre programme : PortConflict, rien d''exécuté' {
+        # Faux serveur servi par CE processus, lié AVANT le lancement du Panel, qui lit la requête avant de
+        # répondre puis ferme proprement. Run 11 : l'ancien faux serveur (Start-Job) se liait pendant que le
+        # parent tenait encore le port et fermait sans lire la requête ; le Panel voyait « aucune réponse »
+        # (ApiTimeout) — défaut du test, pas du Panel.
+        $title = 'port occupé par un autre programme : PortConflict, rien d''exécuté'
         $port = 8000
         $listener = $null
         try { $listener = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Loopback, $port); $listener.Start() } catch { $listener = $null }
-        if (-not $listener) { Add-Check 'S05' 'security' 'port occupé par un autre programme : PortConflict, rien d''exécuté' 'BLOCKED' "port $port déjà utilisé sur cette machine"; return }
-        $job = Start-Job -ArgumentList $port -ScriptBlock {
-            param($port)
-            $l = New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Loopback, $port); $l.Start()
-            $deadline = (Get-Date).AddSeconds(90)
-            while ((Get-Date) -lt $deadline) {
-                if ($l.Pending()) {
-                    $c = $l.AcceptTcpClient(); $st = $c.GetStream(); Start-Sleep -Milliseconds 100
-                    $body = '{"hello":"& calc.exe","cmd":"$(powershell -c calc)"}'
-                    $resp = "HTTP/1.1 200 OK`r`nContent-Type: application/json`r`nContent-Length: $($body.Length)`r`nConnection: close`r`n`r`n$body"
-                    $b = [Text.Encoding]::ASCII.GetBytes($resp); $st.Write($b, 0, $b.Length); $c.Close()
-                } else { Start-Sleep -Milliseconds 50 }
-            }
-            $l.Stop()
-        }
-        $listener.Stop(); Start-Sleep 2
+        if (-not $listener) { Add-Check 'S05' 'security' $title 'BLOCKED' "port $port déjà utilisé sur cette machine"; return }
         $cfg = Join-Path $env:TEMP ("apex-cfg-" + [guid]::NewGuid()); New-Item -ItemType Directory $cfg | Out-Null
-        $s = Get-PanelStatus @{ APEX_PANEL_CONFIG_DIR = $cfg }  # paramètres par défaut : port 8000
+        $body = '{"hello":"& calc.exe","cmd":"$(powershell -c calc)"}'
+        $resp = [Text.Encoding]::ASCII.GetBytes("HTTP/1.1 200 OK`r`nContent-Type: application/json`r`nContent-Length: $($body.Length)`r`nConnection: close`r`n`r`n$body")
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $ApexExe; $psi.Arguments = '--status-json'  # paramètres par défaut : port 8000
+        $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true
+        $psi.RedirectStandardOutput = $true; $psi.RedirectStandardError = $true
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $psi.EnvironmentVariables['WSL_UTF8'] = '1'; $psi.EnvironmentVariables['APEX_PANEL_CONFIG_DIR'] = $cfg
+        $served = 0
+        $p = [Diagnostics.Process]::Start($psi)
+        $out = $p.StandardOutput.ReadToEndAsync(); $null = $p.StandardError.ReadToEndAsync()
+        $deadline = (Get-Date).AddSeconds(90)
+        try {
+            while (-not $p.HasExited -and (Get-Date) -lt $deadline) {
+                if (-not $listener.Pending()) { Start-Sleep -Milliseconds 20; continue }
+                $c = $listener.AcceptTcpClient()
+                try {
+                    $c.ReceiveTimeout = 5000
+                    $stream = $c.GetStream(); $buf = New-Object byte[] 8192; $req = ''
+                    while ($req -notmatch "`r`n`r`n") {
+                        $n = $stream.Read($buf, 0, $buf.Length); if ($n -le 0) { break }
+                        $req += [Text.Encoding]::ASCII.GetString($buf, 0, $n)
+                    }
+                    $stream.Write($resp, 0, $resp.Length); $stream.Flush()
+                    $c.Client.Shutdown([Net.Sockets.SocketShutdown]::Send)
+                    $served++
+                } catch { } finally { $c.Close() }
+            }
+        } finally { $listener.Stop() }
+        if (-not $p.HasExited) { try { $p.Kill() } catch { } }
         Remove-Item $cfg -Recurse -Force
-        Stop-Job $job; Remove-Job $job -Force
+        $obj = $null; try { $obj = $out.Result | ConvertFrom-Json } catch { }
+        $verdict = '?'; $cause = '?'; if ($obj) { $verdict = [string]$obj.verdict; $cause = [string]$obj.cause }
         $calc = @(Get-Process calc, CalculatorApp -ErrorAction SilentlyContinue).Count
-        $st = 'FAIL'; if ($s.Cause -eq 'PortConflict' -and $calc -eq 0) { $st = 'PASS' }
-        Add-Check 'S05' 'security' 'port occupé par un autre programme : PortConflict, rien d''exécuté' $st "$($s.Verdict)/$($s.Cause) ; calculatrice : $calc"
+        $st = 'FAIL'; if ($cause -eq 'PortConflict' -and $calc -eq 0) { $st = 'PASS' }
+        Add-Check 'S05' 'security' $title $st "$verdict/$cause ; requêtes servies par le faux serveur : $served ; calculatrice : $calc"
     }
     Check 'B02' 'backend' 'launch.sh en préflight : Backend STARTING' {
         $script:Launch = Start-Launch "run$($script:Run)-start1"
@@ -787,8 +844,14 @@ function Test-Backend {
         $s = $w.Status
         Save-Text "run$($script:Run)-status-backend.json" $s.Raw
         if (-not $w.Reached -or $s.Verdict -notin 'Ready', 'Degraded') {
+            $refusal = Get-PreflightRefusal "run$($script:Run)-start1"
+            if ($refusal) {
+                $script:BackendDown = $refusal
+                Add-Check 'B03' 'backend' 'backend démarré : le Panel converge vers l''état réel' 'BLOCKED' "$refusal ; Panel : $($s.Verdict)/$($s.Cause)"
+                return
+            }
             $tail = ''; $log = Join-Path $Evidence "run$($script:Run)-start1.launch.log"
-            if (Test-Path $log) { $tail = (Get-Content $log -Tail 15) -join ' | ' }
+            if (Test-Path $log) { $tail = (Get-Content $log -Tail 15 -Encoding UTF8) -join ' | ' }
             Add-Check 'B03' 'backend' 'backend démarré : le Panel converge vers l''état réel' 'FAIL' "$($s.Verdict)/$($s.Cause) ; launch.sh terminé : $($script:Launch.HasExited) ; fin du journal : $tail"
             return
         }
@@ -800,18 +863,21 @@ function Test-Backend {
         $minio = (Invoke-Wsl 'docker ps --filter name=apex-minio --format "{{.Names}} {{.Status}}" 2>/dev/null' 30).Stdout.Trim()
         $profiles = (Invoke-Wsl "cd '$($script:ApexRepo)' && grep -E '^COMPOSE_PROFILES=' .env 2>/dev/null" 30).Stdout.Trim()
         $log = Join-Path $Evidence "run$($script:Run)-start1.launch.log"
-        $doctor = ''; if (Test-Path $log) { $doctor = ((Get-Content $log | Where-Object { $_ -match 'minio' }) | Select-Object -First 2) -join ' | ' }
+        $doctor = ''; if (Test-Path $log) { $doctor = ((Get-Content $log -Encoding UTF8 | Where-Object { $_ -match 'minio' }) | Select-Object -First 1) -join ' | ' }
+        if (Skip-IfBackendDown 'M01' 'backend' 'MinIO facultatif : le backend démarre sans MinIO (profil « minio » inactif)' " ; conteneur apex-minio : $(if ($minio) { $minio } else { 'absent' }) ; doctor : $doctor") { return }
         if ($profiles -match 'minio|\*') { Add-Check 'M01' 'backend' 'MinIO facultatif' 'NOT_APPLICABLE' "profil MinIO activé sur cette machine ($profiles) : le démarrage sans MinIO n'est pas le cas testé"; return }
         $st = 'FAIL'; if ($s.Verdict -in 'Ready', 'Degraded' -and -not $minio) { $st = 'PASS' }
         Add-Check 'M01' 'backend' 'MinIO facultatif : le backend démarre sans MinIO (profil « minio » inactif)' $st "$($s.Verdict)/$($s.Cause) ; conteneur apex-minio : $(if ($minio) { $minio } else { 'absent' }) ; journal launch.sh (minio) : $doctor"
     }
     Check 'B04' 'backend' 'APEX READY (tous les composants prêts)' {
+        if (Skip-IfBackendDown 'B04' 'backend' 'APEX READY (tous les composants prêts)') { return }
         $s = Get-PanelStatus
         if ($s.Verdict -eq 'Ready') { Add-Check 'B04' 'backend' 'APEX READY (tous les composants prêts)' 'PASS' 'verdict Ready'; return }
         $notReady = @($s.Object.components | Where-Object { $_.status -ne 'Ready' } | ForEach-Object { "$($_.key)=$($_.status) ($($_.detail))" })
         Add-Check 'B04' 'backend' 'APEX READY (tous les composants prêts)' 'BLOCKED' ("pas READY sur cette machine : " + ($notReady -join ' ; '))
     }
     Check 'B05' 'backend' 'chaque composant affiché = état mesuré par le backend lui-même' {
+        if (Skip-IfBackendDown 'B05' 'backend' 'chaque composant affiché = état mesuré par le backend lui-même') { return }
         $own = Get-BackendOwnStatus
         $s = Get-PanelStatus
         if (-not $own) { Add-Check 'B05' 'backend' 'chaque composant affiché = état mesuré par le backend lui-même' 'FAIL' 'réponse du backend illisible depuis WSL'; return }
@@ -825,6 +891,7 @@ function Test-Backend {
         Add-Check 'B05' 'backend' 'chaque composant affiché = état mesuré par le backend lui-même' $st ("écarts : " + ($(if ($diff.Count) { $diff -join ' ; ' } else { 'aucun' })))
     }
     Check 'B06' 'backend' 'Panel ouvert APRÈS le backend : premier verdict = état réel' {
+        if (Skip-IfBackendDown 'B06' 'backend' 'Panel ouvert APRÈS le backend : premier verdict = état réel') { return }
         Stop-AllPanels
         $sw = [Diagnostics.Stopwatch]::StartNew()
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
@@ -846,6 +913,7 @@ function Test-Backend {
         Add-Check 'S03' 'security' 'le diagnostic, les journaux et le presse-papiers ne contiennent aucun secret' $st "$($script:Secrets.Count) secrets recherchés dans $($texts.Count) sorties ; trouvés : $hits ; bouton « Copier le diagnostic » : $(if ($clip) { 'utilisé (' + $clip.Length + ' caractères)' } else { 'non atteint par UI Automation' })"
     }
     Check 'B07' 'backend' 'backend figé (SIGSTOP) : ApiTimeout, puis rétabli (SIGCONT)' {
+        if (Skip-IfBackendDown 'B07' 'backend' 'backend figé (SIGSTOP) : ApiTimeout, puis rétabli (SIGCONT)') { return }
         $rec = Get-DiscoveryRecord
         [void](Send-Signal 'STOP' ([int]$rec.pid))
         $w1 = Wait-Panel { param($s) $s.Cause -eq 'ApiTimeout' } 90 3
@@ -855,6 +923,7 @@ function Test-Backend {
         Add-Check 'B07' 'backend' 'backend figé (SIGSTOP) : ApiTimeout, puis rétabli (SIGCONT)' $st "figé : $($w1.Status.Cause) ; rétabli : $($w2.Status.Verdict)"
     }
     Check 'B08' 'backend' 'crash du backend (kill -9) : BackendStopped, jamais READY fantôme' {
+        if (Skip-IfBackendDown 'B08' 'backend' 'crash du backend (kill -9) : BackendStopped, jamais READY fantôme') { return }
         $rec = Get-DiscoveryRecord
         [void](Send-Signal 'KILL' ([int]$rec.pid))
         $w = Wait-Panel { param($s) $s.Cause -eq 'BackendStopped' } 60 3
@@ -862,6 +931,7 @@ function Test-Backend {
         Add-Check 'B08' 'backend' 'crash du backend (kill -9) : BackendStopped, jamais READY fantôme' $st (($w.Transitions | ForEach-Object { $_.state }) -join ' -> ')
     }
     Check 'B09' 'recovery' 'backend relancé après crash : retour à l''état réel' {
+        if (Skip-IfBackendDown 'B09' 'recovery' 'backend relancé après crash : retour à l''état réel') { return }
         $script:Launch = Start-Launch "run$($script:Run)-restart"
         $sw = [Diagnostics.Stopwatch]::StartNew()
         $w = Wait-Panel { param($s) $s.Verdict -in 'Ready', 'Degraded' } ($BackendStartTimeoutMin * 60) 5
@@ -870,6 +940,7 @@ function Test-Backend {
         Add-Check 'B09' 'recovery' 'backend relancé après crash : retour à l''état réel' $st "$($w.Status.Verdict)/$($w.Status.Cause) en $([math]::Round($sw.ElapsedMilliseconds/1000)) s"
     }
     Check 'B10' 'backend' 'arrêt propre (Ctrl+C) : enregistrement retiré, BackendNotStarted' {
+        if (Skip-IfBackendDown 'B10' 'backend' 'arrêt propre (Ctrl+C) : enregistrement retiré, BackendNotStarted') { return }
         Stop-Backend
         $w = Wait-Panel { param($s) $s.Cause -eq 'BackendNotStarted' } 60 3
         $st = 'FAIL'; if ($w.Reached -and -not (Get-DiscoveryRecord)) { $st = 'PASS' }
@@ -886,6 +957,7 @@ function Test-Backend {
         Stop-Backend
     }
     Check 'B12' 'backend' 'jeton refusé par le backend : TokenRejected' {
+        if (Skip-IfBackendDown 'B12' 'backend' 'jeton refusé par le backend : TokenRejected') { return }
         $bogus = 'apex-validation-' + [guid]::NewGuid().ToString('N')
         $script:Launch = Start-Launch "run$($script:Run)-badtoken" @{ APEX_API_TOKEN = $bogus }
         $w = Wait-Panel { param($s) $s.Cause -eq 'TokenRejected' -or $s.Verdict -in 'Ready', 'Degraded' } ($BackendStartTimeoutMin * 60) 5
@@ -910,6 +982,7 @@ function Test-Backend {
         Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; processus non autorisés : $($bad.Count) $shown"
     }
     Check 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul' {
+        if (Skip-IfBackendDown 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul') { return }
         Stop-AllPanels
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
         $p = Wait-PanelWindow 30

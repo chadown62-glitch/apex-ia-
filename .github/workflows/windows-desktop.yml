@@ -145,7 +145,7 @@ jobs:
           $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
           wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/build_minio_from_source.sh"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec bash -c 'set -a; . ./.env; set +a; COMPOSE_PROFILES=minio docker compose up -d --wait minio && docker compose ps minio && COMPOSE_PROFILES=minio docker compose stop minio'
+          wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec bash -c 'COMPOSE_PROFILES=minio docker compose up -d --wait minio && docker compose ps minio && COMPOSE_PROFILES=minio docker compose stop minio'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           wsl.exe -d $env:DISTRO --exec bash -c 'docker volume ls --filter name=minio-data'
       - name: Validation kit for the user's PC (one folder)

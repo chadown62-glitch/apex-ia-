@@ -71,6 +71,7 @@ APEX de versions incompatibles).
 | « Le backend APEX n'est pas démarré » | `launch.sh` n'a pas été lancé | `bash scripts/apex-launch.sh serve` dans le dossier APEX |
 | « Le backend APEX démarre… » | `launch.sh` prépare Docker, doctor, gate | attendre ; le premier lancement peut durer plusieurs minutes |
 | « Le backend APEX s'est arrêté » | fenêtre fermée ou arrêt brutal | relancer `launch.sh` ; lire son dernier message d'erreur |
+| « démarre… » puis « n'est pas démarré », et `launch.sh` finit sur « Phase 2 autorisée : NON » | `apex gate` n'est pas concluant sur cette machine : `launch.sh` refuse alors de démarrer APEX (code 5). Le Panel n'y est pour rien | lire « Bloquants » / « Non concluants » dans la sortie de `launch.sh` ; lever chaque point, ou l'accepter dans `gate.exceptions.yaml` avec un motif et une date d'expiration (voir `gate.exceptions.example.yaml`) |
 | « jeton … refusé » / « jeton introuvable » | le Panel ne lit pas le jeton du backend en marche | arrêter les autres backends APEX, relancer `launch.sh` depuis le dossier APEX |
 | « Un autre programme utilise le port 8000 » | port occupé | fermer ce programme, ou `launch.sh serve --port 8010` (le Panel suit) |
 | « ne répond pas à temps » | machine surchargée ou APEX bloqué | attendre ; sinon Ctrl+C puis relancer |

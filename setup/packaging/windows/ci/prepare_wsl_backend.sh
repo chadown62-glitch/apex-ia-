@@ -61,4 +61,15 @@ python3 -m venv "$DEST/.venv"
 "$DEST/.venv/bin/pip" install -q -e "$DEST[db,api]" >/dev/null
 
 chown -R "$USER_NAME:$USER_NAME" "$DEST"
+
+# `launch.sh serve` ne démarre `apex serve` que si `apex gate` est concluant. Run 11 : sur ce runner sans GPU,
+# sept contrôles restent UNKNOWN (not_applicable / not_authorized) => launch.sh s'arrête (code 5) et aucun
+# scénario backend du Panel n'est validable. Le propriétaire d'une machine lève ce point avec gate.exceptions.yaml
+# (mécanisme officiel, daté) : on fait de même ICI SEULEMENT, pour ces seules raisons, jamais pour un FAIL.
+log "apex gate (comme launch.sh : .env chargé par son propre chargeur) puis gate.exceptions.yaml de CI"
+su - "$USER_NAME" -c "cd '$DEST' && source scripts/apex-launch.sh && load_env_file .env >/dev/null 2>&1; \
+  .venv/bin/python -m apex.cli.main gate --json --output /tmp/apex-ci-gate-report.json > /tmp/apex-ci-gate.json" || true
+"$DEST/.venv/bin/python" "$SRC/setup/packaging/windows/ci/gate_exceptions_for_ci.py" /tmp/apex-ci-gate.json "$DEST/gate.exceptions.yaml"
+chown "$USER_NAME:$USER_NAME" "$DEST/gate.exceptions.yaml"
+
 log "prêt : $DEST (utilisateur $USER_NAME)"
