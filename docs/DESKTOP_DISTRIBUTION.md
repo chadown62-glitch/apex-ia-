@@ -167,7 +167,8 @@ banc de test lui-même (pid d'un sous-shell au lieu de Python ; hypothèse fauss
 215 fichiers, raccourci Bureau vers `%LOCALAPPDATA%\Programs\APEX\APEX.exe`, menu Démarrer, entrée
 HKCU de désinstallation, validation post-installation, double-clic depuis `/tmp`, instance unique,
 verdict sans WSL (WslNotInstalled), installation refusée pendant que le Panel tourne, relance après
-`kill -9`, journal, réinstallation, **mise à jour 0.2.0 -> 0.2.1** (raccourci et paramètres
+`kill -9`, journal, réinstallation, **mise à jour 0.2.0 -> 0.2.1** (build d'essai ; refaite par la
+release gate avec l'installateur propre 0.2.0 de `649e376` -> 0.2.1 final : PASS ; raccourci et paramètres
 conservés), désinstallation (programme, raccourcis, entrée retirés ; paramètres et journaux
 conservés), réinstallation après désinstallation, installation interrompue (84 fichiers copiés)
 puis relancée. Défauts trouvés sous Wine : `{autopf}` non résolu en mode utilisateur ->
@@ -255,4 +256,34 @@ au lieu d'un 0).
 
 Limites : sondes, correctifs et banc écrits par le même agent (le juge est figé à un commit mais pas
 indépendant) ; les métriques MOCK ne prouvent pas le comportement d'un vrai `wsl.exe`.
+
+### 6.1 Cycle 4 — nouvelle exécution sur le code final 0.2.1
+
+`v3-836db75 -> v4-b3b1171` (fonctionnalité, juge figé à `b3b1171`) : **UNCHANGED**, juge **PASS** —
+16 métriques déterministes à 1,0, `idle_cpu_percent` 2,12 -> 2,23 % (IC 95 % [-0,05 ; 0,33] :
+non distinguable du bruit), 8 sondes passées.
+
+## 7. Release gate (`setup/packaging/release_gate.py`)
+
+Première exécution (HEAD `74fcee5`) : **NOT_RELEASE_READY**, deux FAIL, tous deux réels :
+- `W14_mise_a_jour` : l'installateur propre de `649e376` et HEAD annonçaient tous deux 0.2.0 alors
+  que le Panel avait changé (cycle 2) — deux binaires différents sous un même numéro. Correctif :
+  produit en **0.2.1** (`b3b1171`).
+- « Gauntlet validé » : la règle « aucun cycle en échec, jamais » ne pouvait plus passer une fois un
+  cycle en échec, le ledger étant append-only. Règle remplacée **après l'avoir constaté** (c'est écrit
+  dans le script) : dernier cycle de chaque nature réussi, et dernier cycle mesuré sur le code produit
+  actuel ; l'historique complet reste cité comme preuve. D'où le cycle 4.
+
+Exécution finale (HEAD `b0a751b`, `--older-installer` = 0.2.0 de `649e376`) :
+**BLOCKED_ON_REAL_WINDOWS** — les 22 éléments vérifiables ici PASS (build, SHA256, reproductibilité,
+WINE E2E dont mise à jour 0.2.0 -> 0.2.1, détection offline/online, health checks, authentification,
+suite adversariale, diagnostic, journaux, régression .NET et Python, Gauntlet, documentation) ; 3
+éléments BLOCKED faute de Windows réel (redémarrage de Windows, vrai WSL + `launch.sh` vus depuis
+Windows, raccourci créé par le vrai shell). Jamais RELEASE_READY sans preuve Windows.
+
+Artefact final : `APEX-Setup-x64-v0.2.1.exe`, 32 538 727 octets, SHA256
+`33f76c2077d185168149d4bfc7b20045dddc8bf3ac34f19f204d37e4be195627` (deux builds identiques), commit
+`b0a751b` sans modification locale, 213 fichiers publiés, non signé. L'artefact n'est pas versionné
+dans git (binaire de 32 Mo) : il se reconstruit à l'identique par
+`setup/packaging/build_desktop_release.sh <sortie>` sur ce commit.
 
