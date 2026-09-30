@@ -192,7 +192,7 @@ UTF-16, chemins hostiles refusés avant tout processus. Ne prouve pas le comport
 | lancement du Panel -> premier verdict | 1,25 s |
 | `--status-json` contre un backend en marche | 0,38 à 0,42 s (5 mesures) ; 0,24 s sans backend |
 | mémoire résidente du Panel | 141 Mo |
-| CPU au repos (rafraîchissement 5 s) | 2,8 % d'un cœur |
+| CPU au repos (rafraîchissement 5 s) | 2,8 % d'un cœur (mesure manuelle) ; Gauntlet d6 : moyenne 1,97 % (V2) et 2,12 % (V3), 6 fenêtres de 10 s après 30 s — différence non distinguable du bruit |
 | build complet de l'installateur | 43 s |
 
 ## 4. Sécurité (audit)
@@ -222,3 +222,37 @@ UTF-16, chemins hostiles refusés avant tout processus. Ne prouve pas le comport
   réellement retirée de Docker Hub, `launch.sh` échouera partout — à vérifier en priorité.
 - Interface web (Vite) hors de cette distribution : serveur de développement uniquement.
 - Ollama : aucun modèle téléchargeable ici (ollama.com refusé) : au mieux DEGRADED.
+
+## 6. Gauntlet loop — capacité `desktop_distribution` (ledger `docs/improvement/desktop_distribution.ledger.jsonl`)
+
+Le moteur (`apex/improvement`) mesure chaque version DEUX fois (reproductibilité constatée), refuse de
+comparer deux définitions de banc différentes (INCONCLUSIVE) et fait juger chaque cycle par un juge
+externe exécuté dans un processus séparé depuis un commit figé (`--judge-ref`) : un REJECT du juge rend
+le cycle FAILED quelles que soient les mesures. Le ledger est append-only et chaîné par empreintes :
+les tentatives ratées y restent.
+
+Banc : 11 scénarios Panel contre le vrai backend (binaire Panel compilé, vraie API, vraie découverte,
+vrai `launch.sh` pour STARTING), 3 métriques d'installateur (build, reproductibilité, cycle de vie
+WINE E2E), 2 métriques MOCK (chemins `wsl.exe`), et depuis d5 le CPU au repos du Panel fenêtré
+(stochastique, bootstrap apparié). Sondes du juge : READY sans backend, enregistrement hostile,
+protocole inconnu, paramètres/journaux corrompus, shell dans les commandes WSL, sortie WSL traduite,
+backend dans une autre distribution, politique de l'installateur.
+
+| Cycle | Avant -> après | Verdict moteur | Juge | Constat |
+|---|---|---|---|---|
+| 1 fonctionnalité, tentative 1 | v0-e84f9f1 -> v1-8cb2d3f | **INCONCLUSIVE** | plantage (`IndexError`) | définitions différentes ; racine du dépôt déduite par `parents[3]` dans le juge figé -> corrigé (`6a1d234`) |
+| 1, tentative 2 | v0-…-d3 -> v1-6a1d234 | **FAILED** | REJECT | définitions encore différentes : l'empreinte hachait le script E2E Wine de l'arbre MESURÉ (absent à `e84f9f1`) -> empreinte prise dans l'arbre du banc (`649e376`) |
+| 1, tentative 3 | v0-…-d4 -> v1-649e376 | **FAILED** | REJECT | 14 métriques 0 -> 1 ; `wsl_any_language` et `wsl_backend_in_other_distro` restent à 0 : défauts réels confirmés par le juge |
+| 2 adversarial | v1-649e376 -> v2-dc6a57c | **IMPROVED** | PASS | les 2 métriques WSL 0 -> 1 (état WSL sans mot traduit, recherche dans les autres distributions en cours), 14 inchangées à 1 |
+| 3 amélioration | v2-34e243c-d6 -> v3-836db75 | **UNCHANGED** | PASS | hypothèse (lignes mises à jour en place -> moins de CPU au repos) NON confirmée : 1,97 -> 2,12 %, IC 95 % [-0,30 ; 0,65] |
+
+Défauts du banc lui-même trouvés en route, corrigés avant de conclure : empreinte dépendante de l'arbre
+mesuré (ci-dessus) ; fuite d'une publication du Panel (~90 Mo) par processus de mesure, qui a rempli
+le disque : le snapshot `v2-6c06441-d5` mesure l'installateur à 0/17 faute d'espace pour Wine — il est
+**invalide** pour cette métrique, conservé dans le ledger et remplacé par `v2-34e243c-d6` (17/17)
+après correction (`34e243c` : publication retirée à la sortie, installateur BLOQUÉ sous 4 Gio libres
+au lieu d'un 0).
+
+Limites : sondes, correctifs et banc écrits par le même agent (le juge est figé à un commit mais pas
+indépendant) ; les métriques MOCK ne prouvent pas le comportement d'un vrai `wsl.exe`.
+

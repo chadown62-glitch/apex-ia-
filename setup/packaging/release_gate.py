@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 import time
@@ -33,6 +34,15 @@ SETUP = REPO / "setup"
 LEDGER = REPO / "docs" / "improvement" / "desktop_distribution.ledger.jsonl"
 
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
+#: Code du PRODUIT livré (le banc `apex/improvement` et la documentation n'en font pas partie).
+PRODUCT_PATHS = (
+    "setup/src",
+    "setup/packaging",
+    "setup/Directory.Build.props",
+    "apex",
+    ":(exclude)apex/improvement",
+    "scripts",
+)
 
 
 @dataclass
@@ -234,14 +244,41 @@ def main() -> int:
     )
 
     # -- Gauntlet ---------------------------------------------------------------------------------
+    # Le ledger est append-only : les tentatives ratées y restent, et restent citées ici. Règle : le
+    # DERNIER cycle de chaque nature a réussi (IMPROVED ou UNCHANGED — un REJECT du juge le rend
+    # FAILED), et le dernier cycle a mesuré le code produit ACTUEL (aucune différence entre son commit
+    # et HEAD hors banc et documentation). La règle initiale (« aucun cycle en échec, jamais ») était
+    # insatisfiable après le premier échec, contrairement à la boucle échec -> correctif -> nouveau
+    # cycle : elle a été remplacée après l'avoir constaté (release gate du 2026-09-30).
     cycles = [e["data"] for e in ledger_entries() if e.get("type") == "cycle"]
-    verdicts = [(c.get("kind"), c.get("cycle_index"), str(c.get("verdict", "?")).lower()) for c in cycles]
-    kinds = {kind for kind, _, _ in verdicts}
+    verdicts = [
+        (
+            c.get("kind"),
+            c.get("cycle_index"),
+            str(c.get("verdict", "?")).lower(),
+            str(c.get("version_after", "")),
+        )
+        for c in cycles
+    ]
+    latest = {kind: (index, verdict, version) for kind, index, verdict, version in verdicts}
+    latest_ok = {"functionality", "adversarial", "improvement"} <= set(latest) and all(
+        verdict in ("improved", "unchanged") for _, verdict, _ in latest.values()
+    )
+    last_version = verdicts[-1][3] if verdicts else ""
+    found = re.search(r"-([0-9a-f]{7,40})(?:-|$)", last_version)
+    current = (
+        bool(found)
+        and run(
+            ["git", "diff", "--quiet", found.group(1) if found else "HEAD", "HEAD", "--", *PRODUCT_PATHS]
+        ).returncode
+        == 0
+    )
     add(
         "Gauntlet validé",
-        {"functionality", "adversarial", "improvement"} <= kinds
-        and all(v not in ("regressed", "failed", "blocked", "inconclusive") for _, _, v in verdicts),
-        f"cycles : {verdicts}",
+        latest_ok and current,
+        f"dernier cycle par nature : {latest} ; dernier cycle sur le code actuel : "
+        f"{'oui' if current else 'NON'} ({last_version}) ; historique complet : "
+        f"{[(k, i, v) for k, i, v, _ in verdicts]}",
     )
 
     # -- documentation ----------------------------------------------------------------------------
