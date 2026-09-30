@@ -6,7 +6,10 @@ namespace ApexSetup.Dashboard.Services;
 /// <param name="Applicable">Faux sur un hôte Linux natif : il n'y a pas de WSL, la ligne n'est pas affichée.</param>
 /// <param name="Status">État de WSL (sans objet si non applicable).</param>
 /// <param name="Running">Vrai si l'on peut lire des fichiers de l'hôte SANS le démarrer.</param>
-public sealed record HostProbe(bool Applicable, ComponentStatus Status, bool Running, string Detail, string? Distro, NotReadyCause Cause)
+/// <param name="RunningDistros">Toutes les distributions WSL en cours d'exécution (où chercher le backend sans rien démarrer).</param>
+public sealed record HostProbe(
+    bool Applicable, ComponentStatus Status, bool Running, string Detail, string? Distro, NotReadyCause Cause,
+    IReadOnlyList<string>? RunningDistros = null)
 {
     public static HostProbe LocalHost() => new(false, ComponentStatus.Ready, true, "hôte Linux natif (sans WSL)", null, NotReadyCause.None);
 }
@@ -94,7 +97,11 @@ public sealed class WslBackendHost(IProcessRunner processRunner) : IBackendHost
                 "wsl.exe n'a pas répondu dans le délai (WSL bloqué ?)", preferredDistro, NotReadyCause.WslUnresponsive);
         }
 
-        var distros = WslStatusParser.Parse(result.Stdout);
+        // L'état « en cours » vient de la liste des noms en cours (sortie non traduite), jamais de la
+        // colonne ÉTAT de -l -v (traduite selon la langue de Windows).
+        var running = await processRunner.RunAsync("wsl.exe", ["-l", "--running", "-q"], ProbeTimeout, cancellationToken).ConfigureAwait(false);
+        var runningOutput = running.Started && !running.TimedOut ? running.Stdout : null;
+        var distros = WslStatusParser.Parse(result.Stdout, runningOutput);
         if (distros.Count == 0)
         {
             var reason = Clean(result.Stderr + " " + result.Stdout);
@@ -112,9 +119,10 @@ public sealed class WslBackendHost(IProcessRunner processRunner) : IBackendHost
                 preferredDistro, NotReadyCause.WslNotInstalled);
         }
 
+        var runningNames = distros.Where(d => d.IsRunning).Select(d => d.Name).ToList();
         return selected.IsRunning
-            ? new HostProbe(true, ComponentStatus.Ready, true, $"{selected.Name} — en cours d'exécution", selected.Name, NotReadyCause.None)
-            : new HostProbe(true, ComponentStatus.Offline, false, $"{selected.Name} — installée, arrêtée", selected.Name, NotReadyCause.WslStopped);
+            ? new HostProbe(true, ComponentStatus.Ready, true, $"{selected.Name} — en cours d'exécution", selected.Name, NotReadyCause.None, runningNames)
+            : new HostProbe(true, ComponentStatus.Offline, false, $"{selected.Name} — installée, arrêtée", selected.Name, NotReadyCause.WslStopped, runningNames);
     }
 
     public Task<FileRead> ReadHomeFileAsync(string? distro, string relativePath, CancellationToken cancellationToken = default)

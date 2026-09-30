@@ -28,15 +28,56 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         var probe = await host.ProbeAsync(distro, cancellationToken).ConfigureAwait(false);
         var port = settings.ApiPort ?? DashboardSettings.DefaultApiPort;
 
-        if (!probe.Running)
+        // Où chercher le backend, sans jamais démarrer une distribution : la distribution choisie (ou par
+        // défaut) si elle tourne, puis — si l'utilisateur n'en a choisi aucune — les AUTRES distributions
+        // déjà en cours (launch.sh lancé ailleurs que dans la distribution par défaut).
+        var candidates = new List<string?>();
+        if (probe.Running)
+        {
+            candidates.Add(probe.Distro ?? distro);
+        }
+        if (distro is null)
+        {
+            candidates.AddRange((probe.RunningDistros ?? []).Where(d => d != probe.Distro));
+        }
+        if (candidates.Count == 0)
         {
             return Decide(probe, DiscoveryRead.NotRead, null, TokenRead.NotRead,
                 StatusFetch.NotAttempted("non tentée : hôte arrêté"), port, watch);
         }
 
-        var distroForReads = probe.Distro ?? distro;
-        var discovery = BackendDiscovery.FromFile(
-            await host.ReadHomeFileAsync(distroForReads, BackendDiscovery.RelativePath, cancellationToken).ConfigureAwait(false));
+        var distroForReads = candidates[0];
+        DiscoveryRead? firstRead = null;
+        DiscoveryRead? foundRead = null;
+        foreach (var candidate in candidates)
+        {
+            var read = BackendDiscovery.FromFile(
+                await host.ReadHomeFileAsync(candidate, BackendDiscovery.RelativePath, cancellationToken).ConfigureAwait(false));
+            firstRead ??= read;
+            if (read.Kind is DiscoveryKind.Found or DiscoveryKind.Invalid)
+            {
+                (distroForReads, foundRead) = (candidate, read);
+                break;
+            }
+        }
+        if (foundRead is null && !probe.Running)
+        {
+            // Aucun backend ailleurs, distribution choisie arrêtée : verdict « WSL arrêté », rien d'autre lu.
+            return Decide(probe, DiscoveryRead.NotRead, null, TokenRead.NotRead,
+                StatusFetch.NotAttempted("non tentée : hôte arrêté"), port, watch);
+        }
+        var discovery = foundRead ?? firstRead ?? DiscoveryRead.NotRead;
+        if (foundRead is not null && probe.Applicable && distroForReads != probe.Distro)
+        {
+            probe = probe with
+            {
+                Status = ComponentStatus.Ready,
+                Running = true,
+                Distro = distroForReads,
+                Cause = NotReadyCause.None,
+                Detail = $"{distroForReads} — en cours d'exécution (backend trouvé dans cette distribution ; par défaut : {probe.Distro})",
+            };
+        }
         bool? alive = null;
         var token = TokenRead.NotRead;
         var address = "127.0.0.1";

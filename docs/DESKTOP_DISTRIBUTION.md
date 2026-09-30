@@ -114,8 +114,10 @@ Windows (utilisateur, sans administrateur)
 │     └── désinstalleur (programme + raccourcis ; données utilisateur et WSL conservées)
 │
 └── APEX.exe = Panel (observateur)
-      │  wsl.exe -l -v            (état de la distribution — ne démarre rien)
-      │  wsl.exe --exec cat …     (seulement si la distribution tourne déjà)
+      │  wsl.exe -l -v            (noms + distribution par défaut — ne démarre rien)
+      │  wsl.exe -l --running -q  (distributions en cours : noms seuls, indépendant de la langue)
+      │  wsl.exe --exec cat …     (seulement dans une distribution qui tourne déjà : la choisie,
+      │                            sinon la par défaut puis les autres en cours — cycle 2)
       │     ~/.apex/runtime/backend.json   <- écrit par launch.sh serve (starting) puis apex serve (serving)
       │     /proc/<pid>/cmdline            <- le processus annoncé vit-il ?
       │     <projet>/.apex/api-token       <- jeton, en mémoire seulement

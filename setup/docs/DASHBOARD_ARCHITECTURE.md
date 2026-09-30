@@ -14,8 +14,13 @@ backend ni l'interface web. Le backend reste lancé par `scripts/apex-launch.sh 
 
 ```
 PanelStatusService.MeasureAsync
-  1. IBackendHost.ProbeAsync            Windows : wsl.exe -l -v (ne démarre rien)   Linux : hôte local
-     └─ distribution arrêtée -> STOP : aucune autre commande (rien ne la démarrerait)
+  1. IBackendHost.ProbeAsync            Windows : wsl.exe -l -v + wsl.exe -l --running -q
+                                        (ne démarrent rien ; état lu sans aucun mot traduit)
+                                        Linux : hôte local
+     ├─ distribution choisie dans Paramètres -> elle seule
+     ├─ sinon : la distribution par défaut si elle tourne, puis les AUTRES déjà en cours ; la
+     │  première qui a un enregistrement de découverte est retenue et affichée
+     └─ aucune candidate en cours -> STOP : aucune autre commande (rien ne la démarrerait)
   2. ~/.apex/runtime/backend.json       enregistrement de découverte (apex/discovery.py)
   3. /proc/<pid>/cmdline                le processus annoncé vit-il ?
   4. <projet>/.apex/api-token           en mémoire seulement, masqué dans les journaux

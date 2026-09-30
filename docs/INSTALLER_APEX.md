@@ -62,8 +62,11 @@ APEX de versions incompatibles).
 | VERSION_MISMATCH | Panel et APEX incompatibles | mettre à jour le Panel **ou** le dépôt APEX, selon le message |
 | Fenêtre noire | pilote graphique | lancer `APEX.exe --software-rendering` (ou variable `APEX_PANEL_RENDERING=software`) |
 
-Plusieurs distributions Linux : ouvrez **Paramètres** dans le Panel et indiquez celle où tourne
-APEX (vide = distribution par défaut). C'est le seul réglage ; rien d'autre n'est à saisir.
+Plusieurs distributions Linux : sans réglage, le Panel cherche APEX dans la distribution par défaut
+puis dans les **autres distributions déjà démarrées** (il n'en démarre jamais aucune) et affiche
+celle où il l'a trouvé. Pour fixer une distribution, ouvrez **Paramètres** et indiquez son nom : le
+Panel ne regarde alors plus qu'elle. C'est le seul réglage ; rien d'autre n'est à saisir. La langue
+de Windows n'a pas d'importance (l'état des distributions est lu sans dépendre des mots affichés).
 
 ## Diagnostic et journaux
 
