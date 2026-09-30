@@ -229,11 +229,7 @@ public sealed class MainWindowViewModel : ObservableObject
             }
             _ui(() =>
             {
-                Components.Clear();
-                foreach (var component in snapshot.Components)
-                {
-                    Components.Add(component);
-                }
+                SyncComponents(snapshot.Components);
                 Headline = snapshot.Headline;
                 Guidance = snapshot.Guidance;
                 Verdict = snapshot.Verdict;
@@ -268,6 +264,31 @@ public sealed class MainWindowViewModel : ObservableObject
         await Clipboard.SetTextAsync(text).ConfigureAwait(false);
         _ui(() => CopyMessage = "Diagnostic copié (aucun secret n'y figure).");
         _log.Log("Diagnostic copié dans le presse-papiers.");
+    }
+
+    /// <summary>
+    /// Met la liste à jour EN PLACE : une ligne n'est remplacée que si son contenu a changé, et la liste
+    /// n'est reconstruite que si ses lignes ne sont plus les mêmes. Avant (cycle 3), elle était vidée et
+    /// reconstruite toutes les 5 s, ce qui recréait chaque ligne affichée même sans aucun changement.
+    /// </summary>
+    private void SyncComponents(IReadOnlyList<ComponentState> rows)
+    {
+        if (!Components.Select(c => c.Key).SequenceEqual(rows.Select(r => r.Key)))
+        {
+            Components.Clear();
+            foreach (var row in rows)
+            {
+                Components.Add(row);
+            }
+            return;
+        }
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if (!Equals(Components[i], rows[i]))
+            {
+                Components[i] = rows[i];
+            }
+        }
     }
 
     private static bool Changed(PanelSnapshot a, PanelSnapshot b) =>

@@ -60,6 +60,40 @@ public class MainWindowViewModelTests
     }
 
     [Fact]
+    public async Task An_unchanged_measurement_does_not_touch_the_displayed_rows()
+    {
+        var (vm, _, _, _) = Build();
+        await vm.InitializeAsync();
+        var rows = vm.Components.ToList();
+        var changes = 0;
+        vm.Components.CollectionChanged += (_, _) => changes++;
+
+        await vm.RefreshAsync();
+        await vm.RefreshAsync();
+
+        Assert.Equal(0, changes);
+        Assert.Equal(rows, vm.Components); // mêmes lignes, mêmes instances
+        Assert.All(rows.Zip(vm.Components), pair => Assert.Same(pair.First, pair.Second));
+    }
+
+    [Fact]
+    public async Task A_changed_row_is_replaced_in_place_and_the_others_are_kept()
+    {
+        var (vm, host, _, _) = Build(h => h.Files["~/" + BackendDiscovery.RelativePath] = FileRead.NotFound("absent"));
+        await vm.InitializeAsync();
+        var before = vm.Components.ToList();
+
+        host.Files["~/" + BackendDiscovery.RelativePath] = FileRead.Ok("{ pas du json");
+        await vm.RefreshAsync();
+
+        Assert.Equal(before.Select(c => c.Key), vm.Components.Select(c => c.Key));
+        var changed = vm.Components.Where((c, i) => !ReferenceEquals(c, before[i])).ToList();
+        Assert.NotEmpty(changed);
+        Assert.Contains(vm.Components, c => c.Key == ComponentKey.Backend && c.Status == ComponentStatus.Error);
+        Assert.All(vm.Components.Where((c, i) => ReferenceEquals(c, before[i])), c => Assert.Contains(c, before));
+    }
+
+    [Fact]
     public async Task Unchanged_states_are_not_logged_again()
     {
         var (vm, _, log, _) = Build();
