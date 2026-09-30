@@ -138,6 +138,20 @@ jobs:
           & setup/packaging/windows/Test-ApexWindows.ps1 -Installer $new.FullName -OlderInstaller $old.FullName `
             -AllowBackendControl -AllowWslShutdown -Repeat 1 -Label 'ci-windows-server-hosted' `
             -OutDir "$env:RUNNER_TEMP\validation"
+      - name: Validation kit for the user's PC (one folder)
+        if: always()
+        shell: pwsh
+        run: |
+          $kit = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\APEX-validation-kit"
+          Copy-Item "$env:RUNNER_TEMP\release\APEX-Setup-x64-v*.exe*", "$env:RUNNER_TEMP\release-prev\APEX-Setup-x64-v*.exe" $kit -ErrorAction SilentlyContinue
+          Copy-Item "$env:RUNNER_TEMP\release\manifest.json" "$kit\manifest.json" -ErrorAction SilentlyContinue
+          Copy-Item setup/packaging/windows/Test-ApexWindows.ps1, setup/packaging/windows/Valider-APEX.cmd, setup/packaging/windows/LISEZ-MOI.txt $kit
+          Get-ChildItem $kit | Format-Table Name, Length -AutoSize
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: APEX-validation-kit
+          path: ${{ runner.temp }}/APEX-validation-kit
       - uses: actions/upload-artifact@v4
         if: always()
         with:

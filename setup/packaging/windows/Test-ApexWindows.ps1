@@ -25,7 +25,8 @@
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][string]$Installer,
+    # Par défaut : l'installateur le plus récent du dossier du script (et le précédent pour la mise à jour).
+    [string]$Installer,
     [string]$OlderInstaller,
     [ValidateSet('Full', 'PreReboot', 'PostReboot')][string]$Phase = 'Full',
     [string]$Distro,
@@ -37,7 +38,10 @@ param(
     [string]$OutDir,
     [string]$Label = 'user-pc',
     # Observation MANUELLE (non automatisable) : double-clic sur l'installateur téléchargé avant le script.
-    [ValidateSet('warning', 'no-warning', 'not-tested')][string]$SmartScreen = 'not-tested'
+    [ValidateSet('warning', 'no-warning', 'not-tested')][string]$SmartScreen = 'not-tested',
+    # Mode « double-clic » (Valider-APEX.cmd) : quelques questions O/N au lieu d'options, redémarrage de
+    # Windows proposé puis REPRISE AUTOMATIQUE après ouverture de session (clé RunOnce de l'utilisateur).
+    [switch]$Interactive
 )
 
 Set-StrictMode -Version 2
@@ -46,6 +50,13 @@ $ScriptVersion = '1'
 $Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $Utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
 
+if (-not $Installer) {
+    $found = @(Get-ChildItem -Path $PSScriptRoot -File | Where-Object { $_.Name -match '^APEX-Setup-x64-v\d+\.\d+\.\d+\.exe$' } | Sort-Object {
+            [version]($_.Name -replace '^APEX-Setup-x64-v(\d+\.\d+\.\d+)\.exe$', '$1') })
+    if ($found.Count -eq 0) { throw "aucun APEX-Setup-x64-v*.exe dans $PSScriptRoot : préciser -Installer" }
+    $Installer = $found[$found.Count - 1].FullName
+    if (-not $OlderInstaller -and $found.Count -gt 1) { $OlderInstaller = $found[$found.Count - 2].FullName }
+}
 $Installer = (Resolve-Path $Installer).Path
 if ($OlderInstaller) { $OlderInstaller = (Resolve-Path $OlderInstaller).Path }
 if (-not $OutDir) {
@@ -671,6 +682,29 @@ function Get-BackendOwnStatus {
     try { return ($r.Stdout | ConvertFrom-Json) } catch { return $null }
 }
 
+function Ask([string]$Question) {
+    if (-not $Interactive) { return $false }
+    do { $a = (Read-Host "$Question (O/N)").Trim().ToUpperInvariant() } while ($a -notin 'O', 'N')
+    return ($a -eq 'O')
+}
+
+function Test-UserWorkflow {
+    # Le parcours EXACT de l'utilisateur : WSL démarré, launch.sh lancé par lui, puis double-clic sur APEX.
+    Check 'U01' 'backend' 'parcours utilisateur : launch.sh lancé par l''utilisateur, double-clic, état réel' {
+        $rec = $null; if ($script:DistroName) { $rec = Get-DiscoveryRecord }
+        if (-not $rec) { Add-Check 'U01' 'backend' 'parcours utilisateur' 'BLOCKED' 'aucun backend lancé par l''utilisateur avant le script (launch.sh non lancé)'; return }
+        Stop-AllPanels
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
+        $p = Wait-PanelWindow 30
+        $w = Wait-Panel { param($s) $s.Verdict -in 'Ready', 'Degraded', 'VersionMismatch' } 600 5
+        $shot = $null; if ($p) { $shot = Save-WindowShot $p "run$($script:Run)-user-workflow.png" }
+        Save-Text "run$($script:Run)-user-workflow-status.json" $w.Status.Raw
+        $st = 'FAIL'; if ($p -and $w.Reached -and $w.Status.Verdict -in 'Ready', 'Degraded') { $st = 'PASS' }
+        Add-Check 'U01' 'backend' 'parcours utilisateur : launch.sh lancé par l''utilisateur, double-clic, état réel' $st "fenêtre : $([bool]$p) ; $($w.Status.Verdict)/$($w.Status.Cause) après $([math]::Round($sw.ElapsedMilliseconds/1000)) s ; transitions : $(($w.Transitions | ForEach-Object { $_.state }) -join ' -> ')"
+    }
+}
+
 function Test-Backend {
     $blocked = $null
     if (-not $AllowBackendControl) { $blocked = 'exige -AllowBackendControl (démarre et arrête le backend APEX avec launch.sh)' }
@@ -894,6 +928,16 @@ function Invoke-PreReboot {
     Write-Host "  -Phase PostReboot -OutDir `"$OutDir`" -Installer `"$Installer`" (mêmes autres options)" -ForegroundColor Cyan
 }
 
+function Register-ResumeAfterReboot {
+    # HKCU RunOnce : exécuté UNE fois à la prochaine ouverture de session de CET utilisateur (sans administrateur).
+    $cmd = 'powershell.exe -NoExit -ExecutionPolicy Bypass -File "' + $PSCommandPath + '" -Phase PostReboot -Interactive' +
+        ' -Installer "' + $Installer + '" -OutDir "' + $OutDir + '" -Label "' + $Label + '"'
+    if ($Distro) { $cmd += ' -Distro "' + $Distro + '"' }
+    New-Item -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce' -Force | Out-Null
+    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce' -Name 'ApexValidation' -Value $cmd
+    Write-Host 'Reprise automatique enregistrée pour la prochaine connexion. Redémarrage dans 60 s (annuler : shutdown /a).' -ForegroundColor Cyan
+}
+
 function Invoke-PostReboot {
     $statePath = Join-Path $OutDir 'reboot_state.json'
     if (-not (Test-Path $statePath)) { Add-Check 'R01' 'reboot' 'redémarrage réel' 'BLOCKED' 'phase PreReboot absente de ce dossier'; return }
@@ -929,6 +973,17 @@ function Invoke-PostReboot {
 # Programme principal
 # ------------------------------------------------------------------------------------------------------
 $started = Get-Date
+if ($Interactive -and $Phase -ne 'PostReboot') {
+    Write-Host ''
+    Write-Host 'Validation APEX sur ce PC. Le script installe, lance et désinstalle APEX, et ouvre/ferme le Panel.' -ForegroundColor Cyan
+    Write-Host 'Action manuelle 1/1 avant de commencer : double-cliquez sur l''installateur dans ce dossier, notez si' -ForegroundColor Cyan
+    Write-Host 'Windows affiche « Windows a protégé votre ordinateur » (SmartScreen), puis fermez l''installation.' -ForegroundColor Cyan
+    if (Ask 'Un avertissement SmartScreen s''est-il affiché ?') { $SmartScreen = 'warning' }
+    elseif (Ask 'Avez-vous bien fait le double-clic (N = non testé) ?') { $SmartScreen = 'no-warning' }
+    if (Ask 'Le script peut-il arrêter puis relancer le backend APEX et WSL pour tester les pannes (plusieurs fois, ~30-60 min) ?') {
+        $AllowBackendControl = [switch]$true; $AllowWslShutdown = [switch]$true
+    }
+}
 $script:Env = Get-Environment
 if ($script:Env.is_admin) {
     Write-Host 'ATTENTION : script lancé en administrateur ; l''absence d''élévation ne peut pas être prouvée. Relancez-le en utilisateur normal.' -ForegroundColor Yellow
@@ -979,20 +1034,29 @@ try {
     if ($Phase -eq 'PostReboot') {
         $script:Run = 1
         Invoke-PostReboot
+        if (Ask 'Second redémarrage (nécessaire pour prouver que le comportement se reproduit) ?') {
+            Register-ResumeAfterReboot
+            & shutdown.exe /r /t 60 /c 'Validation APEX : second redémarrage dans 60 s.'
+        }
     } else {
         for ($i = 1; $i -le $Repeat; $i++) {
             $script:Run = $i
             Write-Host "=== Exécution $i / $Repeat ===" -ForegroundColor Cyan
             Test-Install
+            if ($i -eq 1) { Test-UserWorkflow }
             Test-InstallLifecycle
             Test-Launch
             Test-Wsl
             Test-Backend
         }
+        if ($Phase -eq 'Full' -and (Ask 'Tester maintenant le redémarrage de Windows (le script redémarre le PC et reprend seul après votre connexion) ?')) {
+            $Phase = 'PreReboot'
+        }
         if ($Phase -eq 'PreReboot') {
             if ($AllowBackendControl -and $script:ApexRepo) { $script:Launch = Start-Launch 'prereboot'; [void](Wait-Panel { param($s) $s.Verdict -in 'Ready', 'Degraded' } ($BackendStartTimeoutMin * 60) 5) }
             Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP; [void](Wait-PanelWindow 30)
             Invoke-PreReboot
+            if ($Interactive) { Register-ResumeAfterReboot; & shutdown.exe /r /t 60 /c 'Validation APEX : redémarrage dans 60 s ; la validation reprendra après votre connexion.' }
         }
     }
 } finally {

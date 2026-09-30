@@ -68,6 +68,10 @@ GROUPS: dict[str, tuple[str, tuple[str, ...]]] = {
         "backend réel découvert, composants = état du backend, Panel ouvert après",
         ("B03", "B05", "B06"),
     ),
+    "user_workflow": (
+        "parcours utilisateur : launch.sh lancé par l'utilisateur, double-clic sur APEX, état réel",
+        ("U01",),
+    ),
     "ready": ("APEX READY dans une configuration réellement opérationnelle", ("B04",)),
     "offline": ("backend non lancé, crash, arrêt propre", ("B01", "B08", "B10")),
     "starting": ("préflight de launch.sh, interruption pendant le démarrage", ("B02", "B11")),

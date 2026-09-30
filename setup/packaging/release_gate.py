@@ -339,7 +339,7 @@ REAL_WINDOWS_ITEMS: tuple[tuple[str, tuple[str, ...]], ...] = (
         ("I01", "I02", "I09", "I10", "I11", "I12", "I13", "I14"),
     ),
     ("raccourci du vrai shell Windows et double-clic", ("I04", "I05", "L01", "L02", "L03")),
-    ("WSL réel + launch.sh réel vus depuis Windows", ("W01", "W03", "B02", "B03", "B05", "B06")),
+    ("WSL réel + launch.sh réel vus depuis Windows", ("W01", "W03", "U01", "B02", "B03", "B05", "B06")),
     ("APEX READY dans une configuration réellement opérationnelle", ("B04",)),
     (
         "états réels OFFLINE / STARTING / ERROR et récupération",

@@ -1,0 +1,19 @@
+﻿VALIDATION D'APEX DESKTOP SUR VOTRE PC (Windows 10/11 + WSL2)
+
+1. Ouvrez votre distribution Linux (WSL) et lancez APEX comme d'habitude :
+       bash scripts/apex-launch.sh serve
+   Laissez cette fenêtre ouverte.
+
+2. Dans ce dossier, double-cliquez sur Valider-APEX.cmd.
+   Répondez aux questions O/N. La seule action manuelle demandée : un double-clic sur
+   l'installateur pour noter si Windows affiche un avertissement SmartScreen.
+   Si Windows bloque Valider-APEX.cmd (fichier téléchargé) : « Informations complémentaires »
+   puis « Exécuter quand même ».
+
+3. Si vous acceptez le test de redémarrage, le PC redémarre seul (délai 60 s, annulable par
+   « shutdown /a ») et la validation reprend seule après votre connexion.
+
+4. À la fin, une archive APEX-validation-<date>.zip est créée sur le Bureau (jeton, mots de passe et
+   nom d'utilisateur masqués). Transmettez-la.
+
+Le script n'installe ni WSL, ni distribution, ni Docker, et ne modifie ni MinIO ni vos données.
