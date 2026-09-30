@@ -52,10 +52,7 @@ CAPABILITY_ID = "desktop_distribution"
 #: Le juge peut être chargé depuis une révision git dans un fichier temporaire (`--judge-ref`) : la
 #: racine est donc cherchée (module, puis répertoire courant), jamais déduite d'une profondeur fixe
 #: (constaté : `parents[3]` -> IndexError dans le juge en processus séparé, cycle 1).
-def _repo_root() -> Path:
-    configured = os.environ.get("APEX_CI_DESKTOP_REPO")
-    if configured:
-        return Path(configured)
+def _harness_root() -> Path:
     for base in (Path(__file__).resolve().parent, Path.cwd().resolve()):
         for candidate in (base, *base.parents):
             if (candidate / "setup" / "ApexSetup.sln").exists():
@@ -63,8 +60,17 @@ def _repo_root() -> Path:
     return Path.cwd().resolve()
 
 
+def _repo_root() -> Path:
+    configured = os.environ.get("APEX_CI_DESKTOP_REPO")
+    return Path(configured) if configured else _harness_root()
+
+
 REPO = _repo_root()
 SETUP = REPO / "setup"
+#: Arbre du BANC (jamais `APEX_CI_DESKTOP_REPO`) : le script E2E Wine est un instrument de mesure, pas
+#: le produit mesuré. Pris dans l'arbre mesuré, il changeait l'empreinte de définition d'une révision
+#: à l'autre (absent à e84f9f1) et rendait toute comparaison INCONCLUSIVE (constaté, cycle 1).
+WINE_E2E = _harness_root() / "setup" / "packaging" / "wine_installer_e2e.sh"
 PANEL_PROJECT = SETUP / "src" / "ApexSetup.Dashboard" / "ApexSetup.Dashboard.csproj"
 
 _PANEL_METRICS: dict[str, str] = {
@@ -598,7 +604,7 @@ def installer_measure() -> tuple[dict[str, float], dict[str, str], list[str], fl
         done = subprocess.run(
             [
                 "bash",
-                str(SETUP / "packaging" / "wine_installer_e2e.sh"),
+                str(WINE_E2E),
                 str(installer),
                 str(work / "wine"),
             ],
@@ -621,7 +627,7 @@ class DesktopDistributionAdapter:
     spec = SPEC
 
     def benchmark_fingerprint(self) -> str:
-        parts = [inspect_source(f) for f in (SETUP / "packaging" / "wine_installer_e2e.sh", Path(__file__))]
+        parts = [inspect_source(f) for f in (WINE_E2E, Path(__file__))]
         return "desktop=" + hashlib.sha256("".join(parts).encode()).hexdigest()[:16]
 
     def measure(self, version: str) -> BenchmarkSnapshot:

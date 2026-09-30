@@ -41,3 +41,15 @@ def test_installer_policy_probe_reads_script_lines_not_comments(tmp_path, monkey
 def test_static_probes_do_not_refute_the_current_tree() -> None:
     assert dd._probe_no_shell_in_wsl_commands().refuted is False
     assert dd._probe_installer_policy().refuted is False
+
+
+def test_benchmark_fingerprint_ignores_the_measured_tree(tmp_path, monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    """Régression cycle 1 : mesurer une autre révision (sans le script E2E Wine) ne doit pas changer
+    l'empreinte de définition — sinon toute comparaison avant/après est INCONCLUSIVE."""
+    before = dd.DesktopDistributionAdapter().benchmark_fingerprint()
+    monkeypatch.setenv("APEX_CI_DESKTOP_REPO", str(tmp_path))
+    monkeypatch.setattr(dd, "REPO", tmp_path)
+    monkeypatch.setattr(dd, "SETUP", tmp_path / "setup")
+    assert dd._repo_root() == tmp_path
+    assert dd.WINE_E2E.exists()
+    assert dd.DesktopDistributionAdapter().benchmark_fingerprint() == before
