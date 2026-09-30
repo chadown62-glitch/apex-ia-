@@ -139,3 +139,73 @@ jobs:
         with:
           name: wsl-backend-logs
           path: ${{ runner.temp }}/launch.log*
+
+  # Installateurs construits SUR Windows (Inno Setup 6.4.3 figé, natif), puis script de validation
+  # setup/packaging/windows/Test-ApexWindows.ps1 exécuté par Windows PowerShell 5.1 — le même script que
+  # sur le PC de l'utilisateur — contre un vrai WSL2 et le vrai launch.sh. Windows Server hébergé :
+  # pas Windows 10/11 client, pas de redémarrage (phases PreReboot/PostReboot non exécutées ici).
+  real-windows:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      DISTRO: Ubuntu-24.04
+    steps:
+      - name: No CRLF conversion (bash scripts run inside WSL)
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Static check of the validation script for Windows PowerShell 5.1
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion.ToString()
+          Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
+          Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
+          $settings = @{ Rules = @{ PSUseCompatibleSyntax = @{ Enable = $true; TargetVersions = @('5.1') } } }
+          $issues = Invoke-ScriptAnalyzer -Path setup/packaging/windows/Test-ApexWindows.ps1 -Settings $settings -Severity Error
+          $issues | Format-Table Line, RuleName, Message -Wrap -AutoSize | Out-String -Width 200
+          if ($issues) { exit 1 }
+      - name: Build the installers on Windows (current and previous release)
+        shell: bash
+        run: |
+          command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }
+          ISCC=$(bash setup/packaging/fetch_innosetup.sh "$RUNNER_TEMP/toolchain" | tail -1)
+          ISCC="$ISCC" bash setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/release"
+          # Version précédente (0.2.1, commit 4a37092) pour le test de mise à jour : son code, avec le
+          # script de build actuel (celui de 4a37092 ne gérait pas encore les chemins Windows natifs).
+          git worktree add "$RUNNER_TEMP/prev" 4a37092
+          cp setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/prev/setup/packaging/build_desktop_release.sh"
+          ISCC="$ISCC" bash "$RUNNER_TEMP/prev/setup/packaging/build_desktop_release.sh" "$RUNNER_TEMP/release-prev"
+          cat "$RUNNER_TEMP/release/manifest.json"
+      - name: Real WSL2 distribution, prepared like a user's machine
+        shell: pwsh
+        run: |
+          wsl.exe --install -d $env:DISTRO --no-launch --web-download
+          wsl.exe --set-default $env:DISTRO
+          $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
+          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/prepare_wsl_backend.sh" $src apex
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          wsl.exe --terminate $env:DISTRO
+      - name: Validation script (Windows PowerShell 5.1, real WSL2, real launch.sh)
+        shell: powershell
+        run: |
+          $new = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
+          $old = Get-ChildItem "$env:RUNNER_TEMP\release-prev" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
+          & setup/packaging/windows/Test-ApexWindows.ps1 -Installer $new.FullName -OlderInstaller $old.FullName `
+            -AllowBackendControl -AllowWslShutdown -Repeat 1 -Label 'ci-windows-server-hosted' `
+            -OutDir "$env:RUNNER_TEMP\validation"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-windows-validation
+          path: |
+            ${{ runner.temp }}/validation.zip
+            ${{ runner.temp }}/release/*.exe
+            ${{ runner.temp }}/release/*.sha256
+            ${{ runner.temp }}/release/manifest.json
+            ${{ runner.temp }}/release/build.log
+            ${{ runner.temp }}/release-prev/*.exe
+            ${{ runner.temp }}/release-prev/manifest.json

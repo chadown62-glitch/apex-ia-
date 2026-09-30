@@ -23,7 +23,7 @@
 ;               dans WSL (dépôt APEX, .apex/, jeton, volumes Docker, cerveau) — jamais touché.
 ;
 ; Compilation : ISCC.exe (Inno Setup 6.4.3). Sous Linux, via Wine (voir build_desktop_release.sh).
-;   ISCC /DApexVersion=0.2.1 /DPublishDir=<dossier publié> /DIconFile=<apex.ico> /O<sortie> ApexSetup.iss
+;   ISCC /DApexVersion=0.2.2 /DPublishDir=<dossier publié> /DIconFile=<apex.ico> /O<sortie> ApexSetup.iss
 
 #ifndef ApexVersion
   #error ApexVersion doit être fourni (/DApexVersion=x.y.z) — jamais une version implicite.

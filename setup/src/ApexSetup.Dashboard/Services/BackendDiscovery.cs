@@ -79,6 +79,11 @@ public static class BackendDiscovery
             {
                 return Invalid("chemins de l'enregistrement refusés");
             }
+            if (!IsLocalListenAddress(record.Host))
+            {
+                // Le jeton accompagne chaque requête : jamais vers une autre machine, quoi que dise le fichier.
+                return Invalid($"hôte non local refusé (« {record.Host} ») : le Panel n'interroge que cette machine");
+            }
             return new DiscoveryRead(DiscoveryKind.Found, record, $"backend enregistré (pid {record.Pid}, port {record.Port})");
         }
         catch (Exception ex) when (ex is JsonException or FormatException or InvalidOperationException or KeyNotFoundException)
@@ -91,7 +96,12 @@ public static class BackendDiscovery
 
     /// <summary>Adresse à interroger depuis le Panel : une écoute sur toutes les interfaces ou sur la boucle locale se joint par 127.0.0.1 (redirection localhost de WSL2).</summary>
     public static string ReachableHost(string? host) =>
-        host is null or "" or "0.0.0.0" or "127.0.0.1" or "localhost" or "::" ? "127.0.0.1" : host;
+        host is null or "" or "0.0.0.0" or "127.0.0.1" or "localhost" or "::" or "::1" ? "127.0.0.1" : host;
+
+    /// <summary>Adresses d'écoute locales : toutes interfaces, boucle locale IPv4 (127.0.0.0/8) ou IPv6.</summary>
+    public static bool IsLocalListenAddress(string host) =>
+        host is "0.0.0.0" or "::" or "::1" or "localhost"
+        || (System.Net.IPAddress.TryParse(host, out var address) && System.Net.IPAddress.IsLoopback(address));
 
     private static DiscoveryRead Invalid(string detail) => new(DiscoveryKind.Invalid, null, $"enregistrement de découverte invalide : {detail}");
 

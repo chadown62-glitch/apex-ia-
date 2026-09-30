@@ -41,6 +41,13 @@ log "dates des fichiers publiés ramenées à SOURCE_DATE_EPOCH=$SOURCE_DATE_EPO
 # 2. Compilateur
 if [[ -n "${ISCC:-}" ]]; then
   ISCC_CMD=("$ISCC"); to_win() { printf '%s' "$1"; }
+  if command -v cygpath >/dev/null 2>&1; then
+    # Windows (Git Bash) : chemins Windows pour ISCC.exe, et aucune conversion automatique MSYS des
+    # arguments « /Qp », « /DPublishDir=… » (constaté sur le runner Windows : sans cela, les chemins
+    # /d/a/… arrivaient tels quels à ISCC).
+    to_win() { cygpath -w "$1"; }
+    export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
+  fi
   COMPILER="ISCC fourni ($ISCC)"
 else
   TOOLS="$SETUP_ROOT/dist/toolchain"
