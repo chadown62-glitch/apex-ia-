@@ -178,3 +178,33 @@ public class SingleInstanceGuardTests
         Assert.NotNull(third);
     }
 }
+
+/// <summary>Sortie de <c>--diagnostic</c> / <c>--status-json</c> redirigée vers un fichier ou un tube.</summary>
+public class HeadlessOutputTests
+{
+    private const string Text = "Mesuré le : 30/09 — Paramètres « é à ç »";
+
+    [Fact]
+    public void Redirected_output_is_UTF8_without_BOM_whatever_the_console_code_page()
+    {
+        var stream = new MemoryStream();
+        var console = new StringWriter();
+
+        Program.Emit(Text, redirected: true, () => stream, console);
+
+        var bytes = stream.ToArray();
+        Assert.Equal(new System.Text.UTF8Encoding(false).GetBytes(Text + Environment.NewLine), bytes);
+        Assert.False(bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF);
+        Assert.Equal("", console.ToString()); // jamais via la console (page de codes OEM sous Windows)
+    }
+
+    [Fact]
+    public void Interactive_console_output_goes_through_the_console_writer()
+    {
+        var console = new StringWriter();
+
+        Program.Emit(Text, redirected: false, () => throw new InvalidOperationException("non utilisé"), console);
+
+        Assert.Equal(Text + Environment.NewLine, console.ToString());
+    }
+}

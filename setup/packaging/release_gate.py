@@ -5,6 +5,7 @@ Exécute RÉELLEMENT chaque vérification (jamais une case cochée sur déclarat
 
   build          setup/packaging/build_desktop_release.sh (+ reconstruction : même SHA256 ?)
   installateur   setup/packaging/wine_installer_e2e.sh (WINE E2E, avec mise à jour si fournie)
+  robustesse     setup/packaging/wine_robustness_e2e.sh (fin de parcours sur l'artefact, WINE E2E)
   Panel          Gauntlet : dernier snapshot mesuré par le moteur + juge adversarial (sondes)
   régression     dotnet test setup/ApexSetup.sln ; pytest des modules du Panel et du backend
   Gauntlet       verdicts des cycles consignés au ledger (aucun REGRESSED, aucun FAILED)
@@ -34,6 +35,7 @@ SETUP = REPO / "setup"
 LEDGER = REPO / "docs" / "improvement" / "desktop_distribution.ledger.jsonl"
 
 PASS, FAIL, BLOCKED = "PASS", "FAIL", "BLOCKED"
+ROBUSTNESS_STEPS = 10
 #: Code du PRODUIT livré (le banc `apex/improvement` et la documentation n'en font pas partie).
 PRODUCT_PATHS = (
     "setup/src",
@@ -155,6 +157,23 @@ def main() -> int:
     if args.older_installer:
         wine("mise à jour validée", "W14_mise_a_jour")
 
+    # Séquence de fin de parcours sur l'artefact : redémarrage de session Wine (pas Windows), double-clic,
+    # diagnostic redirigé (UTF-8, sans secret), fermeture, réouverture, désinstallation, réinstallation.
+    robust = run(
+        [
+            "bash",
+            str(SETUP / "packaging" / "wine_robustness_e2e.sh"),
+            str(installer),
+            str(out / "robustness"),
+        ]
+    )
+    steps = [line[5:] for line in robust.stdout.splitlines() if line.startswith("STEP ")]
+    add(
+        "séquence de robustesse (WINE E2E)",
+        robust.returncode == 0 and len(steps) == ROBUSTNESS_STEPS and all(" PASS " in s for s in steps),
+        " ; ".join(steps) or (robust.stdout + robust.stderr)[-300:],
+    )
+
     # -- Panel : dernier snapshot du Gauntlet + juge adversarial ---------------------------------
     latest = latest_snapshot()
     means = {m: sum(v) / len(v) for m, v in (latest or {}).get("samples", {}).items() if v}
@@ -237,10 +256,17 @@ def main() -> int:
         ],
         timeout=3600,
     )
+    # La configuration pytest du dépôt n'imprime pas de ligne de totaux : on compte la progression.
+    progress = "".join(
+        line.split(" [")[0]
+        for line in pytest.stdout.splitlines()
+        if re.fullmatch(r"[.FEsxX]+ *\[ *\d+%\]", line)
+    )
     add(
         "regression suite validée (Python)",
         pytest.returncode == 0,
-        (pytest.stdout.strip().splitlines() or ["?"])[-1],
+        f"code {pytest.returncode} : {progress.count('.')} réussis, {progress.count('F')} échecs, "
+        f"{progress.count('E')} erreurs, {progress.count('s')} ignorés",
     )
 
     # -- Gauntlet ---------------------------------------------------------------------------------

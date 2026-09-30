@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ApexSetup.Dashboard.Models;
@@ -59,9 +60,28 @@ public static class Program
         var output = diagnosticText
             ? DiagnosticReport.Build(snapshot, composition.DiagnosticContext(loaded.Problem), composition.Redactor)
             : composition.Redactor.Redact(JsonSerializer.Serialize(snapshot, JsonOutput));
-        Console.Out.WriteLine(output);
-        Console.Out.Flush();
+        Emit(output, Console.IsOutputRedirected, Console.OpenStandardOutput, Console.Out);
         return ExitCode(snapshot.Verdict);
+    }
+
+    /// <summary>
+    /// Sortie redirigée (fichier, tube — <c>APEX.exe --diagnostic &gt; diagnostic.txt</c>) : UTF-8 sans BOM,
+    /// quelle que soit la page de codes de la console. Constaté sous Wine (séquence de robustesse) : via
+    /// <see cref="Console.Out"/>, les accents du diagnostic sortaient dans la page de codes OEM, illisibles
+    /// dans un fichier UTF-8. Console interactive : inchangée (Unicode natif), et la page de codes de la
+    /// console parente n'est jamais modifiée.
+    /// </summary>
+    internal static void Emit(string text, bool redirected, Func<Stream> openStandardOutput, TextWriter console)
+    {
+        if (!redirected)
+        {
+            console.WriteLine(text);
+            console.Flush();
+            return;
+        }
+        using var writer = new StreamWriter(openStandardOutput(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        writer.WriteLine(text);
+        writer.Flush();
     }
 
     private static readonly JsonSerializerOptions JsonOutput = new()
