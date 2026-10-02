@@ -138,6 +138,16 @@ jobs:
           & setup/packaging/windows/Test-ApexWindows.ps1 -Installer $new.FullName -OlderInstaller $old.FullName `
             -AllowBackendControl -AllowWslShutdown -Repeat 1 -Label 'ci-windows-server-hosted' `
             -OutDir "$env:RUNNER_TEMP\validation"
+      # Contrat de démarrage (5736ec9) prouvé sur le vrai WSL2 par le vrai launch.sh, sans aucune dérogation :
+      # décision et codes de sortie imprimés dans CE journal (le journal de launch.sh de l'étape précédente
+      # n'est lisible que dans l'artefact). Les cas d'échec sont des fautes réelles injectées dans des copies.
+      - name: Startup-gate contract on the real WSL2 launcher (evidence, no gate exception)
+        if: always()
+        shell: pwsh
+        run: |
+          $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
+          wsl.exe -d $env:DISTRO --cd /home/apex --exec bash "$src/setup/packaging/windows/ci/startup_contract_evidence.sh" /home/apex/apex
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: MinIO optional profile (Gate M) — build from official sources, start with the profile, healthcheck, stop
         if: always()
         shell: pwsh
