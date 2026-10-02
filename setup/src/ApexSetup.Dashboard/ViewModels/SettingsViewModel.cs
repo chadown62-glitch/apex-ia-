@@ -14,14 +14,18 @@ public sealed class SettingsViewModel : ObservableObject
 {
     private readonly ISettingsStore _settingsStore;
     private readonly DashboardSettings _initial;
+    private readonly Func<DashboardSettings>? _current;
     private string _wslDistro;
+    private string _projectRoot;
     private string? _message;
 
-    public SettingsViewModel(ISettingsStore settingsStore, DashboardSettings initial)
+    public SettingsViewModel(ISettingsStore settingsStore, DashboardSettings initial, Func<DashboardSettings>? current = null)
     {
         _settingsStore = settingsStore;
         _initial = initial;
+        _current = current;
         _wslDistro = initial.WslDistro ?? string.Empty;
+        _projectRoot = initial.ProjectRoot ?? string.Empty;
         SaveCommand = new AsyncRelayCommand(SaveAsync);
         CloseCommand = new RelayCommand(() => CloseRequested?.Invoke(this, EventArgs.Empty));
         SaveCommand.Faulted += (_, ex) => Message = $"Enregistrement impossible : {ex.Message}";
@@ -31,6 +35,13 @@ public sealed class SettingsViewModel : ObservableObject
     {
         get => _wslDistro;
         set => SetProperty(ref _wslDistro, value);
+    }
+
+    /// <summary>Dossier APEX pour « Démarrer APEX » (vide = dernier dossier vérifié, sinon ~/apex).</summary>
+    public string ProjectRoot
+    {
+        get => _projectRoot;
+        set => SetProperty(ref _projectRoot, value);
     }
 
     public string? Message
@@ -46,7 +57,11 @@ public sealed class SettingsViewModel : ObservableObject
     public event EventHandler? CloseRequested;
 
     public DashboardSettings ToSettings() =>
-        _initial with { WslDistro = string.IsNullOrWhiteSpace(WslDistro) ? null : WslDistro.Trim() };
+        (_current?.Invoke() ?? _initial) with
+        {
+            WslDistro = string.IsNullOrWhiteSpace(WslDistro) ? null : WslDistro.Trim(),
+            ProjectRoot = string.IsNullOrWhiteSpace(ProjectRoot) ? null : ProjectRoot.Trim(),
+        };
 
     private async Task SaveAsync(CancellationToken cancellationToken)
     {
@@ -54,6 +69,11 @@ public sealed class SettingsViewModel : ObservableObject
         if (distro.Length > 64 || distro.Any(c => char.IsControl(c) || c is '"' or '\\' or '/'))
         {
             Message = "Nom de distribution invalide.";
+            return;
+        }
+        if (!string.IsNullOrWhiteSpace(ProjectRoot) && BackendLauncher.ScriptPath(ProjectRoot) is null)
+        {
+            Message = "Dossier APEX invalide : chemin absolu (/home/moi/apex) ou relatif au dossier personnel (apex), sans « .. ».";
             return;
         }
         var settings = ToSettings();

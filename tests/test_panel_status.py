@@ -175,13 +175,16 @@ def test_status_requires_the_token_and_reports_versions_and_states(monkeypatch: 
     assert wrong.status_code == 401 and TEST_API_TOKEN not in wrong.text
 
     monkeypatch.setattr(cc, "CHECKS", {"redis": lambda: cc.check_redis(("127.0.0.1", _free_port()))})
+    monkeypatch.setenv("APEX_UI_DIST", "/nonexistent/apex-ui-dist")  # interface non construite ici
     body = authed_client().get("/api/v1/status").json()
     data = body["data"]
     assert body["status"] == "real" and data["service"] == "apex"
     assert data["versions"] == {"apex": __version__, "api": "v1", "panel_protocol": PANEL_PROTOCOL}
     states = {c["component"]: c["state"] for c in data["components"]}
-    assert states == {"api": cc.READY, "redis": cc.OFFLINE}
+    assert states == {"api": cc.READY, "redis": cc.OFFLINE, "ui": cc.OFFLINE}
     assert all(c["state"] in STATES for c in data["components"])
+    # Verdict partagé Panel / interface web : un seul composant non prêt -> DEGRADED, et lesquels.
+    assert data["overall"] == {"verdict": "degraded", "not_ready": ["redis", "ui"]}
 
 
 def test_discovery_record_has_no_secret_and_is_removed_only_by_its_owner(
@@ -265,9 +268,11 @@ def test_serving_keeps_the_start_time_of_its_own_starting_announcement(
         discovery.record("127.0.0.1", 8000, tmp_path, phase="autre")
 
 
-def test_a_gate_refusal_withdraws_the_starting_announcement(
+def test_a_gate_refusal_turns_the_starting_announcement_into_its_reason(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """`apex serve` refusé par le Startup Gate : le Panel doit lire POURQUOI (contrôles cités), pas
+    seulement « non démarré » ; aucun écoute, code 1 inchangé."""
     import types
 
     from apex.cli.main import main
@@ -277,12 +282,20 @@ def test_a_gate_refusal_withdraws_the_starting_announcement(
     discovery.write_discovery(
         "127.0.0.1", 8000, tmp_path, phase="starting"
     )  # annonce de launch.sh (même pid)
-    refused = types.SimpleNamespace(phase_2_authorized=False, startup_authorized=False, startup_blocking=(),
-                                    startup_unverified_blocking=(), probe_is_real=True, write=lambda _path: None)
+    started_at = json.loads(discovery.discovery_path().read_text(encoding="utf-8"))["started_at"]
+    refused = types.SimpleNamespace(
+        phase_2_authorized=False, startup_authorized=False,
+        startup_blocking=(types.SimpleNamespace(check_id="GATE-21"),),
+        startup_unverified_blocking=(types.SimpleNamespace(check_id="GATE-03"),),
+        probe_is_real=True, write=lambda _path: None)
     monkeypatch.setattr("apex.gate.runner.run_gate", lambda **_k: refused)
 
     assert main(["serve"]) == 1
-    assert not discovery.discovery_path().exists()
+    record = json.loads(discovery.discovery_path().read_text(encoding="utf-8"))
+    assert record["phase"] == "refused" and record["pid"] == os.getpid() and record["started_at"] == started_at
+    assert record["refusal"]["exit_code"] == 5 and record["refusal"]["stage"] == "gate"
+    assert record["refusal"]["blocking"] == ["GATE-21"]
+    assert record["refusal"]["unverified_blocking"] == ["GATE-03"]
 
 
 _SERVER = """

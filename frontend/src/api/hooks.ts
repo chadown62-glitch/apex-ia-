@@ -33,6 +33,7 @@ import {
   getEvents,
   getGate,
   getHealth,
+  getSystemStatus,
   getLearningHistory,
   getLearningStatus,
   getMission,
@@ -87,6 +88,11 @@ const REFRESH_MS = 10_000;
 
 export function useHealth() {
   return usePolling(["health"], getHealth, REFRESH_MS);
+}
+
+/** Verdict partagé avec le Panel — même cadence que lui (5 s). */
+export function useSystemStatus() {
+  return usePolling(["system-status"], getSystemStatus, 5_000);
 }
 
 export function useGate() {

@@ -35,6 +35,7 @@ public sealed class VerdictToBrushConverter : IValueConverter
         PanelVerdict.Degraded => Brushes.Orange,
         PanelVerdict.VersionMismatch => Brushes.MediumOrchid,
         PanelVerdict.NotReady => Brushes.Crimson,
+        PanelVerdict.Blocked => Brushes.Crimson,
         _ => Brushes.Gray,
     };
 

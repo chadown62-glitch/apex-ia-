@@ -27,6 +27,14 @@ public sealed record BackendComponent(string Name, string State, string Detail);
 public sealed record StatusPayload(
     string ApexVersion, string ApiVersion, int PanelProtocol, int? Pid, IReadOnlyList<BackendComponent> Components);
 
+/// <summary>Résultat de « Ouvrir APEX » : l'adresse à usage unique, ou pourquoi elle n'existe pas.</summary>
+public sealed record UiLaunch(bool Ok, string? Url, bool UiAvailable, string Detail)
+{
+    public static UiLaunch Failed(string detail) => new(false, null, false, detail);
+
+    public override string ToString() => Ok ? $"UiLaunch(ok, interface {(UiAvailable ? "construite" : "non construite")})" : $"UiLaunch({Detail})";
+}
+
 public sealed record StatusFetch(FetchOutcome Outcome, StatusPayload? Payload, int? HttpStatus, string Detail)
 {
     public static StatusFetch NotAttempted(string detail) => new(FetchOutcome.NotAttempted, null, null, detail);
@@ -67,6 +75,52 @@ public sealed class StatusClient(HttpClient httpClient)
                 return new StatusFetch(FetchOutcome.HttpError, null, status, $"l'API répond HTTP {status}");
             default:
                 return new StatusFetch(outcome, null, status, detail);
+        }
+    }
+
+    /// <summary>
+    /// « Ouvrir APEX » : demande au backend un code d'ouverture À USAGE UNIQUE (jeton exigé) et rend
+    /// l'adresse à ouvrir dans le navigateur — construite ici (boucle locale, port vérifié), jamais
+    /// reprise telle quelle de la réponse. Le jeton n'apparaît jamais dans l'adresse.
+    /// </summary>
+    public async Task<UiLaunch> CreateLaunchCodeAsync(string host, int port, string token, CancellationToken cancellationToken = default)
+    {
+        var baseUrl = $"http://{(host.Contains(':') ? $"[{host}]" : host)}:{port}";
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{baseUrl}/api/v1/ui/launch-code");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(DefaultTimeout);
+        try
+        {
+            using var response = await httpClient.SendAsync(request, cts.Token).ConfigureAwait(false);
+            if ((int)response.StatusCode == 404)
+            {
+                return UiLaunch.Failed("ce backend APEX ne sert pas encore l'interface web (version antérieure) : mettez à jour le dépôt APEX");
+            }
+            if (!response.IsSuccessStatusCode)
+            {
+                return UiLaunch.Failed($"l'API a répondu HTTP {(int)response.StatusCode}");
+            }
+            using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false));
+            var data = doc.RootElement.GetProperty("data");
+            var path = data.GetProperty("login_path").GetString() ?? string.Empty;
+            const string prefix = "/ui/login?code=";
+            var code = path.StartsWith(prefix, StringComparison.Ordinal) ? path[prefix.Length..] : string.Empty;
+            if (code.Length is < 20 or > 200 || !code.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+            {
+                return UiLaunch.Failed("réponse inattendue de l'API (code d'ouverture invalide)");
+            }
+            var available = data.TryGetProperty("ui_available", out var a) && a.ValueKind == JsonValueKind.True;
+            var detail = data.TryGetProperty("ui_detail", out var d) && d.ValueKind == JsonValueKind.String ? d.GetString() ?? "" : "";
+            return new UiLaunch(true, $"{baseUrl}{prefix}{code}", available, detail);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return UiLaunch.Failed("l'API n'a pas répondu à temps");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            return UiLaunch.Failed($"demande impossible ({ex.GetType().Name})");
         }
     }
 

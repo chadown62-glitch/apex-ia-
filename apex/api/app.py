@@ -104,6 +104,7 @@ from apex.api.routes import (
     scheduler,
     status,
 )
+from apex.api import ui
 from apex.version import __version__
 
 API_PREFIX = "/api/v1"
@@ -218,9 +219,13 @@ def create_app() -> FastAPI:
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, learning.router, population.router,
         learning_sessions.router, gauntlets.router, learning_feedback.router, capability.router,
-        brain.router, status.router,
+        brain.router, status.router, ui.api_router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
+
+    # Interface web (build de `frontend/`) : pages sans données, servies sans jeton ; inclus EN
+    # DERNIER — sa route attrape-tout ne doit jamais masquer une route d'API (voir apex.api.ui).
+    app.include_router(ui.page_router)
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

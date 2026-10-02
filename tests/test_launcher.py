@@ -38,6 +38,7 @@ _COREUTILS = (
     "mkdir", "mv", "rm", "date",  # requis par le launcher pour l'état d'ownership compose (commit 4)
     "sleep", "touch",  # requis par le faux `docker` (test SIGINT, marqueur d'état) — jamais par le launcher
     "tr", "head", "kill",  # requis par find_docker_proxy_pid_for_port/reconcile_stale_ports (N+23)
+    "flock",  # verrou « un seul démarrage à la fois » de serve/panel-serve
 )
 
 
@@ -98,6 +99,10 @@ class LauncherFixture:
             'if [[ "$1 $2 $3" == "-m apex.cli.main gate" ]]; then\n'
             f'  echo "{gate_output}"\n'
             f"  exit {gate_exit}\n"
+            "fi\n"
+            # Enregistrement de découverte (annonce au Panel, arrêt du backend) : rien d'enregistré ici.
+            'if [[ "$1 $2" == "-m apex.discovery" ]]; then\n'
+            "  exit 0\n"
             "fi\n"
             'echo "unexpected fake python invocation: $*" >&2\n'
             "exit 99\n"

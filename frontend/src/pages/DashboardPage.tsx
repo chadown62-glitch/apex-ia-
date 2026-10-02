@@ -17,6 +17,7 @@ import { ErrorState, LoadingState } from "../components/common/EmptyState";
 import { Panel } from "../components/common/Panel";
 import { StatCard } from "../components/common/StatCard";
 import { EventTimeline } from "../components/events/EventTimeline";
+import { SystemStatusTable, SystemVerdictBadge, useSystemVerdict } from "../components/status/SystemVerdict";
 import { Tabs } from "../components/ui/Tabs";
 import "./pages.css";
 
@@ -36,6 +37,7 @@ const HARDWARE_CHECK_IDS = new Set([
  * désormais dans la TopBar (toujours visible) — jamais dupliqué ici.
  */
 export function DashboardPage() {
+  const verdict = useSystemVerdict();
   const health = useHealth();
   const gate = useGate();
   const registry = useRegistry();
@@ -48,6 +50,8 @@ export function DashboardPage() {
   const providers = useProviders();
 
   const registryData = registry.data?.data;
+  // Sonde réelle de la base (GET /status, même mesure que le Panel) — jamais déduite d'une autre route.
+  const databaseComponent = verdict.status?.components.find((c) => c.component === "database") ?? null;
   const agentsData = agents.data?.data;
   const missionsData = missions.data?.status === "real" ? missions.data.data ?? [] : [];
   const conversationsData = conversations.data?.status === "real" ? conversations.data.data ?? [] : [];
@@ -67,6 +71,21 @@ export function DashboardPage() {
         </div>
       </div>
 
+      <section aria-labelledby="dashboard-apex-state">
+        <h2 id="dashboard-apex-state" className="section-label">
+          État d'APEX
+        </h2>
+        <Panel action={<SystemVerdictBadge view={verdict.view} />}>
+          {verdict.status ? (
+            <SystemStatusTable status={verdict.status} />
+          ) : verdict.view.kind === "loading" ? (
+            <LoadingState />
+          ) : (
+            <ErrorState detail={verdict.view.detail} />
+          )}
+        </Panel>
+      </section>
+
       <section aria-labelledby="dashboard-system-status">
         <h2 id="dashboard-system-status" className="section-label">
           System status
@@ -85,9 +104,9 @@ export function DashboardPage() {
           />
           <StatCard
             label="Base de données"
-            value={registry.data?.status === "real" ? "CONNECTÉE" : "—"}
-            status={registry.data?.status ?? "unknown"}
-            hint="dérivé de la disponibilité du registre — aucune sonde dédiée"
+            value={databaseComponent ? databaseComponent.state.toUpperCase() : "—"}
+            status={databaseComponent ? "real" : "unknown"}
+            hint={databaseComponent?.detail ?? "non mesurée (GET /status indisponible)"}
           />
           <StatCard
             label="Abstractions"

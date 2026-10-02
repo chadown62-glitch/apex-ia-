@@ -11,6 +11,7 @@ public enum ComponentKey
     Ollama,
     Sandbox,
     Brain,
+    Ui,
 }
 
 public static class ComponentKeys
@@ -23,6 +24,7 @@ public static class ComponentKeys
         (ComponentKey.Ollama, "ollama"),
         (ComponentKey.Sandbox, "sandbox"),
         (ComponentKey.Brain, "brain"),
+        (ComponentKey.Ui, "ui"),
     ];
 
     public static string Label(ComponentKey key) => key switch
@@ -35,6 +37,7 @@ public static class ComponentKeys
         ComponentKey.Ollama => "Ollama",
         ComponentKey.Sandbox => "Sandbox",
         ComponentKey.Brain => "Brain",
+        ComponentKey.Ui => "Interface",
         _ => key.ToString(),
     };
 }

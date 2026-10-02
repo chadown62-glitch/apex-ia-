@@ -12,10 +12,12 @@ public interface IClipboardService
 }
 
 /// <summary>
-/// Racine du Panel. Observateur : il mesure (<see cref="PanelStatusService"/>) et affiche ; il ne
-/// démarre ni WSL ni le backend. Mesure au démarrage puis toutes les <see cref="RefreshInterval"/>
-/// secondes (un backend démarré ou arrêté après l'ouverture du Panel est vu sans action), jamais
-/// deux mesures en même temps. Chaque changement d'état est journalisé.
+/// Racine du Panel. Il mesure (<see cref="PanelStatusService"/>) et affiche ; il AGIT seulement sur un
+/// geste de l'utilisateur : « Démarrer APEX » / « Arrêter APEX » exécutent le launcher officiel
+/// (<see cref="BackendLauncher"/> : launch.sh, Startup Gate compris, jamais contourné), « Ouvrir APEX »
+/// ouvre l'interface web avec un lien à usage unique. Rien n'est jamais démarré automatiquement.
+/// Mesure au démarrage puis toutes les <see cref="RefreshInterval"/> secondes, jamais deux mesures en
+/// même temps. Chaque changement d'état et chaque action est journalisé.
 /// </summary>
 public sealed class MainWindowViewModel : ObservableObject
 {
@@ -28,6 +30,11 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly Func<string?, DiagnosticContext> _diagnosticContext;
     private readonly Action<Action> _ui;
     private readonly SemaphoreSlim _measuring = new(1, 1);
+    private readonly PanelControl? _control;
+    private LaunchAttempt? _launch;
+    private bool _stopping;
+    private string? _actionMessage;
+    private string _overlayTitle = "Diagnostic";
 
     private DashboardSettings _settings = new();
     private string? _settingsProblem;
@@ -48,8 +55,10 @@ public sealed class MainWindowViewModel : ObservableObject
         ILogSink log,
         Redactor redactor,
         Func<string?, DiagnosticContext> diagnosticContext,
-        Action<Action>? uiDispatcher = null)
+        Action<Action>? uiDispatcher = null,
+        PanelControl? control = null)
     {
+        _control = control;
         _settingsStore = settingsStore;
         _statusService = statusService;
         _log = log;
@@ -63,8 +72,13 @@ public sealed class MainWindowViewModel : ObservableObject
         };
 
         RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync());
+        StartCommand = new AsyncRelayCommand(_ => StartAsync(), () => CanStart);
+        StopCommand = new AsyncRelayCommand(_ => StopAsync(), () => CanStop);
+        OpenUiCommand = new AsyncRelayCommand(_ => OpenUiAsync(), () => CanOpen);
+        ShowLaunchLogCommand = new AsyncRelayCommand(_ => ShowLaunchLogAsync());
         ShowDiagnosticCommand = new RelayCommand(() =>
         {
+            OverlayTitle = "Diagnostic";
             DiagnosticText = BuildDiagnostic();
             CopyMessage = null;
             IsDiagnosticVisible = true;
@@ -73,7 +87,7 @@ public sealed class MainWindowViewModel : ObservableObject
         CopyDiagnosticCommand = new AsyncRelayCommand(_ => CopyDiagnosticAsync());
         OpenSettingsCommand = new RelayCommand(() => IsSettingsVisible = true);
         CloseSettingsCommand = new RelayCommand(() => IsSettingsVisible = false);
-        foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand })
+        foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand, StartCommand, StopCommand, OpenUiCommand, ShowLaunchLogCommand })
         {
             command.Faulted += (_, ex) => _log.Log($"Erreur inattendue : {ex.Message}");
         }
@@ -147,12 +161,54 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public string PanelVersion => $"Panel {PanelInfo.Version}";
 
+    /// <summary>Résultat de la dernière action (démarrer, arrêter, ouvrir), en clair ; <c>null</c> si aucune.</summary>
+    public string? ActionMessage
+    {
+        get => _actionMessage;
+        private set => SetProperty(ref _actionMessage, value);
+    }
+
+    public string OverlayTitle
+    {
+        get => _overlayTitle;
+        private set => SetProperty(ref _overlayTitle, value);
+    }
+
+    /// <summary>Le démarrage demandé par ce Panel, s'il y en a un (exposé pour les tests et le diagnostic).</summary>
+    public LaunchAttempt? Launch => _launch;
+
+    /// <summary>
+    /// « Démarrer APEX » : seulement quand APEX ne tourne pas (non démarré, arrêté, WSL arrêté, démarrage
+    /// refusé ou échoué — on relance après correction). Jamais pendant un démarrage ou un arrêt.
+    /// </summary>
+    public bool CanStart =>
+        _control is not null && !_stopping && _launch is not { Running: true } && _snapshot is { } s
+        && (s.Verdict == PanelVerdict.Blocked
+            || (s.Verdict == PanelVerdict.NotReady && s.Cause is NotReadyCause.BackendNotStarted or NotReadyCause.BackendStopped
+                or NotReadyCause.WslStopped or NotReadyCause.StartFailed or NotReadyCause.StartupRefused));
+
+    /// <summary>« Arrêter APEX » : dès qu'un backend existe (en marche, en démarrage, bloqué, muet) ou qu'un démarrage est en cours.</summary>
+    public bool CanStop =>
+        _control is not null && !_stopping
+        && (_launch is { Running: true }
+            || _snapshot is { Verdict: PanelVerdict.Ready or PanelVerdict.Degraded or PanelVerdict.VersionMismatch }
+            || _snapshot is { Cause: NotReadyCause.BackendStarting or NotReadyCause.BackendUnresponsive or NotReadyCause.ApiTimeout
+                or NotReadyCause.ApiError or NotReadyCause.TokenRejected or NotReadyCause.LocalhostUnreachable });
+
+    /// <summary>« Ouvrir APEX » : seulement si APEX a répondu avec son jeton à la dernière mesure.</summary>
+    public bool CanOpen => _control is not null && _statusService.LastAccess is not null
+        && _snapshot is { Verdict: PanelVerdict.Ready or PanelVerdict.Degraded };
+
     public AsyncRelayCommand RefreshCommand { get; }
     public RelayCommand ShowDiagnosticCommand { get; }
     public RelayCommand HideDiagnosticCommand { get; }
     public AsyncRelayCommand CopyDiagnosticCommand { get; }
     public RelayCommand OpenSettingsCommand { get; }
     public RelayCommand CloseSettingsCommand { get; }
+    public AsyncRelayCommand StartCommand { get; }
+    public AsyncRelayCommand StopCommand { get; }
+    public AsyncRelayCommand OpenUiCommand { get; }
+    public AsyncRelayCommand ShowLaunchLogCommand { get; }
 
     /// <summary>Chargement initial puis première mesure — appelé par la racine de composition (jamais dans le constructeur).</summary>
     public async Task InitializeAsync()
@@ -165,13 +221,13 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             _log.Log($"Paramètres : {_settingsProblem}");
         }
-        var settingsViewModel = new SettingsViewModel(_settingsStore, _settings);
+        var settingsViewModel = new SettingsViewModel(_settingsStore, _settings, () => _settings);
         settingsViewModel.Saved += (_, saved) =>
         {
             _settings = saved;
             _settingsProblem = null;
             IsSettingsVisible = false;
-            _log.Log($"Paramètres enregistrés (distribution WSL : {saved.WslDistro ?? "par défaut"}).");
+            _log.Log($"Paramètres enregistrés (distribution WSL : {saved.WslDistro ?? "par défaut"} ; dossier APEX : {saved.EffectiveProjectRoot().Path}).");
             _ = RefreshAsync();
         };
         settingsViewModel.CloseRequested += (_, _) => IsSettingsVisible = false;
@@ -206,7 +262,7 @@ public sealed class MainWindowViewModel : ObservableObject
             PanelSnapshot snapshot;
             try
             {
-                snapshot = await _statusService.MeasureAsync(_settings).ConfigureAwait(false);
+                snapshot = await _statusService.MeasureAsync(_settings, launch: _launch).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -239,13 +295,169 @@ public sealed class MainWindowViewModel : ObservableObject
                     DiagnosticText = BuildDiagnostic();
                 }
                 OnPropertyChanged(nameof(Snapshot));
+                RaiseActionsChanged();
             });
+            await RememberVerifiedProjectRootAsync().ConfigureAwait(false);
         }
         finally
         {
             _ui(() => IsChecking = false);
             _measuring.Release();
         }
+    }
+
+    // -- Actions (toujours sur un geste de l'utilisateur) ------------------------------------------------
+
+    private async Task StartAsync()
+    {
+        if (_control is null || !CanStart)
+        {
+            return;
+        }
+        var (root, source) = _settings.EffectiveProjectRoot();
+        var distro = string.IsNullOrWhiteSpace(_settings.WslDistro) ? null : _settings.WslDistro.Trim();
+        _log.Log($"Démarrage d'APEX demandé — dossier « {root} » ({source}) : launch.sh {BackendLauncher.StartCommand} "
+            + "(même préflight et même Startup Gate que dans un terminal ; journal : ~/" + BackendLauncher.LaunchLog + ").");
+        var (attempt, exited) = _control.Launcher.Start(distro, root, DateTimeOffset.Now);
+        _launch = attempt;
+        if (attempt.FailureReason is { } reason)
+        {
+            _log.Log($"Démarrage impossible : {reason}");
+        }
+        else
+        {
+            _ = WatchLaunchAsync(attempt, exited);
+        }
+        _ui(() => ActionMessage = attempt.Running ? "Démarrage demandé…" : $"Démarrage impossible : {attempt.FailureReason}");
+        RaiseActionsChangedOnUi();
+        await RefreshAsync().ConfigureAwait(false);
+    }
+
+    private async Task WatchLaunchAsync(LaunchAttempt attempt, Task<int> exited)
+    {
+        var code = await exited.ConfigureAwait(false);
+        if (!ReferenceEquals(_launch, attempt))
+        {
+            return; // arrêt demandé entre-temps, ou nouveau démarrage : ce résultat ne décrit plus rien
+        }
+        _launch = attempt with { ExitCode = code };
+        _log.Log($"launch.sh s'est terminé (code {code}).");
+        RaiseActionsChangedOnUi();
+        await RefreshAsync().ConfigureAwait(false);
+    }
+
+    private async Task StopAsync()
+    {
+        if (_control is null || !CanStop)
+        {
+            return;
+        }
+        _stopping = true;
+        _launch = null; // un arrêt volontaire n'est jamais affiché comme un échec du démarrage
+        RaiseActionsChangedOnUi();
+        _ui(() => ActionMessage = "Arrêt d'APEX en cours…");
+        try
+        {
+            var access = _statusService.LastAccess;
+            var root = access?.ProjectRoot ?? _settings.EffectiveProjectRoot().Path;
+            var distro = access?.Distro ?? (string.IsNullOrWhiteSpace(_settings.WslDistro) ? null : _settings.WslDistro.Trim());
+            _log.Log($"Arrêt d'APEX demandé — dossier « {root} » : launch.sh {BackendLauncher.StopCommand}.");
+            var result = await _control.Launcher.StopAsync(distro, root).ConfigureAwait(false);
+            foreach (var line in (result.Stderr + "\n" + result.Stdout).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).TakeLast(6))
+            {
+                _log.Log($"  {line}");
+            }
+            var message = !result.Started ? $"Arrêt impossible : {result.FailureReason}"
+                : result.TimedOut ? "Arrêt sans réponse dans le délai : voir le journal."
+                : result.ExitCode == 0 ? "APEX arrêté."
+                : result.ExitCode == 9 ? "Le backend APEX ne s'est pas arrêté : voir le journal."
+                : $"Arrêt terminé en erreur (code {result.ExitCode}) : voir le journal.";
+            _log.Log(message);
+            _ui(() => ActionMessage = message);
+        }
+        finally
+        {
+            _stopping = false;
+            RaiseActionsChangedOnUi();
+        }
+        await RefreshAsync().ConfigureAwait(false);
+    }
+
+    private async Task OpenUiAsync()
+    {
+        var access = _statusService.LastAccess;
+        if (_control is null || access is null)
+        {
+            return;
+        }
+        var launch = await _control.Client.CreateLaunchCodeAsync(access.Address, access.Port, access.Token).ConfigureAwait(false);
+        string message;
+        if (!launch.Ok || launch.Url is null)
+        {
+            message = $"Ouverture impossible : {launch.Detail}";
+        }
+        else if (_control.Browser.Open(launch.Url) is { } error)
+        {
+            message = $"Ouverture impossible : {error}";
+        }
+        else
+        {
+            message = launch.UiAvailable
+                ? "Interface APEX ouverte dans le navigateur (lien à usage unique)."
+                : $"Navigateur ouvert, mais l'interface n'est pas construite : {launch.Detail}";
+        }
+        _log.Log(message); // jamais l'adresse : elle porte le code d'ouverture
+        _ui(() => ActionMessage = message);
+    }
+
+    private async Task ShowLaunchLogAsync()
+    {
+        var read = await _statusService.ReadLaunchLogAsync(_settings).ConfigureAwait(false);
+        var text = read.Kind switch
+        {
+            FileReadKind.Ok => _redactor.Redact(string.Join('\n', (read.Content ?? "").Split('\n').TakeLast(200))),
+            FileReadKind.NotFound => "Aucun journal de démarrage : APEX n'a pas encore été démarré depuis le Panel (~/" + BackendLauncher.LaunchLog + ").",
+            _ => $"Journal illisible : {read.Detail}",
+        };
+        _ui(() =>
+        {
+            OverlayTitle = "Journal du démarrage (~/" + BackendLauncher.LaunchLog + ")";
+            DiagnosticText = text;
+            CopyMessage = null;
+            IsDiagnosticVisible = true;
+        });
+    }
+
+    /// <summary>Mémorise le dossier d'un backend qui a répondu AVEC le jeton lu dans ce dossier (jamais un chemin non vérifié).</summary>
+    private async Task RememberVerifiedProjectRootAsync()
+    {
+        if (_statusService.LastAccess?.ProjectRoot is not { } verified || verified == _settings.LastProjectRoot)
+        {
+            return;
+        }
+        var updated = _settings with { LastProjectRoot = verified };
+        try
+        {
+            await _settingsStore.SaveAsync(updated).ConfigureAwait(false);
+            _settings = updated;
+            _log.Log($"Dossier APEX vérifié mémorisé pour « Démarrer APEX » : {verified}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Log($"Dossier APEX non mémorisé ({ex.GetType().Name}).");
+        }
+    }
+
+    private void RaiseActionsChangedOnUi() => _ui(RaiseActionsChanged);
+
+    private void RaiseActionsChanged()
+    {
+        StartCommand.NotifyCanExecuteChanged();
+        StopCommand.NotifyCanExecuteChanged();
+        OpenUiCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanStart));
+        OnPropertyChanged(nameof(CanStop));
+        OnPropertyChanged(nameof(CanOpen));
     }
 
     public string BuildDiagnostic() =>

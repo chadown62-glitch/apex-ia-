@@ -14,15 +14,37 @@ namespace ApexSetup.Dashboard.Services;
 /// <item><c>GET /api/v1/status</c> sur le port découvert (ou 8000).</item>
 /// </list>
 /// </summary>
+/// <summary>Accès au backend qui a RÉPONDU avec le jeton lu dans son dossier — seul point de départ de « Ouvrir APEX ».</summary>
+public sealed record BackendAccess(string Address, int Port, string Token, string? ProjectRoot, string? Distro)
+{
+    public override string ToString() => $"BackendAccess({Address}:{Port}, {ProjectRoot})"; // jamais le jeton
+}
+
 public sealed class PanelStatusService(IBackendHost host, StatusClient client, Func<DateTimeOffset>? clock = null)
 {
+    /// <summary>Renseigné seulement après une réponse authentifiée au bon protocole ; <c>null</c> sinon.</summary>
+    public BackendAccess? LastAccess { get; private set; }
+
+    /// <summary>Distribution où le backend a été cherché à la dernière mesure (journal du démarrage).</summary>
+    public string? LastDistro { get; private set; }
+
+    /// <summary>Journal du dernier démarrage (<c>~/.apex/runtime/launch.log</c>) — lecture seule, comme le reste.</summary>
+    public Task<FileRead> ReadLaunchLogAsync(DashboardSettings settings, CancellationToken cancellationToken = default) =>
+        host.ReadHomeFileAsync(LastDistro ?? (string.IsNullOrWhiteSpace(settings.WslDistro) ? null : settings.WslDistro.Trim()),
+            BackendLauncher.LaunchLog, cancellationToken);
+
+    public HostKind HostKind => host is LocalBackendHost ? HostKind.Local : HostKind.Wsl;
+
     private readonly Func<DateTimeOffset> _clock = clock ?? (() => DateTimeOffset.Now);
 
     /// <summary>Appelé avec chaque jeton lu, pour que les journaux puissent le masquer s'il y apparaissait.</summary>
     public event Action<string>? SecretRead;
 
-    public async Task<PanelSnapshot> MeasureAsync(DashboardSettings settings, CancellationToken cancellationToken = default)
+    public async Task<PanelSnapshot> MeasureAsync(
+        DashboardSettings settings, CancellationToken cancellationToken = default, LaunchAttempt? launch = null)
     {
+        _launch = launch;
+        LastAccess = null;
         var watch = Stopwatch.StartNew();
         var distro = string.IsNullOrWhiteSpace(settings.WslDistro) ? null : settings.WslDistro.Trim();
         var probe = await host.ProbeAsync(distro, cancellationToken).ConfigureAwait(false);
@@ -47,6 +69,7 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         }
 
         var distroForReads = candidates[0];
+        LastDistro = distroForReads;
         DiscoveryRead? firstRead = null;
         DiscoveryRead? foundRead = null;
         foreach (var candidate in candidates)
@@ -57,6 +80,7 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
             if (read.Kind is DiscoveryKind.Found or DiscoveryKind.Invalid)
             {
                 (distroForReads, foundRead) = (candidate, read);
+                LastDistro = candidate;
                 break;
             }
         }
@@ -101,6 +125,11 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         }
 
         var fetch = await client.FetchAsync(address, port, token.Value, cancellationToken: cancellationToken).ConfigureAwait(false);
+        if (fetch.Outcome == FetchOutcome.Ok && fetch.Payload?.PanelProtocol == StatusEngine.SupportedProtocol
+            && token.Value is { } verified && discovery.Record is { } served)
+        {
+            LastAccess = new BackendAccess(address, port, verified, served.ProjectRoot, distroForReads);
+        }
         bool? listening = null;
         if (fetch.Outcome == FetchOutcome.Refused && probe.Applicable && alive == true)
         {
@@ -128,8 +157,11 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         return Decide(probe, discovery, alive, token, fetch, port, watch, listening);
     }
 
+    private LaunchAttempt? _launch;
+
     private PanelSnapshot Decide(
         HostProbe probe, DiscoveryRead discovery, bool? alive, TokenRead token, StatusFetch fetch, int port, Stopwatch watch,
         bool? listening = null) =>
-        StatusEngine.Decide(new StatusInputs(probe, discovery, alive, token, fetch, port, _clock(), watch.Elapsed, listening), PanelInfo.Version);
+        StatusEngine.Decide(new StatusInputs(probe, discovery, alive, token, fetch, port, _clock(), watch.Elapsed, listening, _launch),
+            PanelInfo.Version);
 }

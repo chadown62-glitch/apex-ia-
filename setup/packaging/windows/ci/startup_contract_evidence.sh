@@ -25,7 +25,7 @@ excerpt() {
         | sed 's/^/        /' | cut -c1-220
 }
 copy_repo() {  # copie jetable : même .env, même .venv (lien), même projet Compose (`name: apex`)
-    rsync -a --exclude .venv --exclude .apex "$REPO/" "$1/" && ln -s "$REPO/.venv" "$1/.venv"
+    rsync -a --exclude .venv --exclude .apex --exclude node_modules "$REPO/" "$1/" && ln -s "$REPO/.venv" "$1/.venv"
 }
 run_launcher() {  # préflight réel (compose + doctor + gate --startup), sans `serve`
     (cd "$1" && bash scripts/apex-launch.sh) > "$2" 2>&1
@@ -71,6 +71,17 @@ code=$?; excerpt "$WORK/3-serve.log"
 expect "apex serve direct (sans launcher) : refus" 1 "$code"
 if (exec 3<>/dev/tcp/127.0.0.1/18765) 2>/dev/null; then say "FAIL  un serveur écoute sur 18765 malgré le refus"; fail=1
 else say "PASS  rien n'écoute sur 18765 après le refus"; fi
+
+say "3b. même refus par « Démarrer APEX » (launch.sh panel-serve, le chemin du bouton du Panel) : raison enregistrée"
+# Écrit dans le VRAI ~/.apex/runtime (aucun backend ne tourne à cette étape) : l'étape CI suivante fait lire ce
+# refus par APEX.exe sous Windows (verdict BLOCKED attendu) ; elle l'efface ensuite par « launch.sh stop ».
+code=$( (cd "$WORK/fail" && bash scripts/apex-launch.sh panel-serve --port 18766) >/dev/null 2>&1; echo $?)
+expect "launch.sh panel-serve : FAIL mesuré" 5 "$code"
+expect_line "raison du refus enregistrée pour le Panel (phase refused)" "$HOME/.apex/runtime/backend.json" '"phase": "refused"'
+expect_line "contrôle cité : GATE-21 (rapport de CE démarrage)" "$HOME/.apex/runtime/backend.json" '"GATE-21"'
+expect_line "journal du démarrage écrit (launch.log)" "$HOME/.apex/runtime/launch.log" "FAIL mesurés \(bloquants\) : .*GATE-21"
+if (exec 3<>/dev/tcp/127.0.0.1/18766) 2>/dev/null; then say "FAIL  un serveur écoute sur 18766 malgré le refus"; fail=1
+else say "PASS  rien n'écoute sur 18766 après le refus"; fi
 
 say "4. précondition non vérifiée (injection : docker-compose.yml absent d'une copie -> GATE-21 UNKNOWN)"
 copy_repo "$WORK/unknown"; rm -f "$WORK/unknown/docker-compose.yml"

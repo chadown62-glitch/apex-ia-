@@ -55,7 +55,7 @@ def _serve(fx: LauncherFixture, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_serve_announces_starting_during_preflight_and_withdraws_it_on_failure(tmp_path: Path) -> None:
+def test_serve_announces_starting_during_preflight_and_reports_the_refusal(tmp_path: Path) -> None:
     fx, discovery, seen = _fixture(tmp_path, compose_up_exit=1)
 
     result = _serve(fx, "--port", "8123")
@@ -81,7 +81,12 @@ def test_serve_announces_starting_during_preflight_and_withdraws_it_on_failure(t
         "started_at",
     }
     assert record["token_file"] == ".apex/api-token"
-    assert not discovery.exists()  # le démarrage n'a pas eu lieu : l'annonce est retirée
+    # Le démarrage n'a pas eu lieu : l'annonce devient la raison du refus, lue par le Panel.
+    refused = json.loads(discovery.read_text())
+    assert refused["phase"] == "refused" and refused["pid"] == record["pid"]
+    assert refused["started_at"] == record["started_at"]
+    assert refused["refusal"]["exit_code"] == 2 and refused["refusal"]["stage"] == "infrastructure"
+    assert refused["refusal"]["blocking"] == [] and refused["refusal"]["unverified_blocking"] == []
 
 
 def test_port_given_as_equals_form_is_announced(tmp_path: Path) -> None:

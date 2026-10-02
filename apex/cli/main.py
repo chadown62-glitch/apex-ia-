@@ -219,9 +219,18 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     # un FAIL mesuré ou une précondition non vérifiée refuse ; une sonde à consentement non accordée ou
     # une capacité facultative absente (GPU) est « non vérifiée », affichée, jamais un échec.
     if not report.startup_authorized:
-        from apex.discovery import remove_discovery
+        from apex.discovery import write_refused
 
-        remove_discovery()  # annonce « en démarrage » de launch.sh (même pid) : ce démarrage n'aura pas lieu
+        # L'annonce « en démarrage » de launch.sh (même pid) devient la raison du refus, lue par le Panel.
+        try:
+            write_refused(
+                args.host, args.port, Path.cwd().resolve(),
+                exit_code=5 if report.startup_blocking else 6,
+                blocking=[c.check_id for c in report.startup_blocking],
+                unverified_blocking=[c.check_id for c in report.startup_unverified_blocking],
+            )
+        except OSError:
+            pass
         print("erreur : apex gate refuse le démarrage — APEX ne démarre pas.", file=sys.stderr)
         if report.startup_blocking:
             print("  FAIL mesurés : " + ", ".join(c.check_id for c in report.startup_blocking), file=sys.stderr)

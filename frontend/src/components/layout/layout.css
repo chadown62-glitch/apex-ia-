@@ -307,3 +307,14 @@
     display: none;
   }
 }
+
+/* Session expirée / APEX injoignable : toujours visible, avec quoi faire (jamais un écran vide). */
+.app-shell__alert {
+  margin: 0.75rem 1.5rem 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--status-fail);
+  background: var(--status-fail-bg);
+  color: var(--text);
+  font-size: 0.9rem;
+}

@@ -888,10 +888,20 @@ function Send-Signal([string]$Signal, [int]$ProcessId) {
     Invoke-Native 'wsl.exe' @('-d', $script:DistroName, '--exec', 'kill', "-$Signal", "$ProcessId") 30
 }
 
-function Stop-Backend {
+function Get-LiveRecord {
+    # Un enregistrement « refused » (dernier démarrage refusé) ne décrit aucun processus vivant.
     $rec = Get-DiscoveryRecord
+    if ($rec -and [string]$rec.phase -ne 'refused') { return $rec }
+    return $null
+}
+
+function Stop-Backend {
+    $rec = Get-LiveRecord
     if ($rec) { [void](Send-Signal 'INT' ([int]$rec.pid)) }
-    for ($i = 0; $i -lt 60 -and (Get-DiscoveryRecord); $i++) { Start-Sleep 1 }
+    for ($i = 0; $i -lt 60 -and (Get-LiveRecord); $i++) { Start-Sleep 1 }
+    # Raison d'un refus précédent : effacée, comme le fait « launch.sh stop » (sinon le Panel la montrerait).
+    $left = Get-DiscoveryRecord
+    if ($left -and [string]$left.phase -eq 'refused') { [void](Invoke-Wsl 'rm -f ~/.apex/runtime/backend.json' 30) }
     $script:Launch = $null
 }
 
@@ -1166,6 +1176,130 @@ function Test-Backend {
     }
 }
 
+# ------------------------------------------------------------------------------------------------------
+# Démarrer / Ouvrir / Arrêter APEX DEPUIS le Panel (sans terminal) : mêmes services que les boutons
+# (APEX.exe --start / --ui-url / --stop), même launcher (launch.sh panel-serve), même Startup Gate.
+# ------------------------------------------------------------------------------------------------------
+function Get-PanelLaunches {
+    # wsl.exe lancés par « Démarrer APEX » encore en vie (le backend tourne dans ce processus).
+    @(Get-CimInstance Win32_Process -Filter "Name = 'wsl.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { [string]$_.CommandLine -match 'apex-launch\.sh panel-serve' })
+}
+
+function Invoke-PanelAction([string]$Action, [int]$TimeoutSec = 900) {
+    $r = Invoke-Native $ApexExe @($Action) $TimeoutSec @{ APEX_PANEL_START_TIMEOUT_S = [string]($TimeoutSec - 30) }
+    $obj = $null; try { $obj = $r.Stdout | ConvertFrom-Json } catch { }
+    [pscustomobject]@{ ExitCode = $r.ExitCode; Ms = $r.Ms; Obj = $obj; Stdout = $r.Stdout; Stderr = $r.Stderr
+        Verdict = $(if ($obj) { [string]$obj.verdict } else { '' }); Cause = $(if ($obj) { [string]$obj.cause } else { '' }) }
+}
+
+function Invoke-Http {
+    # HttpWebRequest (Windows PowerShell 5.1) : redirections et cookies maîtrisés, aucune exception sur 4xx.
+    param([string]$Url, [string]$Method = 'GET', [hashtable]$Headers = @{}, [Net.CookieContainer]$Cookies)
+    $req = [Net.HttpWebRequest]::Create($Url)
+    $req.Method = $Method; $req.AllowAutoRedirect = $false; $req.Timeout = 30000
+    if ($Cookies) { $req.CookieContainer = $Cookies }
+    foreach ($k in $Headers.Keys) { $req.Headers[$k] = [string]$Headers[$k] }
+    if ($Method -eq 'POST') { $req.ContentLength = 0 }
+    try { $resp = $req.GetResponse() } catch [Net.WebException] { $resp = $_.Exception.Response; if (-not $resp) { throw } }
+    $reader = New-Object IO.StreamReader($resp.GetResponseStream(), [Text.Encoding]::UTF8)
+    $body = $reader.ReadToEnd(); $reader.Close()
+    $out = [pscustomobject]@{ Status = [int]$resp.StatusCode; Body = $body; Location = $resp.Headers['Location']; SetCookie = $resp.Headers['Set-Cookie'] }
+    $resp.Close()
+    $out
+}
+
+function Test-PanelControl {
+    $titles = [ordered]@{
+        C01 = '« Démarrer APEX » sans terminal : launch.sh panel-serve, Startup Gate, backend prêt'
+        C02 = 'second démarrage pendant qu''APEX tourne : rien n''est relancé'
+        C03 = '« Ouvrir APEX » : interface servie par APEX, lien à usage unique, même verdict que le Panel'
+        C04 = '« Arrêter APEX » : backend arrêté, aucun processus laissé, BackendNotStarted'
+        C05 = 'relance depuis le Panel après arrêt'
+    }
+    $blocked = $null
+    if (-not $AllowBackendControl) { $blocked = 'exige -AllowBackendControl (démarre et arrête le backend APEX)' }
+    elseif (-not $script:ApexRepo) { $blocked = 'dépôt APEX introuvable dans la distribution (préciser -ApexPathInWsl)' }
+    if ($blocked) { foreach ($id in $titles.Keys) { Add-Check $id 'panel_control' $titles[$id] 'BLOCKED' $blocked }; return }
+    Stop-AllPanels
+    Stop-Backend
+    $before = (Get-PanelStatus).Cause
+
+    Check 'C01' 'panel_control' $titles.C01 {
+        $r = Invoke-PanelAction '--start' ($BackendStartTimeoutMin * 60)
+        Save-Text "run$($script:Run)-panel-start.json" $r.Stdout
+        $script:Perf["panel_start_seconds_run$($script:Run)"] = [math]::Round($r.Ms / 1000)
+        $launches = Get-PanelLaunches
+        $cmd = ''; if ($launches.Count -gt 0) { $cmd = [string]$launches[0].CommandLine }
+        # Forme exacte : argv direct vers le launcher officiel, jamais un shell, jamais une option du Gate.
+        $shapeOk = $cmd -match '(^|[\s"\\])wsl(\.exe)?"?\s+(-d\s+\S+\s+)?--cd ~ --exec bash \S+/scripts/apex-launch\.sh panel-serve\s*$'
+        $log = (Invoke-Wsl 'tail -n 40 ~/.apex/runtime/launch.log 2>/dev/null' 30).Stdout
+        Save-Text "run$($script:Run)-panel-launch.log" $log
+        $gateRan = $log -match 'apex gate'
+        if ($r.Verdict -eq 'Blocked') {
+            Add-Check 'C01' 'panel_control' $titles.C01 'BLOCKED' "démarrage refusé par une vérification de cette machine (jamais contourné) : $($r.Obj.guidance)"
+            return
+        }
+        $st = 'FAIL'; if ($r.ExitCode -in 0, 1 -and $r.Verdict -in 'Ready', 'Degraded' -and $launches.Count -eq 1 -and $shapeOk -and $gateRan) { $st = 'PASS' }
+        Add-Check 'C01' 'panel_control' $titles.C01 $st ("avant : $before ; APEX.exe --start : code $($r.ExitCode) en $([math]::Round($r.Ms/1000)) s -> $($r.Verdict)/$($r.Cause) ; " +
+            "processus de démarrage : $($launches.Count) ($(($cmd -replace '^.*?--cd', '--cd'))) ; forme exacte : $shapeOk ; Startup Gate exécuté (journal) : $gateRan")
+    }
+    $script:PanelUp = (Get-PanelStatus).Verdict -in 'Ready', 'Degraded'
+
+    Check 'C02' 'panel_control' $titles.C02 {
+        if (-not $script:PanelUp) { Add-Check 'C02' 'panel_control' $titles.C02 'BLOCKED' 'APEX n''a pas démarré depuis le Panel (C01)'; return }
+        $r = Invoke-PanelAction '--start' 120
+        $direct = Invoke-Native 'wsl.exe' @('-d', $script:DistroName, '--cd', $script:ApexRepo, '--exec', 'bash', 'scripts/apex-launch.sh', 'serve') 120
+        $launches = Get-PanelLaunches
+        $st = 'FAIL'; if ($r.Verdict -in 'Ready', 'Degraded' -and $launches.Count -eq 1 -and $direct.ExitCode -eq 8) { $st = 'PASS' }
+        Add-Check 'C02' 'panel_control' $titles.C02 $st "APEX.exe --start : $($r.Verdict) en $([math]::Round($r.Ms/1000)) s (aucun relancement) ; processus de démarrage : $($launches.Count) ; launch.sh serve direct : code $($direct.ExitCode) (8 attendu : déjà en cours)"
+    }
+
+    Check 'C03' 'panel_control' $titles.C03 {
+        if (-not $script:PanelUp) { Add-Check 'C03' 'panel_control' $titles.C03 'BLOCKED' 'APEX n''a pas démarré depuis le Panel (C01)'; return }
+        $u = Invoke-Native $ApexExe @('--ui-url') 90
+        $url = $u.Stdout.Trim()
+        if ($url -notmatch '^http://127\.0\.0\.1:\d+/ui/login\?code=[A-Za-z0-9_-]{20,}$') {
+            Add-Check 'C03' 'panel_control' $titles.C03 'FAIL' "APEX.exe --ui-url : code $($u.ExitCode) ; $($u.Stderr.Trim())"; return
+        }
+        $base = $url.Substring(0, $url.IndexOf('/ui/login'))
+        $jar = New-Object Net.CookieContainer
+        $login = Invoke-Http $url -Cookies $jar
+        $page = Invoke-Http "$base/" -Cookies $jar
+        $api = Invoke-Http "$base/api/v1/status" -Headers @{ 'X-APEX-UI' = '1' } -Cookies $jar
+        $noHeader = Invoke-Http "$base/api/v1/status" -Cookies $jar
+        $reuse = Invoke-Http $url -Cookies (New-Object Net.CookieContainer)
+        $apiVerdict = ''; try { $apiVerdict = [string]($api.Body | ConvertFrom-Json).data.overall.verdict } catch { }
+        $panel = (Get-PanelStatus).Verdict
+        $same = ($panel -eq 'Ready' -and $apiVerdict -eq 'ready') -or ($panel -eq 'Degraded' -and $apiVerdict -eq 'degraded')
+        $httpOnly = [string]$login.SetCookie -match 'HttpOnly'
+        $st = 'FAIL'
+        if ($login.Status -eq 303 -and $httpOnly -and $page.Status -eq 200 -and $page.Body -match 'APEX Control Center' -and $api.Status -eq 200 -and
+            $noHeader.Status -eq 401 -and $reuse.Status -eq 401 -and $same) { $st = 'PASS' }
+        Add-Check 'C03' 'panel_control' $titles.C03 $st ("lien : $base/ui/login?code=<masqué> ; connexion : $($login.Status) (cookie HttpOnly : $httpOnly) ; page : $($page.Status) ; " +
+            "API avec la session : $($api.Status) ; sans l'en-tête de l'interface : $($noHeader.Status) ; lien réutilisé : $($reuse.Status) ; verdict API « $apiVerdict » = Panel « $panel » : $same")
+    }
+
+    Check 'C04' 'panel_control' $titles.C04 {
+        if (-not $script:PanelUp) { Add-Check 'C04' 'panel_control' $titles.C04 'BLOCKED' 'APEX n''a pas démarré depuis le Panel (C01)'; return }
+        $r = Invoke-PanelAction '--stop' 240
+        $left = 0; for ($i = 0; $i -lt 30; $i++) { $left = (Get-PanelLaunches).Count; if ($left -eq 0) { break }; Start-Sleep 1 }
+        $s = Get-PanelStatus
+        $rec = Get-LiveRecord
+        $st = 'FAIL'; if ($r.ExitCode -eq 0 -and $left -eq 0 -and -not $rec -and $s.Cause -eq 'BackendNotStarted') { $st = 'PASS' }
+        Add-Check 'C04' 'panel_control' $titles.C04 $st "APEX.exe --stop : code $($r.ExitCode) en $([math]::Round($r.Ms/1000)) s ; processus de démarrage restants : $left ; enregistrement vivant : $([bool]$rec) ; ensuite : $($s.Verdict)/$($s.Cause)"
+    }
+
+    Check 'C05' 'panel_control' $titles.C05 {
+        if (-not $script:PanelUp) { Add-Check 'C05' 'panel_control' $titles.C05 'BLOCKED' 'APEX n''a pas démarré depuis le Panel (C01)'; return }
+        $r = Invoke-PanelAction '--start' ($BackendStartTimeoutMin * 60)
+        $up = $r.Verdict
+        $stop = Invoke-PanelAction '--stop' 240
+        $st = 'FAIL'; if ($up -in 'Ready', 'Degraded' -and $stop.ExitCode -eq 0) { $st = 'PASS' }
+        Add-Check 'C05' 'panel_control' $titles.C05 $st "relance : $up en $([math]::Round($r.Ms/1000)) s ; nouvel arrêt : code $($stop.ExitCode)"
+    }
+}
+
 function Copy-DiagnosticThroughUi {
     # Bouton « Copier le diagnostic » via UI Automation (Avalonia expose ses boutons à UIA sous Windows).
     try {
@@ -1325,8 +1459,8 @@ try {
             # Chaque groupe est isolé : un incident du banc devient un échec EXPLICITE du banc (HARNESS) et la
             # suite continue ; les résultats et l'archive sont toujours produits.
             $groups = @(${function:Test-Install}, ${function:Test-UserWorkflow}, ${function:Test-InstallLifecycle},
-                ${function:Test-Launch}, ${function:Test-Wsl}, ${function:Test-Backend})
-            $names = @('Test-Install', 'Test-UserWorkflow', 'Test-InstallLifecycle', 'Test-Launch', 'Test-Wsl', 'Test-Backend')
+                ${function:Test-Launch}, ${function:Test-Wsl}, ${function:Test-Backend}, ${function:Test-PanelControl})
+            $names = @('Test-Install', 'Test-UserWorkflow', 'Test-InstallLifecycle', 'Test-Launch', 'Test-Wsl', 'Test-Backend', 'Test-PanelControl')
             for ($g = 0; $g -lt $groups.Count; $g++) {
                 if ($names[$g] -eq 'Test-UserWorkflow' -and $i -ne 1) { continue }
                 try { & $groups[$g] } catch {

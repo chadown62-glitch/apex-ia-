@@ -62,6 +62,16 @@ python3 -m venv "$DEST/.venv"
 
 chown -R "$USER_NAME:$USER_NAME" "$DEST"
 
+# Interface web : étape d'installation d'un poste (comme .venv), par le script fourni à l'utilisateur. Un échec
+# n'arrête pas la préparation : la validation le montrera (C03 : interface non construite = FAIL).
+log "interface web : Node.js (paquets Ubuntu) puis scripts/apex-build-ui.sh sous le compte $USER_NAME"
+apt-get install -y -qq nodejs npm >/dev/null
+if su - "$USER_NAME" -c "cd '$DEST' && bash scripts/apex-build-ui.sh" > /tmp/apex-build-ui.log 2>&1; then
+  log "interface construite : $DEST/frontend/dist"
+else
+  log "interface NON construite (fin du journal ci-dessous)"; tail -15 /tmp/apex-build-ui.log
+fi
+
 # Aucune dérogation du Gate (gate.exceptions.yaml) : depuis l'audit du 02/10/2026, `launch.sh serve`
 # décide sur `apex gate --startup` — les sondes à consentement non accordées et l'absence de GPU y sont
 # « non vérifiés », pas des échecs. La CI prouve ainsi le vrai parcours d'un poste, sans contournement.

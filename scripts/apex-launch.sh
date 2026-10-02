@@ -49,6 +49,9 @@
 #         (jamais une sonde à consentement non accordée ni un GPU absent : voir
 #         apex.gate.report.StartupRole — « non vérifié » n'est pas un échec)
 #   7   - `apex gate` en erreur interne (exception Python, arguments refusés…)
+#   8   - `serve`/`panel-serve` : APEX est déjà en cours de démarrage ou d'exécution pour cet
+#         utilisateur (verrou ~/.apex/runtime/launch.lock) — rien n'est relancé
+#   9   - `stop` : le backend APEX enregistré ne s'est pas arrêté
 #   130 - interrompu (Ctrl+C / SIGINT)
 #
 # Sous-commande `serve` (`./apex-launch.sh serve [args...]`) — N+15 : exécute
@@ -63,7 +66,15 @@
 # `make up` : seul un arrêt volontaire l'arrête). N'arrête que
 # l'infrastructure que CE launcher a lui-même fait démarrer depuis un état
 # éteint — jamais une infrastructure déjà active avant son passage, jamais
-# un service externe (Ollama compris). Voir `compose_up`/`cmd_stop`.
+# un service externe (Ollama compris). Voir `compose_up`/`cmd_stop`. Arrête d'abord le backend APEX
+# lui-même s'il tourne (`python -m apex.discovery stop` : pid enregistré, vérifié comme APEX avant
+# tout signal) — c'est l'arrêt du bouton « Arrêter APEX » du Panel, sans terminal ni Ctrl+C.
+#
+# Sous-commande `panel-serve` : exactement `serve` (même préflight, même Startup Gate, même `exec`),
+# sortie écrite dans ~/.apex/runtime/launch.log (l'ancien journal devient launch.log.1) au lieu du
+# terminal — c'est ce que lance le bouton « Démarrer APEX » du Panel Windows, sans fenêtre : le
+# démarrage ne dépend ainsi d'aucun tube vers le Panel (le fermer n'arrête pas APEX) et le Panel lit
+# ce journal pour expliquer un échec. Aucune autre différence avec `serve`.
 
 set -euo pipefail
 
@@ -75,6 +86,8 @@ readonly EXIT_DOCTOR_FAIL=4
 readonly EXIT_GATE_FAIL=5
 readonly EXIT_GATE_UNVERIFIED=6
 readonly EXIT_GATE_ERROR=7
+readonly EXIT_ALREADY_RUNNING=8
+readonly EXIT_STOP_FAILED=9
 readonly EXIT_INTERRUPTED=130
 
 readonly MIN_PYTHON_MAJOR=3
@@ -602,6 +615,19 @@ compose_up() {
 cmd_stop() {
     local project_root
     project_root="$(resolve_project_root)"
+
+    # 1. Le backend APEX lui-même (enregistré par `serve`/`panel-serve`), s'il tourne. Sans Python
+    #    utilisable, aucun backend n'a pu être démarré par ce launcher : rien à arrêter de ce côté.
+    local python_bin backend_status=0
+    if python_bin="$(detect_python "${project_root}" 2>/dev/null)"; then
+        (cd -- "${project_root}" && "${python_bin}" -m apex.discovery stop) || backend_status=$?
+        if (( backend_status != 0 )); then
+            log_err "le backend APEX ne s'est pas arrêté (voir ci-dessus) — infrastructure laissée en place."
+            exit "${EXIT_STOP_FAILED}"
+        fi
+    fi
+
+    # 2. L'infrastructure que ce launcher a lui-même démarrée.
     local state_file
     state_file="$(compose_state_file "${project_root}")"
 
@@ -707,15 +733,53 @@ announce_starting() {
     [[ "${ANNOUNCE_STARTING}" == "1" ]] || return 0
     if (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery starting \
             --pid "$$" --host "${SERVE_HOST}" --port "${SERVE_PORT}") >/dev/null 2>&1; then
-        trap withdraw_starting EXIT
+        trap finish_starting EXIT
         log_info "démarrage annoncé au Panel APEX (~/.apex/runtime/backend.json)."
     else
         log_warn "annonce du démarrage au Panel impossible — il indiquera « non démarré » jusqu'à l'écoute de l'API."
     fi
 }
 
-withdraw_starting() {
-    (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery remove --pid "$$") >/dev/null 2>&1 || true
+# Le démarrage annoncé n'aura pas lieu : l'annonce devient la raison du refus (code du launcher,
+# étape, contrôles du Gate qui refusent, lus dans le rapport de CE démarrage) pour que le Panel
+# l'affiche ; une interruption volontaire (Ctrl+C, « Arrêter APEX ») la retire simplement.
+finish_starting() {
+    local status=$?
+    case "${status}" in
+        "${EXIT_DOCKER_FAIL}"|"${EXIT_DOCTOR_FAIL}"|"${EXIT_GATE_FAIL}"|"${EXIT_GATE_UNVERIFIED}"|"${EXIT_GATE_ERROR}")
+            (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery refused --pid "$$" --code "${status}" \
+                --host "${SERVE_HOST}" --port "${SERVE_PORT}") >/dev/null 2>&1 || true
+            ;;
+        *)
+            (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery remove --pid "$$") >/dev/null 2>&1 || true
+            ;;
+    esac
+}
+
+# Un seul démarrage d'APEX à la fois par utilisateur (le Panel et la découverte sont par utilisateur) :
+# verrou `flock` tenu par le descripteur 9, hérité par `apex serve` après `exec` — il dure donc toute
+# la vie du backend et se libère seul à sa fin, même brutale. Sans `flock` (util-linux absent), la
+# protection est inactive et le dit ; un second `apex serve` échouerait alors sur le port occupé.
+runtime_dir() {
+    printf '%s\n' "${APEX_DISCOVERY_DIR:-${HOME}/.apex/runtime}"
+}
+
+acquire_launch_lock() {
+    local dir
+    dir="$(runtime_dir)"
+    if ! command -v flock >/dev/null 2>&1; then
+        log_warn "flock introuvable : protection contre un double lancement inactive."
+        return 0
+    fi
+    if ! mkdir -p -- "${dir}" 2>/dev/null || ! exec 9>>"${dir}/launch.lock"; then
+        log_warn "verrou de lancement impossible dans ${dir} : protection contre un double lancement inactive."
+        return 0
+    fi
+    if ! flock -n 9; then
+        log_err "APEX est déjà en cours de démarrage ou d'exécution pour cet utilisateur — rien n'est relancé."
+        log_err "pour le redémarrer : arrêtez-le d'abord (bash scripts/apex-launch.sh stop, ou « Arrêter APEX » dans le Panel)."
+        exit "${EXIT_ALREADY_RUNNING}"
+    fi
 }
 
 # -- Préflight environnement --------------------------------------------------
@@ -794,11 +858,30 @@ main() {
 cmd_serve() {
     ANNOUNCE_STARTING=1
     parse_serve_address "$@"
+    [[ "${LAUNCH_LOCK_HELD:-0}" == "1" ]] || acquire_launch_lock
     run_preflight
     log_info "préflight OK — démarrage d'APEX (apex serve)."
     cd -- "${PROJECT_ROOT}"
     trap - EXIT  # l'enregistrement passe à `apex serve` (même pid après `exec`)
     exec "${PYTHON_BIN}" -m apex.cli.main serve "$@"
+}
+
+# Sous-commande `panel-serve` (bouton « Démarrer APEX » du Panel) : verrou d'abord — un second
+# lancement ne doit ni tourner ni écraser le journal du premier —, puis journal dans
+# ~/.apex/runtime/launch.log, puis exactement `serve`.
+cmd_panel_serve() {
+    acquire_launch_lock
+    LAUNCH_LOCK_HELD=1
+    local dir log
+    dir="$(runtime_dir)"
+    log="${dir}/launch.log"
+    if mkdir -p -- "${dir}" 2>/dev/null && { [[ ! -e "${log}" ]] || mv -f -- "${log}" "${log}.1"; } \
+            && exec >>"${log}" 2>&1; then
+        log_info "$(date '+%Y-%m-%d %H:%M:%S') — démarrage demandé depuis le Panel APEX (journal : ${log})."
+    else
+        log_warn "journal ${log} impossible : sortie conservée telle quelle."
+    fi
+    cmd_serve "$@"
 }
 
 # Exécuté seulement en tant que script (`./apex-launch.sh`), jamais quand ce
@@ -813,6 +896,10 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         serve)
             shift
             cmd_serve "$@"
+            ;;
+        panel-serve)
+            shift
+            cmd_panel_serve "$@"
             ;;
         *)
             main "$@"

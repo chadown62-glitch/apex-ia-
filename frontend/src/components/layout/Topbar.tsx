@@ -3,13 +3,14 @@ import type { ReactNode } from "react";
 import { useGate, useHealth, useMissions } from "../../api/hooks";
 import { IconButton } from "../ui/Button";
 import { ApexStatusBadge, deriveApexStatus } from "../status/ApexStatus";
+import { SystemVerdictBadge, type SystemVerdictView } from "../status/SystemVerdict";
 import { GateStatusBadge, HealthStatusBadge } from "../status/StatusBadge";
 import { ThemeToggle } from "../../theme/ThemeToggle";
 import { GlobalSearch } from "./GlobalSearch";
 import { useSidebar } from "./SidebarContext";
 import "./layout.css";
 
-export function Topbar() {
+export function Topbar({ verdict }: { verdict: SystemVerdictView }) {
   const health = useHealth();
   const gate = useGate();
   const missions = useMissions();
@@ -32,7 +33,12 @@ export function Topbar() {
       </div>
       <GlobalSearch />
       <div className="topbar__status">
-        <ApexStatusBadge status={systemStatus} />
+        <StatusGroup label="État">
+          <SystemVerdictBadge view={verdict} />
+        </StatusGroup>
+        <StatusGroup label="Activité">
+          <ApexStatusBadge status={systemStatus} />
+        </StatusGroup>
         <StatusGroup label="Système">
           {health.data?.data ? (
             <HealthStatusBadge status={health.data.data.status} />

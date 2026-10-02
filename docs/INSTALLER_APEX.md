@@ -1,8 +1,10 @@
 # Installer APEX (Windows)
 
-Le Panel APEX est une petite application Windows qui **affiche l'état réel d'APEX**. APEX lui-même
-(le « backend ») tourne dans Linux, via WSL, et se lance avec le `launch.sh` dédié. Le Panel ne
-démarre jamais WSL ni le backend : il les observe et vous dit quoi faire.
+Le Panel APEX (`APEX.exe`) est le point d'entrée Windows d'APEX : il **démarre, arrête et ouvre
+APEX**, et affiche son état réel. APEX lui-même (le « backend ») tourne dans Linux, via WSL. Le
+bouton « Démarrer APEX » exécute le launcher officiel, `scripts/apex-launch.sh`, exactement comme
+dans un terminal — même préflight (Docker, `apex doctor`) et même **Startup Gate**, jamais contourné.
+Rien n'est démarré sans votre clic.
 
 ## Prérequis (constatés, jamais installés par APEX Desktop)
 
@@ -11,8 +13,13 @@ démarre jamais WSL ni le backend : il les observe et vous dit quoi faire.
 - WSL 2 avec une distribution Linux (`wsl --install -d Ubuntu` dans PowerShell si besoin).
 - Dans cette distribution : le dépôt APEX, Docker utilisable par votre compte (`docker compose`), et
   l'environnement Python d'APEX (`.venv`) — c'est-à-dire ce qu'exige déjà `scripts/apex-launch.sh`.
-- Lancez `launch.sh` avec le **même compte Linux** que l'utilisateur WSL par défaut : le Panel lit
-  `~/.apex/runtime/backend.json` dans le dossier personnel de l'utilisateur par défaut.
+- L'interface web d'APEX, construite **une fois** (puis après chaque mise à jour du dépôt), comme
+  `.venv` : dans le dossier APEX, `bash scripts/apex-build-ui.sh` (Node.js 18+ requis :
+  `sudo apt install nodejs npm`). Sans elle, APEX fonctionne mais « Ouvrir APEX » affiche comment la
+  construire (ligne **Interface** du Panel : OFFLINE).
+- APEX tourne sous le **compte Linux par défaut** de WSL : le Panel lit `~/.apex/runtime/` de ce
+  compte. Le dépôt est cherché dans `~/apex` ; s'il est ailleurs, indiquez-le une fois dans
+  **Paramètres** (« Dossier APEX dans WSL »).
 - MinIO est **facultatif** : l'image `minio/minio` n'est plus distribuée publiquement (constaté le
   30/09/2026) et aucune fonction d'APEX ne l'utilise aujourd'hui. `launch.sh` démarre sans lui ;
   `apex doctor` le signale en WARN (« service optionnel : non bloquant »). Pour l'activer :
@@ -30,20 +37,31 @@ démarre jamais WSL ni le backend : il les observe et vous dit quoi faire.
 3. Laissez l'installation se terminer. L'installateur vérifie lui-même que le Panel démarre.
 4. Un raccourci **APEX** est créé sur le Bureau (et dans le menu Démarrer).
 
-## Utiliser APEX au quotidien
+## Utiliser APEX au quotidien (sans terminal)
 
-5. Ouvrez votre distribution Linux (par exemple « Ubuntu » dans le menu Démarrer) : c'est WSL.
-6. Placez-vous dans le dossier APEX et lancez le launch.sh dédié :
-   ```
-   bash scripts/apex-launch.sh serve
-   ```
-   Laissez cette fenêtre ouverte : c'est elle qui fait tourner APEX.
-7. Double-cliquez sur **APEX** sur le Bureau.
-8. Vérifiez que le Panel indique **APEX READY**.
+5. Double-cliquez sur **APEX** sur le Bureau.
+6. Cliquez sur **Démarrer APEX**. Le Panel affiche « démarre… » pendant le préflight (Docker,
+   `apex doctor`, Startup Gate — le premier lancement peut durer plusieurs minutes), puis
+   **APEX READY** ou **APEX DEGRADED** (APEX tourne, un service facultatif manque : la ligne
+   concernée dit lequel).
+7. Cliquez sur **Ouvrir APEX** : l'interface web d'APEX s'ouvre dans votre navigateur (lien à usage
+   unique, valable 60 s ; la session dure jusqu'au prochain arrêt d'APEX). Si elle dit « session
+   expirée », cliquez de nouveau sur **Ouvrir APEX**.
+8. Pour arrêter : **Arrêter APEX** (APEX, puis l'infrastructure Docker que son lancement a démarrée).
 
-Le Panel se met à jour tout seul toutes les 5 secondes : vous pouvez l'ouvrir avant ou après
-`launch.sh`. Fermer le Panel n'arrête pas APEX ; pour arrêter APEX, faites Ctrl+C dans la fenêtre
-Linux (puis `bash scripts/apex-launch.sh stop` pour arrêter l'infrastructure Docker).
+Fermer le Panel n'arrête pas APEX ; rouvert, il le retrouve tout seul. Deux démarrages ne peuvent
+pas se chevaucher : un second clic, ou un `launch.sh serve` lancé ailleurs, est refusé tant qu'APEX
+tourne (« déjà en cours », code 8 de launch.sh). **Journal du démarrage** montre la sortie complète
+du dernier démarrage (`~/.apex/runtime/launch.log` dans WSL).
+
+Si le démarrage est refusé, le Panel affiche **APEX BLOCKED** et la raison : contrôle(s) mesuré(s)
+en FAIL ou précondition non vérifiable du Startup Gate (identifiants `GATE-xx` cités), ou échec
+d'`apex doctor`. Le Panel ne propose jamais de contourner ce refus : corrigez la cause puis cliquez de
+nouveau sur **Démarrer APEX**. « Phase 2 autorisée : NON » n'empêche jamais le démarrage : c'est une
+décision séparée de la feuille de route.
+
+Toujours possible depuis un terminal WSL (dans le dossier APEX) : `bash scripts/apex-launch.sh serve`
+(Ctrl+C pour arrêter) — le Panel le voit de la même façon.
 
 ## Ce que le Panel affiche
 
@@ -53,12 +71,15 @@ Linux (puis `bash scripts/apex-launch.sh stop` pour arrêter l'infrastructure Do
 | Backend | APEX a été lancé par `launch.sh` (en démarrage, en marche, arrêté) |
 | API | APEX répond réellement, avec son jeton d'accès |
 | Database, Redis, Ollama, Sandbox, Brain | l'état mesuré à l'instant par APEX lui-même |
+| Interface | l'interface web est construite et servie par APEX (`scripts/apex-build-ui.sh`) |
 
 États : **READY** (vérifié), **STARTING** (en démarrage), **OFFLINE** (arrêté / absent),
 **DEGRADED** (répond mais incomplet), **ERROR** (répond mal), **UNKNOWN** (pas mesurable pour
 l'instant). En tête : **APEX READY** (tout est prêt), **APEX DEGRADED** (APEX répond, certains
-services non), **APEX NOT READY** (avec la raison et quoi faire), **VERSION_MISMATCH** (Panel et
-APEX de versions incompatibles).
+services non), **APEX BLOCKED** (démarrage refusé par le Startup Gate ou `apex doctor`, raison
+affichée), **APEX NOT READY** (avec la raison et quoi faire), **VERSION_MISMATCH** (Panel et APEX
+de versions incompatibles). L'interface web affiche le MÊME verdict (calculé par APEX, `GET
+/api/v1/status`).
 
 ## Dépannage
 
@@ -67,14 +88,18 @@ APEX de versions incompatibles).
 | « WSL n'est pas installé » | `wsl.exe` absent | installer WSL 2 : `wsl --install` dans PowerShell, redémarrer, puis installer APEX dans la distribution |
 | « WSL est présent mais aucune distribution Linux n'est installée » | WSL activé, aucune distribution | `wsl --install -d Ubuntu` dans PowerShell, puis installer APEX dans cette distribution |
 | « WSL ne répond pas correctement » | `wsl.exe` répond en erreur (service WSL) | `wsl --shutdown` dans PowerShell, rouvrir la distribution ; sinon redémarrer Windows |
-| « WSL n'est pas démarré » | la distribution est arrêtée | ouvrir la distribution Linux puis lancer `launch.sh` |
-| « Le backend APEX n'est pas démarré » | `launch.sh` n'a pas été lancé | `bash scripts/apex-launch.sh serve` dans le dossier APEX |
+| « WSL n'est pas démarré » | la distribution est arrêtée | **Démarrer APEX** (la distribution démarre, puis APEX) |
+| « Le backend APEX n'est pas démarré » | APEX n'a pas été démarré | **Démarrer APEX** |
+| « launch.sh introuvable » | le dossier APEX n'est pas `~/apex` | **Paramètres** → « Dossier APEX dans WSL », puis **Démarrer APEX** |
+| APEX BLOCKED | le Startup Gate (FAIL mesuré, précondition non vérifiable) ou `apex doctor` refuse le démarrage | lire la raison et **Journal du démarrage**, corriger, puis **Démarrer APEX** (voir docs/PHASE_1_GATE.md §10) |
+| « Interface APEX non construite » (navigateur) | l'interface web n'a pas été construite | `bash scripts/apex-build-ui.sh` dans le dossier APEX (WSL), puis **Ouvrir APEX** |
+| « Session APEX absente ou expirée » (navigateur) | APEX a redémarré, ou lien déjà utilisé | **Ouvrir APEX** dans le Panel |
 | « Le backend APEX démarre… » | `launch.sh` prépare Docker, doctor, gate | attendre ; le premier lancement peut durer plusieurs minutes |
 | « Le backend APEX s'est arrêté » | fenêtre fermée ou arrêt brutal | relancer `launch.sh` ; lire son dernier message d'erreur |
 | « démarre… » puis « n'est pas démarré », et `launch.sh` finit sur « Démarrage d'APEX : REFUSÉ » | `apex gate` a mesuré un FAIL (code 5) ou n'a pas pu vérifier une précondition (code 6) ; code 7 = erreur interne du Gate. Une sonde non autorisée ou l'absence de GPU ne refusent jamais le démarrage (« non vérifiés »). Le Panel n'y est pour rien | lire « FAIL mesurés » / « Préconditions non vérifiées » dans la sortie de `launch.sh` et lever ce point (voir docs/PHASE_1_GATE.md §10). « Phase 2 autorisée : NON » seul n'empêche pas le démarrage |
 | « jeton … refusé » / « jeton introuvable » | le Panel ne lit pas le jeton du backend en marche | arrêter les autres backends APEX, relancer `launch.sh` depuis le dossier APEX |
 | « Un autre programme utilise le port 8000 » | port occupé | fermer ce programme, ou `launch.sh serve --port 8010` (le Panel suit) |
-| « ne répond pas à temps » | machine surchargée ou APEX bloqué | attendre ; sinon Ctrl+C puis relancer |
+| « ne répond pas à temps » | machine surchargée ou APEX bloqué | attendre ; sinon **Arrêter APEX** puis **Démarrer APEX** |
 | « écoute dans WSL … mais Windows ne l'atteint pas par localhost » | APEX tourne, mais la redirection localhost WSL2 -> Windows ne fonctionne pas | vérifier `%UserProfile%\.wslconfig` (pas de `localhostForwarding=false`), couper un VPN ou vérifier le pare-feu, puis `wsl --shutdown` et relancer `launch.sh` |
 | APEX DEGRADED | APEX répond, un service manque | la ligne concernée dit lequel (ex. Ollama sans modèle) |
 | VERSION_MISMATCH | Panel et APEX incompatibles | mettre à jour le Panel **ou** le dépôt APEX, selon le message |
@@ -93,7 +118,10 @@ de Windows n'a pas d'importance (l'état des distributions est lu sans dépendre
 - Journaux du Panel : `%LOCALAPPDATA%\APEX\logs\panel-AAAAMMJJ.log` (14 derniers jours).
 - Journal d'installation : `%TEMP%\Setup Log AAAA-MM-JJ #NNN.txt`.
 - Sans fenêtre : `APEX.exe --diagnostic` ou `APEX.exe --status-json` (code de sortie 0 READY,
-  1 DEGRADED, 2 NOT READY, 3 VERSION_MISMATCH).
+  1 DEGRADED, 2 NOT READY, 3 VERSION_MISMATCH, 4 BLOCKED).
+- Mêmes actions que les boutons, sans fenêtre (automatisation) : `APEX.exe --start` (démarre puis
+  attend un verdict établi, même code de sortie), `APEX.exe --stop` (code de `launch.sh stop`),
+  `APEX.exe --ui-url` (écrit un lien d'ouverture à usage unique de l'interface).
 
 ## Désinstaller
 

@@ -38,6 +38,35 @@ export interface Health {
   components: HealthComponent[];
 }
 
+// -- status (GET /status : le verdict PARTAGÉ avec le Panel APEX.exe) -------
+
+/** États mesurés par APEX (`apex.obs.component_checks`) — même vocabulaire que le Panel. */
+export type ComponentState = "ready" | "degraded" | "offline" | "error" | "unknown";
+
+export interface SystemComponent {
+  component: string;
+  state: ComponentState;
+  detail: string;
+  latency_ms: number | null;
+}
+
+export interface SystemStatus {
+  service: string;
+  versions: { apex: string; api: string; panel_protocol: number };
+  backend: { pid: number; started_at: string };
+  components: SystemComponent[];
+  /** READY seulement si chaque composant rapporté est prêt (règle identique au Panel). */
+  overall: { verdict: "ready" | "degraded"; not_ready: string[] };
+  /** Dernier rapport du Gate ; la phase 2 est une décision À PART du démarrage. `null` = illisible. */
+  gate: {
+    startup_authorized: boolean;
+    phase_2_authorized: boolean;
+    startup_unverified: string[];
+    generated_at: string | null;
+  } | null;
+  measured_at: string;
+}
+
 // -- gate ------------------------------------------------------------------
 
 export interface GateCheck {

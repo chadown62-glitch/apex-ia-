@@ -24,6 +24,15 @@
                 </StackPanel>
             </Border>
 
+            <!-- Actions : toujours sur un geste de l'utilisateur ; démarrage = launch.sh (Startup Gate compris). -->
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
+                <Button Name="StartButton" Content="Démarrer APEX" Command="{Binding StartCommand}" FontWeight="SemiBold" />
+                <Button Name="StopButton" Content="Arrêter APEX" Command="{Binding StopCommand}" />
+                <Button Name="OpenButton" Content="Ouvrir APEX" Command="{Binding OpenUiCommand}" FontWeight="SemiBold" />
+                <Button Name="LaunchLogButton" Content="Journal du démarrage" Command="{Binding ShowLaunchLogCommand}" />
+                <TextBlock Name="ActionText" Text="{Binding ActionMessage}" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.85" />
+            </StackPanel>
+
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
                 <Button Content="Rafraîchir" Command="{Binding RefreshCommand}" />
                 <Button Content="Diagnostic" Command="{Binding ShowDiagnosticCommand}" />
@@ -71,7 +80,7 @@
         <Border IsVisible="{Binding IsDiagnosticVisible}" Background="#DD1E1E1E">
             <Border Margin="40" Background="#FF2A2A2A" CornerRadius="6" Padding="16">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Diagnostic" FontSize="18" FontWeight="Bold" Margin="0,0,0,8" />
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding OverlayTitle}" FontSize="18" FontWeight="Bold" Margin="0,0,0,8" />
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
                         <Button Content="Copier le diagnostic" Command="{Binding CopyDiagnosticCommand}" />
                         <Button Content="Fermer" Command="{Binding HideDiagnosticCommand}" />
@@ -91,9 +100,11 @@
                 <StackPanel Spacing="10">
                     <TextBlock Text="Paramètres" FontSize="18" FontWeight="Bold" />
                     <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8"
-                               Text="Rien n'est à configurer en temps normal : le Panel trouve lui-même le backend démarré par launch.sh (port, dossier du projet, jeton). Il ne démarre jamais WSL ni le backend." />
+                               Text="Rien n'est à configurer en temps normal : le Panel trouve lui-même APEX (port, dossier, jeton). « Démarrer APEX » lance le launcher officiel (launch.sh) dans ce dossier ; rien n'est démarré sans votre clic." />
                     <TextBlock Text="Distribution WSL (vide = distribution par défaut)" FontSize="11" Opacity="0.7" />
                     <TextBox Text="{Binding WslDistro}" Watermark="par défaut" />
+                    <TextBlock Text="Dossier APEX dans WSL (vide = dernier dossier où APEX a tourné, sinon ~/apex)" FontSize="11" Opacity="0.7" />
+                    <TextBox Name="ProjectRootBox" Text="{Binding ProjectRoot}" Watermark="apex  (ou /home/moi/apex)" />
                     <TextBlock Text="{Binding Message}" TextWrapping="Wrap" FontSize="12" />
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
                         <Button Content="Enregistrer" Command="{Binding SaveCommand}" />

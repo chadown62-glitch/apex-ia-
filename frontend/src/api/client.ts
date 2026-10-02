@@ -6,12 +6,15 @@
  * qui parle réseau ; les composants ne connaissent que des fonctions
  * typées (voir endpoints.ts), jamais une URL.
  *
- * Authentification (passe « Frontend API Integration ») : `apex.api.auth.
- * require_api_token` exige désormais un jeton sur CHAQUE route, `/health`
- * inclus — ce module est le SEUL endroit qui lit `VITE_APEX_API_TOKEN` et
- * pose l'en-tête `Authorization`, jamais un composant individuel. Le jeton
- * n'est jamais journalisé, jamais renvoyé dans un message d'erreur, jamais
- * affiché — seule sa PRÉSENCE/ABSENCE est observable.
+ * Authentification — deux modes, choisis ICI seulement :
+ * - interface servie par APEX (`apex serve`, mode normal) : AUCUN jeton dans
+ *   le build. L'interface est ouverte depuis le Panel par un code à usage
+ *   unique échangé contre une session (cookie HttpOnly, voir
+ *   `apex/api/ui.py`) ; chaque requête porte ce cookie (même origine) et
+ *   l'en-tête `X-APEX-UI: 1`, exigé par le backend avec la session ;
+ * - développement (`npm run dev`) : `VITE_APEX_API_TOKEN` défini -> en-tête
+ *   `Authorization: Bearer`, comme avant. Ce module est le SEUL endroit qui
+ *   lit ce jeton ; il n'est jamais journalisé ni affiché.
  */
 
 import type { DataEnvelope } from "./types";
@@ -73,22 +76,25 @@ function extractDetail(body: unknown, status: number): string {
  * de l'appelant (page/hook) de distinguer authentification/validation/
  * ressource-absente/inattendu via `error.status`.
  */
+export const SESSION_EXPIRED_MESSAGE =
+  "Session APEX absente ou expirée : rouvrez APEX depuis le Panel (bouton « Ouvrir APEX »).";
+
+/** `true` en mode normal (interface servie par APEX, session ouverte depuis le Panel). */
+export function isSessionMode(): boolean {
+  return !getApiToken();
+}
+
 export async function fetchEnvelope<T>(path: string, init?: RequestInit): Promise<DataEnvelope<T>> {
   const token = getApiToken();
-  if (!token) {
-    return {
-      status: "unknown",
-      data: null,
-      detail: "VITE_APEX_API_TOKEN non configuré — voir frontend/.env.example.",
-    };
-  }
+  const auth: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : { "X-APEX-UI": "1" };
   try {
     const response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, {
       ...init,
+      credentials: "same-origin",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
+        ...auth,
         ...init?.headers,
       },
     });
@@ -103,6 +109,7 @@ export async function fetchEnvelope<T>(path: string, init?: RequestInit): Promis
       // (gestionnaire global, apex/api/app.py) — on la lit telle quelle ;
       // sinon (401/404/422, forme `{"detail": ...}`) : ApiError typée.
       if (hasEnvelopeShape(body)) return body as DataEnvelope<T>;
+      if (response.status === 401 && !token) throw new ApiError(SESSION_EXPIRED_MESSAGE, 401);
       throw new ApiError(extractDetail(body, response.status), response.status);
     }
     return (await response.json()) as DataEnvelope<T>;

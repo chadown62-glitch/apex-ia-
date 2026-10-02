@@ -14,10 +14,24 @@ public sealed record DiscoveryRecord(
     int Port,
     int Pid,
     DateTimeOffset StartedAt,
-    string Phase = "serving")
+    string Phase = "serving",
+    StartRefusal? Refusal = null)
 {
     /// <summary>`launch.sh serve` prépare le démarrage (compose, doctor, gate) : l'API n'écoute pas encore, c'est normal.</summary>
     public bool IsStarting => Phase == "starting";
+
+    /// <summary>Le dernier démarrage n'a pas eu lieu (phase <c>refused</c>) : <see cref="Refusal"/> dit pourquoi.</summary>
+    public bool IsRefused => Phase == "refused";
+}
+
+/// <summary>
+/// Pourquoi le dernier démarrage n'a pas eu lieu (<c>apex/discovery.py</c>, <c>write_refused</c>) :
+/// code de sortie de <c>launch.sh</c>, étape, contrôles du Gate cités par le rapport de CE démarrage.
+/// </summary>
+public sealed record StartRefusal(int ExitCode, string Stage, IReadOnlyList<string> Blocking, IReadOnlyList<string> UnverifiedBlocking)
+{
+    /// <summary>Une VÉRIFICATION a refusé (Startup Gate, apex doctor) — à distinguer d'une panne (Docker, erreur interne).</summary>
+    public bool IsVerdict => Stage is "gate" or "doctor";
 }
 
 public enum DiscoveryKind
@@ -67,9 +81,13 @@ public static class BackendDiscovery
                 Pid: Int(root, "pid"),
                 StartedAt: DateTimeOffset.Parse(Str(root, "started_at") ?? throw new FormatException("started_at"), CultureInfo.InvariantCulture),
                 Phase: Str(root, "phase") ?? "serving");
-            if (record.Phase is not ("starting" or "serving"))
+            if (record.Phase is not ("starting" or "serving" or "refused"))
             {
                 return Invalid($"phase inconnue « {record.Phase} »");
+            }
+            if (record.IsRefused)
+            {
+                record = record with { Refusal = ParseRefusal(root) };
             }
             if (record.Port is < 1 or > 65535 || record.Pid < 1)
             {
@@ -90,6 +108,41 @@ public static class BackendDiscovery
         {
             return Invalid($"format invalide ({ex.Message})");
         }
+    }
+
+    /// <summary>Stricte, comme le reste : code borné, étape connue, identifiants de contrôles courts et sans caractère spécial.</summary>
+    private static StartRefusal ParseRefusal(JsonElement root)
+    {
+        if (!root.TryGetProperty("refusal", out var refusal) || refusal.ValueKind != JsonValueKind.Object)
+        {
+            throw new FormatException("refusal");
+        }
+        var code = Int(refusal, "exit_code");
+        var stage = Str(refusal, "stage") ?? throw new FormatException("stage");
+        if (code is < 1 or > 255 || stage is not ("infrastructure" or "doctor" or "gate" or "gate_error" or "unknown"))
+        {
+            throw new FormatException("refusal");
+        }
+        return new StartRefusal(code, stage, CheckIds(refusal, "blocking"), CheckIds(refusal, "unverified_blocking"));
+    }
+
+    private static List<string> CheckIds(JsonElement refusal, string name)
+    {
+        if (!refusal.TryGetProperty(name, out var list) || list.ValueKind != JsonValueKind.Array || list.GetArrayLength() > 50)
+        {
+            throw new FormatException(name);
+        }
+        var ids = new List<string>();
+        foreach (var item in list.EnumerateArray())
+        {
+            var id = item.ValueKind == JsonValueKind.String ? item.GetString() : null;
+            if (id is null || id.Length is 0 or > 40 || !id.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_'))
+            {
+                throw new FormatException(name);
+            }
+            ids.Add(id);
+        }
+        return ids;
     }
 
     public static string TokenPath(DiscoveryRecord record) => record.ProjectRoot.TrimEnd('/') + "/" + record.TokenFile;

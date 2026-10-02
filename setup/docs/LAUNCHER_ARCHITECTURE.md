@@ -1,5 +1,14 @@
 # Launcher de production — Architecture (N+15)
 
+> **État au 02/10/2026 (audit launcher + app/web) : NON LIVRÉ, NE PAS ÉTENDRE.** L'installateur Windows
+> ne contient que le Panel `APEX.exe` (`ApexSetup.Dashboard`) ; c'est lui qui démarre, arrête et ouvre
+> APEX, par le launcher officiel `scripts/apex-launch.sh` (boutons « Démarrer / Arrêter / Ouvrir APEX »,
+> voir `docs/INSTALLER_APEX.md`). Ce projet-ci est un second launcher parallèle, jamais publié, et il
+> décide sur `GateSummary.Phase2Authorized` (règle `Blocked` ci-dessous) : il confond l'autorisation de
+> la PHASE 2 avec celle du DÉMARRAGE (`startup_authorized`, docs/PHASE_1_GATE.md §10) et refuserait
+> donc toute machine. Toute la chaîne `ApexSetup.Application`/`Core` partage ce défaut. À retirer ou à
+> réaligner sur `startup_authorized` — décision à prendre, hors de ce chantier.
+
 ## Objectif
 
 Transformer APEX en application Windows lançable en un clic : double-clic

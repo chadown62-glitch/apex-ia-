@@ -32,7 +32,7 @@ public sealed class App : Avalonia.Application
 
             var viewModel = new MainWindowViewModel(
                 composition.Settings, composition.Status, log, composition.Redactor, composition.DiagnosticContext,
-                action => Dispatcher.UIThread.Post(action));
+                action => Dispatcher.UIThread.Post(action), composition.Control);
             var window = new MainWindow { DataContext = viewModel };
             viewModel.Clipboard = new WindowClipboard(window);
             desktop.MainWindow = window;

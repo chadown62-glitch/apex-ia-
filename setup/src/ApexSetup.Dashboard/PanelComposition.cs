@@ -9,12 +9,13 @@ namespace ApexSetup.Dashboard;
 /// </summary>
 public sealed class PanelComposition
 {
-    private PanelComposition(FileLogSink log, Redactor redactor, JsonSettingsStore settings, PanelStatusService status)
+    private PanelComposition(FileLogSink log, Redactor redactor, JsonSettingsStore settings, PanelStatusService status, PanelControl control)
     {
         Log = log;
         Redactor = redactor;
         Settings = settings;
         Status = status;
+        Control = control;
     }
 
     public FileLogSink Log { get; }
@@ -22,16 +23,22 @@ public sealed class PanelComposition
     public JsonSettingsStore Settings { get; }
     public PanelStatusService Status { get; }
 
+    /// <summary>Démarrer / arrêter / ouvrir APEX — toujours sur un geste de l'utilisateur.</summary>
+    public PanelControl Control { get; }
+
     public static PanelComposition Create()
     {
         var redactor = new Redactor();
         var log = new FileLogSink(PanelInfo.LogDirectory, redactor);
+        var runner = new RealProcessRunner();
         IBackendHost host = OperatingSystem.IsWindows()
-            ? new WslBackendHost(new RealProcessRunner(), new WindowsWslRegistry())
+            ? new WslBackendHost(runner, new WindowsWslRegistry())
             : new LocalBackendHost();
-        var status = new PanelStatusService(host, new StatusClient(new HttpClient()));
+        var client = new StatusClient(new HttpClient());
+        var status = new PanelStatusService(host, client);
         status.SecretRead += redactor.Register;
-        return new PanelComposition(log, redactor, new JsonSettingsStore(PanelInfo.SettingsFile), status);
+        var control = new PanelControl(new BackendLauncher(runner, runner, wsl: OperatingSystem.IsWindows()), client, new SystemBrowserLauncher());
+        return new PanelComposition(log, redactor, new JsonSettingsStore(PanelInfo.SettingsFile), status, control);
     }
 
     public DiagnosticContext DiagnosticContext(string? settingsProblem) => new(

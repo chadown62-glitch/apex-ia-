@@ -36,25 +36,20 @@ python -m apex.cli.main doctor
 
 ## Lancement (Windows)
 
-Depuis Windows (WSL2 déjà configuré comme ci-dessus), double-cliquer sur
-`apex.bat` à la racine du dépôt — ou l'exécuter depuis une invite :
+Le produit Windows est le **Panel APEX** (`APEX.exe`, installateur `APEX-Setup-x64-v<version>.exe`,
+voir `docs/INSTALLER_APEX.md`) : double-clic, **Démarrer APEX** (le launcher officiel
+`scripts/apex-launch.sh` dans WSL — préflight, `apex doctor`, Startup Gate, jamais contournés), puis
+**Ouvrir APEX** (l'interface web servie par APEX lui-même). Aucun terminal au quotidien.
 
-```bat
-apex.bat
+Une fois, dans le dépôt (WSL) : `.env`, `.venv` (ci-dessus), puis l'interface web :
+
+```bash
+bash scripts/apex-build-ui.sh
 ```
 
-`apex.bat` est un délégateur PUR : il ne fait que résoudre son propre
-emplacement, appeler `wsl.exe` pour transmettre fidèlement les arguments à
-`scripts/apex-launch.sh` (exécuté dans WSL), et relayer le code de sortie.
-Il n'installe rien, ne modifie jamais Windows/WSL, et ne contourne jamais
-`apex doctor`/`apex gate`. Voir `scripts/apex-launch.sh` pour le détail du
-préflight (environnement, infrastructure, Doctor, Gate).
-
-Pour une expérience un-clic complète (double-clic, sans jamais ouvrir de
-terminal, avec détection d'installation/réparation automatique et
-élévation administrateur seulement si nécessaire), voir le launcher de
-production `setup/src/ApexSetup.Launcher` — architecture détaillée dans
-`setup/docs/LAUNCHER_ARCHITECTURE.md`.
+`apex.bat` (racine du dépôt) reste un délégateur pur vers `scripts/apex-launch.sh` pour un usage en
+invite de commandes. `setup/src/ApexSetup.Launcher` n'est PAS livré et ne doit pas être étendu (voir
+l'avertissement en tête de `setup/docs/LAUNCHER_ARCHITECTURE.md`).
 
 ## Commandes disponibles
 

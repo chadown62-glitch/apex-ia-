@@ -1,3 +1,4 @@
+using ApexSetup.Dashboard.Models;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -40,7 +41,7 @@ public class StatusClientTests
 
         Assert.Equal(FetchOutcome.Ok, fetch.Outcome);
         Assert.Equal(1, fetch.Payload!.PanelProtocol);
-        Assert.Equal(6, fetch.Payload.Components.Count);
+        Assert.Equal(1 + ComponentKeys.BackendServices.Count, fetch.Payload.Components.Count); // api + services mesurés
         Assert.Equal($"Bearer {PanelData.Token}", authorization);
         Assert.DoesNotContain(PanelData.Token, fetch.Detail);
     }

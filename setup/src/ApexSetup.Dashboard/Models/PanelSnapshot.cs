@@ -14,6 +14,8 @@ public enum PanelVerdict
 
     /// <summary>Panel et backend ne parlent pas le même protocole : aucun état n'est interprété.</summary>
     VersionMismatch,
+    /// <summary>Le démarrage d'APEX a été REFUSÉ par une vérification (Startup Gate, apex doctor) : jamais contourné.</summary>
+    Blocked,
 }
 
 /// <summary>Cause précise d'un verdict non READY — une par situation distincte que l'utilisateur doit corriger différemment.</summary>
@@ -38,6 +40,10 @@ public enum NotReadyCause
     PanelTooOld,
     /// <summary>Le backend écoute dans WSL, mais Windows ne l'atteint pas par 127.0.0.1 (redirection localhost WSL2).</summary>
     LocalhostUnreachable,
+    /// <summary>Démarrage refusé par le Startup Gate (FAIL mesuré, précondition non vérifiée) ou par apex doctor.</summary>
+    StartupRefused,
+    /// <summary>Le démarrage a échoué avant APEX (.env, Python, Docker, erreur interne du Gate, dossier introuvable…).</summary>
+    StartFailed,
 }
 
 /// <summary>Versions constatées (jamais supposées) : celle du Panel est la sienne ; celles du backend viennent de sa réponse.</summary>

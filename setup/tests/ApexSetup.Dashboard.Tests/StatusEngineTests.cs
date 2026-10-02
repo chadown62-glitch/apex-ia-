@@ -20,7 +20,7 @@ public class StatusEngineTests
         Assert.Equal("APEX READY", s.Headline);
         Assert.All(s.Components, c => Assert.Equal(ComponentStatus.Ready, c.Status));
         Assert.Equal(
-            [ComponentKey.Wsl, ComponentKey.Backend, ComponentKey.Api, ComponentKey.Database, ComponentKey.Redis, ComponentKey.Ollama, ComponentKey.Sandbox, ComponentKey.Brain],
+            [ComponentKey.Wsl, ComponentKey.Backend, ComponentKey.Api, ComponentKey.Database, ComponentKey.Redis, ComponentKey.Ollama, ComponentKey.Sandbox, ComponentKey.Brain, ComponentKey.Ui],
             s.Components.Select(c => c.Key));
         Assert.Equal("0.1.2", s.Versions.BackendApexVersion);
     }
@@ -78,7 +78,7 @@ public class StatusEngineTests
 
         Assert.Equal(NotReadyCause.BackendStopped, s.Cause);
         Assert.Equal(ComponentStatus.Offline, Of(s, ComponentKey.Backend));
-        Assert.Contains("Relancez", s.Guidance);
+        Assert.Contains("« Démarrer APEX » pour le relancer", s.Guidance);
     }
 
     [Fact]

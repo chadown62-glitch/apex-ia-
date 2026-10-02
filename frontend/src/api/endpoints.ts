@@ -32,6 +32,7 @@ import type {
   ExperimentCycleCreateInput,
   Gate,
   Health,
+  SystemStatus,
   LearningCycleHistoryEntry,
   LearningCycleStartInput,
   LearningCycleStatus,
@@ -53,6 +54,10 @@ import type {
 
 export function getHealth(): Promise<DataEnvelope<Health>> {
   return fetchEnvelope<Health>("/health");
+}
+
+export function getSystemStatus(): Promise<DataEnvelope<SystemStatus>> {
+  return fetchEnvelope<SystemStatus>("/status");
 }
 
 export function getGate(): Promise<DataEnvelope<Gate>> {

@@ -258,6 +258,7 @@ class TestEveryRegisteredRouteRequiresAuthentication(unittest.TestCase):
         `original_router.routes` (l'`APIRouter` passé à `include_router`),
         SANS le préfixe `API_PREFIX` appliqué au moment de l'inclusion —
         recomposé explicitement ci-dessous plutôt que supposé."""
+        from apex.api import ui
         from apex.api.app import API_PREFIX, create_app
 
         app = create_app()
@@ -265,8 +266,8 @@ class TestEveryRegisteredRouteRequiresAuthentication(unittest.TestCase):
         checked = 0
         for included in app.routes:
             original_router = getattr(included, "original_router", None)
-            if original_router is None:
-                continue
+            if original_router is None or original_router is ui.page_router:
+                continue  # pages de l'interface : exception unique, bornée par le test ci-dessous
             for route in original_router.routes:
                 path = getattr(route, "path", "")
                 methods = getattr(route, "methods", None) or set()
@@ -283,6 +284,22 @@ class TestEveryRegisteredRouteRequiresAuthentication(unittest.TestCase):
                         )
                         checked += 1
         self.assertGreater(checked, 10)  # preuve qu'on a bien parcouru un ensemble réel
+
+
+    def test_the_only_unauthenticated_routes_are_the_interface_pages(self) -> None:
+        """Seule exception à la frontière : les pages de l'interface web (`apex.api.ui.page_router`),
+        sans aucune donnée — fichiers du build, échange d'un code à usage unique, déconnexion. Figée
+        ici : toute route ajoutée à ce routeur fait échouer ce test, et aucune ne sert /api/."""
+        from apex.api import ui
+        from apex.api.app import create_app
+
+        routes = {(r.path, tuple(sorted(r.methods))) for r in ui.page_router.routes}
+        self.assertEqual(routes, {("/ui/login", ("GET",)), ("/ui/logout", ("POST",)), ("/{path:path}", ("GET",))})
+        anonymous = TestClient(create_app())
+        for path in ("/api/v1/does-not-exist", "/api", "/api/v1"):
+            with self.subTest(path=path):
+                self.assertIn(anonymous.get(path).status_code, (401, 404))
+        self.assertEqual(anonymous.get("/ui/login?code=forged").status_code, 401)
 
 
 def _path_params(path: str) -> list[str]:

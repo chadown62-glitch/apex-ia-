@@ -41,7 +41,7 @@ import secrets
 import stat
 from pathlib import Path
 
-from fastapi import Header, HTTPException
+from fastapi import Header, HTTPException, Request
 
 #: Chemin relatif — même convention que `apex.gate.report.DEFAULT_REPORT_PATH`
 #: (".apex/environment.json") : suppose un répertoire de travail à la racine
@@ -93,17 +93,28 @@ def get_or_create_api_token() -> str:
     return token
 
 
-def require_api_token(authorization: str | None = Header(default=None)) -> None:
+def require_api_token(request: Request, authorization: str | None = Header(default=None)) -> None:
     """Dépendance FastAPI — appliquée UNIFORMÉMENT à chaque routeur inclus
     dans `apex.api.app.create_app()`, sans exception : frontière de
     sécurité uniforme, décision explicite (aucune route jugée « assez
     anodine » pour être exemptée au cas par cas).
-
     `401` dans les deux cas d'échec, sans jamais citer le jeton reçu ou
     attendu dans le message — seule la présence/absence et la validité
-    sont observables depuis l'extérieur."""
+    sont observables depuis l'extérieur.
+
+    Second moyen, pour l'interface web servie par APEX (`apex.api.ui`) : une
+    session ouverte depuis le Panel par un code à usage unique — cookie
+    `HttpOnly` + en-tête `X-APEX-UI` + même origine (`ui.session_authorizes`).
+    Un en-tête `Authorization` présent est TOUJOURS jugé seul : un jeton faux
+    n'est jamais rattrapé par un cookie."""
     expected = get_or_create_api_token()
-    if authorization is None or not authorization.startswith("Bearer "):
+    if authorization is None:
+        from apex.api.ui import session_authorizes
+
+        if session_authorizes(request):
+            return
+        raise HTTPException(status_code=401, detail="authentification requise")
+    if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="authentification requise")
     provided = authorization.removeprefix("Bearer ").strip()
     if not provided or not secrets.compare_digest(provided, expected):

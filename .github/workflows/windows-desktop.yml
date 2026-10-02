@@ -148,6 +148,21 @@ jobs:
           $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
           wsl.exe -d $env:DISTRO --cd /home/apex --exec bash "$src/setup/packaging/windows/ci/startup_contract_evidence.sh" /home/apex/apex
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: The Panel (APEX.exe) shows that real Startup Gate refusal as BLOCKED, then clears it
+        if: always()
+        shell: pwsh
+        run: |
+          # Refus RÉEL enregistré par l'étape précédente (3b : launch.sh panel-serve, FAIL mesuré GATE-21).
+          $exe = Get-ChildItem "$env:RUNNER_TEMP\release\publish" -Recurse -Filter APEX.exe | Select-Object -First 1
+          $out = Join-Path $env:RUNNER_TEMP 'panel-blocked.json'
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList '--status-json' -NoNewWindow -Wait -PassThru -RedirectStandardOutput $out
+          $s = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json
+          Write-Host "APEX.exe --status-json : code $($p.ExitCode) ; $($s.headline) / $($s.cause)"
+          Write-Host "guidance : $($s.guidance)"
+          wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec bash scripts/apex-launch.sh stop
+          $ok = $p.ExitCode -eq 4 -and $s.verdict -eq 'Blocked' -and $s.cause -eq 'StartupRefused' -and $s.guidance -match 'GATE-21' -and $s.guidance -match 'Startup Gate'
+          if (-not $ok) { Write-Host 'FAIL : le Panel ne montre pas ce refus réel comme APEX BLOCKED'; exit 1 }
+          Write-Host 'PASS : refus réel du Startup Gate affiché APEX BLOCKED (GATE-21 cité), jamais contourné'
       - name: MinIO optional profile (Gate M) — build from official sources, start with the profile, healthcheck, stop
         if: always()
         shell: pwsh

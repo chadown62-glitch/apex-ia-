@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, fetchEnvelope, isApiTokenConfigured } from "./client";
+import { ApiError, SESSION_EXPIRED_MESSAGE, fetchEnvelope, isApiTokenConfigured } from "./client";
 
 describe("fetchEnvelope", () => {
   const originalFetch = globalThis.fetch;
@@ -71,14 +71,33 @@ describe("fetchEnvelope", () => {
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer test-token-value");
   });
 
-  it("never calls fetch and fails clearly when no token is configured", async () => {
+  it("without a build-time token, uses the session opened from the Panel — never a bearer header", async () => {
     vi.unstubAllEnvs();
-    globalThis.fetch = vi.fn();
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: "real", data: null, detail: null }),
+    }) as unknown as typeof fetch;
 
-    const result = await fetchEnvelope("/tasks");
-    expect(globalThis.fetch).not.toHaveBeenCalled();
-    expect(result.status).toBe("unknown");
-    expect(result.detail).toContain("VITE_APEX_API_TOKEN");
+    await fetchEnvelope("/tasks");
+    const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+    const headers = init.headers as Record<string, string>;
+    expect(url).toBe("/api/v1/tasks");
+    expect(init.credentials).toBe("same-origin");
+    expect(headers["X-APEX-UI"]).toBe("1");
+    expect(headers.Authorization).toBeUndefined();
+    expect(isApiTokenConfigured()).toBe(false);
+  });
+
+  it("tells the user to reopen APEX from the Panel when the session is missing or expired", async () => {
+    vi.unstubAllEnvs();
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ detail: "authentification requise" }),
+    }) as unknown as typeof fetch;
+
+    await expect(fetchEnvelope("/status")).rejects.toMatchObject({ status: 401, message: SESSION_EXPIRED_MESSAGE });
   });
 
   it("throws a typed ApiError(401) on a missing/invalid token, never a DataEnvelope", async () => {

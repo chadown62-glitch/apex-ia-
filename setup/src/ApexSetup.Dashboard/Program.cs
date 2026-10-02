@@ -16,7 +16,8 @@ public static class Program
         PanelVerdict.Degraded => 1,
         PanelVerdict.NotReady => 2,
         PanelVerdict.VersionMismatch => 3,
-        _ => 4,
+        PanelVerdict.Blocked => 4,
+        _ => 5,
     };
 
     internal static SingleInstanceGuard? Guard { get; private set; }
@@ -32,6 +33,20 @@ public static class Program
         if (args.Contains("--status-json") || args.Contains("--diagnostic"))
         {
             return RunHeadlessAsync(args.Contains("--diagnostic")).GetAwaiter().GetResult();
+        }
+        // Mêmes actions que les boutons, sans fenêtre (automatisation, validation Windows réelle) :
+        // mêmes services, même launcher, même Startup Gate.
+        if (args.Contains("--start"))
+        {
+            return HeadlessActions.StartAsync().GetAwaiter().GetResult();
+        }
+        if (args.Contains("--stop"))
+        {
+            return HeadlessActions.StopAsync().GetAwaiter().GetResult();
+        }
+        if (args.Contains("--ui-url"))
+        {
+            return HeadlessActions.UiUrlAsync().GetAwaiter().GetResult();
         }
 
         // Un second double-clic ramène le Panel existant au premier plan au lieu d'en ouvrir un autre.
@@ -84,7 +99,7 @@ public static class Program
         writer.Flush();
     }
 
-    private static readonly JsonSerializerOptions JsonOutput = new()
+    internal static readonly JsonSerializerOptions JsonOutput = new()
     {
         WriteIndented = true,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
