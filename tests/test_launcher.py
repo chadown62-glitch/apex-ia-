@@ -672,11 +672,33 @@ class TestDoctorGateIntegration(LauncherTestCase):
         self.assertNotIn("gate", calls)
 
     def test_gate_failure_exits_5(self) -> None:
-        fx = self._fixture(gate_exit=1, gate_output="APEX GATE (fake): not authorized")
+        # `apex gate --startup` : 3 = un contrôle MESURÉ en FAIL refuse le démarrage (audit du 02/10/2026 ;
+        # avant, n'importe quel code ≠ 0 — refus, précondition non vérifiée ou panne Python — donnait 5).
+        fx = self._fixture(gate_exit=3, gate_output="APEX GATE (fake): not authorized")
         result = fx.run()
         self.assertEqual(result.returncode, 5)
         self.assertIn("APEX GATE (fake): not authorized", result.stdout)
-        self.assertIn("apex gate a signalé un échec", result.stderr)
+        self.assertIn("un contrôle mesuré est en FAIL", result.stderr)
+
+    def test_gate_unverified_precondition_exits_6_and_is_not_called_a_failure(self) -> None:
+        fx = self._fixture(gate_exit=4, gate_output="APEX GATE (fake): precondition not verified")
+        result = fx.run()
+        self.assertEqual(result.returncode, 6)
+        self.assertIn("ce n'est pas un FAIL", result.stderr)
+        self.assertNotIn("est en FAIL", result.stderr)
+
+    def test_gate_internal_error_exits_7_never_5(self) -> None:
+        for crash_code in (1, 2, 99):
+            fx = self._fixture(gate_exit=crash_code, gate_output="Traceback (most recent call last):")
+            result = fx.run()
+            self.assertEqual(result.returncode, 7, crash_code)
+            self.assertIn("erreur interne", result.stderr)
+
+    def test_gate_is_asked_for_its_startup_decision(self) -> None:
+        fx = self._fixture()
+        fx.run()
+        gate_calls = [c for c in fx.python_calls_log.read_text().splitlines() if " gate" in c]
+        self.assertEqual(gate_calls, ["-m apex.cli.main gate --startup"])
 
     def test_doctor_runs_before_gate_in_order(self) -> None:
         fx = self._fixture()

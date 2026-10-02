@@ -136,8 +136,23 @@ def _cmd_config(args: argparse.Namespace) -> int:
 
 
 
+#: Codes de sortie d'`apex gate --startup` — distincts de 1 (exception Python non rattrapée) et de 2
+#: (erreur d'arguments argparse), pour qu'un lanceur ne confonde jamais un refus avec une panne du Gate.
+GATE_STARTUP_BLOCKED = 3
+GATE_STARTUP_UNVERIFIED = 4
+
+
+def _startup_exit_code(report: Any) -> int:
+    if report.startup_authorized:
+        return 0
+    return GATE_STARTUP_BLOCKED if report.startup_blocking else GATE_STARTUP_UNVERIFIED
+
+
 def _cmd_gate(args: argparse.Namespace) -> int:
-    """Hardware & Environment Gate — phase 1."""
+    """Hardware & Environment Gate — phase 1.
+
+    Sans `--startup` : code de sortie = autorisation de la phase 2 (inchangé). Avec : décision de
+    démarrage d'APEX (`EnvironmentReport.startup_authorized`), même rapport, même affichage."""
     from apex.gate.report import DEFAULT_REPORT_PATH
     from apex.gate.runner import render_text, run_gate
 
@@ -155,6 +170,8 @@ def _cmd_gate(args: argparse.Namespace) -> int:
     else:
         print(render_text(report, verbose=args.verbose))
         print(f"  Rapport machine-lisible : {written}\n")
+    if getattr(args, "startup", False):
+        return _startup_exit_code(report)
     return 0 if report.phase_2_authorized else 1
 
 
@@ -168,6 +185,12 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     l'appel transite par `scripts/apex-launch.sh` — un `apex serve` invoqué
     directement (sans passer par le launcher) doit refuser exactement de la
     même façon. Aucune option n'existe pour sauter cette vérification.
+
+    La décision est `EnvironmentReport.startup_authorized` (audit du
+    02/10/2026), pas `phase_2_authorized` : celle-ci exige des sondes à
+    consentement que ni ce code ni le launcher n'accordent jamais, et
+    aucune machine ne pouvait démarrer sans dérogation périssable.
+    Voir `apex.gate.report.StartupRole` et docs/PHASE_1_GATE.md §10.
 
     `allow_container_exec`/`allow_network_probe` : lus sur `args` avec
     `False` par défaut — jamais activés d'eux-mêmes. `apex serve` invoqué
@@ -192,13 +215,28 @@ def _cmd_serve(args: argparse.Namespace) -> int:
         timeout_s=20.0,
     )
     report.write(DEFAULT_REPORT_PATH)
-    if not report.phase_2_authorized:
+    # Décision de DÉMARRAGE (EnvironmentReport.startup_authorized), pas l'autorisation de la phase 2 :
+    # un FAIL mesuré ou une précondition non vérifiée refuse ; une sonde à consentement non accordée ou
+    # une capacité facultative absente (GPU) est « non vérifiée », affichée, jamais un échec.
+    if not report.startup_authorized:
         from apex.discovery import remove_discovery
 
         remove_discovery()  # annonce « en démarrage » de launch.sh (même pid) : ce démarrage n'aura pas lieu
-        print("erreur : apex gate refuse l'autorisation — APEX ne démarre pas.", file=sys.stderr)
+        print("erreur : apex gate refuse le démarrage — APEX ne démarre pas.", file=sys.stderr)
+        if report.startup_blocking:
+            print("  FAIL mesurés : " + ", ".join(c.check_id for c in report.startup_blocking), file=sys.stderr)
+        if report.startup_unverified_blocking:
+            print("  préconditions non vérifiées : "
+                  + ", ".join(c.check_id for c in report.startup_unverified_blocking), file=sys.stderr)
+        if not report.probe_is_real:
+            print("  mesures non issues d'une sonde système réelle", file=sys.stderr)
         print(f"  rapport machine-lisible : {DEFAULT_REPORT_PATH}", file=sys.stderr)
         return 1
+    if report.startup_unverified:
+        unverified = ", ".join(f"{c.check_id} ({c.unknown_reason})" for c in report.startup_unverified)
+        print(f"apex serve : contrôles non vérifiés (n'empêchent pas le démarrage) : {unverified}", file=sys.stderr)
+        log.warning("contrôles du Gate non vérifiés au démarrage", checks=unverified,
+                    phase_2_authorized=report.phase_2_authorized)
 
     try:
         import uvicorn
@@ -693,6 +731,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--allow-desktop-control", action="store_true",
         help="autoriser la sonde de contrôle clavier/souris (GATE-22) — jamais d'action réelle, "
              "seulement une mesure de capacité",
+    )
+    gate_cmd.add_argument(
+        "--startup", action="store_true",
+        help="code de sortie = décision de DÉMARRAGE d'APEX (0 autorisé, "
+             f"{GATE_STARTUP_BLOCKED} FAIL mesuré, {GATE_STARTUP_UNVERIFIED} précondition non vérifiée) "
+             "au lieu de l'autorisation de phase 2 — utilisé par scripts/apex-launch.sh",
     )
     gate_cmd.set_defaults(func=_cmd_gate)
 

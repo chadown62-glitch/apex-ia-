@@ -49,17 +49,18 @@ Aucune simulation (Wine, faux `wsl.exe`) n'est comptée ci-dessous comme preuve 
 | 11 | f694541 | 32 PASS / 10 FAIL / 5 BLOCKED | `launch.sh` arrêté par `apex gate` non concluant (code 5) : backend jamais démarré ; S05 : faux serveur du test en course sur le port | refus du préflight = BLOCKED avec la cause ; S05 réécrit ; Gate excusé en CI (§4) |
 | 12 | 6edb965 | **42 PASS / 0 FAIL / 5 BLOCKED** | — | — |
 
-## 4. Écart assumé en CI : dérogations du Gate APEX
+## 4. Gate APEX et démarrage (corrigé le 02/10/2026)
 
-`launch.sh serve` ne démarre APEX que si `apex gate` est concluant. `launch.sh` n'autorise jamais les sondes
-réseau, conteneur et bureau : GATE-15/17/18/22 sont donc UNKNOWN (`not_authorized`) **sur toute machine**, et
-GATE-08/09/10 le sont sans GPU (`not_applicable`). En CI seulement, `prepare_wsl_backend.sh` écrit un
-`gate.exceptions.yaml` (mécanisme officiel, `gate.exceptions.example.yaml`) pour ces seules raisons, jamais
-pour un FAIL, expirant le lendemain (`gate_exceptions_for_ci.py`, testé). Rien n'est changé dans APEX.
+Runs 11–12 : `launch.sh serve` exigeait l'autorisation de **phase 2** de la feuille de route. Les sondes
+réseau, conteneur et bureau n'étant jamais accordées par `launch.sh`, GATE-15/17/18/22 restaient UNKNOWN
+sur **toute** machine, et le backend ne démarrait jamais sans dérogation. Le run 12 l'avait contourné en CI
+par un `gate.exceptions.yaml` temporaire.
 
-**Décision en attente du propriétaire** : sur un poste sans `gate.exceptions.yaml`, `launch.sh serve` s'arrête
-sur « Phase 2 autorisée : NON » ; le Panel affiche alors « démarre… » puis « non démarré ». Faut-il que
-`launch.sh` traite différemment les UNKNOWN `not_authorized` qu'il provoque lui-même ? Non modifié.
+Corrigé : le démarrage décide sur `apex gate --startup` (docs/PHASE_1_GATE.md §10). Un FAIL mesuré refuse
+toujours, même excusé (code 5) ; une précondition non vérifiée refuse (code 6) ; une sonde non autorisée
+ou l'absence de GPU sont affichées « non vérifiés » et ne refusent pas ; une panne du Gate a son propre code
+(7). La CI n'écrit plus **aucune** dérogation : le run 13 doit prouver le démarrage réel sans contournement.
+`phase_2_authorized` est inchangé.
 
 ## 5. Matrice de preuves
 

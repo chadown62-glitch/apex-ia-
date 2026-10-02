@@ -4,7 +4,7 @@
 Compose des briques déjà réelles, ne réimplémente aucune d'entre elles :
 `apex.doctor.runner.run_checks` (diagnostic, lecture seule, INCHANGÉ),
 `apex.doctor.repair` (classification + réparation sûre, ce module),
-`apex.gate.runner.run_gate` (autorisation Phase 2, JAMAIS court-circuitée —
+`apex.gate.runner.run_gate` (décision de démarrage, JAMAIS court-circuitée —
 même discipline que `apex.cli.main._cmd_serve`, qui vérifie Gate
 inconditionnellement). Le démarrage réel du serveur (`uvicorn.run`,
 bloquant) reste dans `apex.cli.main._cmd_start` — cette fonction s'arrête
@@ -47,9 +47,13 @@ class StartupOutcome:
     plans: tuple[RepairPlan, ...]
     repair_outcomes: tuple[RepairOutcome, ...]
     verify_report: DoctorReport | None
+    #: Décision de DÉMARRAGE du Gate (`EnvironmentReport.startup_authorized`), pas l'autorisation de
+    #: phase 2 — voir `apex.gate.report.StartupRole`. `None` : Gate non sollicité.
     gate_authorized: bool | None
     status: StartupStatus
     duration_s: float
+    #: Autorisation de la phase 2 de la feuille de route, affichée à titre informatif.
+    phase_2_authorized: bool | None = None
 
 
 def run_preflight_and_repair(
@@ -98,11 +102,11 @@ def run_preflight_and_repair(
     from apex.gate.runner import run_gate
 
     gate_report = run_gate(config_path=config_path, timeout_s=timeout_s, **(gate_kwargs or {}))
-    status = StartupStatus.READY_TO_SERVE if gate_report.phase_2_authorized else StartupStatus.BLOCKED_GATE
+    status = StartupStatus.READY_TO_SERVE if gate_report.startup_authorized else StartupStatus.BLOCKED_GATE
     outcome = StartupOutcome(
         initial_report=initial_report, plans=plans, repair_outcomes=repair_outcomes,
-        verify_report=verify_report, gate_authorized=gate_report.phase_2_authorized, status=status,
-        duration_s=time.monotonic() - started,
+        verify_report=verify_report, gate_authorized=gate_report.startup_authorized, status=status,
+        duration_s=time.monotonic() - started, phase_2_authorized=gate_report.phase_2_authorized,
     )
     _record(outcome, problems, history_path)
     return outcome
@@ -158,7 +162,10 @@ def render_text(outcome: StartupOutcome, *, verbose: bool = False) -> str:
     if outcome.gate_authorized is None:
         lines.append("  non sollicité (doctor bloquant)")
     else:
-        lines.append(f"  autorisation Phase 2 : {'OUI' if outcome.gate_authorized else 'NON'}")
+        lines.append(f"  démarrage d'APEX : {'AUTORISÉ' if outcome.gate_authorized else 'REFUSÉ'}")
+        if outcome.phase_2_authorized is not None:
+            lines.append(f"  autorisation Phase 2 (feuille de route, n'empêche pas le démarrage) : "
+                         f"{'OUI' if outcome.phase_2_authorized else 'NON'}")
 
     lines.append("")
     lines.append(f"Statut final : {outcome.status.value.upper()} ({outcome.duration_s:.1f}s)")

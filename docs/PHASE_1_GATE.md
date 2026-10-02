@@ -315,3 +315,54 @@ Le remplissage de ces champs demande de charger les modèles : c'est un
 d'environnement. Tant qu'il n'a pas tourné, tout budget de calcul exprimé en
 VRAM ou en task-runs repose sur de la documentation, et doit être traité comme
 tel.
+
+---
+
+## 10. Démarrage d'APEX contre autorisation de phase 2 (audit du 02/10/2026)
+
+Le Gate répond à deux questions distinctes, sur le même rapport :
+
+| Question | Champ | Utilisé par | Code de sortie |
+|---|---|---|---|
+| La machine permet-elle d'ouvrir la **phase 2** de la feuille de route ? | `phase_2_authorized` | `apex gate` | 0 / 1 (inchangé) |
+| APEX peut-il **démarrer** sur cette machine ? | `startup.authorized` | `apex gate --startup`, `launch.sh serve`, `apex serve`, `apex start` | 0 autorisé · 3 FAIL mesuré · 4 précondition non vérifiée |
+
+**Pourquoi la séparation.** Avant l'audit, les trois lanceurs exigeaient `phase_2_authorized`. Or ils
+n'accordent jamais les sondes à consentement (`--allow-*`) : GATE-15/17/18/22 restaient UNKNOWN
+(`not_authorized`) sur **toute** machine, et une machine sans GPU gardait GATE-08/09/10 UNKNOWN
+(`not_applicable`) à vie. Aucun poste ne démarrait sans dérogation — périssable par construction, donc à
+renouveler indéfiniment (constaté en réel : CI Windows Server + WSL2, run 11 ; conteneur Linux, audit). De
+plus, GATE-08/09/10/15/18/22 n'ont **aucun chemin FAIL** : un « non mesuré » bloquait plus qu'un « mesuré
+dégradé ».
+
+**Règles du démarrage** (`apex/gate/report.py`, tests : `tests/test_startup_gate_contract.py`) :
+
+1. un FAIL mesuré bloque toujours, **même excusé** : une dérogation peut ouvrir une phase, jamais faire
+   démarrer APEX sur une précondition mesurée non satisfaite ;
+2. une mesure non issue d'une sonde réelle (SIMULATED) bloque toujours ;
+3. un UNKNOWN ne bloque que s'il porte sur une PRÉCONDITION (il pourrait cacher un FAIL) — sauf dérogation
+   datée ; sinon il est affiché « non vérifié », avec son motif, jamais comme un échec. Excusé ou non, un
+   UNKNOWN reste listé « non vérifié » : une dérogation accepte l'absence de preuve, elle ne la fournit pas ;
+4. un contrôle non classé est une PRÉCONDITION (repli sûr).
+
+| Rôle | Signification | Contrôles |
+|---|---|---|
+| A — précondition | FAIL possible ; UNKNOWN bloquant | GATE-02, 05, 06, 14, 16, 19, 21 |
+| B — informatif | aucun chemin FAIL | GATE-03, 04, 11, 12, 13 |
+| C — capacité facultative | utile à une phase ultérieure (GPU : phase 6 ; runsc : phase 21) | GATE-07, 08, 09, 10, 20 |
+| D — non vérifiable | mesure empêchée par un durcissement délibéré | GATE-01 |
+| E — consentement explicite | sonde que les lanceurs n'accordent jamais | GATE-15, 17, 18, 22 |
+
+GATE-17 est le seul contrôle non-A qui puisse produire un FAIL : il est toléré non vérifié au démarrage
+parce que sa garantie est revérifiée **au moment de l'utiliser**, en refus par défaut
+(`select_sandbox_provider` sonde un vrai conteneur durci ; `ContainerSandbox.execute` lève
+`IsolationUnavailable` sans preuve), et l'absence de Docker est un FAIL passif de GATE-06. Lancé avec
+`--allow-container-exec`, un GATE-17 en FAIL bloque le démarrage comme tout FAIL.
+
+**Inchangés** : `phase_2_authorized`, le code de sortie d'`apex gate`, les dérogations
+(`gate.exceptions.yaml`) pour la phase 2, `apex doctor` (qui reste exécuté avant le Gate et bloque sur ses
+propres FAIL, par exemple `host.cgroups`).
+
+**Point ouvert (non modifié)** : `phase_2_authorized` ignore `blocks_phases` — un FAIL qui ne bloque que la
+phase 21 (GATE-14, Red Team) refuse aussi la phase 2. C'est une question de feuille de route, pas de
+démarrage ; à trancher par le propriétaire.

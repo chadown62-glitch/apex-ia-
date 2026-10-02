@@ -21,6 +21,7 @@ import json
 import time
 from dataclasses import dataclass, field
 from datetime import date
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -84,6 +85,67 @@ def load_exceptions(path: str | Path) -> tuple[GateException, ...]:
         return ()
     document = yaml.safe_load(file_path.read_text(encoding="utf-8")) or {}
     return tuple(GateException.parse(item) for item in document.get("exceptions", []))
+
+
+class StartupRole(str, Enum):
+    """Rôle d'un contrôle dans la décision de DÉMARRAGE d'APEX (`launch.sh serve`, `apex serve`,
+    `apex start`) — distincte de l'autorisation de la phase 2 de la feuille de route, inchangée.
+
+    Un FAIL mesuré bloque le démarrage quel que soit le rôle. Le rôle ne décide que du sort d'un
+    UNKNOWN : seule une PRECONDITION non vérifiée bloque le démarrage ; les autres rôles sont
+    « non vérifiés » affichés comme tels, jamais comme des échecs."""
+
+    #: A — précondition : FAIL possible, et un UNKNOWN pourrait cacher ce FAIL -> bloque.
+    PRECONDITION = "precondition"
+    #: B — informatif : aucun chemin FAIL (pire résultat mesurable : DEGRADED, non bloquant).
+    INFORMATIVE = "informative"
+    #: C — capacité facultative (GPU, runsc) : nécessaire à des phases ultérieures, pas au démarrage.
+    OPTIONAL_CAPABILITY = "optional_capability"
+    #: D — non vérifiable par construction (mesure empêchée par un durcissement délibéré).
+    UNVERIFIABLE = "unverifiable"
+    #: E — sonde à consentement explicite, que les lanceurs n'accordent jamais d'eux-mêmes.
+    CONSENT_REQUIRED = "consent_required"
+
+
+#: Classification explicite des 22 contrôles. Un contrôle absent de cette table est une PRECONDITION
+#: (repli sûr : un nouveau contrôle non classé bloque le démarrage tant qu'on ne l'a pas examiné).
+#: `tests/test_startup_gate_contract.py` vérifie qu'aucun contrôle non-PRECONDITION n'a de chemin FAIL,
+#: hors RUNTIME_ENFORCED.
+STARTUP_ROLES: dict[str, StartupRole] = {
+    "GATE-01": StartupRole.UNVERIFIABLE,         # version Windows : illisible si l'interop est coupée (ADR-0005)
+    "GATE-02": StartupRole.PRECONDITION,         # Linux / WSL2
+    "GATE-03": StartupRole.INFORMATIVE,          # distribution
+    "GATE-04": StartupRole.INFORMATIVE,          # noyau
+    "GATE-05": StartupRole.PRECONDITION,         # Python 3.12+
+    "GATE-06": StartupRole.PRECONDITION,         # Docker / Compose (mesuré passivement)
+    "GATE-07": StartupRole.OPTIONAL_CAPABILITY,  # GPU visible : CPU seul = DEGRADED, requis en phase 6
+    "GATE-08": StartupRole.OPTIONAL_CAPABILITY,  # modèle du GPU
+    "GATE-09": StartupRole.OPTIONAL_CAPABILITY,  # VRAM
+    "GATE-10": StartupRole.OPTIONAL_CAPABILITY,  # pilote / CUDA
+    "GATE-11": StartupRole.INFORMATIVE,          # disque (pire cas : DEGRADED)
+    "GATE-12": StartupRole.INFORMATIVE,          # RAM
+    "GATE-13": StartupRole.INFORMATIVE,          # CPU
+    "GATE-14": StartupRole.PRECONDITION,         # cgroups v2 / virtualisation
+    "GATE-15": StartupRole.CONSENT_REQUIRED,     # sortie réseau (APEX fonctionne hors ligne, principe 3)
+    "GATE-16": StartupRole.PRECONDITION,         # git, pyyaml
+    "GATE-17": StartupRole.CONSENT_REQUIRED,     # conteneur durci : revérifié à l'exécution (RUNTIME_ENFORCED)
+    "GATE-18": StartupRole.CONSENT_REQUIRED,     # GPU en conteneur (pire cas : DEGRADED)
+    "GATE-19": StartupRole.PRECONDITION,         # niveau d'isolation de la sandbox
+    "GATE-20": StartupRole.OPTIONAL_CAPABILITY,  # runsc : Red Team, phase 21
+    "GATE-21": StartupRole.PRECONDITION,         # Compose : sur-allocation mémoire (K2)
+    "GATE-22": StartupRole.CONSENT_REQUIRED,     # clavier/souris (pire cas : DEGRADED)
+}
+
+#: Contrôles non-PRECONDITION qui ont pourtant un chemin FAIL : tolérés non vérifiés au démarrage
+#: UNIQUEMENT parce que la garantie qu'ils mesurent est revérifiée, en refus par défaut, au moment de
+#: l'utiliser. GATE-17 : `apex.sandbox.provider.select_sandbox_provider` sonde un vrai conteneur durci et
+#: `ContainerSandbox.execute` lève `IsolationUnavailable` sans preuve (réseau coupé, non-root, racine en
+#: lecture seule) ; l'absence de Docker est en outre un FAIL passif de GATE-06.
+RUNTIME_ENFORCED: frozenset[str] = frozenset({"GATE-17"})
+
+
+def startup_role(check_id: str) -> StartupRole:
+    return STARTUP_ROLES.get(check_id, StartupRole.PRECONDITION)
 
 
 @dataclass
@@ -159,6 +221,40 @@ class EnvironmentReport:
         """Le Gate autorise la phase 2 s'il est concluant et sans blocage résiduel."""
         return self.probe_is_real and not self.blocking and not self.unresolved
 
+    # -- démarrage d'APEX (distinct de la phase 2) -------------------------
+
+    @property
+    def startup_blocking(self) -> tuple[GateCheckResult, ...]:
+        """FAIL mesurés : bloquent TOUJOURS le démarrage, même excusés. Une dérogation peut ouvrir une
+        phase de la feuille de route ; elle ne fait jamais démarrer APEX sur une précondition mesurée
+        non satisfaite."""
+        return tuple(c for c in self.effective_checks if c.status.is_blocking)
+
+    def _not_conclusive(self) -> tuple[GateCheckResult, ...]:
+        # Excusés compris : une dérogation accepte l'absence de preuve, elle ne la fournit pas.
+        return tuple(c for c in self.effective_checks if not c.status.is_conclusive)
+
+    @property
+    def startup_unverified_blocking(self) -> tuple[GateCheckResult, ...]:
+        """Non vérifiés qui bloquent le démarrage : UNKNOWN d'une PRECONDITION (il pourrait cacher un
+        FAIL) et toute mesure SIMULATED, sauf dérogation datée. Jamais présentés comme des échecs."""
+        return tuple(
+            c for c in self._not_conclusive()
+            if c.check_id not in self.excused
+            and (c.status is not GateStatus.UNKNOWN or startup_role(c.check_id) is StartupRole.PRECONDITION)
+        )
+
+    @property
+    def startup_unverified(self) -> tuple[GateCheckResult, ...]:
+        """Non vérifiés qui n'empêchent pas le démarrage (tolérés par leur rôle, ou excusés), affichés
+        comme tels avec leur motif."""
+        blocking = {c.check_id for c in self.startup_unverified_blocking}
+        return tuple(c for c in self._not_conclusive() if c.check_id not in blocking)
+
+    @property
+    def startup_authorized(self) -> bool:
+        return self.probe_is_real and not self.startup_blocking and not self.startup_unverified_blocking
+
     # -- faits consolidés --------------------------------------------------
 
     def facts(self) -> dict[str, Any]:
@@ -221,6 +317,19 @@ class EnvironmentReport:
             "measured_on_target_machine": self.probe_is_real,
             "gate_status": self.status.value,
             "phase_2_authorized": self.phase_2_authorized,
+            "startup": {
+                "authorized": self.startup_authorized,
+                "blocking": [c.check_id for c in self.startup_blocking],
+                "unverified_blocking": [
+                    {"check_id": c.check_id, "status": c.status.value, "reason": c.unknown_reason or None}
+                    for c in self.startup_unverified_blocking
+                ],
+                "unverified": [
+                    {"check_id": c.check_id, "reason": c.unknown_reason or None,
+                     "role": startup_role(c.check_id).value}
+                    for c in self.startup_unverified
+                ],
+            },
             "fingerprint": self.fingerprint(),
             "counts": self.counts,
             "capabilities": self.capabilities(),

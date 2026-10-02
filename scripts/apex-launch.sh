@@ -44,7 +44,11 @@
 #   2   - Docker/Compose indisponible ou `docker compose up`/`down` en échec
 #   3   - aucun interpréteur Python >= 3.12 utilisable trouvé
 #   4   - `apex doctor` a renvoyé FAIL
-#   5   - `apex gate` a renvoyé FAIL
+#   5   - `apex gate --startup` : un contrôle MESURÉ en FAIL refuse le démarrage
+#   6   - `apex gate --startup` : une PRÉCONDITION non vérifiée refuse le démarrage
+#         (jamais une sonde à consentement non accordée ni un GPU absent : voir
+#         apex.gate.report.StartupRole — « non vérifié » n'est pas un échec)
+#   7   - `apex gate` en erreur interne (exception Python, arguments refusés…)
 #   130 - interrompu (Ctrl+C / SIGINT)
 #
 # Sous-commande `serve` (`./apex-launch.sh serve [args...]`) — N+15 : exécute
@@ -69,6 +73,8 @@ readonly EXIT_DOCKER_FAIL=2
 readonly EXIT_PYTHON_MISSING=3
 readonly EXIT_DOCTOR_FAIL=4
 readonly EXIT_GATE_FAIL=5
+readonly EXIT_GATE_UNVERIFIED=6
+readonly EXIT_GATE_ERROR=7
 readonly EXIT_INTERRUPTED=130
 
 readonly MIN_PYTHON_MAJOR=3
@@ -658,12 +664,16 @@ run_doctor() {
     return "${status}"
 }
 
+# `--startup` : le code de sortie du Gate est sa décision de DÉMARRAGE (0 autorisé, 3 FAIL mesuré,
+# 4 précondition non vérifiée), pas l'autorisation de la phase 2 de la feuille de route — celle-ci
+# exige des sondes à consentement que ce launcher n'accorde jamais (aucun drapeau --allow-* ici), et
+# aucune machine ne pouvait démarrer. Le rapport complet (phase 2 comprise) reste affiché tel quel.
 run_gate() {
     local project_root="$1"
     local python_bin="$2"
-    log_info "exécution de apex gate..."
+    log_info "exécution de apex gate (décision de démarrage)..."
     local status=0
-    (cd -- "${project_root}" && "${python_bin}" -m apex.cli.main gate) || status=$?
+    (cd -- "${project_root}" && "${python_bin}" -m apex.cli.main gate --startup) || status=$?
     return "${status}"
 }
 
@@ -744,10 +754,23 @@ run_preflight() {
         exit "${EXIT_DOCTOR_FAIL}"
     fi
 
-    if ! run_gate "${PROJECT_ROOT}" "${PYTHON_BIN}"; then
-        log_err "apex gate a signalé un échec — voir le rapport ci-dessus."
-        exit "${EXIT_GATE_FAIL}"
-    fi
+    local gate_status=0
+    run_gate "${PROJECT_ROOT}" "${PYTHON_BIN}" || gate_status=$?
+    case "${gate_status}" in
+        0) ;;
+        3)
+            log_err "apex gate refuse le démarrage : un contrôle mesuré est en FAIL — voir « FAIL mesurés » ci-dessus."
+            exit "${EXIT_GATE_FAIL}"
+            ;;
+        4)
+            log_err "apex gate refuse le démarrage : une précondition n'a pas pu être vérifiée (ce n'est pas un FAIL) — voir « Préconditions non vérifiées » ci-dessus."
+            exit "${EXIT_GATE_UNVERIFIED}"
+            ;;
+        *)
+            log_err "apex gate s'est terminé en erreur interne (code ${gate_status}) — ce n'est pas une décision du Gate."
+            exit "${EXIT_GATE_ERROR}"
+            ;;
+    esac
 }
 
 main() {

@@ -129,5 +129,23 @@ def render_text(report: EnvironmentReport, *, verbose: bool = False) -> str:
     if not report.phase_2_authorized:
         lines.append("  Lever chaque point, ou l'inscrire dans gate.exceptions.yaml avec une")
         lines.append("  date d'expiration et un motif.")
+
+    # Démarrage d'APEX : décision distincte de la phase 2 (voir StartupRole). Un FAIL mesuré n'y est
+    # jamais mêlé à un contrôle non vérifié, et inversement.
+    def _ids(items: tuple[GateCheckResult, ...]) -> str:
+        return ", ".join(
+            f"{c.check_id}" + (f" ({c.unknown_reason})" if c.unknown_reason else f" ({c.status.value})")
+            for c in items
+        ) or "aucun"
+
+    lines += [
+        "",
+        f"  Démarrage d'APEX : {'AUTORISÉ' if report.startup_authorized else 'REFUSÉ'}",
+        f"    FAIL mesurés (bloquants) : {', '.join(c.check_id for c in report.startup_blocking) or 'aucun'}",
+        f"    Préconditions non vérifiées (bloquantes) : {_ids(report.startup_unverified_blocking)}",
+        f"    Non vérifiés (n'empêchent pas le démarrage) : {_ids(report.startup_unverified)}",
+    ]
+    if not report.probe_is_real:
+        lines.append("    Sonde non réelle : aucune mesure ne peut autoriser le démarrage.")
     lines.append("")
     return "\n".join(lines)

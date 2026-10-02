@@ -700,10 +700,12 @@ function Get-PreflightRefusal([string]$Name) {
         2 { $reason = 'Docker/Compose indisponible ou en échec' }
         3 { $reason = 'aucun Python 3.12+ utilisable' }
         4 { $reason = 'apex doctor a renvoyé FAIL' }
-        5 { $reason = 'apex gate non concluant ou en échec (« Phase 2 autorisée : NON »)' }
+        5 { $reason = 'apex gate --startup : un contrôle mesuré est en FAIL' }
+        6 { $reason = 'apex gate --startup : une précondition n''a pas pu être vérifiée' }
+        # 7 = panne interne du Gate : pas un refus de la machine, B03 reste un FAIL.
     }
     if (-not $reason) { return $null }
-    $why = @($text -split "`r?`n" | Where-Object { $_ -match 'Bloquants :|Non concluants :|\[ FAIL \]' } |
+    $why = @($text -split "`r?`n" | Where-Object { $_ -match 'FAIL mesurés \(bloquants\)|Préconditions non vérifiées \(bloquantes\)|\[ FAIL \]' } |
         ForEach-Object { $_.Trim() } | Select-Object -First 3)
     $msg = "launch.sh arrêté par son préflight (code $code : $reason)"
     if ($why.Count -gt 0) { $msg += ' — ' + ($why -join ' ; ') }

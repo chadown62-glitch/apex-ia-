@@ -3,8 +3,8 @@
 1. Ouvrez votre distribution Linux (WSL) et lancez APEX comme d'habitude :
        bash scripts/apex-launch.sh serve
    Laissez cette fenêtre ouverte.
-   Si launch.sh s'arrête sur « Phase 2 autorisée : NON » (Gate matériel d'APEX), ne changez
-   rien : passez à l'étape 2, le script le relèvera (vérifications backend « BLOCKED »).
+   Si launch.sh s'arrête sur « Démarrage d'APEX : REFUSÉ », ne changez rien : passez à
+   l'étape 2, le script relèvera la cause (vérifications backend « BLOCKED »).
 
 2. Dans ce dossier, double-cliquez sur Valider-APEX.cmd.
    Répondez aux questions O/N. La seule action manuelle demandée : un double-clic sur

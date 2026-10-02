@@ -218,7 +218,9 @@ def test_serve_publishes_discovery_while_serving_and_removes_it_after(
 
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv(discovery.DISCOVERY_DIR_ENV, str(tmp_path / "runtime"))
-    report = types.SimpleNamespace(phase_2_authorized=True, write=lambda _path: None)
+    # Décision de démarrage (apex.gate.report.startup_authorized) : autorisé, rien de non vérifié.
+    report = types.SimpleNamespace(phase_2_authorized=True, startup_authorized=True, startup_unverified=(),
+                                   write=lambda _path: None)
     monkeypatch.setattr("apex.gate.runner.run_gate", lambda **_k: report)
     seen: dict[str, object] = {}
 
@@ -275,7 +277,8 @@ def test_a_gate_refusal_withdraws_the_starting_announcement(
     discovery.write_discovery(
         "127.0.0.1", 8000, tmp_path, phase="starting"
     )  # annonce de launch.sh (même pid)
-    refused = types.SimpleNamespace(phase_2_authorized=False, write=lambda _path: None)
+    refused = types.SimpleNamespace(phase_2_authorized=False, startup_authorized=False, startup_blocking=(),
+                                    startup_unverified_blocking=(), probe_is_real=True, write=lambda _path: None)
     monkeypatch.setattr("apex.gate.runner.run_gate", lambda **_k: refused)
 
     assert main(["serve"]) == 1
