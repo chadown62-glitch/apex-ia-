@@ -13,7 +13,10 @@
     - lance et ferme APEX.exe ;
     - avec -AllowBackendControl : démarre et arrête le backend APEX via le launch.sh dédié, écrit puis
       RESTAURE temporairement ~/.apex/runtime/backend.json dans la distribution (tests de sécurité) ;
-    - avec -AllowWslShutdown : arrête la distribution choisie (wsl --terminate) puis la redémarre.
+    - avec -AllowWslShutdown : arrête la distribution choisie (wsl --terminate) puis la redémarre ;
+    - avec -AuditProcessCreation (administrateur, CI) : active le temps du script l'audit Windows des
+      créations de processus avec ligne de commande (événement 4688), puis RESTAURE la stratégie d'audit
+      et la clé de registre d'origine.
   Les paramètres du Panel (%APPDATA%\APEX) sont sauvegardés au début et restaurés à la fin.
 
   Résultats : <OutDir>\results.json et <OutDir>.zip (journaux, sorties, captures), sans secret : le jeton
@@ -41,7 +44,10 @@ param(
     [ValidateSet('warning', 'no-warning', 'not-tested')][string]$SmartScreen = 'not-tested',
     # Mode « double-clic » (Valider-APEX.cmd) : quelques questions O/N au lieu d'options, redémarrage de
     # Windows proposé puis REPRISE AUTOMATIQUE après ouverture de session (clé RunOnce de l'utilisateur).
-    [switch]$Interactive
+    [switch]$Interactive,
+    # CI / administrateur : source indépendante des lignes de commande des processus enfants (audit noyau
+    # 4688), en plus du sondage WMI qui peut les lire vides (processus en création ou en fin de vie).
+    [switch]$AuditProcessCreation
 )
 
 # Version 1 : variables non initialisées interdites (erreur constatée au run 10) ; les propriétés absentes
@@ -94,6 +100,8 @@ $script:KeepAlive = $null
 $script:FailCount = 0
 $script:Launch = $null
 $script:BackendDown = $null
+$script:ProcessAudit = [ordered]@{ Active = $false; Reason = 'non demandé (option -AuditProcessCreation absente)'
+    Backup = $null; RegExisted = $false; RegPrevious = $null; Changed = $false }
 $script:DistroName = $null
 $script:ApexRepo = $null
 
@@ -275,18 +283,122 @@ function Save-WindowShot([Diagnostics.Process]$Process, [string]$Name) {
     } catch { return $null }
 }
 
+$AuditKey = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System\Audit'
+$AuditSubcategory = '{0CCE922B-69AE-11D9-BED3-505054503030}'  # « Process Creation », indépendant de la langue
+
+function Enable-ProcessAudit {
+    # Active l'audit des créations de processus avec ligne de commande (événement 4688), après sauvegarde de
+    # la stratégie d'audit et de la clé de registre ; un TÉMOIN prouve ensuite que la source fonctionne.
+    $principal = New-Object Security.Principal.WindowsPrincipal ([Security.Principal.WindowsIdentity]::GetCurrent())
+    if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+        $script:ProcessAudit.Reason = 'exige un administrateur : non activé'; return
+    }
+    $backup = Join-Path $env:TEMP ('apex-auditpol-' + [guid]::NewGuid().ToString('N') + '.csv')
+    & auditpol.exe /backup /file:$backup | Out-Null
+    if ($LASTEXITCODE -ne 0) { $script:ProcessAudit.Reason = "auditpol /backup en échec (code $LASTEXITCODE) : non activé"; return }
+    $script:ProcessAudit.Backup = $backup
+    if (Test-Path $AuditKey) {
+        $v = Get-ItemProperty $AuditKey -Name ProcessCreationIncludeCmdLine_Enabled -ErrorAction SilentlyContinue
+        if ($v) { $script:ProcessAudit.RegExisted = $true; $script:ProcessAudit.RegPrevious = $v.ProcessCreationIncludeCmdLine_Enabled }
+    } else { New-Item $AuditKey -Force | Out-Null }
+    $script:ProcessAudit.Changed = $true
+    New-ItemProperty $AuditKey -Name ProcessCreationIncludeCmdLine_Enabled -Value 1 -PropertyType DWord -Force | Out-Null
+    & auditpol.exe /set /subcategory:$AuditSubcategory /success:enable | Out-Null
+    $since = (Get-Date).AddSeconds(-2)
+    $marker = 'apexaudit' + [guid]::NewGuid().ToString('N').Substring(0, 10)
+    $probe = Start-Process "$env:SystemRoot\System32\where.exe" -ArgumentList '/Q', $marker -WindowStyle Hidden -PassThru
+    [void]$probe.WaitForExit(10000)
+    $script:ProcessAudit.Active = $true
+    $found = $false
+    for ($i = 0; $i -lt 10 -and -not $found; $i++) {
+        Start-Sleep 1
+        $found = @(Get-AuditedChildren $PID $since | Where-Object { [string]$_.cmd -match $marker }).Count -gt 0
+    }
+    if ($found) { $script:ProcessAudit.Reason = 'actif : témoin identifié par l''événement 4688' }
+    else {
+        $script:ProcessAudit.Active = $false
+        $script:ProcessAudit.Reason = 'activé, mais le témoin est absent du journal 4688 : source non fiable, non utilisée'
+    }
+}
+
+function Restore-ProcessAudit {
+    if (-not $script:ProcessAudit.Changed) { return }
+    if ($script:ProcessAudit.Backup) {
+        & auditpol.exe /restore /file:$($script:ProcessAudit.Backup) | Out-Null
+        Remove-Item $script:ProcessAudit.Backup -Force -ErrorAction SilentlyContinue
+    }
+    if ($script:ProcessAudit.RegExisted) {
+        Set-ItemProperty $AuditKey -Name ProcessCreationIncludeCmdLine_Enabled -Value $script:ProcessAudit.RegPrevious
+    } else { Remove-ItemProperty $AuditKey -Name ProcessCreationIncludeCmdLine_Enabled -ErrorAction SilentlyContinue }
+    $script:ProcessAudit.Changed = $false
+}
+
+function Read-CommandLine([int]$ProcessId) {
+    # Relit la ligne de commande d'un processus : $null s'il n'existe plus ou si elle reste illisible
+    # (processus en cours de création, ou déjà en fin de vie : WMI la rend alors vide — constaté au run 13).
+    for ($i = 0; $i -lt 5; $i++) {
+        $p = Get-CimInstance Win32_Process -Filter "ProcessId=$ProcessId" -ErrorAction SilentlyContinue
+        if (-not $p) { return $null }
+        if ([string]$p.CommandLine) { return [string]$p.CommandLine }
+        Start-Sleep -Milliseconds 20
+    }
+    return $null
+}
+
 function Watch-Children {
-    # Processus lancés par APEX.exe pendant $Seconds (sondage WMI toutes les 250 ms : un processus très bref
-    # peut échapper au sondage — ce qui est vu est exact, ce qui n'est pas vu n'est pas prouvé absent).
-    param([int]$ParentId, [int]$Seconds = 20)
+    # Processus lancés par $ParentId pendant $Seconds. Deux sources :
+    #   - sondage WMI toutes les 250 ms (toujours) : une ligne de commande lue vide est relue aussitôt puis à
+    #     chaque relevé ; un processus très bref peut échapper au sondage ;
+    #   - audit noyau 4688 (si -AuditProcessCreation est actif) : ligne de commande enregistrée À LA CRÉATION,
+    #     y compris pour les processus que le sondage n'a pas vus.
+    # Chaque entrée garde sa source ; une ligne de commande restée vide n'est jamais devinée.
+    param([int]$ParentId, [int]$Seconds = 20, [datetime]$Since = (Get-Date).AddSeconds(-1))
     $seen = @{}; $deadline = (Get-Date).AddSeconds($Seconds)
     while ((Get-Date) -lt $deadline) {
         foreach ($c in (Get-CimInstance Win32_Process -Filter "ParentProcessId=$ParentId" -ErrorAction SilentlyContinue)) {
-            if (-not $seen.ContainsKey($c.ProcessId)) { $seen[$c.ProcessId] = [ordered]@{ name = $c.Name; cmd = [string]$c.CommandLine } }
+            $id = [int]$c.ProcessId; $cmd = [string]$c.CommandLine
+            if (-not $seen.ContainsKey($id)) {
+                $entry = [ordered]@{ pid = $id; name = [string]$c.Name; cmd = $cmd; source = 'wmi'; first_read_empty = (-not $cmd) }
+                if (-not $cmd) {
+                    $again = Read-CommandLine $id
+                    if ($again) { $entry.cmd = $again; $entry.source = 'wmi-relecture' } else { $entry.source = 'aucune' }
+                }
+                $seen[$id] = $entry
+            } elseif (-not $seen[$id].cmd -and $cmd) {
+                $seen[$id].cmd = $cmd; $seen[$id].source = 'wmi-relecture'
+            }
         }
         Start-Sleep -Milliseconds 250
     }
+    if ($script:ProcessAudit.Active) {
+        Start-Sleep 2  # l'écriture de l'événement 4688 peut suivre la création de quelques instants
+        foreach ($a in @(Get-AuditedChildren $ParentId $Since)) {
+            $id = [int]$a.pid
+            if ($seen.ContainsKey($id)) {
+                if (-not $seen[$id].cmd -and $a.cmd) { $seen[$id].cmd = $a.cmd; $seen[$id].source = 'audit-4688' }
+            } else {
+                $leaf = ''; if ([string]$a.name) { $leaf = Split-Path ([string]$a.name) -Leaf }
+                $seen[$id] = [ordered]@{ pid = $id; name = $leaf; cmd = [string]$a.cmd
+                    source = 'audit-4688 (non vu par sondage)'; first_read_empty = $false }
+            }
+        }
+    }
     @($seen.Values)
+}
+
+function ConvertFrom-ProcessCreationEvent([xml]$Xml) {
+    # Événement Security 4688 -> pid, pid du créateur, image, ligne de commande. Pur (testé hors Windows).
+    $d = @{}
+    foreach ($n in $Xml.Event.EventData.Data) { $d[[string]$n.Name] = [string]$n.'#text' }
+    if (-not $d['NewProcessId'] -or -not $d['ProcessId']) { return $null }
+    [pscustomobject]@{ pid = [Convert]::ToInt64($d['NewProcessId'], 16); parent = [Convert]::ToInt64($d['ProcessId'], 16)
+        name = $d['NewProcessName']; cmd = $d['CommandLine'] }
+}
+
+function Get-AuditedChildren([int]$ParentId, [datetime]$Since) {
+    if (-not $script:ProcessAudit.Active) { return @() }
+    $events = @(Get-WinEvent -FilterHashtable @{ LogName = 'Security'; Id = 4688; StartTime = $Since } -ErrorAction SilentlyContinue)
+    @($events | ForEach-Object { ConvertFrom-ProcessCreationEvent ([xml]$_.ToXml()) } | Where-Object { $_ -and $_.parent -eq $ParentId })
 }
 
 function Test-AllowedChild($child) {
@@ -295,6 +407,38 @@ function Test-AllowedChild($child) {
     $cmd = $child.cmd
     if ($cmd -match '\s-l(\s|$)') { return $true }
     return ($cmd -match '--exec\s+cat\s+--\s' -and $cmd -notmatch '\b(bash|sh|zsh|cmd|powershell|pwsh)\b')
+}
+
+function Get-ChildVerdict($child) {
+    # 'allowed' | 'forbidden' | 'unidentified'. Le nom de l'image est toujours lisible : tout autre programme
+    # que wsl.exe est interdit. Une ligne de commande illisible n'est JAMAIS « autorisée » : non identifié.
+    $name = [string]$child.name
+    if (-not $name) { return 'unidentified' }
+    if ($name -ne 'wsl.exe') { return 'forbidden' }
+    if (-not [string]$child.cmd) { return 'unidentified' }
+    if (Test-AllowedChild $child) { return 'allowed' }
+    return 'forbidden'
+}
+
+function Get-ChildrenOutcome($Children, [bool]$AuditActive) {
+    # Interdit -> FAIL. Non identifié -> jamais PASS : FAIL si l'audit noyau était actif (la source fiable
+    # existait et n'a pas suffi), sinon BLOCKED (mesure incomplète sur cette machine, avec la raison).
+    $all = @($Children)
+    $forbidden = @($all | Where-Object { (Get-ChildVerdict $_) -eq 'forbidden' })
+    $unknown = @($all | Where-Object { (Get-ChildVerdict $_) -eq 'unidentified' })
+    $sources = (@($all | Group-Object { $_.source } | ForEach-Object { "$($_.Name)=$($_.Count)" }) -join ', ')
+    $show = { param($list) (@($list) | Select-Object -First 3 | ForEach-Object { "[$($_.name) pid $($_.pid)] $($_.cmd)" }) -join ' | ' }
+    $status = 'PASS'
+    if ($forbidden.Count -gt 0) { $status = 'FAIL' }
+    elseif ($unknown.Count -gt 0) { if ($AuditActive) { $status = 'FAIL' } else { $status = 'BLOCKED' } }
+    $detail = "$($all.Count) processus enfants vus ; non autorisés : $($forbidden.Count) ; non identifiés : $($unknown.Count)"
+    if ($sources) { $detail += " ; sources : $sources" }
+    if ($forbidden.Count -gt 0) { $detail += " ; interdits : " + (& $show $forbidden) }
+    if ($unknown.Count -gt 0) {
+        $detail += " ; non identifiés (ligne de commande illisible, jamais comptée sûre) : " + (& $show $unknown)
+        if (-not $AuditActive) { $detail += " ; relancer en administrateur avec -AuditProcessCreation pour les identifier" }
+    }
+    [pscustomobject]@{ Status = $status; Detail = $detail; Forbidden = $forbidden; Unidentified = $unknown }
 }
 
 # ------------------------------------------------------------------------------------------------------
@@ -514,6 +658,28 @@ function Test-InstallLifecycle {
 # ------------------------------------------------------------------------------------------------------
 function Test-Launch {
     Stop-AllPanels
+    if ($AuditProcessCreation) {
+        Check 'H01' 'harness' 'étalonnage : identification des processus enfants (sondage WMI contre audit noyau)' {
+            # Instrument de S01/S04 mesuré sur des enfants CONNUS : 30 wsl.exe -l -q lancés par un parent témoin.
+            $t = 'étalonnage : identification des processus enfants (sondage WMI contre audit noyau)'
+            if (-not $script:ProcessAudit.Active) { Add-Check 'H01' 'harness' $t 'BLOCKED' "audit noyau indisponible : $($script:ProcessAudit.Reason)"; return }
+            $n = 30
+            $since = (Get-Date).AddSeconds(-1)
+            $parent = Start-Process powershell.exe -ArgumentList '-NoProfile', '-Command', "1..$n | ForEach-Object { & wsl.exe -l -q | Out-Null }" -WindowStyle Hidden -PassThru
+            $kids = @(Watch-Children $parent.Id 60 -Since $since | Where-Object { $_.name -eq 'wsl.exe' })
+            $polled = @($kids | Where-Object { $_.source -ne 'audit-4688 (non vu par sondage)' })
+            $emptyFirst = @($polled | Where-Object { $_.first_read_empty }).Count
+            $byRetry = @($kids | Where-Object { $_.source -eq 'wmi-relecture' }).Count
+            $byAudit = @($kids | Where-Object { $_.source -eq 'audit-4688' }).Count
+            $o = Get-ChildrenOutcome $kids $true
+            $script:Perf['harness_children_known'] = $n; $script:Perf['harness_children_seen_by_polling'] = $polled.Count
+            $script:Perf['harness_children_empty_first_read'] = $emptyFirst; $script:Perf['harness_children_recovered_by_audit'] = $byAudit
+            $st = 'FAIL'; if ($kids.Count -eq $n -and $o.Status -eq 'PASS') { $st = 'PASS' }
+            Add-Check 'H01' 'harness' $t $st ("$n wsl.exe -l -q lancés (arguments connus) ; identifiés au total : $($kids.Count) ; vus par sondage : $($polled.Count) ; " +
+                "ligne vide au 1er relevé : $emptyFirst ; récupérés par relecture : $byRetry ; récupérés par l'audit : $byAudit ; " +
+                "vus seulement par l'audit : $($kids.Count - $polled.Count) ; " + $o.Detail)
+        }
+    }
     Check 'L01' 'launch' 'double-clic sur le raccourci Bureau depuis un autre dossier' {
         $sw = [Diagnostics.Stopwatch]::StartNew()
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
@@ -553,12 +719,10 @@ function Test-Launch {
         $p = Wait-PanelWindow 10
         if (-not $p) { Add-Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' 'FAIL' 'Panel absent'; return }
         $children = @(Watch-Children $p.Id 30)
-        $bad = @($children | Where-Object { -not (Test-AllowedChild $_) })
+        $o = Get-ChildrenOutcome $children $script:ProcessAudit.Active
         $script:Perf["wsl_spawns_per_30s_run$($script:Run)"] = $children.Count
-        Save-Text "run$($script:Run)-children.txt" (($children | ForEach-Object { "$($_.name) $($_.cmd)" }) -join "`n")
-        $st = 'PASS'; if ($bad.Count -gt 0) { $st = 'FAIL' }
-        $shown = ($bad | Select-Object -First 3 | ForEach-Object { "[$($_.name)] $($_.cmd)" }) -join ' | '
-        Add-Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' $st "$($children.Count) processus enfants vus ; non autorisés : $($bad.Count) $shown"
+        Save-Text "run$($script:Run)-children.txt" (($children | ForEach-Object { "$($_.name) pid=$($_.pid) source=$($_.source) $($_.cmd)" }) -join "`n")
+        Add-Check 'S01' 'security' 'APEX.exe ne lance que wsl.exe, jamais un shell (fenêtre ouverte 30 s)' $o.Status $o.Detail
     }
     Check 'P01' 'performance' 'mémoire et CPU au repos du Panel (60 s)' {
         $p = Wait-PanelWindow 10
@@ -971,17 +1135,19 @@ function Test-Backend {
         $hostile = '{"schema":1,"service":"apex","phase":"serving","apex_version":"x","api_version":"v1","panel_protocol":1,' +
             '"project_root":"/tmp/$(touch /tmp/apex_pwned)","token_file":"../../etc/shadow","host":"127.0.0.1","port":8000,"pid":1,"started_at":"2026-01-01T00:00:00Z"}'
         [void](Invoke-Wsl ("mkdir -p ~/.apex/runtime && printf '%s' '" + $hostile + "' > ~/.apex/runtime/backend.json && rm -f /tmp/apex_pwned") 30)
+        $since = (Get-Date).AddSeconds(-1)
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
         $p = Wait-PanelWindow 30
-        $children = @(); if ($p) { $children = @(Watch-Children $p.Id 15) }
+        $children = @(); if ($p) { $children = @(Watch-Children $p.Id 15 -Since $since) }
         $s = Get-PanelStatus
         $pwned = (Invoke-Wsl 'test -e /tmp/apex_pwned && echo yes || echo no' 30).Stdout.Trim()
         [void](Invoke-Wsl 'rm -f ~/.apex/runtime/backend.json' 30)
         Stop-AllPanels
-        $bad = @($children | Where-Object { -not (Test-AllowedChild $_) })
-        $st = 'FAIL'; if ($s.Cause -eq 'DiscoveryInvalid' -and $pwned -eq 'no' -and $bad.Count -eq 0) { $st = 'PASS' }
-        $shown = ($bad | Select-Object -First 3 | ForEach-Object { "[$($_.name)] $($_.cmd)" }) -join ' | '
-        Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; processus non autorisés : $($bad.Count) $shown"
+        $o = Get-ChildrenOutcome $children $script:ProcessAudit.Active
+        # Le refus de l'enregistrement et l'absence d'exécution dans WSL sont mesurés sans ambiguïté : leur
+        # échec est un FAIL ; sinon le verdict des processus enfants s'applique (jamais PASS sur un non identifié).
+        $st = $o.Status; if ($s.Cause -ne 'DiscoveryInvalid' -or $pwned -ne 'no') { $st = 'FAIL' }
+        Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; $($o.Detail)"
     }
     Check 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul' {
         if (Skip-IfBackendDown 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul') { return }
@@ -1141,6 +1307,10 @@ $settingsFile = Join-Path $SettingsDir 'dashboard-settings.json'
 if (Test-Path $settingsFile) { $settingsBackup = [IO.File]::ReadAllBytes($settingsFile) }
 
 try {
+    if ($AuditProcessCreation) {
+        try { Enable-ProcessAudit } catch { $script:ProcessAudit.Active = $false; $script:ProcessAudit.Reason = "activation impossible : $($_.Exception.Message)" }
+        Write-Host "Audit des créations de processus (4688) : $($script:ProcessAudit.Reason)"
+    }
     if ($Phase -eq 'PostReboot') {
         $script:Run = 1
         Invoke-PostReboot
@@ -1176,6 +1346,7 @@ try {
     }
 } finally {
     # Chaque étape de nettoyage est isolée : un incident ne doit jamais empêcher résultats et archive.
+    try { Restore-ProcessAudit } catch { Write-Host "restauration de l'audit des processus : $($_.Exception.Message)" }
     if ($Phase -ne 'PreReboot') {
         try { Stop-AllPanels } catch { Write-Host "nettoyage : $($_.Exception.Message)" }
         if ($AllowBackendControl -and $script:ApexRepo) { try { Stop-Backend } catch { Write-Host "nettoyage : $($_.Exception.Message)" } }
@@ -1189,7 +1360,9 @@ try {
     foreach ($c in $script:Checks) { $summary[$c.status]++ }
     $result = [ordered]@{ schema = 1; script_version = $ScriptVersion; smartscreen_observation = $SmartScreen; script_sha256 = (Get-FileHash $PSCommandPath -Algorithm SHA256).Hash.ToLower(); phase = $Phase; repeat = $Repeat
         started_at = $started.ToString('o'); finished_at = (Get-Date).ToString('o')
-        options = [ordered]@{ allow_backend_control = [bool]$AllowBackendControl; allow_wsl_shutdown = [bool]$AllowWslShutdown; older_installer = [bool]$OlderInstaller }
+        options = [ordered]@{ allow_backend_control = [bool]$AllowBackendControl; allow_wsl_shutdown = [bool]$AllowWslShutdown; older_installer = [bool]$OlderInstaller
+            audit_process_creation = [bool]$AuditProcessCreation }
+        process_audit = [ordered]@{ active = [bool]$script:ProcessAudit.Active; reason = $script:ProcessAudit.Reason }
         environment = $script:Env; performance = $script:Perf; summary = $summary; checks = $script:Checks }
     $resultName = 'results.json'
     if ($Phase -eq 'PostReboot') { $resultName = 'results-postreboot-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.json' }

@@ -136,7 +136,7 @@ jobs:
           $new = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
           $old = Get-ChildItem "$env:RUNNER_TEMP\release-prev" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
           & setup/packaging/windows/Test-ApexWindows.ps1 -Installer $new.FullName -OlderInstaller $old.FullName `
-            -AllowBackendControl -AllowWslShutdown -Repeat 1 -Label 'ci-windows-server-hosted' `
+            -AllowBackendControl -AllowWslShutdown -AuditProcessCreation -Repeat 1 -Label 'ci-windows-server-hosted' `
             -OutDir "$env:RUNNER_TEMP\validation"
       # Contrat de démarrage (5736ec9) prouvé sur le vrai WSL2 par le vrai launch.sh, sans aucune dérogation :
       # décision et codes de sortie imprimés dans CE journal (le journal de launch.sh de l'étape précédente
