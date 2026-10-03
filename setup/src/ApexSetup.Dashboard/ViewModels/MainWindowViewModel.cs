@@ -415,7 +415,7 @@ public sealed class MainWindowViewModel : ObservableObject
         var read = await _statusService.ReadLaunchLogAsync(_settings).ConfigureAwait(false);
         var text = read.Kind switch
         {
-            FileReadKind.Ok => _redactor.Redact(string.Join('\n', (read.Content ?? "").Split('\n').TakeLast(200))),
+            FileReadKind.Ok => _redactor.Redact(LaunchLogExcerpt(read.Content ?? "")),
             FileReadKind.NotFound => "Aucun journal de démarrage : APEX n'a pas encore été démarré depuis le Panel (~/" + BackendLauncher.LaunchLog + ").",
             _ => $"Journal illisible : {read.Detail}",
         };
@@ -426,6 +426,21 @@ public sealed class MainWindowViewModel : ObservableObject
             CopyMessage = null;
             IsDiagnosticVisible = true;
         });
+    }
+
+    /// <summary>
+    /// Début ET fin du journal : le préflight et la décision du Startup Gate sont en tête ; une fois APEX
+    /// lancé, ses requêtes HTTP s'ajoutent à la suite (constaté sur Windows réel, run 17 : les dernières
+    /// lignes ne montraient plus que des requêtes, jamais la décision de démarrage).
+    /// </summary>
+    internal static string LaunchLogExcerpt(string content, int head = 150, int tail = 100)
+    {
+        var lines = content.Split('\n');
+        return lines.Length <= head + tail
+            ? content
+            : string.Join('\n', lines.Take(head))
+                + $"\n… ({lines.Length - head - tail} lignes omises : requêtes servies par APEX) …\n"
+                + string.Join('\n', lines.TakeLast(tail));
     }
 
     /// <summary>Mémorise le dossier d'un backend qui a répondu AVEC le jeton lu dans ce dossier (jamais un chemin non vérifié).</summary>

@@ -1181,9 +1181,21 @@ function Test-Backend {
 # (APEX.exe --start / --ui-url / --stop), même launcher (launch.sh panel-serve), même Startup Gate.
 # ------------------------------------------------------------------------------------------------------
 function Get-PanelLaunches {
-    # wsl.exe lancés par « Démarrer APEX » encore en vie (le backend tourne dans ce processus).
-    @(Get-CimInstance Win32_Process -Filter "Name = 'wsl.exe'" -ErrorAction SilentlyContinue |
+    # Démarrages lancés par « Démarrer APEX » encore en vie (le backend tourne dans ce processus). Constaté au
+    # run 17 : chaque lancement apparaît en DEUX wsl.exe — le wsl.exe de System32 relaie vers celui de
+    # « Program Files\WSL » avec la même ligne de commande. Un lancement = une RACINE (dont le parent n'est
+    # pas lui-même un de ces wsl.exe) ; un relais n'est compté comme tel que s'il est l'enfant d'une racine
+    # avec exactement la même fin de ligne de commande — mesuré ici, jamais supposé.
+    $all = @(Get-CimInstance Win32_Process -Filter "Name = 'wsl.exe'" -ErrorAction SilentlyContinue |
         Where-Object { [string]$_.CommandLine -match 'apex-launch\.sh panel-serve' })
+    $ids = @($all | ForEach-Object { [int]$_.ProcessId })
+    $roots = @($all | Where-Object { $ids -notcontains [int]$_.ParentProcessId })
+    $tail = { param($c) ([string]$c -replace '^.*?(--cd|-d)\s', '$1 ') }
+    $relays = @($all | Where-Object { $ids -contains [int]$_.ParentProcessId } | Where-Object {
+        $child = $_; $parent = $all | Where-Object { [int]$_.ProcessId -eq [int]$child.ParentProcessId } | Select-Object -First 1
+        (& $tail $child.CommandLine) -eq (& $tail $parent.CommandLine) })
+    [pscustomobject]@{ Roots = $roots; Relays = $relays.Count; Other = ($all.Count - $roots.Count - $relays.Count)
+        Paths = (@($all | ForEach-Object { [string]$_.ExecutablePath } | Sort-Object -Unique) -join ' + ') }
 }
 
 function Invoke-PanelAction([string]$Action, [int]$TimeoutSec = 900) {
@@ -1230,19 +1242,23 @@ function Test-PanelControl {
         Save-Text "run$($script:Run)-panel-start.json" $r.Stdout
         $script:Perf["panel_start_seconds_run$($script:Run)"] = [math]::Round($r.Ms / 1000)
         $launches = Get-PanelLaunches
-        $cmd = ''; if ($launches.Count -gt 0) { $cmd = [string]$launches[0].CommandLine }
+        $cmd = ''; if ($launches.Roots.Count -gt 0) { $cmd = [string]$launches.Roots[0].CommandLine }
         # Forme exacte : argv direct vers le launcher officiel, jamais un shell, jamais une option du Gate.
         $shapeOk = $cmd -match '(^|[\s"\\])wsl(\.exe)?"?\s+(-d\s+\S+\s+)?--cd ~ --exec bash \S+/scripts/apex-launch\.sh panel-serve\s*$'
-        $log = (Invoke-Wsl 'tail -n 40 ~/.apex/runtime/launch.log 2>/dev/null' 30).Stdout
+        # Le journal ENTIER : une fois APEX lancé, ses requêtes HTTP suivent la décision de démarrage (run 17 :
+        # les 40 dernières lignes ne contenaient plus que des requêtes).
+        $log = (Invoke-Wsl 'grep -E "racine du projet|exécution de apex (doctor|gate)|Démarrage d.APEX :|Phase 2 autorisée|préflight OK" ~/.apex/runtime/launch.log 2>/dev/null' 30).Stdout
         Save-Text "run$($script:Run)-panel-launch.log" $log
-        $gateRan = $log -match 'apex gate'
+        $gateRan = ($log -match 'exécution de apex gate') -and ($log -match "Démarrage d.APEX : AUTORISÉ")
         if ($r.Verdict -eq 'Blocked') {
             Add-Check 'C01' 'panel_control' $titles.C01 'BLOCKED' "démarrage refusé par une vérification de cette machine (jamais contourné) : $($r.Obj.guidance)"
             return
         }
-        $st = 'FAIL'; if ($r.ExitCode -in 0, 1 -and $r.Verdict -in 'Ready', 'Degraded' -and $launches.Count -eq 1 -and $shapeOk -and $gateRan) { $st = 'PASS' }
+        $st = 'FAIL'
+        if ($r.ExitCode -in 0, 1 -and $r.Verdict -in 'Ready', 'Degraded' -and $launches.Roots.Count -eq 1 -and $launches.Other -eq 0 -and $shapeOk -and $gateRan) { $st = 'PASS' }
         Add-Check 'C01' 'panel_control' $titles.C01 $st ("avant : $before ; APEX.exe --start : code $($r.ExitCode) en $([math]::Round($r.Ms/1000)) s -> $($r.Verdict)/$($r.Cause) ; " +
-            "processus de démarrage : $($launches.Count) ($(($cmd -replace '^.*?--cd', '--cd'))) ; forme exacte : $shapeOk ; Startup Gate exécuté (journal) : $gateRan")
+            "démarrages : $($launches.Roots.Count) (+ $($launches.Relays) relais wsl.exe de même commande, autres : $($launches.Other) ; $($launches.Paths)) ; " +
+            "commande : $(($cmd -replace '^.*?--cd', '--cd')) ; forme exacte : $shapeOk ; Startup Gate exécuté et AUTORISÉ (journal) : $gateRan")
     }
     $script:PanelUp = (Get-PanelStatus).Verdict -in 'Ready', 'Degraded'
 
@@ -1251,8 +1267,8 @@ function Test-PanelControl {
         $r = Invoke-PanelAction '--start' 120
         $direct = Invoke-Native 'wsl.exe' @('-d', $script:DistroName, '--cd', $script:ApexRepo, '--exec', 'bash', 'scripts/apex-launch.sh', 'serve') 120
         $launches = Get-PanelLaunches
-        $st = 'FAIL'; if ($r.Verdict -in 'Ready', 'Degraded' -and $launches.Count -eq 1 -and $direct.ExitCode -eq 8) { $st = 'PASS' }
-        Add-Check 'C02' 'panel_control' $titles.C02 $st "APEX.exe --start : $($r.Verdict) en $([math]::Round($r.Ms/1000)) s (aucun relancement) ; processus de démarrage : $($launches.Count) ; launch.sh serve direct : code $($direct.ExitCode) (8 attendu : déjà en cours)"
+        $st = 'FAIL'; if ($r.Verdict -in 'Ready', 'Degraded' -and $launches.Roots.Count -eq 1 -and $launches.Other -eq 0 -and $direct.ExitCode -eq 8) { $st = 'PASS' }
+        Add-Check 'C02' 'panel_control' $titles.C02 $st "APEX.exe --start : $($r.Verdict) en $([math]::Round($r.Ms/1000)) s (aucun relancement) ; démarrages : $($launches.Roots.Count) (+ $($launches.Relays) relais) ; launch.sh serve direct : code $($direct.ExitCode) (8 attendu : déjà en cours)"
     }
 
     Check 'C03' 'panel_control' $titles.C03 {
@@ -1283,7 +1299,7 @@ function Test-PanelControl {
     Check 'C04' 'panel_control' $titles.C04 {
         if (-not $script:PanelUp) { Add-Check 'C04' 'panel_control' $titles.C04 'BLOCKED' 'APEX n''a pas démarré depuis le Panel (C01)'; return }
         $r = Invoke-PanelAction '--stop' 240
-        $left = 0; for ($i = 0; $i -lt 30; $i++) { $left = (Get-PanelLaunches).Count; if ($left -eq 0) { break }; Start-Sleep 1 }
+        $left = 0; for ($i = 0; $i -lt 30; $i++) { $l = Get-PanelLaunches; $left = $l.Roots.Count + $l.Relays + $l.Other; if ($left -eq 0) { break }; Start-Sleep 1 }
         $s = Get-PanelStatus
         $rec = Get-LiveRecord
         $st = 'FAIL'; if ($r.ExitCode -eq 0 -and $left -eq 0 -and -not $rec -and $s.Cause -eq 'BackendNotStarted') { $st = 'PASS' }

@@ -411,6 +411,20 @@ public class LaunchControlTests
     }
 
     [Fact]
+    public void The_launch_log_keeps_the_startup_decision_even_after_hours_of_requests()
+    {
+        var log = string.Join('\n', new[] { "[apex-launch] racine du projet : /home/apex/apex", "Démarrage d'APEX : AUTORISÉ" }
+            .Concat(Enumerable.Range(0, 5000).Select(i => $"INFO: 127.0.0.1 - \"GET /api/v1/status HTTP/1.1\" 200 #{i}")));
+
+        var excerpt = MainWindowViewModel.LaunchLogExcerpt(log);
+
+        Assert.Contains("Démarrage d'APEX : AUTORISÉ", excerpt);
+        Assert.Contains("#4999", excerpt);
+        Assert.Contains("lignes omises", excerpt);
+        Assert.Equal("court\njournal", MainWindowViewModel.LaunchLogExcerpt("court\njournal"));
+    }
+
+    [Fact]
     public void Exit_codes_include_BLOCKED() =>
         Assert.Equal((0, 1, 2, 3, 4), (Program.ExitCode(PanelVerdict.Ready), Program.ExitCode(PanelVerdict.Degraded),
             Program.ExitCode(PanelVerdict.NotReady), Program.ExitCode(PanelVerdict.VersionMismatch), Program.ExitCode(PanelVerdict.Blocked)));
