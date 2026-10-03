@@ -1458,3 +1458,36 @@ class AgentTeamRow(Base):
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat(),
         }
+
+
+class TaskRunRow(Base):
+    """Une EXÉCUTION de `apex.taskloop.loop.run_task_loop` (audit « première boucle d'exécution réelle »,
+    03/10/2026) : jusqu'ici, son résultat d'ensemble (`TaskResult` : statut final, raison d'arrêt,
+    tentatives, modèles essayés, sortie) n'existait qu'en mémoire du processus — seuls ses `EvalRun`,
+    `Experience` et événements étaient persistés.
+
+    `id` = le `trace_id` de l'exécution (le même que `EvalRun.experiment_ref` et que le
+    `context["trace_id"]` des événements) : une seule clé relie la TaskRun à toute sa trace.
+
+    Cycle de vie VOLONTAIREMENT court : une ligne `running` à l'acceptation, puis UNE mise à jour vers
+    un statut terminal (`completed`/`failed`/`blocked`/`cancelled`/`error`). Une exécution dont le
+    processus a disparu (arrêt d'APEX en cours de route) devient `interrupted` au démarrage suivant —
+    jamais reprise ni devinée (`run_task_loop` n'a pas de reprise, voir sa docstring)."""
+
+    __tablename__ = "task_runs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    task_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    objective: Mapped[str] = mapped_column(Text, nullable=False)
+    execution_mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(16), nullable=False)
+    limits: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    providers_tried: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    eval_run_ids: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    attempts: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    final_output: Mapped[str | None] = mapped_column(Text, nullable=True)
+    failure: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stop_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -309,3 +309,35 @@ def reset_learning_service_for_tests() -> None:
             _learning_scheduler.stop()
         _learning_scheduler = None
         _learning_service = None
+
+
+_task_run_service: Any = None
+_task_run_lock = threading.Lock()
+
+
+def get_task_run_service() -> Any:
+    """`apex.taskloop.runs.TaskRunService` — UN par processus (il porte les fils d'exécution en cours).
+    Même discipline que `get_scheduler_service` : à sa construction, toute TaskRun encore `running`
+    appartient à un processus disparu et devient `interrupted` ; le singleton n'est retenu qu'après une
+    construction réussie (DB injoignable -> nouvel essai à l'appel suivant)."""
+    global _task_run_service
+    if _task_run_service is not None:
+        return _task_run_service
+    with _task_run_lock:
+        if _task_run_service is not None:
+            return _task_run_service
+        from apex.agents.runtime import AgentRuntime
+        from apex.config.loader import load_config
+        from apex.taskloop.runs import TaskRunService, execution_pool
+
+        session_factory = get_session_factory()
+        service = TaskRunService(session_factory, AgentRuntime(session_factory), execution_pool(load_config()))
+        service.reconcile_on_startup()
+        _task_run_service = service
+        return _task_run_service
+
+
+def reset_task_run_service_for_tests() -> None:
+    global _task_run_service
+    with _task_run_lock:
+        _task_run_service = None

@@ -103,6 +103,7 @@ from apex.api.routes import (
     registry,
     scheduler,
     status,
+    task_runs,
 )
 from apex.api import ui
 from apex.version import __version__
@@ -166,6 +167,15 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     except OSError:
         pass
 
+    # TaskRun orphelines d'un processus précédent -> `interrupted` dès le démarrage (pas à la première
+    # requête) : le Panel et l'interface voient l'état vrai tout de suite. Ne lève jamais.
+    try:
+        from apex.api.dependencies import get_task_run_service
+
+        get_task_run_service()
+    except Exception:
+        pass
+
     scheduler_service = None
     try:
         scheduler_service = get_learning_scheduler()
@@ -219,7 +229,7 @@ def create_app() -> FastAPI:
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, learning.router, population.router,
         learning_sessions.router, gauntlets.router, learning_feedback.router, capability.router,
-        brain.router, status.router, ui.api_router,
+        brain.router, status.router, task_runs.router, ui.api_router,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 

@@ -264,6 +264,9 @@ public static class StatusEngine
                 "apex doctor a signalé un échec : APEX ne démarre pas" + at + ". Le rapport est dans « Journal du démarrage » ; corrigez puis cliquez sur " + StartButton + "."),
             2 => ("démarrage impossible : Docker / docker compose",
                 "L'infrastructure d'APEX (Docker, docker compose) n'a pas démarré" + at + ". Vérifiez que Docker fonctionne dans WSL (détail dans « Journal du démarrage »), puis cliquez sur " + StartButton + "."),
+            10 => ("démarrage impossible : schéma de la base",
+                "Le schéma de la base d'APEX n'a pas pu être mis à jour" + at + " (migrations, apex db upgrade). Vérifiez dans .env les mots de passe "
+                + "APEX_DB_*_PASSWORD et l'accès à PostgreSQL (détail dans « Journal du démarrage »), puis cliquez sur " + StartButton + "."),
             7 => ("démarrage impossible : erreur interne du Startup Gate",
                 "Le Startup Gate s'est terminé en erreur interne" + at + " — ce n'est pas une décision du Gate. Détail dans « Journal du démarrage »."),
             _ => ($"démarrage refusé (code {refusal.ExitCode})",

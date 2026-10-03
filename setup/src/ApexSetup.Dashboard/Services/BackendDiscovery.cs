@@ -119,7 +119,7 @@ public static class BackendDiscovery
         }
         var code = Int(refusal, "exit_code");
         var stage = Str(refusal, "stage") ?? throw new FormatException("stage");
-        if (code is < 1 or > 255 || stage is not ("infrastructure" or "doctor" or "gate" or "gate_error" or "unknown"))
+        if (code is < 1 or > 255 || stage is not ("infrastructure" or "database" or "doctor" or "gate" or "gate_error" or "unknown"))
         {
             throw new FormatException("refusal");
         }

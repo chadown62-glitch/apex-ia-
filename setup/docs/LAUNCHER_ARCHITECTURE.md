@@ -6,8 +6,16 @@
 > voir `docs/INSTALLER_APEX.md`). Ce projet-ci est un second launcher parallèle, jamais publié, et il
 > décide sur `GateSummary.Phase2Authorized` (règle `Blocked` ci-dessous) : il confond l'autorisation de
 > la PHASE 2 avec celle du DÉMARRAGE (`startup_authorized`, docs/PHASE_1_GATE.md §10) et refuserait
-> donc toute machine. Toute la chaîne `ApexSetup.Application`/`Core` partage ce défaut. À retirer ou à
-> réaligner sur `startup_authorized` — décision à prendre, hors de ce chantier.
+> donc toute machine. Toute la chaîne `ApexSetup.Application`/`Core` partage ce défaut.
+>
+> **Décision du 03/10/2026 (chantier « première boucle d'exécution réelle ») : RETIRÉ DU CHEMIN PRODUIT.**
+> Contrairement à ce qui précède, la chaîne de release Phase 8 (`setup/packaging/publish.sh`,
+> `release.sh`) publiait encore `ApexLauncher.exe` avec ce contrat erroné : il n'est plus publié ni
+> manifesté. Le réaligner aurait créé un troisième lanceur à côté du Panel et de `launch.sh` ; le source
+> et ses tests restent compilés dans la solution, à titre historique, sans évolution. `apex-setup`
+> (Cli/Gui, `check`/`install`/`validate`) décide toujours sur `Phase2Authorized` : ce n'est pas un
+> lanceur, mais un `install` refusé faute de phase 2 serait le même défaut — à trancher avant toute
+> livraison de cette chaîne (aujourd'hui produite par aucun workflow, absente de l'installateur).
 
 ## Objectif
 

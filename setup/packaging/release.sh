@@ -153,7 +153,7 @@ if [[ -n "$SETUP_COMMIT_SHA" ]]; then
   GEN_ARGS+=(--commit-sha "$SETUP_COMMIT_SHA")
 fi
 
-for component in cli gui launcher; do
+for component in cli gui; do  # launcher retiré : voir publish.sh
   exe=$(find "$DIST_DIR/$component" -maxdepth 1 -name '*.exe' | head -1)
   manifest_path="$DIST_DIR/$component/manifest.json"
   log "manifeste pour $exe ..."
@@ -163,7 +163,7 @@ done
 # ---------------------------------------------------------------------------
 section "8/8 — VALIDATION FINALE"
 # ---------------------------------------------------------------------------
-for component in cli gui launcher; do
+for component in cli gui; do  # launcher retiré : voir publish.sh
   manifest_path="$DIST_DIR/$component/manifest.json"
   log "validation du manifeste $component ..."
   dotnet "$RELEASE_CLI_DLL" validate --manifest "$manifest_path" --artifact-dir "$DIST_DIR/$component" \

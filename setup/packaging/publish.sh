@@ -31,7 +31,7 @@ fi
 
 DIST_DIR="$OUT_ROOT/apex-setup-${VERSION}-win-x64"
 rm -rf "$DIST_DIR"
-mkdir -p "$DIST_DIR/cli" "$DIST_DIR/gui" "$DIST_DIR/launcher"
+mkdir -p "$DIST_DIR/cli" "$DIST_DIR/gui"
 
 echo "[publish.sh] Version : $VERSION"
 echo "[publish.sh] Publication ApexSetup.Cli (win-x64, self-contained, fichier unique)..."
@@ -45,20 +45,16 @@ dotnet publish "$SETUP_ROOT/src/ApexSetup.Gui/ApexSetup.Gui.csproj" \
   -c Release -r win-x64 --self-contained true \
   -o "$DIST_DIR/gui"
 
-# N+15 : le launcher de production n'utilise JAMAIS PublishSingleFile —
-# contrairement à Cli, il doit rester à côté d'ApexSetup.Gui.exe (qu'il
-# invoque directement pour l'installation/réparation, voir
-# ApexSetup.Launcher/Program.cs) dans le MÊME répertoire de release final ;
-# un fichier unique compliquerait sans bénéfice cette cohabitation.
-echo "[publish.sh] Publication ApexSetup.Launcher (win-x64, self-contained)..."
-dotnet publish "$SETUP_ROOT/src/ApexSetup.Launcher/ApexSetup.Launcher.csproj" \
-  -c Release -r win-x64 --self-contained true \
-  -o "$DIST_DIR/launcher"
+# ApexSetup.Launcher n'est PLUS publié (audit « première boucle d'exécution réelle », 03/10/2026) : il
+# décide sur `GateSummary.Phase2Authorized` et refuserait donc de démarrer toute machine dont la phase 2
+# n'est pas autorisée — l'état normal (le démarrage relève de `startup_authorized`, docs/PHASE_1_GATE.md
+# §10). Le seul lanceur livré est le Panel `APEX.exe` (publish_dashboard.sh -> launch.sh). Source et
+# tests restent dans la solution, à titre historique (setup/docs/LAUNCHER_ARCHITECTURE.md).
 
 # Vérification empirique — jamais une simple confiance dans le succès de
 # `dotnet publish` : le fichier produit est-il RÉELLEMENT un exécutable
 # Windows valide ?
-for exe in "$DIST_DIR/cli/apex-setup.exe" "$DIST_DIR/gui/apex-setup-gui.exe" "$DIST_DIR/launcher/ApexLauncher.exe"; do
+for exe in "$DIST_DIR/cli/apex-setup.exe" "$DIST_DIR/gui/apex-setup-gui.exe"; do
   if [[ ! -f "$exe" ]]; then
     echo "[publish.sh] ERREUR : $exe n'a pas été produit" >&2
     exit 1

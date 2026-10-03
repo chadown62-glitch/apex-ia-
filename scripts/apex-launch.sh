@@ -52,6 +52,7 @@
 #   8   - `serve`/`panel-serve` : APEX est déjà en cours de démarrage ou d'exécution pour cet
 #         utilisateur (verrou ~/.apex/runtime/launch.lock) — rien n'est relancé
 #   9   - `stop` : le backend APEX enregistré ne s'est pas arrêté
+#   10  - schéma de la base : les migrations n'ont pas pu être appliquées (`apex db upgrade`)
 #   130 - interrompu (Ctrl+C / SIGINT)
 #
 # Sous-commande `serve` (`./apex-launch.sh serve [args...]`) — N+15 : exécute
@@ -88,6 +89,7 @@ readonly EXIT_GATE_UNVERIFIED=6
 readonly EXIT_GATE_ERROR=7
 readonly EXIT_ALREADY_RUNNING=8
 readonly EXIT_STOP_FAILED=9
+readonly EXIT_DB_SCHEMA=10
 readonly EXIT_INTERRUPTED=130
 
 readonly MIN_PYTHON_MAJOR=3
@@ -681,6 +683,19 @@ cmd_stop() {
 # drapeau (aucune option `--allow-container-exec`/`--allow-network-probe`
 # n'est ajoutée par ce script : leurs valeurs par défaut, les plus
 # conservatrices, sont conservées).
+# Schéma de la base (audit du 03/10/2026) : sans cette étape, une installation neuve n'avait AUCUNE table —
+# rien n'exécutait les migrations Alembic qu'`init-db` annonce. `apex db upgrade` applique les migrations
+# du dépôt, vers l'avant uniquement (jamais de downgrade, aucune donnée supprimée), et ne fait rien si la
+# base est déjà à jour. Les mots de passe des rôles viennent de .env (déjà chargé), jamais affichés.
+run_db_upgrade() {
+    local project_root="$1"
+    local python_bin="$2"
+    log_info "schéma de la base (apex db upgrade)..."
+    local status=0
+    (cd -- "${project_root}" && "${python_bin}" -m apex.cli.main db upgrade) || status=$?
+    return "${status}"
+}
+
 run_doctor() {
     local project_root="$1"
     local python_bin="$2"
@@ -746,7 +761,7 @@ announce_starting() {
 finish_starting() {
     local status=$?
     case "${status}" in
-        "${EXIT_DOCKER_FAIL}"|"${EXIT_DOCTOR_FAIL}"|"${EXIT_GATE_FAIL}"|"${EXIT_GATE_UNVERIFIED}"|"${EXIT_GATE_ERROR}")
+        "${EXIT_DOCKER_FAIL}"|"${EXIT_DB_SCHEMA}"|"${EXIT_DOCTOR_FAIL}"|"${EXIT_GATE_FAIL}"|"${EXIT_GATE_UNVERIFIED}"|"${EXIT_GATE_ERROR}")
             (cd -- "${PROJECT_ROOT}" && "${PYTHON_BIN}" -m apex.discovery refused --pid "$$" --code "${status}" \
                 --host "${SERVE_HOST}" --port "${SERVE_PORT}") >/dev/null 2>&1 || true
             ;;
@@ -811,6 +826,11 @@ run_preflight() {
 
     if ! compose_up "${PROJECT_ROOT}"; then
         exit "${EXIT_DOCKER_FAIL}"
+    fi
+
+    if ! run_db_upgrade "${PROJECT_ROOT}" "${PYTHON_BIN}"; then
+        log_err "le schéma de la base n'a pas pu être mis à jour — voir le message ci-dessus (apex db upgrade)."
+        exit "${EXIT_DB_SCHEMA}"
     fi
 
     if ! run_doctor "${PROJECT_ROOT}" "${PYTHON_BIN}"; then

@@ -132,3 +132,32 @@ ce test est honnêtement SAUTÉ, jamais remplacé par une simulation présentée
 comme équivalente — le reste de la boucle (sandbox, oracle, fitness,
 sélection) est vérifié avec un double de test fidèle au contrat
 `ModelProvider` (voir la docstring du fichier de test).
+
+## Exécuter une tâche pour de vrai : TaskRun (audit du 03/10/2026)
+
+Avant cet audit, la boucle `apex.taskloop.loop.run_task_loop` (routage, génération par un
+`ModelProvider`, sandbox, Judge Tier, recovery, `Experience`) n'était appelée que par des tests et
+son résultat n'existait qu'en mémoire. Elle a maintenant un point d'entrée produit, sans seconde
+architecture (`apex/taskloop/runs.py`, `apex/api/routes/task_runs.py`) :
+
+```
+POST /api/v1/tasks/reference        {"kind": "is_palindrome"}  -> tâche de référence (tests cachés)
+POST /api/v1/tasks/{id}/runs        {"objective": "...", "generation_timeout_s": 600} -> 202, TaskRun « running »
+GET  /api/v1/task-runs/{run_id}     statut, tentatives, code RÉELLEMENT généré, exécution, verdict, Experience
+GET  /api/v1/tasks/{id}/runs        historique des exécutions de la tâche
+```
+
+- La TaskRun est une ligne `task_runs` (migration `c8e2f4a6b9d1`) ; son id est le `trace_id` de la
+  boucle, donc l'`experiment_ref` de ses `EvalRun`.
+- Le modèle est choisi par le routage existant parmi les classes qui génèrent du code (`coder`,
+  `fast`, `generalist`) et réellement présents (sonde physique) : jamais l'embedding (`bge-m3`) ni le
+  juge (`gemma4`, `gpt-oss`).
+- Le code généré est conservé dans l'`EvalRun` (`facts.model_response`) et son empreinte dans
+  l'`Experience`, avec le niveau d'isolation réellement appliqué (`facts.isolation_level`).
+- Arrêt d'APEX pendant une exécution : au redémarrage, la TaskRun devient `interrupted`
+  (`process_restarted`) — jamais reprise ni laissée « running ».
+- Une `Experience` est un enregistrement de ce qui s'est passé. **Exécuter n'est pas apprendre** :
+  rien ici ne modifie le comportement d'APEX d'une exécution à l'autre.
+
+Preuve sur un WSL2 réel avec un vrai modèle : étape « First real execution loop » de
+`.github/workflows/windows-desktop.yml` (`setup/packaging/windows/ci/first_real_loop.py`).

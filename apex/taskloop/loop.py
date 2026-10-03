@@ -124,6 +124,19 @@ from apex.taskloop.result import TaskLoopStatus, TaskResult
 from apex.tasks.repository import TaskRepository
 
 
+#: Classes de modèles qui GÉNÈRENT le code d'une tâche. Exclues (audit du 03/10/2026, machine cible où
+#: `bge-m3` et `gemma4:12b` sont installés) : `embed` (un modèle d'embedding ne génère jamais de texte —
+#: une réassignation vers lui ne pouvait qu'échouer) et `judge` (principe 2 de config.yaml : le juge reste
+#: d'une famille distincte du générateur ; il ne doit jamais devenir générateur par réassignation).
+CODE_GENERATION_CLASSES = frozenset({"coder", "fast", "generalist"})
+
+
+def code_generation_candidates(config: Any) -> tuple[ModelCandidate, ...]:
+    return tuple(
+        c for c in filter_available(resolve_candidates(config)) if c.ref.capability_class in CODE_GENERATION_CLASSES
+    )
+
+
 def _default_provider_factory(candidate: ModelCandidate) -> ModelProvider:
     """Même patron qu'`apex.routing.generation._default_provider_factory` —
     injectable pour les tests (double de test fidèle au contrat
@@ -237,6 +250,7 @@ def run_task_loop(
     provider_factory: Callable[[ModelCandidate], ModelProvider] = _default_provider_factory,
     generation_timeout_s: float = _DEFAULT_GENERATION_TIMEOUT_S,
     no_progress_patience: int = _DEFAULT_NO_PROGRESS_PATIENCE,
+    trace_id: str | None = None,
 ) -> TaskResult:
     """Exécute intégralement UNE tâche, du premier attempt au `TaskResult`
     final. Ne lève QUE pour des erreurs d'appel (tâche introuvable/mal
@@ -255,7 +269,9 @@ def run_task_loop(
         )
     ensure_candidate_marker(task.solution_harness)
 
-    trace_id = str(uuid.uuid4())
+    # `trace_id` fourni par `apex.taskloop.runs.TaskRunService` : la TaskRun persistée porte la MÊME clé
+    # que les EvalRun (`experiment_ref`) et les événements de cette exécution.
+    trace_id = trace_id or str(uuid.uuid4())
     # `is None`, JAMAIS `registry or default_registry()` : `TaskLoopRegistry`
     # définit `__len__` (pour `len(registry)`, la vue de capacité) — un
     # registre valide mais VIDE (`len() == 0`, le cas normal au tout début
@@ -320,9 +336,7 @@ def _run(
     # -- PROVIDER SELECTION (initiale) -----------------------------------
     from apex.config.loader import load_config
 
-    resolved_candidates = (
-        candidates if candidates is not None else filter_available(resolve_candidates(load_config()))
-    )
+    resolved_candidates = candidates if candidates is not None else code_generation_candidates(load_config())
     # Sonde la disponibilité PHYSIQUE (jamais seulement déclarative) avant
     # tout scoring — voir `apex.routing.availability` pour le diagnostic
     # exact du bug corrigé ici et pourquoi ni `apex.models.registry` ni
@@ -566,6 +580,7 @@ def _run(
             oracle_verdict=verdict.oracle_result.verdict, oracle_detail=verdict.oracle_result.detail,
             model_id=generation.model_used, started_at=attempt_started_at, completed_at=_utcnow(),
             created_by=request.authorization.value, experiment_ref=trace_id, eval_run_repo=eval_run_repo,
+            generation=generation,
         )
         eval_run_ids.append(eval_run.id)
         fitness = compute_fitness(eval_run, limits=limits)
@@ -745,7 +760,7 @@ def _handle_failure(
 def _persist_eval_run(
     *, eval_run_id: str, task: Any, clone_id: str, sandbox_result: Any, oracle_verdict: OracleVerdict,
     oracle_detail: str | None, model_id: str, started_at: datetime, completed_at: datetime,
-    created_by: str, experiment_ref: str, eval_run_repo: EvalRunRepository,
+    created_by: str, experiment_ref: str, eval_run_repo: EvalRunRepository, generation: Any = None,
 ) -> EvalRun:
     exit_code = (
         int(sandbox_result.exit_code.value) if sandbox_result.exit_code.status is DataStatus.REAL else None
@@ -763,6 +778,17 @@ def _persist_eval_run(
     # aujourd'hui (`apex/sandbox/linux_namespace.py`/`container.py`
     # vérifiés) — pas de collision possible.
     facts = dict(sandbox_result.facts)
+    # Niveau d'isolation RÉELLEMENT appliqué à cette exécution (même clé que `SandboxResult.to_dict`) :
+    # `facts` du backend n'en porte que la description.
+    facts["isolation_level"] = sandbox_result.isolation_level.value
+    if generation is not None:
+        # Le code RÉELLEMENT généré, au même format qu'`EvalRunnerService.run_generated_solution`
+        # (`facts["model_response"]`, borné) : sans lui, la solution produite par le modèle était
+        # irrécupérable et `Experience.solution_fingerprint` restait toujours vide pour le TaskLoop
+        # (constat de l'audit du 03/10/2026).
+        from apex.evalrunner.service import EvalRunnerService
+
+        facts.update(EvalRunnerService._model_response_facts(generation))
     stdout = sandbox_result.stdout
     stderr = sandbox_result.stderr
     facts["candidate_execution"] = {

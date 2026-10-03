@@ -65,9 +65,21 @@ def check_database() -> ComponentStatus:
         from apex.api.dependencies import get_session_factory
         from apex.db.engine import session_scope
 
+        from apex.db.schema import schema_state
+
         with session_scope(get_session_factory()) as session:
             session.execute(text("SELECT 1"))
-        return ComponentStatus("database", READY, "SELECT 1 réussi")
+            engine = session.get_bind()
+        # Joignable ne suffit pas : sans les tables du code en cours (audit du 03/10/2026, aucune
+        # migration n'était jamais appliquée), aucune donnée ne peut être lue ni écrite.
+        state = schema_state(engine)
+        if state.ok:
+            return ComponentStatus("database", READY, f"connectée ; {state.describe()}")
+        return ComponentStatus(
+            "database", DEGRADED,
+            f"connectée, mais {state.describe()} — redémarrez APEX (launch.sh applique les migrations) "
+            "ou « apex db upgrade »",
+        )
     except Exception as exc:
         state = OFFLINE if _refused(exc) else ERROR
         return ComponentStatus("database", state, f"{exc.__class__.__name__}: {exc}"[:300])
@@ -140,17 +152,24 @@ def check_sandbox(
         if detect is None and _sandbox_cache is not None and now() - _sandbox_cache[0] < SANDBOX_CACHE_S:
             return _sandbox_cache[1]
         try:
+            backend = ""
             if detect is None:
-                from apex.sandbox.detect import detect_capabilities
+                # La sélection RÉELLE du runtime (`apex.sandbox.provider.select_sandbox_provider`, celle
+                # qu'`AgentRuntime`/TaskLoop utilisent), pas seulement le backend par namespaces : constaté
+                # sur WSL2 réel (run 18, B04), `detect_capabilities` seul disait « Sandbox OFFLINE »
+                # pendant que le runtime retenait ContainerSandbox, isolation vérifiée sur un vrai conteneur.
+                from apex.sandbox.provider import select_sandbox_provider
 
-                detect = detect_capabilities
-            report = detect()
+                selection = select_sandbox_provider()
+                report, backend = selection.report, f"{selection.provider_name} : "
+            else:
+                report = detect()
             level = getattr(report.level, "value", str(report.level))
             status = (
-                ComponentStatus("sandbox", READY, f"isolation {level} disponible")
+                ComponentStatus("sandbox", READY, f"{backend}isolation {level} disponible")
                 if report.is_available
                 else ComponentStatus(
-                    "sandbox", OFFLINE, f"aucune isolation réelle ({level}) : {report.detail}"[:300]
+                    "sandbox", OFFLINE, f"{backend}aucune isolation réelle ({level}) : {report.detail}"[:300]
                 )
             )
         except Exception as exc:

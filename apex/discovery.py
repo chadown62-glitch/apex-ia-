@@ -48,6 +48,7 @@ PHASES = ("starting", "serving", "refused")
 #: Python soit trouvé : aucun enregistrement ne peut alors être écrit.
 REFUSAL_STAGES = {
     2: "infrastructure",   # Docker/Compose indisponible ou `compose up` en échec
+    10: "database",        # schéma de la base : migrations impossibles (`apex db upgrade`)
     4: "doctor",           # `apex doctor` FAIL
     5: "gate",             # Startup Gate : un contrôle MESURÉ en FAIL
     6: "gate",             # Startup Gate : une PRÉCONDITION non vérifiée

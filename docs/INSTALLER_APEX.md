@@ -20,6 +20,16 @@ Rien n'est démarré sans votre clic.
 - APEX tourne sous le **compte Linux par défaut** de WSL : le Panel lit `~/.apex/runtime/` de ce
   compte. Le dépôt est cherché dans `~/apex` ; s'il est ailleurs, indiquez-le une fois dans
   **Paramètres** (« Dossier APEX dans WSL »).
+- Pour qu'APEX **exécute** des tâches (pas seulement démarre) : Ollama dans la distribution avec un
+  modèle de génération de code déclaré par `config.yaml` (référence : `ollama pull
+  qwen2.5-coder:7b-instruct`), et soit l'isolation par namespaces, soit Docker pour la sandbox
+  conteneur (image `python:3.12-slim`, téléchargée au premier usage). Sans modèle, APEX démarre
+  (ligne **Ollama** OFFLINE ou DEGRADED) mais une exécution de tâche s'arrête « blocked » : aucun
+  candidat disponible — jamais une réponse simulée.
+- Base de données : son schéma est créé et mis à jour **automatiquement** à chaque démarrage
+  (`launch.sh` exécute `apex db upgrade` après avoir démarré PostgreSQL, avant `apex doctor`). Les
+  mots de passe `APEX_DB_*_PASSWORD` de `.env` (présents dans `.env.example`) sont nécessaires ; s'ils
+  manquent, le démarrage est refusé avec « schéma de la base » (code 10 de launch.sh).
 - MinIO est **facultatif** : l'image `minio/minio` n'est plus distribuée publiquement (constaté le
   30/09/2026) et aucune fonction d'APEX ne l'utilise aujourd'hui. `launch.sh` démarre sans lui ;
   `apex doctor` le signale en WARN (« service optionnel : non bloquant »). Pour l'activer :
@@ -92,6 +102,7 @@ de versions incompatibles). L'interface web affiche le MÊME verdict (calculé p
 | « Le backend APEX n'est pas démarré » | APEX n'a pas été démarré | **Démarrer APEX** |
 | « launch.sh introuvable » | le dossier APEX n'est pas `~/apex` | **Paramètres** → « Dossier APEX dans WSL », puis **Démarrer APEX** |
 | APEX BLOCKED | le Startup Gate (FAIL mesuré, précondition non vérifiable) ou `apex doctor` refuse le démarrage | lire la raison et **Journal du démarrage**, corriger, puis **Démarrer APEX** (voir docs/PHASE_1_GATE.md §10) |
+| « démarrage impossible : schéma de la base » | `apex db upgrade` a échoué (mot de passe `APEX_DB_*_PASSWORD` manquant dans `.env`, base injoignable) | compléter `.env` depuis `.env.example`, lire **Journal du démarrage**, puis **Démarrer APEX** |
 | « Interface APEX non construite » (navigateur) | l'interface web n'a pas été construite | `bash scripts/apex-build-ui.sh` dans le dossier APEX (WSL), puis **Ouvrir APEX** |
 | « Session APEX absente ou expirée » (navigateur) | APEX a redémarré, ou lien déjà utilisé | **Ouvrir APEX** dans le Panel |
 | « Le backend APEX démarre… » | `launch.sh` prépare Docker, doctor, gate | attendre ; le premier lancement peut durer plusieurs minutes |

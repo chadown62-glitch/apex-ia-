@@ -81,7 +81,7 @@ jobs:
   # pas Windows 10/11 client, pas de redémarrage (phases PreReboot/PostReboot non exécutées ici).
   real-windows:
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     env:
       DISTRO: Ubuntu-24.04
     steps:
@@ -163,6 +163,49 @@ jobs:
           $ok = $p.ExitCode -eq 4 -and $s.verdict -eq 'Blocked' -and $s.cause -eq 'StartupRefused' -and $s.guidance -match 'GATE-21' -and $s.guidance -match 'Startup Gate'
           if (-not $ok) { Write-Host 'FAIL : le Panel ne montre pas ce refus réel comme APEX BLOCKED'; exit 1 }
           Write-Host 'PASS : refus réel du Startup Gate affiché APEX BLOCKED (GATE-21 cité), jamais contourné'
+      # Première boucle d'exécution RÉELLE : Task -> TaskRun -> modèle réel (Ollama + qwen2.5-coder:7b-instruct,
+      # le modèle de la machine cible, sur le CPU du runner) -> code généré exécuté dans la sandbox choisie
+      # par le runtime -> Oracle sur tests cachés -> Experience -> persistance après redémarrage. APEX est
+      # démarré et redémarré par le Panel publié (APEX.exe --start/--stop -> launch.sh panel-serve -> Startup
+      # Gate), sans aucune dérogation. Un maillon absent est BLOCKED, jamais PASS (first_real_loop.py).
+      - name: First real execution loop (real model, real sandbox, judge, experience, restart)
+        if: always()
+        shell: pwsh
+        timeout-minutes: 75
+        run: |
+          $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
+          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/prepare_real_model.sh"
+          if ($LASTEXITCODE -ne 0) { Write-Host 'BLOCKED : Ollama ou le modèle n''a pas pu être installé'; exit 3 }
+          $exe = (Get-ChildItem "$env:RUNNER_TEMP\release\publish" -Recurse -Filter APEX.exe | Select-Object -First 1).FullName
+          # Réglages du Panel neufs : dossier APEX par défaut (~/apex de l'utilisateur), jamais une copie de test.
+          $env:APEX_PANEL_CONFIG_DIR = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\panel-loop-config").FullName
+          $env:APEX_PANEL_START_TIMEOUT_S = '870'
+          function Panel([string]$action) {
+            $out = Join-Path $env:RUNNER_TEMP "panel$action.json"
+            $p = Start-Process -FilePath $exe -ArgumentList $action -NoNewWindow -Wait -PassThru -RedirectStandardOutput $out
+            $s = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json
+            Write-Host "APEX.exe $action : code $($p.ExitCode) ; $($s.headline) / $($s.cause)"
+            return $p.ExitCode
+          }
+          function Loop([string]$phase) {
+            wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec .venv/bin/python "$src/setup/packaging/windows/ci/first_real_loop.py" $phase | Out-Host
+            return $LASTEXITCODE
+          }
+          $codes = @()
+          if ((Panel '--start') -gt 1) { Write-Host 'BLOCKED : APEX ne démarre pas (voir le verdict ci-dessus)'; exit 3 }
+          $codes += Loop 'run'
+          Panel '--stop' | Out-Null
+          if ((Panel '--start') -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; exit 1 }
+          $codes += Loop 'verify'
+          $codes += Loop 'interrupt'
+          Panel '--stop' | Out-Null
+          if ((Panel '--start') -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; exit 1 }
+          $codes += Loop 'interrupted'
+          Panel '--stop' | Out-Null
+          wsl.exe -d $env:DISTRO --exec bash -c 'ollama ps; docker ps -a --filter name=apex_ --format "{{.Names}} {{.Status}}"'
+          Write-Host "codes des phases (run, verify, interrupt, interrupted) : $($codes -join ', ')"
+          if ($codes -contains 1) { exit 1 }
+          if ($codes -contains 3) { exit 3 }
       - name: MinIO optional profile (Gate M) — build from official sources, start with the profile, healthcheck, stop
         if: always()
         shell: pwsh

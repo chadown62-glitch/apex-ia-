@@ -24,6 +24,35 @@ from apex.version import PHASE, PHASE_NAME, __version__, build_info
 log = get_logger("cli")
 
 
+def _cmd_db(args: argparse.Namespace) -> int:
+    """`apex db status` / `apex db upgrade` — schéma de la base (apex.db.schema). Aucune valeur secrète
+    n'est jamais affichée : seulement des révisions et des noms d'erreurs. Codes : 0 à jour (ou mis à
+    jour), 1 échec (connexion, migration), 2 (status seulement) schéma absent ou en retard."""
+    from apex.db import schema
+
+    try:
+        engine = schema.engine_from_environment()
+        if args.db_command == "upgrade":
+            before = schema.schema_state(engine)
+            if not before.ok:
+                print(f"apex db : {before.describe()} — application des migrations…", file=sys.stderr)
+                schema.upgrade_to_head()
+            after = schema.schema_state(engine)
+        else:
+            after = schema.schema_state(engine)
+    except Exception as exc:  # connexion refusée, migration en échec : jamais une pile brute ni un secret
+        detail = str(exc).splitlines()[0][:300] if str(exc) else ""
+        print(f"apex db : échec ({exc.__class__.__name__}) : {detail}", file=sys.stderr)
+        return 1
+    if args.json:
+        print(json.dumps({"status": after.status.value, "current": after.current, "head": after.head}))
+    else:
+        print(f"apex db : {after.describe()}")
+    if args.db_command == "upgrade":
+        return 0 if after.ok else 1
+    return 0 if after.ok else 2
+
+
 def _cmd_version(args: argparse.Namespace) -> int:
     info = build_info()
     if args.json:
@@ -711,6 +740,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="ajoute la sonde d'isolation sandbox (coûteuse : namespaces/cgroups/Docker réels)",
     )
     doctor_cmd.set_defaults(func=_cmd_doctor)
+
+    db_cmd = sub.add_parser("db", help="schéma de la base : état ou mise à niveau (migrations Alembic)")
+    db_sub = db_cmd.add_subparsers(dest="db_command", required=True)
+    for name, help_text in (("status", "révision appliquée contre révision attendue par ce code"),
+                            ("upgrade", "appliquer les migrations manquantes (vers l'avant, idempotent)")):
+        db_one = db_sub.add_parser(name, help=help_text)
+        db_one.add_argument("--json", action="store_true")
+        db_one.set_defaults(func=_cmd_db)
 
     interfaces_cmd = sub.add_parser("interfaces", help="état réel des abstractions et de leur implémentation")
     interfaces_cmd.add_argument("--json", action="store_true")

@@ -295,6 +295,18 @@ public class LaunchControlTests
     }
 
     [Fact]
+    public void A_database_schema_failure_is_NOT_READY_not_BLOCKED()
+    {
+        var s = PanelData.Decide(PanelData.WslRunning(), BackendDiscovery.Parse(RefusedJson(10, "database", [])),
+            new StatusFetch(FetchOutcome.Refused, null, null, "refusé"));
+
+        Assert.Equal(PanelVerdict.NotReady, s.Verdict);
+        Assert.Equal(NotReadyCause.StartFailed, s.Cause);
+        Assert.Contains("schéma de la base", s.Headline + s.Guidance);
+        Assert.Contains("APEX_DB_", s.Guidance);
+    }
+
+    [Fact]
     public void A_running_backend_always_wins_over_an_old_refusal()
     {
         var s = PanelData.Decide(PanelData.WslRunning(), BackendDiscovery.Parse(RefusedJson(5, "gate", ["GATE-21"])),

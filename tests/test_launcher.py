@@ -79,6 +79,7 @@ class LauncherFixture:
         doctor_output: str = "APEX DOCTOR (fake): 0 fail",
         gate_exit: int = 0,
         gate_output: str = "APEX GATE (fake): authorized",
+        db_exit: int = 0,
     ) -> None:
         """Faux interpréteur déterministe — même esprit que `FakeProbe` côté
         `apex doctor` : répond au test de version (`-c ...`) et, invoqué
@@ -99,6 +100,10 @@ class LauncherFixture:
             'if [[ "$1 $2 $3" == "-m apex.cli.main gate" ]]; then\n'
             f'  echo "{gate_output}"\n'
             f"  exit {gate_exit}\n"
+            "fi\n"
+            # Schéma de la base (apex db upgrade) : à jour.
+            'if [[ "$1 $2 $3 $4" == "-m apex.cli.main db upgrade" ]]; then\n'
+            f"  exit {db_exit}\n"
             "fi\n"
             # Enregistrement de découverte (annonce au Panel, arrêt du backend) : rien d'enregistré ici.
             'if [[ "$1 $2" == "-m apex.discovery" ]]; then\n'
@@ -676,6 +681,25 @@ class TestDoctorGateIntegration(LauncherTestCase):
         calls = fx.python_calls_log.read_text() if fx.python_calls_log.exists() else ""
         self.assertNotIn("gate", calls)
 
+    def test_schema_is_upgraded_after_infrastructure_and_before_doctor_and_gate(self) -> None:
+        """Audit du 03/10/2026 : sans cette étape, une base neuve n'avait aucune table."""
+        fx = self._fixture()
+        result = fx.run()
+        self.assertEqual(result.returncode, 0)
+        calls = [c for c in fx.python_calls_log.read_text().splitlines() if c.startswith("-m apex.cli.main")]
+        self.assertEqual([c.split()[2] for c in calls], ["db", "doctor", "gate"])
+        self.assertEqual(calls[0], "-m apex.cli.main db upgrade")
+        self.assertIn("schéma de la base (apex db upgrade)", result.stderr)
+
+    def test_schema_failure_exits_10_and_never_runs_doctor_or_gate(self) -> None:
+        fx = self._fixture(db_exit=1)
+        result = fx.run()
+        self.assertEqual(result.returncode, 10)
+        self.assertIn("le schéma de la base n'a pas pu être mis à jour", result.stderr)
+        calls = fx.python_calls_log.read_text()
+        self.assertNotIn("doctor", calls)
+        self.assertNotIn(" gate", calls)
+
     def test_gate_failure_exits_5(self) -> None:
         # `apex gate --startup` : 3 = un contrôle MESURÉ en FAIL refuse le démarrage (audit du 02/10/2026 ;
         # avant, n'importe quel code ≠ 0 — refus, précondition non vérifiée ou panne Python — donnait 5).
@@ -758,6 +782,7 @@ class TestDoctorGateIntegration(LauncherTestCase):
             "#!/usr/bin/env bash\n"
             'if [[ "$1" == "-c" ]]; then exit 0; fi\n'
             f'echo "$*" >> "{fx.python_calls_log}"\n'
+            'if [[ "$1 $2 $3 $4" == "-m apex.cli.main db upgrade" ]]; then exit 0; fi\n'  # schéma à jour
             'if [[ "$1 $2 $3" == "-m apex.cli.main doctor" ]]; then\n'
             "  sleep 5\n"
             "  exit 0\n"
@@ -969,6 +994,7 @@ class TestInterruptHandlerIsIsolated(LauncherTestCase):
         python_path.write_text(
             "#!/usr/bin/env bash\n"
             'if [[ "$1" == "-c" ]]; then exit 0; fi\n'
+            'if [[ "$1 $2 $3 $4" == "-m apex.cli.main db upgrade" ]]; then exit 0; fi\n'  # schéma à jour
             'if [[ "$1 $2 $3" == "-m apex.cli.main doctor" ]]; then\n'
             "  sleep 5\n"
             "  exit 0\n"
