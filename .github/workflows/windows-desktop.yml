@@ -174,7 +174,7 @@ jobs:
         timeout-minutes: 75
         run: |
           $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
-          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/prepare_real_model.sh"
+          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/prepare_real_model.sh" /home/apex/apex
           if ($LASTEXITCODE -ne 0) { Write-Host 'BLOCKED : Ollama ou le modèle n''a pas pu être installé'; exit 3 }
           $exe = (Get-ChildItem "$env:RUNNER_TEMP\release\publish" -Recurse -Filter APEX.exe | Select-Object -First 1).FullName
           # Réglages du Panel neufs : dossier APEX par défaut (~/apex de l'utilisateur), jamais une copie de test.
@@ -185,6 +185,10 @@ jobs:
             $p = Start-Process -FilePath $exe -ArgumentList $action -NoNewWindow -Wait -PassThru -RedirectStandardOutput $out
             $s = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json
             Write-Host "APEX.exe $action : code $($p.ExitCode) ; $($s.headline) / $($s.cause)"
+            if ($p.ExitCode -gt 1 -and $action -eq '--start') {
+              Write-Host "guidance : $($s.guidance)"
+              wsl.exe -d $env:DISTRO --exec bash -c 'tail -60 ~/.apex/runtime/launch.log' | Out-Host
+            }
             return $p.ExitCode
           }
           function Loop([string]$phase) {
