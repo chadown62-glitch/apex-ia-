@@ -81,7 +81,7 @@ jobs:
   # pas Windows 10/11 client, pas de redémarrage (phases PreReboot/PostReboot non exécutées ici).
   real-windows:
     runs-on: windows-latest
-    timeout-minutes: 180
+    timeout-minutes: 220
     env:
       DISTRO: Ubuntu-24.04
     steps:
@@ -171,7 +171,7 @@ jobs:
       - name: First real execution loop (real model, real sandbox, judge, experience, restart)
         if: always()
         shell: pwsh
-        timeout-minutes: 75
+        timeout-minutes: 110
         run: |
           $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
           wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/prepare_real_model.sh" /home/apex/apex

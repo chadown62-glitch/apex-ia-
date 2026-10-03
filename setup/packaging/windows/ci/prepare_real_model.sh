@@ -43,6 +43,20 @@ for model in "${MODELS[@]}"; do
 done
 ollama list
 
+log "capacité MESURÉE de la distribution (run 21 : API sans réponse pendant l'inférence CPU) :"
+echo "  processeurs : $(nproc) ; $(free -m | awk '/^Mem:/ {print "mémoire " $2 " Mo, disponible " $7 " Mo"} /^Swap:/ {print "; swap " $2 " Mo"}' | tr '\n' ' ')"
+log "vitesse MESURÉE d'Ollama sur ce CPU (${MODELS[0]}, 32 jetons ; charge aussi le modèle en mémoire) :"
+curl -fsS --max-time 900 http://127.0.0.1:11434/api/generate \
+  -d "{\"model\": \"${MODELS[0]}\", \"prompt\": \"def add(a, b):\", \"stream\": false, \"options\": {\"num_predict\": 32}}" \
+  | python3 -c 'import json, sys
+r = json.load(sys.stdin)
+s = lambda k: r.get(k, 0) / 1e9
+print("  chargement %.1f s ; prompt %s jetons en %.1f s ; génération %s jetons en %.1f s ; total %.1f s" % (
+    s("load_duration"), r.get("prompt_eval_count"), s("prompt_eval_duration"),
+    r.get("eval_count"), s("eval_duration"), s("total_duration")))' \
+  || log "mesure impossible (voir ci-dessus)"
+echo "  après chargement : $(free -m | awk '/^Mem:/ {print "disponible " $7 " Mo"}')"
+
 log "image de la sandbox conteneur : $IMAGE"
 docker pull -q "$IMAGE"
 

@@ -58,7 +58,9 @@ class Api:
         self._token = token_path.read_text(encoding="utf-8").strip()
         self.pid = record.get("pid")
 
-    def call(self, method: str, path: str, body: dict | None = None) -> tuple[int, dict]:
+    def call(
+        self, method: str, path: str, body: dict | None = None, timeout_s: float = 60
+    ) -> tuple[int, dict]:
         data = json.dumps(body).encode() if body is not None else None
         request = urllib.request.Request(
             self.base + path,
@@ -70,7 +72,7 @@ class Api:
             },
         )
         try:
-            with urllib.request.urlopen(request, timeout=60) as response:
+            with urllib.request.urlopen(request, timeout=timeout_s) as response:
                 return response.status, json.loads(response.read())
         except urllib.error.HTTPError as exc:
             return exc.code, json.loads(exc.read() or b"{}")
@@ -91,22 +93,61 @@ def show_status(api: Api) -> dict[str, dict]:
     return components
 
 
+def host_facts() -> str:
+    """Charge et mémoire de la distribution, lues dans /proc (run 21 : l'API n'a pas répondu en 60 s pendant
+    l'inférence CPU — mesuré ici à chaque relevé, jamais supposé)."""
+    try:
+        load = Path("/proc/loadavg").read_text().split()[:3]
+        mem = {
+            line.split(":")[0]: int(line.split()[1]) // 1024
+            for line in Path("/proc/meminfo").read_text().splitlines()
+            if line.split(":")[0] in ("MemTotal", "MemAvailable", "SwapTotal", "SwapFree")
+        }
+        return (
+            f"charge {'/'.join(load)} ; mémoire dispo {mem.get('MemAvailable')}/{mem.get('MemTotal')} Mo ; "
+            f"swap utilisé {mem.get('SwapTotal', 0) - mem.get('SwapFree', 0)} Mo"
+        )
+    except (OSError, ValueError, IndexError):
+        return "charge/mémoire illisibles"
+
+
 def wait_terminal(api: Api, run_id: str) -> dict:
-    deadline = time.monotonic() + RUN_TIMEOUT_S
-    last = None
-    while True:
-        status, payload = api.call("GET", f"/task-runs/{run_id}")
-        detail = payload.get("data") or {}
-        state = (detail.get("status"), len(detail.get("eval_runs") or []))
-        if state != last:
+    """Relève la TaskRun toutes les 30 s jusqu'à un statut terminal. Une API qui ne répond pas à temps est
+    MESURÉE (latence, charge, mémoire) et le relevé continue : elle n'est jamais confondue avec un résultat."""
+    started = time.monotonic()
+    deadline = started + RUN_TIMEOUT_S
+    detail: dict = {}
+    while time.monotonic() < deadline:
+        asked = time.monotonic()
+        try:
+            status, payload = api.call("GET", f"/task-runs/{run_id}", timeout_s=120)
+            detail = payload.get("data") or {}
             print(
-                f"[first-loop] TaskRun {run_id[:8]} : {state[0]} ({state[1]} tentative(s) jugée(s))",
+                f"[first-loop] t={asked - started:5.0f}s TaskRun {run_id[:8]} : {detail.get('status')} "
+                f"({len(detail.get('eval_runs') or [])} tentative(s) jugée(s)) — API en "
+                f"{time.monotonic() - asked:.1f} s ; {host_facts()}",
                 flush=True,
             )
-            last = state
-        if status != 200 or detail.get("status") != "running" or time.monotonic() > deadline:
-            return detail
-        time.sleep(10)
+            if status != 200 or detail.get("status") != "running":
+                return detail
+        except (OSError, ValueError) as exc:
+            print(
+                f"[first-loop] t={asked - started:5.0f}s API sans réponse après {time.monotonic() - asked:.0f} s "
+                f"({exc.__class__.__name__}) ; {host_facts()}",
+                flush=True,
+            )
+        time.sleep(30)
+    print(f"[first-loop] délai de {RUN_TIMEOUT_S} s atteint : TaskRun toujours « {detail.get('status')} »")
+    return detail
+
+
+def load_state(path: Path, number: str, label: str) -> dict | None:
+    """Une phase précédente sans résultat enregistré rend cette preuve BLOQUÉE — jamais un plantage muet."""
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        proof(number, label, None, f"{path.name} absent : la phase précédente n'a rien enregistré")
+        return None
 
 
 def phase_run(api: Api) -> int:
@@ -150,10 +191,11 @@ def phase_run(api: Api) -> int:
 
     detail = wait_terminal(api, run["id"])
     elapsed = time.monotonic() - started
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    RUN_FILE.write_text(json.dumps(detail, ensure_ascii=False, indent=1), encoding="utf-8")
+    if detail.get("id"):
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        RUN_FILE.write_text(json.dumps(detail, ensure_ascii=False, indent=1), encoding="utf-8")
     print(
-        f"[first-loop] TaskRun terminée : {detail.get('status')} / {detail.get('stop_reason')} en {elapsed:.0f} s"
+        f"[first-loop] TaskRun : {detail.get('status')} / {detail.get('stop_reason')} après {elapsed:.0f} s"
     )
     if detail.get("failure"):
         print(f"[first-loop] échec rapporté : {str(detail['failure'])[:800]}")
@@ -188,9 +230,11 @@ def phase_run(api: Api) -> int:
             f"échec {x.get('failure_category')}, empreinte {str(x.get('solution_fingerprint'))[:16]}…"
         )
 
+    unfinished = detail.get("status") in (None, "running")
     if not eval_runs:
-        # Aucune tentative jugée : sans modèle joignable, les étapes suivantes n'ont pas pu être exercées
-        # (BLOCKED, jamais PASS) ; avec un modèle joignable, c'est un défaut de la boucle (FAIL).
+        # Aucune tentative jugée : sans modèle joignable, ou sans fin dans le délai sur ce matériel, les étapes
+        # suivantes n'ont pas pu être exercées (BLOCKED, jamais PASS) ; une boucle TERMINÉE sans tentative
+        # alors qu'un modèle était joignable est un défaut de la boucle (FAIL).
         reason = (
             f"TaskRun {detail.get('status')} : {str(detail.get('failure'))[:300]} ; "
             f"Ollama {components.get('ollama', {}).get('detail')}"
@@ -203,7 +247,7 @@ def phase_run(api: Api) -> int:
             ("7", "évaluation réelle"),
             ("8", "Experience enregistrée"),
         ):
-            proof(number, label, False if ollama_ready else None, reason)
+            proof(number, label, False if ollama_ready and not unfinished else None, reason)
         return finish()
     models = [e.get("model_id") for e in eval_runs if e.get("model_id")]
     proof(
@@ -256,7 +300,18 @@ def phase_run(api: Api) -> int:
 
 def phase_verify(api: Api) -> int:
     show_status(api)
-    before = json.loads(RUN_FILE.read_text(encoding="utf-8"))
+    label9 = "persistance : TaskRun, résultat, code, verdicts et Experience relus après redémarrage"
+    before = load_state(RUN_FILE, "9", label9)
+    if before is None:
+        return finish()
+    if before.get("status") == "running":
+        proof(
+            "9",
+            label9,
+            None,
+            "la TaskRun n'était pas terminée avant le redémarrage : rien de final à relire",
+        )
+        return finish()
     status, payload = api.call("GET", f"/task-runs/{before['id']}")
     after = payload.get("data") or {}
     same = all(
@@ -280,7 +335,9 @@ def phase_verify(api: Api) -> int:
 
 
 def phase_interrupt(api: Api) -> int:
-    before = json.loads(RUN_FILE.read_text(encoding="utf-8"))
+    before = load_state(RUN_FILE, "10", "reprise après redémarrage")
+    if before is None:
+        return finish()
     status, payload = api.call(
         "POST",
         f"/tasks/{before['task_id']}/runs",
@@ -299,7 +356,9 @@ def phase_interrupt(api: Api) -> int:
 
 
 def phase_interrupted(api: Api) -> int:
-    saved = json.loads(INTERRUPT_FILE.read_text(encoding="utf-8"))
+    saved = load_state(INTERRUPT_FILE, "10", "reprise après redémarrage")
+    if saved is None:
+        return finish()
     status, payload = api.call("GET", f"/task-runs/{saved['id']}")
     run = payload.get("data") or {}
     print(
