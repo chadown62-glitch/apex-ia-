@@ -180,10 +180,18 @@ jobs:
           # Réglages du Panel neufs : dossier APEX par défaut (~/apex de l'utilisateur), jamais une copie de test.
           $env:APEX_PANEL_CONFIG_DIR = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\panel-loop-config").FullName
           $env:APEX_PANEL_START_TIMEOUT_S = '870'
+          # Attendre APEX.exe SEUL (comme Invoke-Native du script de validation) : `--start` laisse volontairement
+          # tourner le backend (wsl.exe ... panel-serve) — `Start-Process -Wait` attendait aussi ce descendant et
+          # n'a jamais rendu la main (run 20, délai de 75 min atteint).
           function Panel([string]$action) {
-            $out = Join-Path $env:RUNNER_TEMP "panel$action.json"
-            $p = Start-Process -FilePath $exe -ArgumentList $action -NoNewWindow -Wait -PassThru -RedirectStandardOutput $out
-            $s = Get-Content $out -Raw -Encoding UTF8 | ConvertFrom-Json
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $exe; $psi.Arguments = $action
+            $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardOutput = $true
+            $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+            $p = [Diagnostics.Process]::Start($psi)
+            $read = $p.StandardOutput.ReadToEndAsync()
+            if (-not $p.WaitForExit(900000)) { try { $p.Kill() } catch { }; Write-Host "APEX.exe $action : délai de 900 s dépassé"; return 98 }
+            $s = $null; if ($read.Wait(30000)) { try { $s = $read.Result | ConvertFrom-Json } catch { } }
             Write-Host "APEX.exe $action : code $($p.ExitCode) ; $($s.headline) / $($s.cause)"
             if ($p.ExitCode -gt 1 -and $action -eq '--start') {
               Write-Host "guidance : $($s.guidance)"
