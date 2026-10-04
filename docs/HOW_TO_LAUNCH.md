@@ -160,4 +160,4 @@ GET  /api/v1/tasks/{id}/runs        historique des exécutions de la tâche
   rien ici ne modifie le comportement d'APEX d'une exécution à l'autre.
 
 Preuve sur un WSL2 réel avec un vrai modèle : étape « First real execution loop » de
-`.github/workflows/windows-desktop.yml` (`setup/packaging/windows/ci/first_real_loop.py`).
+`.github/workflows/windows-desktop.yml` (`setup/packaging/windows/ci/first_real_loop.py`) ; résultats et procédure machine cible : `docs/PREMIERE_BOUCLE_REELLE.md`.

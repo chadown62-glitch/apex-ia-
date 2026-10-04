@@ -69,6 +69,8 @@ def _eval_run_view(run: Any) -> dict[str, Any]:
         "generated_code": response.get("text"),
         "generated_code_truncated": response.get("truncated"),
         "tokens_completion": response.get("tokens_completion"),
+        "generation_elapsed_s": response.get("elapsed_s"),
+        "backend_timings_s": response.get("backend_timings_s"),
         "stdout": execution.get("stdout"),
         "stderr": execution.get("stderr"),
         "started_at": _plain(run.started_at),

@@ -460,6 +460,16 @@ class EvalRunnerService:
                     if generation.tokens_completion.status is DataStatus.REAL
                     else None
                 ),
+                # Durée de l'appel mesurée par le fournisseur, et durées RAPPORTÉES par le backend (Ollama :
+                # nanosecondes -> secondes) quand il les fournit — jamais estimées (audit du 04/10/2026 : sans
+                # elles, ni le chargement du modèle ni la vitesse de génération d'une exécution n'étaient
+                # mesurables après coup).
+                "elapsed_s": generation.elapsed_s,
+                "backend_timings_s": {
+                    key.removesuffix("_duration"): round(value / 1e9, 3)
+                    for key, value in (generation.facts or {}).items()
+                    if key.endswith("_duration") and isinstance(value, int | float)
+                },
             }
         }
 

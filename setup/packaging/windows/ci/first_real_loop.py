@@ -150,6 +150,21 @@ def load_state(path: Path, number: str, label: str) -> dict | None:
         return None
 
 
+def print_trace(detail: dict, eval_runs: list, experiences: list) -> None:
+    """La chaîne d'une exécution, chaque maillon par son identifiant RÉEL lu dans la base."""
+    exp_by_eval = {x.get("eval_run_id"): x for x in experiences}
+    print(f"[first-loop] TRACE TASK {detail.get('task_id')} -> RUN {detail.get('id')}")
+    for i, e in enumerate(eval_runs, 1):
+        x = exp_by_eval.get(e.get("id")) or {}
+        print(
+            f"[first-loop] TRACE   tentative {i} : {e.get('model_id')} -> génération {e.get('tokens_completion')} jetons "
+            f"en {e.get('generation_elapsed_s')} s -> sandbox {e.get('isolation')} ({e.get('container_image')}) "
+            f"code {e.get('exit_code')} en {e.get('elapsed_s')} s -> Judge {e.get('oracle_verdict')} "
+            f"« {e.get('oracle_detail')} » -> Experience {x.get('id')} (fitness {x.get('fitness')})"
+        )
+    print(f"[first-loop] TRACE   TaskRun {detail.get('status')} / {detail.get('stop_reason')}")
+
+
 def phase_run(api: Api) -> int:
     components = show_status(api)
     ollama_ready = components.get("ollama", {}).get("state") == "ready"
@@ -193,7 +208,9 @@ def phase_run(api: Api) -> int:
     elapsed = time.monotonic() - started
     if detail.get("id"):
         STATE_DIR.mkdir(parents=True, exist_ok=True)
-        RUN_FILE.write_text(json.dumps(detail, ensure_ascii=False, indent=1), encoding="utf-8")
+        RUN_FILE.write_text(
+            json.dumps({**detail, "_apex_pid": api.pid}, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
     print(
         f"[first-loop] TaskRun : {detail.get('status')} / {detail.get('stop_reason')} après {elapsed:.0f} s"
     )
@@ -210,7 +227,8 @@ def phase_run(api: Api) -> int:
     for i, e in enumerate(eval_runs, 1):
         print(
             f"[first-loop] --- EvalRun {i} ({e.get('id')}) : modèle {e.get('model_id')}, "
-            f"{e.get('tokens_completion')} jetons générés"
+            f"{e.get('tokens_completion')} jetons générés ; appel au modèle {e.get('generation_elapsed_s')} s ; "
+            f"durées rapportées par Ollama (s) : {e.get('backend_timings_s')}"
         )
         print("[first-loop] code RÉELLEMENT généré par le modèle :")
         for line in str(e.get("generated_code") or "").splitlines()[:60]:
@@ -289,6 +307,7 @@ def phase_run(api: Api) -> int:
         f"verdicts : {[e.get('oracle_verdict') for e in eval_runs]} ; TaskRun {detail.get('status')}",
     )
     linked = {x.get("eval_run_id") for x in experiences} == {e.get("id") for e in eval_runs}
+    print_trace(detail, eval_runs, experiences)
     proof(
         "8",
         "Experience enregistrée pour chaque tentative jugée (exécution ≠ apprentissage)",
@@ -312,6 +331,16 @@ def phase_verify(api: Api) -> int:
             "la TaskRun n'était pas terminée avant le redémarrage : rien de final à relire",
         )
         return finish()
+    if before.get("_apex_pid") == api.pid:
+        # Run 23 : `APEX.exe --stop` a échoué (Wsl/Service/0x8007274c), `--start` a constaté APEX déjà en
+        # marche, et la relecture a eu lieu dans le MÊME processus — ce n'était pas une preuve de persistance.
+        proof(
+            "9",
+            label9,
+            None,
+            f"APEX n'a pas été redémarré (même processus, pid {api.pid}) : rien de prouvé",
+        )
+        return finish()
     status, payload = api.call("GET", f"/task-runs/{before['id']}")
     after = payload.get("data") or {}
     same = all(
@@ -328,7 +357,7 @@ def phase_verify(api: Api) -> int:
         "9",
         "persistance : TaskRun, résultat, code, verdicts et Experience relus après redémarrage",
         status == 200 and same and same_code and same_exp,
-        f"APEX pid {api.pid} ; TaskRun {before['id'][:8]} {after.get('status')} ; "
+        f"APEX pid {before.get('_apex_pid')} -> {api.pid} ; TaskRun {before['id'][:8]} {after.get('status')} ; "
         f"identique : champs={same}, code={same_code}, experiences={same_exp}",
     )
     return finish()

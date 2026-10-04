@@ -100,15 +100,19 @@ jobs:
           Install-PackageProvider NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser | Out-Null
           Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -SkipPublisherCheck
           $settings = @{ Rules = @{ PSUseCompatibleSyntax = @{ Enable = $true; TargetVersions = @('5.1') } } }
-          $issues = Invoke-ScriptAnalyzer -Path setup/packaging/windows/Test-ApexWindows.ps1 -Settings $settings -Severity Error
+          $issues = foreach ($f in 'Test-ApexWindows.ps1', 'Prouver-Boucle-APEX.ps1') { Invoke-ScriptAnalyzer -Path "setup/packaging/windows/$f" -Settings $settings -Severity Error }
           $issues | Format-Table Line, RuleName, Message -Wrap -AutoSize | Out-String -Width 200
           # Analyse par Windows PowerShell 5.1 LUI-MÊME, avec la détection d'encodage qu'il applique à
           # l'exécution (constaté au run 8 : sans BOM, le fichier UTF-8 était lu en Windows-1252 et
           # « — » devenait un guillemet — erreur que PSScriptAnalyzer n'avait pas vue).
           $tokens = $null; $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path setup/packaging/windows/Test-ApexWindows.ps1).Path, [ref]$tokens, [ref]$errors) | Out-Null
-          $errors | ForEach-Object { "$($_.Extent.StartLineNumber): $($_.Message)" }
-          if ($issues -or $errors) { exit 1 }
+          $allErrors = @()
+          foreach ($f in 'Test-ApexWindows.ps1', 'Prouver-Boucle-APEX.ps1') {
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path "setup/packaging/windows/$f").Path, [ref]$tokens, [ref]$errors) | Out-Null
+            $errors | ForEach-Object { "$f $($_.Extent.StartLineNumber): $($_.Message)" }
+            $allErrors += $errors
+          }
+          if ($issues -or $allErrors) { exit 1 }
       - name: Build the installers on Windows (current and previous release)
         shell: bash
         run: |
@@ -199,6 +203,13 @@ jobs:
             }
             return $p.ExitCode
           }
+          # Run 23 : un arrêt a échoué sur une erreur du service WSL (Wsl/Service/0x8007274c) ; il est retenté
+          # une fois. S'il échoue encore, la phase suivante le constate (même processus APEX : BLOCKED).
+          function Stop-Apex {
+            $c = Panel '--stop'
+            if ($c -ne 0) { Start-Sleep -Seconds 20; $c = Panel '--stop' }
+            return $c
+          }
           function Loop([string]$phase) {
             wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec .venv/bin/python "$src/setup/packaging/windows/ci/first_real_loop.py" $phase | Out-Host
             return $LASTEXITCODE
@@ -206,14 +217,14 @@ jobs:
           $codes = @()
           if ((Panel '--start') -gt 1) { Write-Host 'BLOCKED : APEX ne démarre pas (voir le verdict ci-dessus)'; exit 3 }
           $codes += Loop 'run'
-          Panel '--stop' | Out-Null
+          Stop-Apex | Out-Null
           if ((Panel '--start') -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; exit 1 }
           $codes += Loop 'verify'
           $codes += Loop 'interrupt'
-          Panel '--stop' | Out-Null
+          Stop-Apex | Out-Null
           if ((Panel '--start') -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; exit 1 }
           $codes += Loop 'interrupted'
-          Panel '--stop' | Out-Null
+          Stop-Apex | Out-Null
           wsl.exe -d $env:DISTRO --exec bash -c 'ollama ps; docker ps -a --filter name=apex_ --format "{{.Names}} {{.Status}}"'
           Write-Host "codes des phases (run, verify, interrupt, interrupted) : $($codes -join ', ')"
           if ($codes -contains 1) { exit 1 }
@@ -235,7 +246,7 @@ jobs:
           $kit = New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\APEX-validation-kit"
           Copy-Item "$env:RUNNER_TEMP\release\APEX-Setup-x64-v*.exe*", "$env:RUNNER_TEMP\release-prev\APEX-Setup-x64-v*.exe" $kit -ErrorAction SilentlyContinue
           Copy-Item "$env:RUNNER_TEMP\release\manifest.json" "$kit\manifest.json" -ErrorAction SilentlyContinue
-          Copy-Item setup/packaging/windows/Test-ApexWindows.ps1, setup/packaging/windows/Valider-APEX.cmd, setup/packaging/windows/LISEZ-MOI.txt $kit
+          Copy-Item setup/packaging/windows/Test-ApexWindows.ps1, setup/packaging/windows/Valider-APEX.cmd, setup/packaging/windows/LISEZ-MOI.txt, setup/packaging/windows/Prouver-Boucle-APEX.ps1 $kit
           Get-ChildItem $kit | Format-Table Name, Length -AutoSize
       - uses: actions/upload-artifact@v4
         if: always()

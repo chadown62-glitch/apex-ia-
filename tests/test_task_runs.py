@@ -103,6 +103,28 @@ def test_the_generated_code_and_its_fingerprint_are_kept_for_comparison(factory)
     assert experience.oracle_verdict.value == "pass" and experience.fitness > 0
 
 
+def test_generation_timings_reported_by_the_backend_are_kept_never_invented() -> None:
+    """Chargement et vitesse de génération d'une exécution réelle : mesurables après coup (machine cible)."""
+    from apex.evalrunner.service import EvalRunnerService
+    from apex.models.model import GenerationResult
+    from apex.obs.status import Measurement
+
+    reported = GenerationResult(
+        text="x", model_used="m", tokens_prompt=Measurement.real(35), tokens_completion=Measurement.real(32),
+        finish_reason="stop", elapsed_s=11.1,
+        facts={"load_duration": 9_400_000_000, "eval_duration": 1_300_000_000, "done": True},
+    )
+    silent = GenerationResult(
+        text="x", model_used="m", tokens_prompt=Measurement.unknown(), tokens_completion=Measurement.unknown(),
+        finish_reason=None, elapsed_s=0.5, facts={},
+    )
+
+    facts = EvalRunnerService._model_response_facts(reported)["model_response"]
+    assert facts["elapsed_s"] == 11.1
+    assert facts["backend_timings_s"] == {"load": 9.4, "eval": 1.3}
+    assert EvalRunnerService._model_response_facts(silent)["model_response"]["backend_timings_s"] == {}
+
+
 def test_a_wrong_solution_is_judged_failed_and_still_leaves_an_experience(factory) -> None:
     from apex.metalearner.experience import ExperienceRepository
 
