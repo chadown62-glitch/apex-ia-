@@ -47,3 +47,29 @@ réussis, Experience ID et fitness, puis la relecture après redémarrage et l'e
 
 Exécuter n'est pas apprendre : une Experience enregistre ce qui s'est passé ; rien ici ne modifie le
 comportement d'APEX d'une exécution à l'autre.
+
+## Audit : RUN 1 → Experience → RUN 2 influencé par l'expérience ? (04/10/2026, lecture du code)
+
+Rien n'a été construit : état constaté.
+
+- **RUN 1 → Experience** : réel. Le TaskLoop écrit une `Experience` par tentative jugée (code, empreinte,
+  verdict, catégorie d'échec, fitness) — prouvé en CI (A).
+- **Entre deux tentatives d'une même TaskRun** : le prompt est IDENTIQUE (`GenerationRequest(prompt=prompt)`,
+  `apex/taskloop/loop.py`), sans température ni retour d'échec ; `apex.recovery` décide seulement RETRY /
+  REASSIGN / BLOCK. Au run 23, la 2e tentative différait par le seul aléa de l'échantillonnage.
+- **Entre deux TaskRuns** : `run_task_loop` ne LIT aucune `Experience`. Un RUN 2 sur la même tâche repart de zéro.
+- **Existant qui lit l'expérience** (à réutiliser, jamais dupliquer) :
+  - `apex.metalearner.adaptive_solution_loop.decide_next_strategies` (`apex solve`) : lit les `Experience`
+    persistées de la génération précédente et mute la température + un rappel générique dans le prompt
+    (`_INCORRECT_SOLUTION_HINT`, `_INVALID_CANDIDATE_HINT`) ; propriété TESTÉE : sans ces lignes, retour à la
+    stratégie de repli. Il ne transmet PAS le détail de l'Oracle (cas échoués), et passe par
+    `EvalRunnerService`, pas par les TaskRuns.
+  - `apex.metalearner.recommendation_engine` : lit les `Experience` du TaskLoop et RECOMMANDE sans exécuter.
+- **Non démontré (UNVERIFIED)** : qu'une décision tirée de l'expérience améliore la performance d'un vrai
+  modèle sur les TaskRuns — aucune mesure de ce type n'a été produite dans ce chantier. Aucune preuve
+  aujourd'hui que « APEX apprend » ; seulement que la décision de `decide_next_strategies` DÉPEND de
+  l'expérience persistée (test d'ablation).
+
+Prochain chantier logique : brancher les TaskRuns sur la règle existante (`decide_next_strategies`), puis
+une expérience pré-enregistrée avec un vrai modèle — RUN 1, puis RUN 2 avec l'expérience contre RUN 2 sans
+(ablation), sur plusieurs tâches et graines — pour mesurer si l'expérience change la performance.
