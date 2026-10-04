@@ -341,8 +341,7 @@ class EvalRunnerService:
         # ADDITIF uniquement, voir la docstring de
         # `resolve_generation_prompt_suffix` : `task.description` (montrée
         # au modèle) n'est jamais modifiée, seulement complétée.
-        prompt_suffix = clone_config.resolve_generation_prompt_suffix(genome_content)
-        prompt = task.description if prompt_suffix is None else f"{task.description}\n\n{prompt_suffix}"
+        prompt = clone_config.compose_generation_prompt(task.description, genome_content)
         started_at = _utcnow()
 
         request = GenerationRequest(

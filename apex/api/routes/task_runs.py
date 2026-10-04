@@ -23,7 +23,6 @@ from apex.api.schemas import DataEnvelope
 
 router = APIRouter(tags=["task-runs"])
 
-_REFERENCE_TASKS = ("is_palindrome",)
 
 
 class ReferenceTaskIn(BaseModel):
@@ -37,6 +36,8 @@ class TaskRunIn(BaseModel):
     max_candidates: int = Field(default=2, ge=1, le=5)
     max_wall_clock_s: float = Field(default=900.0, gt=0, le=3600)
     generation_timeout_s: float = Field(default=120.0, gt=0, le=900)
+    #: TaskRun TERMINÉE de la même tâche dont les Experience conditionnent la stratégie (None : baseline).
+    condition_on_run: str | None = Field(default=None, max_length=36)
 
 
 def _plain(value: Any) -> Any:
@@ -102,13 +103,13 @@ def create_reference_task(body: ReferenceTaskIn) -> DataEnvelope[dict[str, Any]]
     from apex.api.dependencies import get_session_factory
     from apex.api.routes.evals import _to_task_out
     from apex.policy.model import Subject
-    from apex.taskgen.solution_tasks import build_palindrome_task_spec
+    from apex.taskgen.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
     from apex.tasks.model import TaskSplit
     from apex.tasks.service import TaskBankService
 
-    if body.kind not in _REFERENCE_TASKS:
+    if body.kind not in REFERENCE_TASK_KINDS:
         raise HTTPException(status_code=422, detail=f"tâche de référence « {body.kind} » inconnue")
-    spec = build_palindrome_task_spec()
+    spec = build_reference_task_spec(body.kind)
     try:
         task = TaskBankService(get_session_factory()).create(
             split=TaskSplit.TRAIN,
@@ -150,6 +151,7 @@ def start_task_run(task_id: str, body: TaskRunIn) -> DataEnvelope[dict[str, Any]
                 max_wall_clock_s=body.max_wall_clock_s,
             ),
             generation_timeout_s=body.generation_timeout_s,
+            condition_on_run=body.condition_on_run,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -71,6 +71,8 @@ class TaskRun:
     failure: str | None = None
     stop_reason: str | None = None
     completed_at: datetime | None = None
+    #: TaskRun dont les `Experience` conditionnent la stratégie ; None : bras « baseline ».
+    condition_on_run: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -89,6 +91,7 @@ class TaskRun:
             "stop_reason": self.stop_reason,
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "condition_on_run": self.condition_on_run,
         }
 
 
@@ -120,6 +123,7 @@ class TaskRunRepository:
                     stop_reason=run.stop_reason,
                     started_at=run.started_at,
                     completed_at=run.completed_at,
+                    condition_on_run=run.condition_on_run,
                 )
             )
 
@@ -222,6 +226,7 @@ def _from_row(row: Any) -> TaskRun:
         failure=row.failure,
         stop_reason=row.stop_reason,
         completed_at=row.completed_at,
+        condition_on_run=row.condition_on_run,
     )
 
 
@@ -268,6 +273,7 @@ class TaskRunService:
         generation_timeout_s: float = 120.0,
         requested_by: Subject = Subject.HUMAN,
         wait: bool = False,
+        condition_on_run: str | None = None,
     ) -> TaskRun:
         from apex.taskloop.registry import default_registry
         from apex.tasks.repository import TaskRepository
@@ -281,6 +287,17 @@ class TaskRunService:
             )
         if task_id in default_registry():
             raise RuntimeError(f"une exécution de la tâche « {task_id} » est déjà en cours")
+        if condition_on_run is not None:
+            prior = self.repo.get(condition_on_run)
+            if prior is None:
+                raise ValueError(f"TaskRun de référence « {condition_on_run} » introuvable")
+            if prior.task_id != task_id:
+                # Jamais l'expérience d'une AUTRE tâche : aucune contamination entre tâches.
+                raise ValueError(
+                    f"la TaskRun « {condition_on_run} » porte sur une autre tâche ({prior.task_id})"
+                )
+            if not prior.status.terminal:
+                raise ValueError(f"la TaskRun « {condition_on_run} » n'est pas terminée ({prior.status.value})")
         limits = limits or TaskLimits(
             max_attempts=3, max_retries=2, max_candidates=2, max_wall_clock_s=900.0
         )
@@ -289,6 +306,7 @@ class TaskRunService:
             objective=objective,
             execution_mode=execution_mode,
             limits=limits,
+            condition_on_run=condition_on_run,
         )  # `authorization` : défaut de `TaskRequest` (CORE), celui avec lequel la boucle est éprouvée
         run = TaskRun(
             id=str(uuid.uuid4()),
@@ -305,6 +323,7 @@ class TaskRunService:
                 "generation_timeout_s": generation_timeout_s,
             },
             started_at=_utcnow(),
+            condition_on_run=condition_on_run,
         )
         self.repo.create(run)
 

@@ -229,6 +229,36 @@ jobs:
           Write-Host "codes des phases (run, verify, interrupt, interrupted) : $($codes -join ', ')"
           if ($codes -contains 1) { exit 1 }
           if ($codes -contains 3) { exit 3 }
+      # Expérience RUN 1 -> Experience -> RUN 2 (protocole pré-enregistré : docs/EXPERIENCE_RUN1_RUN2.md), avec le
+      # VRAI modèle installé par l'étape précédente (1.5B sur ce runner, mesuré à 3,9 Go — preuve CI, jamais celle
+      # de la machine cible). Aucune donnée fabriquée : le script ne fait que piloter l'API réelle.
+      - name: Experience A/B experiment (RUN 1 -> RUN 2 baseline vs conditioned, real model)
+        if: always()
+        shell: pwsh
+        timeout-minutes: 100
+        run: |
+          $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
+          $exe = (Get-ChildItem "$env:RUNNER_TEMP\release\publish" -Recurse -Filter APEX.exe | Select-Object -First 1).FullName
+          $env:APEX_PANEL_CONFIG_DIR = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\panel-ab-config").FullName
+          $env:APEX_PANEL_START_TIMEOUT_S = '870'
+          function Panel([string]$action) {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $exe; $psi.Arguments = $action
+            $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardOutput = $true
+            $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+            $p = [Diagnostics.Process]::Start($psi)
+            $read = $p.StandardOutput.ReadToEndAsync()
+            if (-not $p.WaitForExit(900000)) { try { $p.Kill() } catch { }; return 98 }
+            $s = $null; if ($read.Wait(30000)) { try { $s = $read.Result | ConvertFrom-Json } catch { } }
+            Write-Host "APEX.exe $action : code $($p.ExitCode) ; $($s.headline) / $($s.cause)"
+            return $p.ExitCode
+          }
+          if ((Panel '--start') -gt 1) { Write-Host 'BLOCKED : APEX ne démarre pas'; exit 3 }
+          wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec .venv/bin/python "$src/scripts/apex_experience_ab.py" --replicates 4 --timeout-s 600 --out /home/apex/apex-experience-ab | Out-Host
+          $code = $LASTEXITCODE
+          wsl.exe -d $env:DISTRO --exec bash -c 'cat ~/apex-experience-ab/summary.json 2>/dev/null' | Out-Host
+          $null = Panel '--stop'
+          exit $code
       - name: MinIO optional profile (Gate M) — build from official sources, start with the profile, healthcheck, stop
         if: always()
         shell: pwsh

@@ -8,7 +8,7 @@ fait que piloter l'API réelle et relire la base.
 
 **Deux niveaux de preuve, jamais confondus.** A (CI) ne prouve rien sur B (machine cible).
 
-## A. Preuve CI — run 23 (commit 8281b92), Windows Server 2025 + WSL2 réel
+## A. Preuve CI — runs 23 (8281b92) et 24 (9b2aef9), Windows Server 2025 + WSL2 réel
 
 Environnement MESURÉ : 2 processeurs, 3 913 Mo de mémoire, 1 024 Mo de swap, aucun GPU. Le modèle de
 référence 7B n'y tient pas (run 22 : aucune réponse en 15 min, puis `Wsl/Service/0x8007274c`) ; la CI utilise
@@ -26,7 +26,7 @@ donc un VRAI modèle réduit, `qwen2.5-coder:1.5b-instruct`, par une configurati
 | 6 | Résultat | MESURÉ | code 0 en 1,25 s, sortie `APEX_RESULT` capturée |
 | 7 | Judge | JUGÉ | Oracle : FAIL, « 3/12 cas incorrects » ×2 — le modèle a retiré espaces/ponctuation, contre l'énoncé |
 | 8 | Experience | MESURÉ | `3d4bc20d-…` (fitness 0,1999), `08da80a6-…` (fitness 0,1999), empreintes distinctes |
-| 9 | Persistance après redémarrage | **NON PROUVÉE au run 23** | `APEX.exe --stop` a échoué (`Wsl/Service/0x8007274c`) : la relecture a eu lieu dans le MÊME processus (pid 10285). Défaut du script corrigé : la phase exige désormais un changement de processus, sinon BLOCKED. Seul fait mesuré après un vrai redémarrage : la TaskRun `aafb13b0-…`, écrite par le pid 10285, relue par le pid 12115. |
+| 9 | Persistance après redémarrage | **NON PROUVÉE au run 23 ; MESURÉE au run 24** | Run 23 : `APEX.exe --stop` a échoué (`Wsl/Service/0x8007274c`), relecture dans le MÊME processus (pid 10285) — défaut du script corrigé (même processus → BLOCKED). Run 24 (commit 9b2aef9) : arrêt code 0, pid 10473 → 12147, conteneur Postgres supprimé puis recréé (`docker compose down`, volume conservé) ; TaskRun `f203ff20-1622-4528-bd5d-62758db563d0`, code généré, verdicts et Experiences `5423bed7-…`/`6f4a8d67-…` relus À L'IDENTIQUE par le nouveau processus. |
 | 10 | Récupération | MESURÉ | TaskRun `aafb13b0-…` coupée par l'arrêt → « interrupted / process_restarted » après redémarrage (pid 10285 → 12115), jamais reprise |
 
 ## B. Preuve machine cible — à exécuter par l'utilisateur
@@ -45,8 +45,8 @@ durée de l'appel au modèle et durées rapportées par Ollama (chargement, prom
 TaskRun ID, code généré, isolation et image de la sandbox, résultat, verdict de l'Oracle et nombre de cas
 réussis, Experience ID et fitness, puis la relecture après redémarrage et l'exécution interrompue.
 
-Exécuter n'est pas apprendre : une Experience enregistre ce qui s'est passé ; rien ici ne modifie le
-comportement d'APEX d'une exécution à l'autre.
+Exécuter n'est pas apprendre : une Experience enregistre ce qui s'est passé. La suite (RUN 1 → RUN 2
+conditionné par l'Experience) : `docs/EXPERIENCE_RUN1_RUN2.md`.
 
 ## Audit : RUN 1 → Experience → RUN 2 influencé par l'expérience ? (04/10/2026, lecture du code)
 

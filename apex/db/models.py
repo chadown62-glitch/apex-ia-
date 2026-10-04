@@ -1491,3 +1491,5 @@ class TaskRunRow(Base):
     stop_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: TaskRun dont les `Experience` ont conditionné la stratégie (migration e4b6d8f0a2c3) ; NULL : aucune.
+    condition_on_run: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)

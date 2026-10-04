@@ -76,6 +76,7 @@ from __future__ import annotations
 import time
 import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
@@ -85,6 +86,7 @@ from apex.errors import IsolationUnavailable, ModelProviderError, TimeoutExceede
 from apex.evalrunner.generated_solution import build_candidate_command, ensure_candidate_marker
 from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
+from apex.genome.clone_config import compose_generation_prompt, resolve_generation_temperature
 from apex.judge.provider import get_default_judge_tier
 from apex.metalearner.experience import ExperienceRepository, build_experience
 from apex.metalearner.population_fitness import compute_fitness
@@ -134,6 +136,53 @@ CODE_GENERATION_CLASSES = frozenset({"coder", "fast", "generalist"})
 def code_generation_candidates(config: Any) -> tuple[ModelCandidate, ...]:
     return tuple(
         c for c in filter_available(resolve_candidates(config)) if c.ref.capability_class in CODE_GENERATION_CLASSES
+    )
+
+
+@dataclass(frozen=True)
+class _Strategy:
+    """Stratégie de génération d'une TaskRun et sa provenance. Non conditionnée : aucun contenu, prompt et
+    température du fournisseur inchangés (comportement historique, bras « baseline »)."""
+
+    conditioned: bool
+    genome_content: dict[str, Any] | None = None
+    description: str | None = None
+    source: Any = None  # `Experience` dont dérive la stratégie, ou None
+    read_count: int = 0
+
+    @property
+    def generation_number(self) -> int:
+        return (self.source.generation_number + 1) if self.source is not None else 0
+
+    def event(self) -> dict[str, Any]:
+        return {
+            "experiences_read": self.read_count,
+            "source_experience_id": self.source.id if self.source else None,
+            "source_failure_category": self.source.failure_category.value if self.source else None,
+            "genome_content": self.genome_content or {},
+            "description": self.description,
+        }
+
+
+def _strategy_for(request: TaskRequest, *, experience_repo: ExperienceRepository) -> _Strategy:
+    """Lit les `Experience` de la TaskRun `request.condition_on_run` (MÊME tâche — filtre `task_id` ET
+    `experiment_ref`, jamais une autre tâche) et applique la règle EXISTANTE `decide_strategy_from_experiences`.
+    Seuls des contenus constants et bornés en sortent (température, rappel générique ≤ 500 caractères) :
+    ni entrées ni réponses des cas cachés, ni texte produit par le modèle — aucune fuite du jeu de test,
+    aucune injection de prompt depuis une sortie de modèle."""
+    if not request.condition_on_run:
+        return _Strategy(conditioned=False)
+    from apex.metalearner.adaptive_solution_loop import decide_strategy_from_experiences
+    from apex.metalearner.generated_solution_cycle import CandidateStrategy
+
+    prior = [
+        e for e in experience_repo.list_by_task(request.task_id, limit=500)
+        if e.experiment_ref == request.condition_on_run
+    ]
+    decision = decide_strategy_from_experiences(prior, base_strategies=(CandidateStrategy(label="base"),))
+    return _Strategy(
+        conditioned=True, genome_content=decision.strategies[0].genome_content,
+        description=decision.description, source=decision.source, read_count=len(prior),
     )
 
 
@@ -333,6 +382,13 @@ def _run(
     emit("task.planning.completed", {})
     stage = _advance_stage(stage, TaskLoopStage.PLAN)
 
+    # -- STRATÉGIE (expérience d'un RUN précédent, si demandé) ---------------
+    strategy = _strategy_for(request, experience_repo=experience_repo)
+    if strategy.conditioned:
+        emit("strategy.decided", {"condition_on_run": request.condition_on_run, **strategy.event()})
+    generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+    generation_temperature = resolve_generation_temperature(strategy.genome_content)
+
     # -- PROVIDER SELECTION (initiale) -----------------------------------
     from apex.config.loader import load_config
 
@@ -457,7 +513,8 @@ def _run(
         )
         assert current_candidate.endpoint is not None  # garanti par select_model (is_available filtré)
         generation_request = GenerationRequest(
-            endpoint=current_candidate.endpoint, prompt=prompt, timeout_s=generation_timeout_s,
+            endpoint=current_candidate.endpoint, prompt=generation_prompt, temperature=generation_temperature,
+            timeout_s=generation_timeout_s,
         )
         provider = provider_factory(current_candidate)
         try:
@@ -586,7 +643,11 @@ def _run(
         fitness = compute_fitness(eval_run, limits=limits)
         experience = build_experience(
             eval_run, fitness, strategy_id=f"candidate:{current_candidate.ref.id}",
-            generation_number=0, generation_config={}, created_by=request.authorization.value,
+            generation_number=strategy.generation_number, generation_config=strategy.genome_content or {},
+            created_by=request.authorization.value,
+            parent_experience_id=strategy.source.id if strategy.source else None,
+            parent_generation=strategy.source.generation_number if strategy.source else None,
+            mutation_description=strategy.description if strategy.conditioned else None,
         )
         experience_repo.create(experience)
 

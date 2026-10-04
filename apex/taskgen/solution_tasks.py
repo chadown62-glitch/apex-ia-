@@ -98,3 +98,97 @@ def build_palindrome_task_spec() -> SolutionTaskSpec:
         solution_harness=harness,
         expected_answer=json.dumps([expected for _, expected in _HIDDEN_TEST_CASES]),
     )
+
+
+# -- Tâches contrôlées de l'expérience RUN 1 -> RUN 2 (docs/EXPERIENCE_RUN1_RUN2.md) ----------------------
+# Même contrat que `is_palindrome` : énoncé montré au modèle, cas cachés JAMAIS montrés, réponses attendues
+# qui ne quittent jamais l'hôte. Chaque énoncé porte UNE contrainte précise, facile à manquer (constat run 23/24 :
+# le modèle 1.5B a ignoré « PAS les espaces ni la ponctuation ») — figées AVANT toute mesure, jamais ajustées
+# après coup pour fabriquer une amélioration. Arguments passés par `fonction(*arguments)`.
+
+_FUNCTION_HARNESS_TEMPLATE = """\
+{marker}
+
+import json as _apex_json
+
+_APEX_INPUTS = {inputs!r}
+_apex_results = []
+for _apex_args in _APEX_INPUTS:
+    try:
+        _apex_results.append({function}(*_apex_args))
+    except Exception as _apex_exc:
+        _apex_results.append({{"error": repr(_apex_exc)}})
+print({prefix!r} + _apex_json.dumps({{"results": _apex_results}}, default=repr))
+"""
+
+_ANSWER_FORMAT = (
+    " Réponds UNIQUEMENT avec le code Python de la fonction (aucune explication, aucun bloc markdown, "
+    "aucun appel d'exemple)."
+)
+
+_CONTROLLED_TASKS: dict[str, tuple[str, str, tuple[tuple[tuple, object], ...]]] = {
+    "rle_encode": (
+        "rle_encode",
+        "Écris une fonction Python nommée exactement `rle_encode` qui prend une chaîne `s` et retourne son "
+        "encodage par plages : chaque suite de caractères identiques consécutifs devient le caractère suivi "
+        "du nombre de répétitions, nombre TOUJOURS écrit, même quand il vaut 1 (« aab » donne « a2b1 »). "
+        "L'encodage est sensible à la casse. Une chaîne vide donne une chaîne vide.",
+        (
+            (("aaab",), "a3b1"), (("abc",), "a1b1c1"), (("",), ""), (("aA",), "a1A1"),
+            (("zzzzzzzzzzzz",), "z12"), (("aabbaa",), "a2b2a2"), (("x",), "x1"), (("  ",), " 2"),
+        ),
+    ),
+    "count_vowels": (
+        "count_vowels",
+        "Écris une fonction Python nommée exactement `count_vowels` qui prend une chaîne `s` et retourne le "
+        "nombre de voyelles a, e, i, o, u qu'elle contient, sans tenir compte de la casse. La lettre y n'est "
+        "PAS une voyelle ici, et les lettres accentuées (é, è, à, ...) ne sont PAS comptées.",
+        (
+            (("hello",), 2), (("HELLO",), 2), (("rhythm",), 0), (("yay",), 1), (("",), 0),
+            (("AEIOUaeiou",), 10), (("éléphant",), 1), (("Python",), 1),
+        ),
+    ),
+    "word_count": (
+        "word_count",
+        "Écris une fonction Python nommée exactement `word_count` qui prend une chaîne `s` et retourne son "
+        "nombre de mots. Un mot est une suite maximale de caractères qui ne sont pas des blancs (espace, "
+        "tabulation, saut de ligne) ; la ponctuation attachée fait partie du mot, et « peut-être » compte "
+        "pour UN seul mot. Une chaîne vide ou faite uniquement de blancs donne 0.",
+        (
+            (("hello world",), 2), (("",), 0), (("   ",), 0), (("a\tb\nc",), 3), (("peut-être demain",), 2),
+            (("  lead and trail  ",), 3), (("one,two three",), 2), (("x",), 1),
+        ),
+    ),
+    "second_largest": (
+        "second_largest",
+        "Écris une fonction Python nommée exactement `second_largest` qui prend une liste d'entiers `nums` "
+        "et retourne la deuxième plus grande valeur DISTINCTE de la liste, ou None s'il y a moins de deux "
+        "valeurs distinctes.",
+        (
+            (([1, 2, 3],), 2), (([5, 5, 4],), 4), (([7, 7],), None), (([],), None), (([-1, -2],), -2),
+            (([3, 1, 3, 2],), 2), (([10],), None), (([2, 2, 3, 3],), 2),
+        ),
+    ),
+}
+
+#: Toutes les tâches de référence disponibles (`POST /tasks/reference`, protocole RUN 1 -> RUN 2).
+REFERENCE_TASK_KINDS: tuple[str, ...] = ("is_palindrome", *_CONTROLLED_TASKS)
+
+
+def build_reference_task_spec(kind: str) -> SolutionTaskSpec:
+    if kind == "is_palindrome":
+        return build_palindrome_task_spec()
+    if kind not in _CONTROLLED_TASKS:
+        raise KeyError(kind)
+    function, description, cases = _CONTROLLED_TASKS[kind]
+    harness = _FUNCTION_HARNESS_TEMPLATE.format(
+        marker=CANDIDATE_CODE_MARKER, inputs=[list(args) for args, _ in cases], function=function,
+        prefix=RESULT_LINE_PREFIX,
+    )
+    return SolutionTaskSpec(
+        title=f"Solution générée — {function}",
+        description=description + _ANSWER_FORMAT,
+        command=PLACEHOLDER_COMMAND,
+        solution_harness=harness,
+        expected_answer=json.dumps([expected for _, expected in cases]),
+    )

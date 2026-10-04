@@ -156,3 +156,11 @@ def resolve_generation_prompt_suffix(genome_content: dict[str, Any] | None) -> s
     if len(value) > _MAX_PROMPT_SUFFIX_CHARS:
         return None
     return value
+
+
+def compose_generation_prompt(base_prompt: str, genome_content: dict[str, Any] | None) -> str:
+    """Le prompt RÉELLEMENT envoyé : `base_prompt` (la description de la tâche, éventuellement complétée),
+    suivi du `prompt_suffix` de la stratégie s'il est valide — ADDITIF, jamais une réécriture. Une seule
+    règle pour `EvalRunnerService.run_generated_solution` et le TaskLoop."""
+    suffix = resolve_generation_prompt_suffix(genome_content)
+    return base_prompt if suffix is None else f"{base_prompt}\n\n{suffix}"

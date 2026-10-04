@@ -98,6 +98,11 @@ class TaskRequest:
     execution_mode: TaskExecutionMode = TaskExecutionMode.BOUNDED
     limits: TaskLimits = field(default_factory=TaskLimits)
     authorization: Subject = Subject.CORE
+    #: Id d'une TaskRun TERMINÉE de la même tâche dont les `Experience` conditionnent la stratégie de
+    #: génération (règle existante `apex.metalearner.adaptive_solution_loop.
+    #: decide_strategy_from_experiences`). `None` (défaut) : aucune expérience lue, comportement inchangé —
+    #: c'est le bras « baseline » de l'expérience RUN 1 -> RUN 2.
+    condition_on_run: str | None = None
 
     def effective_max_attempts(self) -> int:
         """`MANUAL`/`ASSISTED` forcent une seule tentative — voir la

@@ -186,6 +186,44 @@ def _spread_strategies(
     return tuple(strategies)
 
 
+@dataclass(frozen=True)
+class StrategyDecision:
+    """Décision de stratégie ET sa provenance : `source` est l'`Experience` RÉELLE dont elle dérive
+    (`None` -> aucune expérience, stratégies de repli inchangées)."""
+
+    strategies: tuple[CandidateStrategy, ...]
+    description: str
+    source: Experience | None
+
+
+def decide_strategy_from_experiences(
+    prior_experiences: Sequence[Experience], *, base_strategies: Sequence[CandidateStrategy]
+) -> StrategyDecision:
+    """La RÈGLE de décision, pure (aucun accès DB) — partagée par `decide_next_strategies` (générations de
+    `apex solve`) et par le TaskLoop (`TaskRequest.condition_on_run`, audit du 04/10/2026) : une seule règle,
+    jamais deux. Sans expérience : `base_strategies` INCHANGÉES (jamais une amélioration fabriquée)."""
+    if not prior_experiences:
+        return StrategyDecision(
+            strategies=tuple(base_strategies),
+            description=(
+                "aucune expérience trouvée pour la génération précédente — "
+                "stratégie de repli inchangée (jamais une amélioration fabriquée)"
+            ),
+            source=None,
+        )
+    # Référence : un succès confirmé avant tout, un succès réfuté en dernier, puis la fitness.
+    best = max(
+        prior_experiences,
+        key=lambda e: (e.confirmed_success, e.success_evidence is not SuccessEvidence.REFUTED, e.fitness),
+    )
+    new_temperature, new_suffix, description = _mutate_from_experience(best)
+    strategies = _spread_strategies(
+        generation_number=best.generation_number + 1, base_temperature=new_temperature,
+        prompt_suffix=new_suffix, count=len(base_strategies),
+    )
+    return StrategyDecision(strategies=strategies, description=description, source=best)
+
+
 def decide_next_strategies(
     experience_repo: ExperienceRepository,
     *,
@@ -204,24 +242,8 @@ def decide_next_strategies(
     prior_experiences = experience_repo.list_by_task_and_generation(
         task_id, prior_generation_number, experiment_ref=experiment_ref,
     )
-    if not prior_experiences:
-        return (
-            tuple(base_strategies),
-            "aucune expérience trouvée pour la génération précédente — "
-            "stratégie de repli inchangée (jamais une amélioration fabriquée)",
-        )
-
-    # Référence : un succès confirmé avant tout, un succès réfuté en dernier, puis la fitness.
-    best = max(
-        prior_experiences,
-        key=lambda e: (e.confirmed_success, e.success_evidence is not SuccessEvidence.REFUTED, e.fitness),
-    )
-    new_temperature, new_suffix, description = _mutate_from_experience(best)
-    strategies = _spread_strategies(
-        generation_number=prior_generation_number + 1, base_temperature=new_temperature,
-        prompt_suffix=new_suffix, count=len(base_strategies),
-    )
-    return strategies, description
+    decision = decide_strategy_from_experiences(prior_experiences, base_strategies=base_strategies)
+    return decision.strategies, decision.description
 
 
 @dataclass(frozen=True)

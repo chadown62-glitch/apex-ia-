@@ -348,15 +348,17 @@ def test_status_sandbox_reports_the_backend_the_runtime_really_selects(monkeypat
 
 
 def test_the_migration_matches_the_model() -> None:
-    """La table créée par la migration porte exactement les colonnes du modèle SQLAlchemy."""
+    """La table créée puis complétée par les migrations porte exactement les colonnes du modèle SQLAlchemy."""
     import re
     from pathlib import Path
 
     from apex.db.models import TaskRunRow
 
-    source = (
-        Path(__file__).resolve().parents[1] / "migrations" / "versions" / "c8e2f4a6b9d1_task_runs.py"
-    ).read_text()
+    versions = Path(__file__).resolve().parents[1] / "migrations" / "versions"
+    source = "".join(
+        (versions / name).read_text()
+        for name in ("c8e2f4a6b9d1_task_runs.py", "e4b6d8f0a2c3_task_runs_condition_on_run.py")
+    )
     migrated = set(re.findall(r'sa\.Column\("(\w+)"', source))
     assert migrated == {c.name for c in TaskRunRow.__table__.columns}
     _ = threading  # le service exécute dans un fil (voir TaskRunService.start)
