@@ -13,7 +13,19 @@
 # Usage (en root dans la distribution) : prepare_real_model.sh <dépôt APEX de l'utilisateur>
 set -euo pipefail
 APEX_HOME_REPO="${1:?dépôt APEX attendu (ex. /home/apex/apex)}"
-MODELS=(qwen2.5-coder:7b-instruct gemma4:12b bge-m3)
+# Mode choisi sur la mémoire MESURÉE de la distribution (run 22 : 2 processeurs, 3,9 Go — le modèle de
+# référence 7B (~4,7 Go) n'y tient pas : aucune réponse en 15 min, puis arrêt du service WSL) :
+#   reference  (>= 7 Go) : les modèles de la machine cible ;
+#   reduced    (< 7 Go)  : un VRAI modèle plus petit, qwen2.5-coder:1.5b-instruct, déclaré par une configuration
+#                          de déploiement CI dérivée de config.yaml (APEX_CONFIG) — jamais présenté comme le
+#                          modèle de référence ; gemma4 (juge, 8 Go) et qwen3.6 restent « incompatibles avec la
+#                          VRAM déclarée » (WARN) comme sur la machine cible.
+MEM_MB=$(awk '/^MemTotal:/ {print int($2/1024)}' /proc/meminfo)
+if (( MEM_MB >= 7000 )); then
+  MODE=reference; MODELS=(qwen2.5-coder:7b-instruct gemma4:12b bge-m3)
+else
+  MODE=reduced; MODELS=(qwen2.5-coder:1.5b-instruct bge-m3)
+fi
 IMAGE="python:3.12-slim"
 log() { echo "[prepare_real_model] $(date -u +%H:%M:%S) $*"; }
 
@@ -65,4 +77,27 @@ log "déclaration matérielle de la machine cible dans $ENV_FILE (le runner n'a 
 sed -i -E 's/^APEX_GPU_MODEL=.*/APEX_GPU_MODEL=NVIDIA GeForce RTX 4060 Ti/; s/^APEX_GPU_VRAM_GB=.*/APEX_GPU_VRAM_GB=8/' "$ENV_FILE"
 grep -E '^APEX_GPU_(MODEL|VRAM_GB)=' "$ENV_FILE"
 
-log "prêt : Ollama sur 127.0.0.1:11434 avec ${MODELS[*]} ; image $IMAGE"
+if [[ "$MODE" == reduced ]]; then
+  CI_CONFIG="$APEX_HOME_REPO/config.ci-reduced.yaml"
+  log "mode reduced : $CI_CONFIG (qwen2.5-coder 7b-instruct -> 1.5b-instruct, rôles coder_main et fast), APEX_CONFIG dans .env"
+  "$APEX_HOME_REPO/.venv/bin/python" - "$APEX_HOME_REPO/config.yaml" "$CI_CONFIG" <<'PY'
+import sys, yaml
+src, dst = sys.argv[1:3]
+doc = yaml.safe_load(open(src, encoding="utf-8"))
+changed = 0
+for role in doc["models"]["roles"].values():
+    for cand in role.get("candidates", []):
+        if cand.get("family") == "qwen2.5-coder" and cand.get("version") == "7b-instruct":
+            cand["version"] = "1.5b-instruct"; changed += 1
+for ep in doc["models"]["endpoints"]:
+    if ep.get("served_model") == "qwen2.5-coder:7b-instruct":
+        ep["served_model"] = "qwen2.5-coder:1.5b-instruct"; ep["vram_gb"] = 1.5; changed += 1
+assert changed >= 3, f"configuration inattendue ({changed} remplacements)"
+yaml.safe_dump(doc, open(dst, "w", encoding="utf-8"), allow_unicode=True, sort_keys=False)
+print(f"  {changed} remplacements")
+PY
+  chown apex:apex "$CI_CONFIG" 2>/dev/null || true
+  sed -i '/^APEX_CONFIG=/d' "$ENV_FILE"; echo "APEX_CONFIG=$CI_CONFIG" >> "$ENV_FILE"
+fi
+
+log "prêt (mode $MODE) : Ollama sur 127.0.0.1:11434 avec ${MODELS[*]} ; image $IMAGE"
