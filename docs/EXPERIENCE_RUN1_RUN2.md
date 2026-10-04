@@ -70,5 +70,40 @@ stratégie à l'Experience persistée. E et F exigent un vrai modèle : ci-desso
 
 ## 4. Résultats
 
-À compléter par les mesures (CI : modèle réel 1.5B ; machine cible : modèle de référence 7B). Aucune affirmation
-« APEX apprend » sans une amélioration mesurée selon la règle ci-dessus.
+### 4.1 CI — run 25 (commit 3afe576), preuve A : modèle RÉEL `qwen2.5-coder:1.5b-instruct`, jamais la machine cible
+
+Windows Server 2025 + WSL2 réel, 2 CPU / 3,9 Go MESURÉS, aucun GPU ; APEX démarré par le Panel publié (Startup
+Gate), ContainerSandbox ; 60 TaskRuns réelles (5 tâches × 4 répliques × 3 bras), 1 tentative chacune.
+
+| Tâche | RUN 1 (réussis / 4) | Paires analysées | Résultat des paires (baseline → conditionné, cas réussis) |
+|---|---|---|---|
+| is_palindrome | 1/4 | 3 | 9→9, 9→9, 9→9 (12 cas) |
+| rle_encode | 1/4 | 3 | 8→8, 8→8, **8→7** (8 cas) |
+| count_vowels | 4/4 | 0 | — |
+| word_count | 4/4 | 0 | — |
+| second_largest | 4/4 | 0 | — |
+
+- **Analyse primaire (règle pré-enregistrée)** : 6 paires ; conditionné meilleur 0, **pire 1** (rle_encode r4,
+  8 → 7), égal 5 ; test du signe p = 1,0 ; PASS : baseline 3/6, conditionné 2/6.
+  **Conclusion : AUCUNE différence démontrée.** La régression observée (1 paire) est conservée ; elle n'est pas
+  significative. Aucun code identique entre bras dans les paires analysées.
+- 14 paires exclues comme prévu : RUN 1 réussi, aucun échec à exploiter.
+- Observations (MESURÉ, non interprétées comme effet) :
+  - is_palindrome : le 1.5B retire la ponctuation ; le rappel générique (casse, cas limites) ne le corrige pas
+    (9/12 dans tous les bras conditionnés) — conforme à la limite documentée §1.
+  - rle_encode : forte variabilité d'un tirage à l'autre au réglage par défaut (RUN 1 réussi 1/4, RUN 2
+    baseline réussi 4/4) ; le bruit d'échantillonnage domine.
+  - Pour deux échecs rle_encode partiels (7/8), la règle a choisi la branche « candidat invalide » (T = 0,21,
+    rappel de format) — INFÉRÉ d'après la température appliquée (0,7 × 0,3) ; la catégorie d'échec exacte est
+    dans `runs.jsonl` (non publié par la CI).
+  - Quand le RUN 1 réussit, le bras conditionné applique T = 0,7 explicite au lieu du réglage du fournisseur :
+    ces paires sont exclues de l'analyse primaire.
+- Ce que ce résultat NE dit PAS : qu'il n'y a aucun effet (6 paires, puissance faible) ; quoi que ce soit sur le
+  modèle 7B de la machine cible.
+
+### 4.2 Machine cible (modèle de référence 7B) — UNVERIFIED
+
+Non exécutée. Avec APEX démarré par le Panel : `python scripts/apex_experience_ab.py --replicates 4` dans la
+distribution (résultats dans `~/apex-experience-ab/`).
+
+**Aucune affirmation « APEX apprend » : aucune amélioration n'a été mesurée selon la règle ci-dessus.**
