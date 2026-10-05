@@ -36,6 +36,8 @@ Environnement : Windows + WSL2, Ollama avec `qwen2.5-coder:7b-instruct`, `gemma4
 
 ```
 powershell -ExecutionPolicy Bypass -File setup\packaging\windows\Prouver-Boucle-APEX.ps1 -AllowRestart
+# ou, avec l'expérience RUN 1 -> RUN 2 (v1) enchaînée sur le modèle installé :
+powershell -ExecutionPolicy Bypass -File setup\packaging\windows\Prouver-Boucle-APEX.ps1 -AllowRestart -WithExperience -Replicates 4
 ```
 
 (dans le kit de validation : `Prouver-Boucle-APEX.ps1`). Le script n'installe rien, ne modifie ni `.env` ni
@@ -44,6 +46,10 @@ powershell -ExecutionPolicy Bypass -File setup\packaging\windows\Prouver-Boucle-
 durée de l'appel au modèle et durées rapportées par Ollama (chargement, prompt, génération), Task ID,
 TaskRun ID, code généré, isolation et image de la sandbox, résultat, verdict de l'Oracle et nombre de cas
 réussis, Experience ID et fitness, puis la relecture après redémarrage et l'exécution interrompue.
+Il relève aussi la machine (CPU, RAM, GPU et pilote, commit APEX, modèles Ollama présents, alerte si
+`qwen2.5-coder:7b-instruct` manque) et, juste après chaque exécution, la VRAM utilisée (nvidia-smi) et la part du
+modèle chargée en VRAM (Ollama `/api/ps`). Avec `-WithExperience`, `runs.jsonl` et `summary.json` sont copiés
+dans le même dossier.
 
 Exécuter n'est pas apprendre : une Experience enregistre ce qui s'est passé. La suite (RUN 1 → RUN 2
 conditionné par l'Experience) : `docs/EXPERIENCE_RUN1_RUN2.md`.

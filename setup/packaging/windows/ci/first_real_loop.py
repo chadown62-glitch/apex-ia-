@@ -18,6 +18,7 @@ jeton `.apex/api-token` du dépôt, comme le Panel). Le jeton n'est jamais affic
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 import time
 import urllib.error
@@ -93,6 +94,58 @@ def show_status(api: Api) -> dict[str, dict]:
     return components
 
 
+def parse_gpu_query(text: str) -> str:
+    """Sortie de `nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu --format=csv,noheader,
+    nounits` -> texte lisible ; vide ou illisible -> « GPU non mesuré » (jamais une valeur supposée)."""
+    rows = []
+    for line in (text or "").strip().splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) != 4:
+            continue
+        name, used, total, util = parts
+        rows.append(f"{name} : VRAM {used}/{total} Mio, GPU {util} %")
+    return " | ".join(rows) if rows else "GPU non mesuré"
+
+
+def parse_ollama_ps(payload: dict) -> str:
+    """Réponse d'Ollama `GET /api/ps` -> modèles chargés, taille et part réellement en VRAM (rapportées par
+    Ollama) ; aucun modèle chargé -> le dire."""
+    models = payload.get("models") if isinstance(payload, dict) else None
+    if not isinstance(models, list):
+        return "Ollama : état des modèles chargés illisible"
+    if not models:
+        return "Ollama : aucun modèle chargé"
+    parts = []
+    for m in models:
+        size, vram = m.get("size") or 0, m.get("size_vram") or 0
+        share = f"{100 * vram / size:.0f} %" if size else "?"
+        parts.append(f"{m.get('name')} {size / 1e9:.1f} Go dont {vram / 1e9:.1f} Go en VRAM ({share})")
+    return "Ollama : " + " ; ".join(parts)
+
+
+def gpu_facts() -> str:
+    for exe in ("nvidia-smi", "/usr/lib/wsl/lib/nvidia-smi"):
+        try:
+            out = subprocess.run(
+                [exe, "--query-gpu=name,memory.used,memory.total,utilization.gpu",
+                 "--format=csv,noheader,nounits"],
+                capture_output=True, text=True, timeout=10, check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            continue
+        if out.returncode == 0:
+            return parse_gpu_query(out.stdout)
+    return "GPU non mesuré (nvidia-smi absent)"
+
+
+def ollama_facts(url: str = "http://127.0.0.1:11434/api/ps") -> str:
+    try:
+        with urllib.request.urlopen(url, timeout=5) as response:  # adresse déclarée par config.yaml
+            return parse_ollama_ps(json.loads(response.read()))
+    except (OSError, ValueError):
+        return "Ollama : /api/ps injoignable"
+
+
 def host_facts() -> str:
     """Charge et mémoire de la distribution, lues dans /proc (run 21 : l'API n'a pas répondu en 60 s pendant
     l'inférence CPU — mesuré ici à chaque relevé, jamais supposé)."""
@@ -103,12 +156,13 @@ def host_facts() -> str:
             for line in Path("/proc/meminfo").read_text().splitlines()
             if line.split(":")[0] in ("MemTotal", "MemAvailable", "SwapTotal", "SwapFree")
         }
-        return (
+        system = (
             f"charge {'/'.join(load)} ; mémoire dispo {mem.get('MemAvailable')}/{mem.get('MemTotal')} Mo ; "
             f"swap utilisé {mem.get('SwapTotal', 0) - mem.get('SwapFree', 0)} Mo"
         )
     except (OSError, ValueError, IndexError):
-        return "charge/mémoire illisibles"
+        system = "charge/mémoire illisibles"
+    return f"{system} ; {gpu_facts()} ; {ollama_facts()}"
 
 
 def wait_terminal(api: Api, run_id: str) -> dict:
@@ -206,6 +260,7 @@ def phase_run(api: Api) -> int:
 
     detail = wait_terminal(api, run["id"])
     elapsed = time.monotonic() - started
+    print(f"[first-loop] juste après l'exécution (modèle encore chargé) : {host_facts()}", flush=True)
     if detail.get("id"):
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         RUN_FILE.write_text(

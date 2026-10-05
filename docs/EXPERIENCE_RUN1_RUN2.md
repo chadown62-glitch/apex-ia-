@@ -107,3 +107,8 @@ Non exécutée. Avec APEX démarré par le Panel : `python scripts/apex_experien
 distribution (résultats dans `~/apex-experience-ab/`).
 
 **Aucune affirmation « APEX apprend » : aucune amélioration n'a été mesurée selon la règle ci-dessus.**
+
+## 5. Suite
+
+Audit des causes possibles de l'absence d'amélioration et protocole v2 (A/B/C) pré-enregistré, non exécuté :
+`docs/APPRENTISSAGE_AUDIT_V2.md`. Le protocole v1 ci-dessus n'est pas modifié.

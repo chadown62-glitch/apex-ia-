@@ -14,11 +14,18 @@
   Il ARRÊTE et REDÉMARRE APEX (d'où -AllowRestart, obligatoire). Le journal complet est écrit dans
   %USERPROFILE%\Documents\APEX-preuve-boucle-<date>\journal.txt (aucun secret : le jeton n'est jamais affiché).
 
+  -WithExperience : enchaîne ensuite l'expérience RUN 1 -> RUN 2 pré-enregistrée (docs/EXPERIENCE_RUN1_RUN2.md,
+  scripts/apex_experience_ab.py) avec le modèle réellement installé ; résultats copiés dans le dossier du journal.
+
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File Prouver-Boucle-APEX.ps1 -AllowRestart
+.EXAMPLE
+  powershell -ExecutionPolicy Bypass -File Prouver-Boucle-APEX.ps1 -AllowRestart -WithExperience -Replicates 4
 #>
 param(
     [switch]$AllowRestart,
+    [switch]$WithExperience,
+    [int]$Replicates = 4,
     [string]$Distro = '',
     [string]$ApexPathInWsl = 'apex',
     [string]$ApexExe = (Join-Path $env:LOCALAPPDATA 'Programs\APEX\APEX.exe')
@@ -55,6 +62,30 @@ function Stop-Apex {
     return $c
 }
 
+function Wsl-Exec([string[]]$Command) {
+    $wslArgs = @()
+    if ($Distro) { $wslArgs += @('-d', $Distro) }
+    $wslArgs += @('--cd', '~', '--exec') + $Command
+    $env:WSL_UTF8 = '1'
+    & wsl.exe @wslArgs
+}
+
+function Machine-Facts {
+    # Relevé de la machine RÉELLE : rien n'est supposé, une mesure absente est dite absente.
+    $cpu = (Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1).Name
+    $ram = (Get-CimInstance Win32_ComputerSystem -ErrorAction SilentlyContinue).TotalPhysicalMemory
+    Write-Host "Windows : $([Environment]::OSVersion.VersionString) ; CPU : $cpu ; RAM : $([math]::Round($ram / 1GB, 1)) Go"
+    $smi = Get-Command nvidia-smi.exe -ErrorAction SilentlyContinue
+    if ($smi) { Write-Host ('GPU : ' + (& $smi.Source --query-gpu=name,driver_version,memory.total,memory.used --format=csv,noheader)) }
+    else { Write-Host 'GPU : nvidia-smi introuvable côté Windows (non mesuré)' }
+    Write-Host ('APEX (dépôt WSL) : commit ' + ((Wsl-Exec @('git', '-C', $ApexPathInWsl, 'rev-parse', '--short', 'HEAD')) -join ''))
+    $models = (Wsl-Exec @('ollama', 'list')) -join "`n"
+    Write-Host "Modèles Ollama installés :`n$models"
+    if ($models -notmatch 'qwen2\.5-coder:7b-instruct') {
+        Write-Host 'ATTENTION : qwen2.5-coder:7b-instruct absent de ce Ollama — le modèle de référence ne sera PAS celui mesuré.'
+    }
+}
+
 function Loop([string]$Phase) {
     $wslArgs = @()
     if ($Distro) { $wslArgs += @('-d', $Distro) }
@@ -66,6 +97,7 @@ function Loop([string]$Phase) {
 }
 
 Write-Host "PREUVE MACHINE CIBLE — $(Get-Date -Format o) — $env:COMPUTERNAME"
+Machine-Facts
 $codes = @()
 if ((Panel '--start') -gt 1) { Write-Host 'BLOCKED : APEX ne démarre pas (voir le verdict ci-dessus)'; Stop-Transcript | Out-Null; exit 3 }
 $codes += Loop 'run'
@@ -76,7 +108,19 @@ $codes += Loop 'interrupt'
 Stop-Apex | Out-Null
 if ((Panel '--start') -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; Stop-Transcript | Out-Null; exit 1 }
 $codes += Loop 'interrupted'
-Write-Host "codes des phases (run, verify, interrupt, interrupted) : $($codes -join ', ') (0 = preuves vérifiées, 1 = preuve contredite, 3 = BLOCKED)"
+if ($WithExperience) {
+    $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $wslOut = "apex-experience-ab-$stamp"
+    Write-Host "EXPÉRIENCE RUN 1 -> RUN 2 ($Replicates répliques par tâche ; résultats WSL : ~/$wslOut)"
+    $env:WSL_UTF8 = '1'
+    Wsl-Exec @("$ApexPathInWsl/.venv/bin/python", "$ApexPathInWsl/scripts/apex_experience_ab.py",
+        '--replicates', [string]$Replicates, '--out', $wslOut) | Out-Host
+    $codes += $LASTEXITCODE
+    foreach ($f in 'runs.jsonl', 'summary.json') {
+        (Wsl-Exec @('cat', "$wslOut/$f")) -join "`n" | Set-Content -Path (Join-Path $OutDir $f) -Encoding UTF8
+    }
+}
+Write-Host "codes des phases (run, verify, interrupt, interrupted[, experience]) : $($codes -join ', ') (0 = preuves vérifiées / expérience menée à terme, 1 = preuve contredite, 3 = BLOCKED)"
 Write-Host "APEX reste démarré. Journal : $OutDir\journal.txt"
 Stop-Transcript | Out-Null
 if ($codes -contains 1) { exit 1 }

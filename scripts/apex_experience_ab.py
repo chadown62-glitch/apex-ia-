@@ -118,6 +118,7 @@ def record(kind: str, replicate: int, arm: str, detail: dict) -> dict:
         "exit_code": eval_run.get("exit_code"),
         "sandbox": eval_run.get("isolation"),
         "generation_s": eval_run.get("generation_elapsed_s"),
+        "backend_timings_s": eval_run.get("backend_timings_s"),
         "tokens": eval_run.get("tokens_completion"),
         "generated_code": eval_run.get("generated_code"),
         "fingerprint": experience.get("solution_fingerprint"),
@@ -241,13 +242,15 @@ def main() -> int:
                     f"[ab] {kind} r{replicate} {arm:11} run {str(row['run_id'])[:8]} {row['model']} "
                     f"T={row['strategy']['temperature']} indice={'oui' if row['strategy']['prompt_suffix'] else 'non'} "
                     f"-> {row['oracle_verdict']} {row['cases_passed']}/{row['cases_total']} "
-                    f"({row['generation_s']} s) exp {str(row['experience_id'])[:8]} "
+                    f"({row['generation_s']} s ; Ollama {row['backend_timings_s']}) "
+                    f"exp {str(row['experience_id'])[:8]} "
                     f"source {str(row['source_experience_id'])[:8]}",
                     flush=True,
                 )
             if all(r["status"] == "error" for r in rows[-3:]) or not any(r["model"] for r in rows[-3:]):
                 print("[ab] BLOCKED : aucune génération réelle (modèle indisponible ?) — arrêt")
                 return 3
+        print(f"[ab] après {kind} : {host_facts()}", flush=True)  # modèle encore chargé (keep_alive)
     summary = analyse(rows)
     summary["duration_s"] = round(time.monotonic() - started)
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
