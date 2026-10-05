@@ -77,6 +77,11 @@ class TaskLimits:
 
 
 STRATEGIES = ("rule", "failure_facts")
+#: Ce que la boucle change ENTRE deux tentatives d'une même TaskRun après un échec jugé :
+#: `failure_facts` = la tentative suivante reçoit les faits d'échec autorisés de la précédente
+#: (`apex.metalearner.failure_facts`, liste fermée) ; `none` = même prompt, même température
+#: (comportement d'avant le 05/10/2026).
+RETRY_ADAPTATIONS = ("failure_facts", "none")
 
 
 @dataclass(frozen=True)
@@ -113,8 +118,17 @@ class TaskRequest:
     #: Température EXPLICITE de la génération quand aucune règle ne la fixe (RUN 1, bras A et C).
     #: `None` : celle du fournisseur (comportement historique). Le bras B garde celle de sa règle.
     base_temperature: float | None = None
+    #: Voir `RETRY_ADAPTATIONS`. Sans effet avec une seule tentative (protocoles RUN 1 -> RUN 2).
+    retry_adaptation: str = "failure_facts"
+    #: Étape PLAN réelle : le modèle rédige d'abord une analyse et un plan (sans code), réinjectés dans
+    #: la génération. `False` : l'étape PLAN se limite à composer le prompt (énoncé, contexte, contraintes).
+    plan_first: bool = False
 
     def __post_init__(self) -> None:
+        if self.retry_adaptation not in RETRY_ADAPTATIONS:
+            raise ValueError(
+                f"adaptation « {self.retry_adaptation} » inconnue (attendu : {', '.join(RETRY_ADAPTATIONS)})"
+            )
         if self.strategy not in STRATEGIES:
             raise ValueError(f"stratégie « {self.strategy} » inconnue (attendu : {', '.join(STRATEGIES)})")
         if self.strategy == "failure_facts" and not self.condition_on_run:

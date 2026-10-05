@@ -49,6 +49,10 @@ import type {
   SendMessageInput,
   SendMessageResult,
   Task,
+  TaskRun,
+  TaskRunDetail,
+  TaskRunStartInput,
+  FunctionTaskCreateInput,
   WeaknessReport,
 } from "./types";
 
@@ -283,6 +287,34 @@ export function listTasks(params?: { specialty?: string; split?: string }): Prom
 
 export function getTask(taskId: string): Promise<DataEnvelope<Task>> {
   return fetchEnvelope<Task>(`/tasks/${encodeURIComponent(taskId)}`);
+}
+
+export function listReferenceTaskKinds(): Promise<DataEnvelope<string[]>> {
+  return fetchEnvelope<string[]>("/tasks/reference/kinds");
+}
+
+export function createReferenceTask(kind: string): Promise<DataEnvelope<Task>> {
+  return fetchEnvelope<Task>("/tasks/reference", { method: "POST", body: JSON.stringify({ kind }) });
+}
+
+/** Tâche définie par l'utilisateur — `ApiError(422)` si l'énoncé, le nom ou les cas sont refusés. */
+export function createFunctionTask(input: FunctionTaskCreateInput): Promise<DataEnvelope<Task>> {
+  return fetchEnvelope<Task>("/tasks/function", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function startTaskRun(taskId: string, input: TaskRunStartInput): Promise<DataEnvelope<TaskRun>> {
+  return fetchEnvelope<TaskRun>(`/tasks/${encodeURIComponent(taskId)}/runs`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listTaskRuns(taskId: string): Promise<DataEnvelope<TaskRun[]>> {
+  return fetchEnvelope<TaskRun[]>(`/tasks/${encodeURIComponent(taskId)}/runs`);
+}
+
+export function getTaskRun(runId: string): Promise<DataEnvelope<TaskRunDetail>> {
+  return fetchEnvelope<TaskRunDetail>(`/task-runs/${encodeURIComponent(runId)}`);
 }
 
 export function listEvalRuns(params?: { taskId?: string; cloneId?: string }): Promise<DataEnvelope<EvalRun[]>> {

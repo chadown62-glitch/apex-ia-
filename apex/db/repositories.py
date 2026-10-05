@@ -88,6 +88,16 @@ class EventRepository:
         stmt = select(EventRow).order_by(EventRow.ts.desc()).limit(limit)
         return list(self._session.scalars(stmt))
 
+    def in_window(
+        self, *, logger: str, since: datetime, until: datetime | None = None, limit: int = 2000
+    ) -> list[EventRow]:
+        """Événements d'un journaliseur dans une fenêtre de temps, ordre CHRONOLOGIQUE (trace d'une
+        exécution : l'appelant filtre ensuite sur son `trace_id`)."""
+        stmt = select(EventRow).where(EventRow.logger == logger, EventRow.ts >= since)
+        if until is not None:
+            stmt = stmt.where(EventRow.ts <= until)
+        return list(self._session.scalars(stmt.order_by(EventRow.ts.asc(), EventRow.id.asc()).limit(limit)))
+
 
 class AuditLogRepository:
     """INSERT seul — voir la note du module. Aucune méthode update/delete n'existe ici."""
@@ -1511,6 +1521,16 @@ class MessageRepository:
             .limit(limit)
         )
         return list(self._session.scalars(stmt))
+
+    def recent_by_conversation(self, conversation_id: str, limit: int) -> list[MessageRow]:
+        """Les `limit` messages les PLUS RÉCENTS, rendus dans l'ordre chronologique."""
+        stmt = (
+            select(MessageRow)
+            .where(MessageRow.conversation_id == conversation_id)
+            .order_by(MessageRow.created_at.desc())
+            .limit(limit)
+        )
+        return list(reversed(list(self._session.scalars(stmt))))
 
 
 class AgentTemplateRepository:

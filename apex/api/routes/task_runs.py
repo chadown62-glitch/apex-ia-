@@ -29,6 +29,21 @@ class ReferenceTaskIn(BaseModel):
     kind: str = Field(default="is_palindrome")
 
 
+class FunctionCaseIn(BaseModel):
+    args: list[Any] = Field(default_factory=list)
+    expected: Any = None
+
+
+class FunctionTaskIn(BaseModel):
+    """Tâche définie par l'utilisateur : énoncé, nom de fonction, cas cachés. Aucun code fourni par
+    l'utilisateur n'est exécuté : APEX écrit le harnais (`apex.taskgen.solution_tasks`)."""
+
+    title: str | None = Field(default=None, max_length=200)
+    description: str = Field(min_length=1, max_length=4000)
+    function: str = Field(min_length=1, max_length=64)
+    cases: list[FunctionCaseIn] = Field(min_length=1, max_length=50)
+
+
 class TaskRunIn(BaseModel):
     objective: str = Field(default="résoudre la tâche", min_length=1, max_length=2000)
     execution_mode: str = Field(default="bounded")
@@ -41,6 +56,10 @@ class TaskRunIn(BaseModel):
     #: Protocole v2 : `rule` (bras B) ou `failure_facts` (bras C) ; et température de base explicite.
     strategy: str = Field(default="rule", max_length=32)
     base_temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    #: Entre deux tentatives : `failure_facts` (faits d'échec autorisés de la tentative précédente) ou `none`.
+    retry_adaptation: str = Field(default="failure_facts", max_length=32)
+    #: Étape PLAN réelle (analyse et plan rédigés par le modèle avant la génération).
+    plan_first: bool = False
 
 
 def _plain(value: Any) -> Any:
@@ -106,7 +125,34 @@ def _detail(run: Any, session_factory: Any) -> dict[str, Any]:
         **run.to_dict(),
         "eval_runs": [_eval_run_view(r) for r in eval_runs],
         "experiences": experiences,
+        "events": _trace(run, session_factory),
     }
+
+
+def _trace(run: Any, session_factory: Any) -> list[dict[str, Any]]:
+    """Trace RÉELLE de l'exécution (événements `apex.taskloop` portant son `trace_id`), dans l'ordre."""
+    from datetime import timedelta
+
+    from apex.db.engine import session_scope
+    from apex.db.repositories import EventRepository
+
+    until = run.completed_at + timedelta(seconds=5) if run.completed_at else None
+    with session_scope(session_factory) as session:
+        rows = EventRepository(session).in_window(
+            logger="apex.taskloop", since=run.started_at - timedelta(seconds=5), until=until
+        )
+        return [
+            {"ts": row.ts.isoformat(), **row.context}
+            for row in rows
+            if (row.context or {}).get("trace_id") == run.id
+        ]
+
+
+@router.get("/tasks/reference/kinds", response_model=DataEnvelope[list[str]])
+def list_reference_task_kinds() -> DataEnvelope[list[str]]:
+    from apex.taskgen.solution_tasks import REFERENCE_TASK_KINDS
+
+    return DataEnvelope(status="real", data=list(REFERENCE_TASK_KINDS))
 
 
 @router.post("/tasks/reference", response_model=DataEnvelope[dict[str, Any]])
@@ -121,6 +167,38 @@ def create_reference_task(body: ReferenceTaskIn) -> DataEnvelope[dict[str, Any]]
     if body.kind not in REFERENCE_TASK_KINDS:
         raise HTTPException(status_code=422, detail=f"tâche de référence « {body.kind} » inconnue")
     spec = build_reference_task_spec(body.kind)
+    try:
+        task = TaskBankService(get_session_factory()).create(
+            split=TaskSplit.TRAIN,
+            specialty="research",
+            title=spec.title,
+            description=spec.description,
+            command=spec.command,
+            created_by=Subject.HUMAN,
+            solution_harness=spec.solution_harness,
+            expected_answer=spec.expected_answer,
+        )
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_task_out(task).model_dump())
+
+
+@router.post("/tasks/function", response_model=DataEnvelope[dict[str, Any]])
+def create_function_task(body: FunctionTaskIn) -> DataEnvelope[dict[str, Any]]:
+    from apex.api.dependencies import get_session_factory
+    from apex.api.routes.evals import _to_task_out
+    from apex.policy.model import Subject
+    from apex.taskgen.solution_tasks import InvalidUserTask, build_user_function_task_spec
+    from apex.tasks.model import TaskSplit
+    from apex.tasks.service import TaskBankService
+
+    try:
+        spec = build_user_function_task_spec(
+            function=body.function, description=body.description, title=body.title,
+            cases=[c.model_dump() for c in body.cases],
+        )
+    except InvalidUserTask as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         task = TaskBankService(get_session_factory()).create(
             split=TaskSplit.TRAIN,
@@ -165,6 +243,8 @@ def start_task_run(task_id: str, body: TaskRunIn) -> DataEnvelope[dict[str, Any]
             condition_on_run=body.condition_on_run,
             strategy=body.strategy,
             base_temperature=body.base_temperature,
+            retry_adaptation=body.retry_adaptation,
+            plan_first=body.plan_first,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

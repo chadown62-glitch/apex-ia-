@@ -226,6 +226,72 @@ def _failure_facts_strategy(
     )
 
 
+def _adapted_strategy(current: _Strategy, experience: Any, eval_run: EvalRun, attempt_number: int) -> _Strategy | None:
+    """DIAGNOSTIC -> CORRECTION entre deux tentatives d'une même TaskRun : la tentative suivante reçoit les
+    faits d'échec AUTORISÉS de celle qui vient d'échouer (`apex.metalearner.failure_facts` : liste fermée,
+    observations sans consigne, jamais entrée cachée, réponse attendue, message d'exception ni code).
+    La température en cours est conservée. `None` : aucun fait exploitable (catégorie non couverte, ex.
+    délai dépassé) — la tentative suivante garde la stratégie en cours, et l'événement le dit."""
+    from apex.metalearner.failure_facts import PROMPT_VERSION, extract_failure_facts, render_failure_facts
+
+    facts = extract_failure_facts(eval_run, experience.failure_category)
+    if facts is None:
+        return None
+    genome = dict(current.genome_content or {})
+    generation = dict(genome.get("generation") or {})
+    generation["prompt_suffix"] = render_failure_facts(facts)
+    genome.update(
+        generation=generation, prompt_version=PROMPT_VERSION, failure_facts=facts.to_dict(),
+        source_eval_run_id=eval_run.id, adaptation="in_run",
+    )
+    return _Strategy(
+        conditioned=True, genome_content=genome, source=experience, read_count=1,
+        description=(
+            f"tentative {attempt_number + 1} : faits d'échec de la tentative {attempt_number} "
+            f"({PROMPT_VERSION}), sans consigne"
+        ),
+    )
+
+
+_PLAN_MAX_CHARS = 2000
+_PLAN_HEADER = "Analyse et plan rédigés à l'étape précédente (à suivre s'ils sont justes) :"
+_PLAN_INSTRUCTION = (
+    "Avant d'écrire le moindre code, analyse le problème ci-dessous. Réponds en français, en 12 lignes au "
+    "plus : (1) ce que la fonction doit faire exactement ; (2) les contraintes et cas limites de l'énoncé ; "
+    "(3) les étapes de l'algorithme. N'écris AUCUN code.\n\nProblème :\n"
+)
+
+
+def _generate_plan(
+    prompt: str, *, candidate: ModelCandidate, provider_factory: Callable[[ModelCandidate], ModelProvider],
+    temperature: float | None, timeout_s: float, emit: Callable[[str, dict[str, Any]], None],
+) -> str | None:
+    """Étape PLAN RÉELLE : un appel au modèle sélectionné, borné en temps et en taille, dont le texte est
+    journalisé tel quel. Aucun code n'est exécuté ici. Un échec n'arrête jamais la tâche : il est journalisé
+    (`task.plan.failed`) et la génération part de l'énoncé seul — jamais un plan inventé."""
+    assert candidate.endpoint is not None
+    started = time.perf_counter()
+    try:
+        result = provider_factory(candidate).generate(GenerationRequest(
+            endpoint=candidate.endpoint, prompt=_PLAN_INSTRUCTION + prompt, temperature=temperature,
+            timeout_s=timeout_s,
+        ))
+    except (ModelProviderError, TimeoutExceeded) as exc:
+        emit("task.plan.failed", {"model_id": candidate.ref.id, "reason": str(exc)[:500]})
+        return None
+    text = (result.text or "").strip()
+    if not text:
+        emit("task.plan.failed", {"model_id": candidate.ref.id, "reason": "réponse vide"})
+        return None
+    truncated = len(text) > _PLAN_MAX_CHARS
+    text = text[:_PLAN_MAX_CHARS]
+    emit("task.plan.generated", {
+        "model_id": result.model_used, "plan": text, "truncated": truncated,
+        "elapsed_s": round(time.perf_counter() - started, 3),
+    })
+    return text
+
+
 def _default_provider_factory(candidate: ModelCandidate) -> ModelProvider:
     """Même patron qu'`apex.routing.generation._default_provider_factory` —
     injectable pour les tests (double de test fidèle au contrat
@@ -413,13 +479,16 @@ def _run(
     stage = _advance_stage(TaskLoopStage.OBJECTIVE, TaskLoopStage.TASK_GENERATION)
 
     # -- PLAN -----------------------------------------------------------
-    emit("task.planning.started", {})
+    # Ce que l'étape PLAN fait RÉELLEMENT est dit dans l'événement : `prompt_composition` (énoncé, contexte,
+    # contraintes) ou, avec `plan_first`, une analyse rédigée par le modèle (plus bas, après la sélection).
+    planning_mode = "model_plan" if request.plan_first else "prompt_composition"
+    emit("task.planning.started", {"mode": planning_mode})
     prompt = task.description
     if request.context.strip():
         prompt = f"{prompt}\n\nContexte :\n{request.context}"
     if request.constraints.strip():
         prompt = f"{prompt}\n\nContraintes :\n{request.constraints}"
-    emit("task.planning.completed", {})
+    emit("task.planning.completed", {"mode": planning_mode})
     stage = _advance_stage(stage, TaskLoopStage.PLAN)
 
     # -- STRATÉGIE (expérience d'un RUN précédent, si demandé) ---------------
@@ -482,6 +551,19 @@ def _run(
         "provider.selected",
         {"model_id": eligible_candidates[0].ref.id, "reason": routing_decision.reason},
     )
+
+    # -- PLAN par le modèle (optionnel) : analyse sans code, réinjectée dans la génération -------------
+    if request.plan_first:
+        plan = _generate_plan(
+            prompt, candidate=eligible_candidates[0], provider_factory=provider_factory,
+            temperature=generation_temperature, timeout_s=generation_timeout_s, emit=emit,
+        )
+        if plan is not None:
+            prompt = f"{prompt}\n\n{_PLAN_HEADER}\n{plan}"
+            from dataclasses import replace as _replace
+
+            strategy = _replace(strategy, genome_content={**(strategy.genome_content or {}), "plan": plan})
+            generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
     stage = _advance_stage(stage, TaskLoopStage.EXECUTION)
 
     effective_policy = _effective_policy(request, load_config())
@@ -741,6 +823,20 @@ def _run(
         current_candidate = eligible_candidates[candidate_index]
         retries_used = outcome.retries_used
 
+        # -- DIAGNOSTIC -> CORRECTION (avant la tentative suivante) -----------
+        if request.retry_adaptation == "failure_facts":
+            adapted = _adapted_strategy(strategy, experience, eval_run, attempt_number)
+            if adapted is None:
+                emit("strategy.unchanged", {
+                    "after_attempt": attempt_number,
+                    "reason": f"catégorie « {experience.failure_category.value} » : aucun fait d'échec exploitable",
+                })
+            else:
+                strategy = adapted
+                generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+                generation_temperature = resolve_generation_temperature(strategy.genome_content)
+                emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
+
 
 def _effective_policy(request: TaskRequest, config: Any) -> Any:
     from dataclasses import replace
@@ -803,7 +899,11 @@ def _handle_failure(
         decision=decision.action,
     ))
     emit("recovery.started", {"attempt_number": attempt_number, "category": category.value})
-    emit("recovery.decided", decision.to_dict())
+    decided = decision.to_dict()
+    # La politique ANNONCE un changement de stratégie ; ce que la boucle fait RÉELLEMENT entre deux
+    # tentatives est dit à côté (`retry_adaptation`, puis l'événement `strategy.adapted`/`strategy.unchanged`).
+    decided["retry_adaptation"] = request.retry_adaptation
+    emit("recovery.decided", decided)
 
     stage = _advance_stage(stage, TaskLoopStage.ANALYZE)
     stage = _advance_stage(stage, TaskLoopStage.STRATEGY_UPDATE)

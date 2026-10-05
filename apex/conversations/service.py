@@ -19,6 +19,43 @@ if TYPE_CHECKING:
     from apex.models.registry import ModelCandidate
 
 
+#: Mémoire de conversation transmise au modèle : messages récents seulement, bornés en caractères.
+_HISTORY_SCAN_LIMIT = 200
+MAX_HISTORY_CHARS = 6000
+MAX_HISTORY_MESSAGE_CHARS = 2000
+_SPEAKERS = {MessageRole.USER: "Utilisateur", MessageRole.ASSISTANT: "Assistant"}
+
+
+def compose_conversation_prompt(history: Sequence[Message], content: str) -> tuple[str, int]:
+    """Prompt = échanges précédents RÉELS (jamais un message en erreur ni vide), du plus ancien au plus
+    récent, dans un budget de `MAX_HISTORY_CHARS` (les plus récents d'abord), puis le nouveau message.
+    Sans historique : le message seul (comportement inchangé). Retourne (prompt, messages repris)."""
+    lines: list[str] = []
+    budget = MAX_HISTORY_CHARS
+    for message in reversed(list(history)):
+        if message.status is not MessageStatus.REAL or not message.content.strip():
+            continue
+        speaker = _SPEAKERS.get(message.role)
+        if speaker is None:
+            continue
+        text = message.content.strip()
+        if len(text) > MAX_HISTORY_MESSAGE_CHARS:
+            text = text[:MAX_HISTORY_MESSAGE_CHARS] + " […]"
+        line = f"{speaker} : {text}"
+        if len(line) > budget:
+            break
+        lines.append(line)
+        budget -= len(line)
+    if not lines:
+        return content, 0
+    transcript = "\n".join(reversed(lines))
+    return (
+        "Échanges précédents de cette conversation (du plus ancien au plus récent) :\n"
+        f"{transcript}\n\nNouveau message de l'utilisateur :\n{content}",
+        len(lines),
+    )
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -105,6 +142,10 @@ class ConversationService:
         from apex.routing.model import RoutingRequest
         from apex.routing.router import select_model
 
+        # MÉMOIRE de la conversation : les échanges RÉELS précédents (bornés), lus AVANT d'enregistrer le
+        # nouveau message. Avant le 05/10/2026, seul le dernier message était envoyé au modèle.
+        history = self._messages.recent_by_conversation(conversation_id, limit=_HISTORY_SCAN_LIMIT)
+        prompt, used = compose_conversation_prompt(history, content)
         user_message = self._messages.create(
             conversation_id=conversation_id, role=MessageRole.USER, content=content,
             model_id=None, provider_id=None, status=MessageStatus.REAL, error=None,
@@ -130,7 +171,7 @@ class ConversationService:
 
         ranked = [sc.candidate for sc in decision.ranked_candidates if sc.score > 0.0]
         fallback_kwargs: dict[str, Any] = dict(
-            prompt=content, max_tokens=max_tokens, temperature=temperature, timeout_s=timeout_s,
+            prompt=prompt, max_tokens=max_tokens, temperature=temperature, timeout_s=timeout_s,
         )
         if provider_factory is not None:
             fallback_kwargs["provider_factory"] = provider_factory
@@ -155,7 +196,10 @@ class ConversationService:
             model_id=served.ref.id, provider_id=provider_id, status=MessageStatus.REAL, error=None,
         )
         self._conversations.touch(conversation_id)
-        self._record_event(conversation_id, "conversation.message_received", {"model_id": served.ref.id})
+        self._record_event(
+            conversation_id, "conversation.message_received",
+            {"model_id": served.ref.id, "history_messages_sent": used},
+        )
         return user_message, assistant_message
 
     @staticmethod

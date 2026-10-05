@@ -19,8 +19,13 @@ propre verdict par un code de sortie)."""
 
 from __future__ import annotations
 
+import builtins
 import json
+import keyword
+import math
+import re
 from dataclasses import dataclass
+from typing import Any
 
 from apex.evalrunner.generated_solution import CANDIDATE_CODE_MARKER, PLACEHOLDER_COMMAND
 from apex.oracles.result_contract import RESULT_LINE_PREFIX
@@ -299,14 +304,98 @@ def build_reference_task_spec(kind: str) -> SolutionTaskSpec:
     if kind not in _CONTROLLED_TASKS:
         raise KeyError(kind)
     function, description, cases = _CONTROLLED_TASKS[kind]
+    return _function_spec(function, description + _ANSWER_FORMAT, cases, title=f"Solution générée — {function}")
+
+
+def _function_spec(function: str, description: str, cases: Any, *, title: str) -> SolutionTaskSpec:
     harness = _FUNCTION_HARNESS_TEMPLATE.format(
         marker=CANDIDATE_CODE_MARKER, inputs=[list(args) for args, _ in cases], function=function,
         prefix=RESULT_LINE_PREFIX,
     )
     return SolutionTaskSpec(
-        title=f"Solution générée — {function}",
-        description=description + _ANSWER_FORMAT,
+        title=title,
+        description=description,
         command=PLACEHOLDER_COMMAND,
         solution_harness=harness,
         expected_answer=json.dumps([expected for _, expected in cases]),
     )
+
+
+# -- Tâches définies par l'utilisateur -------------------------------------------------------------------
+# L'utilisateur fournit un ÉNONCÉ, un NOM de fonction et des CAS (arguments, valeur attendue). APEX écrit
+# lui-même le harnais (même gabarit que les tâches de référence) : l'utilisateur ne fournit JAMAIS de code
+# exécuté dans la sandbox, les arguments n'y entrent que comme littéraux Python, et les valeurs attendues
+# restent sur l'hôte (comparées hors sandbox par `ResultContractOracle`).
+
+MAX_USER_CASES = 50
+MAX_USER_ARGS = 10
+MAX_USER_DESCRIPTION_CHARS = 4000
+MAX_USER_CASES_JSON_CHARS = 100_000
+_FUNCTION_NAME = re.compile(r"^[a-z_][a-z0-9_]{0,63}$")
+
+
+class InvalidUserTask(ValueError):
+    """Tâche utilisateur refusée — le message dit pourquoi, rien n'est créé."""
+
+
+def _check_json_value(value: Any, path: str) -> None:
+    if value is None or isinstance(value, (bool, int, str)):
+        return
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise InvalidUserTask(f"{path} : nombre non fini refusé")
+        return
+    if isinstance(value, list):
+        for i, item in enumerate(value):
+            _check_json_value(item, f"{path}[{i}]")
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise InvalidUserTask(f"{path} : clé non textuelle refusée")
+            _check_json_value(item, f"{path}.{key}")
+        return
+    raise InvalidUserTask(f"{path} : type {type(value).__name__} refusé (JSON seulement)")
+
+
+def build_user_function_task_spec(
+    *, function: str, description: str, cases: list[dict[str, Any]], title: str | None = None
+) -> SolutionTaskSpec:
+    """Valide puis construit une tâche « écrire la fonction `function` » à partir de cas cachés fournis par
+    l'utilisateur : `cases = [{"args": [...], "expected": ...}, ...]` (valeurs JSON seulement)."""
+    if not _FUNCTION_NAME.match(function) or keyword.iskeyword(function) or function.startswith("_apex"):
+        raise InvalidUserTask(
+            f"nom de fonction « {function} » refusé (identifiant Python en minuscules, 64 caractères au plus)"
+        )
+    if function.startswith("__") or function in dir(builtins):
+        raise InvalidUserTask(f"nom de fonction « {function} » refusé (réservé par Python)")
+    text = description.strip()
+    if not text or len(text) > MAX_USER_DESCRIPTION_CHARS:
+        raise InvalidUserTask(f"énoncé vide ou trop long ({MAX_USER_DESCRIPTION_CHARS} caractères au plus)")
+    if not 1 <= len(cases) <= MAX_USER_CASES:
+        raise InvalidUserTask(f"entre 1 et {MAX_USER_CASES} cas exigés ({len(cases)} reçus)")
+    parsed: list[tuple[tuple, Any]] = []
+    for i, case in enumerate(cases):
+        if not isinstance(case, dict) or set(case) != {"args", "expected"}:
+            raise InvalidUserTask(f"cas {i} : exactement « args » et « expected » attendus")
+        args = case["args"]
+        if not isinstance(args, list) or len(args) > MAX_USER_ARGS:
+            raise InvalidUserTask(f"cas {i} : « args » doit être une liste de {MAX_USER_ARGS} arguments au plus")
+        _check_json_value(args, f"cas {i}.args")
+        _check_json_value(case["expected"], f"cas {i}.expected")
+        parsed.append((tuple(args), case["expected"]))
+    if len(json.dumps(cases)) > MAX_USER_CASES_JSON_CHARS:
+        raise InvalidUserTask(f"cas trop volumineux ({MAX_USER_CASES_JSON_CHARS} caractères JSON au plus)")
+    if len({json.dumps(list(args)) for args, _ in parsed}) != len(parsed):
+        raise InvalidUserTask("deux cas portent les mêmes arguments")
+    statement = (
+        f"{text}\n\nÉcris une fonction Python nommée exactement `{function}`. Elle sera appelée avec "
+        f"{_arity(parsed)} argument(s) positionnel(s) et doit RETOURNER le résultat (pas l'afficher)."
+        + _ANSWER_FORMAT
+    )
+    return _function_spec(function, statement, parsed, title=title or f"Tâche utilisateur — {function}")
+
+
+def _arity(parsed: list[tuple[tuple, Any]]) -> str:
+    counts = sorted({len(args) for args, _ in parsed})
+    return str(counts[0]) if len(counts) == 1 else " ou ".join(str(c) for c in counts)

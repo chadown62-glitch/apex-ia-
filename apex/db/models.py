@@ -1496,3 +1496,5 @@ class TaskRunRow(Base):
     #: Protocole v2 (migration b5d7f9a1c3e2) : stratégie tirée de `condition_on_run` et température de base.
     strategy: Mapped[str | None] = mapped_column(String(32), nullable=True)
     base_temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
+    retry_adaptation: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    plan_first: Mapped[bool | None] = mapped_column(Boolean, nullable=True)

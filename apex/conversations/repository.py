@@ -95,6 +95,14 @@ class MessageRepository:
             )
             return Message.from_row(row)
 
+    def recent_by_conversation(self, conversation_id: str, limit: int) -> list[Message]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import MessageRepository as _DbMessageRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbMessageRepository(session).recent_by_conversation(conversation_id, limit=limit)
+            return [Message.from_row(row) for row in rows]
+
     def list_by_conversation(self, conversation_id: str, limit: int = 500) -> list[Message]:
         from apex.db.engine import session_scope
         from apex.db.repositories import MessageRepository as _DbMessageRepository

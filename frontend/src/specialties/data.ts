@@ -66,6 +66,16 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     category: "workspace",
   },
   {
+    id: "task-runs",
+    label: "Tâches",
+    icon: "🧩",
+    description: "Résolution de tâches par le TaskLoop réel : tâche de référence ou définie par l'utilisateur, plan, génération, sandbox, Judge, correction entre tentatives, trace complète.",
+    path: "/tasks",
+    status: "real",
+    devStage: "connected",
+    category: "workspace",
+  },
+  {
     id: "agents",
     label: "Agents / Clones",
     icon: "🤖",

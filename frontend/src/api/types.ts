@@ -956,3 +956,78 @@ export interface BrainState {
   current: BrainCurrent | null;
   experiments: BrainExperiment[];
 }
+
+// -- Résolution de tâches (TaskLoop réel : apex/api/routes/task_runs.py) -------------------------------
+
+export interface FunctionCaseInput {
+  args: unknown[];
+  expected: unknown;
+}
+
+export interface FunctionTaskCreateInput {
+  title?: string;
+  description: string;
+  function: string;
+  cases: FunctionCaseInput[];
+}
+
+export type RetryAdaptation = "failure_facts" | "none";
+
+export interface TaskRunStartInput {
+  max_attempts?: number;
+  plan_first?: boolean;
+  retry_adaptation?: RetryAdaptation;
+  condition_on_run?: string;
+}
+
+export type TaskRunStatus = "running" | "completed" | "failed" | "blocked" | "cancelled" | "error" | "interrupted";
+
+export interface TaskRunAttempt {
+  attempt_number: number;
+  provider_name: string;
+  judge_result: string | null;
+  reason: string | null;
+  category: string | null;
+  duration_s: number | null;
+}
+
+export interface TaskRun {
+  id: string;
+  task_id: string;
+  status: TaskRunStatus;
+  objective: string;
+  attempts: TaskRunAttempt[];
+  failure: string | null;
+  stop_reason: string | null;
+  started_at: string;
+  completed_at: string | null;
+  condition_on_run: string | null;
+  strategy: string | null;
+  base_temperature: number | null;
+  retry_adaptation: string | null;
+  plan_first: boolean | null;
+}
+
+export interface TaskRunEvalRun {
+  id: string;
+  failure_category: string;
+  model_id: string | null;
+  oracle_verdict: string;
+  oracle_detail: string | null;
+  sandbox_status: string | null;
+  isolation: string | null;
+  generated_code: string | null;
+  generation_elapsed_s: number | null;
+}
+
+export interface TaskRunEvent {
+  ts: string;
+  kind: string;
+  [key: string]: unknown;
+}
+
+export interface TaskRunDetail extends TaskRun {
+  eval_runs: TaskRunEvalRun[];
+  experiences: Array<Record<string, unknown>>;
+  events: TaskRunEvent[];
+}

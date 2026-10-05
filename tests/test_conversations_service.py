@@ -263,3 +263,58 @@ class TestSendMessage(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestConversationMemory(unittest.TestCase):
+    """Le modèle reçoit les échanges RÉELS précédents (bornés) — avant le 05/10/2026, seul le dernier message
+    lui était envoyé : la conversation n'avait aucune mémoire."""
+
+    def setUp(self) -> None:
+        self.factory = sqlite_session_factory()
+        self.service = ConversationService(self.factory)
+        self.conversation = self.service.create(title="mémoire", created_by=Subject.HUMAN)
+
+    def _send(self, content: str, provider: _FakeProvider):
+        return self.service.send_message(
+            self.conversation.id, content=content, created_by=Subject.HUMAN, config=a_config(),
+            model_role="fast", provider_factory=lambda c: provider,
+        )
+
+    def test_the_second_message_carries_the_first_exchange(self) -> None:
+        provider = _FakeProvider(text="Bonjour Alice.")
+        self._send("Je m'appelle Alice.", provider)
+        self._send("Comment je m'appelle ?", provider)
+        prompt = provider.received_requests[1].prompt
+        self.assertIn("Utilisateur : Je m'appelle Alice.", prompt)
+        self.assertIn("Assistant : Bonjour Alice.", prompt)
+        self.assertTrue(prompt.endswith("Nouveau message de l'utilisateur :\nComment je m'appelle ?"))
+        self.assertLess(prompt.index("Utilisateur : Je m'appelle"), prompt.index("Assistant : Bonjour"))
+
+    def test_failed_assistant_messages_are_never_replayed_as_if_real(self) -> None:
+        self._send("question 1", _FakeProvider(mode="provider_error"))
+        provider = _FakeProvider(text="ok")
+        self._send("question 2", provider)
+        prompt = provider.received_requests[0].prompt
+        self.assertIn("Utilisateur : question 1", prompt)
+        self.assertNotIn("Assistant :", prompt)  # la réponse en erreur n'existe pas pour le modèle
+
+    def test_history_is_bounded_and_keeps_the_most_recent_exchanges(self) -> None:
+        from apex.conversations.service import MAX_HISTORY_CHARS
+
+        provider = _FakeProvider(text="r" * 1500)
+        for i in range(12):
+            self._send(f"message numéro {i:02d} " + "x" * 1500, provider)
+        prompt = provider.received_requests[-1].prompt
+        self.assertIn("message numéro 10", prompt)
+        self.assertNotIn("message numéro 00", prompt)
+        self.assertLess(len(prompt), MAX_HISTORY_CHARS + 2000)
+
+    def test_conversations_never_share_memory(self) -> None:
+        other = self.service.create(title="autre", created_by=Subject.HUMAN)
+        self._send("secret de la première conversation", _FakeProvider(text="ok"))
+        provider = _FakeProvider(text="ok")
+        self.service.send_message(
+            other.id, content="bonjour", created_by=Subject.HUMAN, config=a_config(), model_role="fast",
+            provider_factory=lambda c: provider,
+        )
+        self.assertEqual(provider.received_requests[0].prompt, "bonjour")

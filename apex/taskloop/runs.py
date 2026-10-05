@@ -54,6 +54,10 @@ class TaskRunStatus(StrEnum):
         return self is not TaskRunStatus.RUNNING
 
 
+#: `condition_on_run` symbolique : la dernière TaskRun TERMINÉE de la même tâche.
+LATEST = "latest"
+
+
 @dataclass(frozen=True)
 class TaskRun:
     id: str
@@ -76,6 +80,10 @@ class TaskRun:
     #: Protocole v2 : stratégie tirée de `condition_on_run` (`rule` | `failure_facts`) et température de base.
     strategy: str | None = None
     base_temperature: float | None = None
+    #: Ce que la boucle change entre deux tentatives (`TaskRequest.retry_adaptation`) et si l'étape PLAN
+    #: a demandé une analyse au modèle (`TaskRequest.plan_first`). `None` : TaskRun antérieure à ces champs.
+    retry_adaptation: str | None = None
+    plan_first: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -97,6 +105,8 @@ class TaskRun:
             "condition_on_run": self.condition_on_run,
             "strategy": self.strategy,
             "base_temperature": self.base_temperature,
+            "retry_adaptation": self.retry_adaptation,
+            "plan_first": self.plan_first,
         }
 
 
@@ -131,6 +141,8 @@ class TaskRunRepository:
                     condition_on_run=run.condition_on_run,
                     strategy=run.strategy,
                     base_temperature=run.base_temperature,
+                    retry_adaptation=run.retry_adaptation,
+                    plan_first=run.plan_first,
                 )
             )
 
@@ -236,6 +248,8 @@ def _from_row(row: Any) -> TaskRun:
         condition_on_run=row.condition_on_run,
         strategy=row.strategy,
         base_temperature=row.base_temperature,
+        retry_adaptation=row.retry_adaptation,
+        plan_first=row.plan_first,
     )
 
 
@@ -285,6 +299,8 @@ class TaskRunService:
         condition_on_run: str | None = None,
         strategy: str = "rule",
         base_temperature: float | None = None,
+        retry_adaptation: str = "failure_facts",
+        plan_first: bool = False,
     ) -> TaskRun:
         from apex.taskloop.registry import default_registry
         from apex.tasks.repository import TaskRepository
@@ -298,6 +314,13 @@ class TaskRunService:
             )
         if task_id in default_registry():
             raise RuntimeError(f"une exécution de la tâche « {task_id} » est déjà en cours")
+        if condition_on_run == LATEST:
+            # Apprendre de la DERNIÈRE exécution terminée de cette même tâche (résolue ici, puis enregistrée
+            # par son identifiant réel : la provenance reste exacte).
+            finished = [r for r in self.repo.list_by_task(task_id) if r.status.terminal]
+            if not finished:
+                raise ValueError(f"aucune exécution terminée de la tâche « {task_id} » dont apprendre")
+            condition_on_run = finished[0].id
         if condition_on_run is not None:
             prior = self.repo.get(condition_on_run)
             if prior is None:
@@ -320,6 +343,8 @@ class TaskRunService:
             condition_on_run=condition_on_run,
             strategy=strategy,
             base_temperature=base_temperature,
+            retry_adaptation=retry_adaptation,
+            plan_first=plan_first,
         )  # `authorization` : défaut de `TaskRequest` (CORE), celui avec lequel la boucle est éprouvée
         run = TaskRun(
             id=str(uuid.uuid4()),
@@ -339,6 +364,8 @@ class TaskRunService:
             condition_on_run=condition_on_run,
             strategy=strategy if condition_on_run else None,
             base_temperature=base_temperature,
+            retry_adaptation=retry_adaptation,
+            plan_first=plan_first,
         )
         self.repo.create(run)
 

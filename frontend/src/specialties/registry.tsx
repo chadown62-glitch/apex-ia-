@@ -25,6 +25,7 @@ import { ResourcesPage } from "../pages/ResourcesPage";
 import { SecurityGatePage } from "../pages/SecurityGatePage";
 import { SkillsPage } from "../pages/SkillsPage";
 import { SystemPage } from "../pages/SystemPage";
+import { TaskRunsPage } from "../pages/TaskRunsPage";
 import { WeaknessesPage } from "../pages/WeaknessesPage";
 import { SPECIALTY_DEFINITIONS } from "./data";
 import type { Specialty } from "./types";
@@ -32,6 +33,7 @@ import type { Specialty } from "./types";
 const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   dashboard: DashboardPage,
   chat: ChatPage,
+  "task-runs": TaskRunsPage,
   agents: AgentsPage,
   models: ModelsPage,
   "code-intelligence": CodeIntelligencePage,
