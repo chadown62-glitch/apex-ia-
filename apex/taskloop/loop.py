@@ -164,25 +164,65 @@ class _Strategy:
         }
 
 
-def _strategy_for(request: TaskRequest, *, experience_repo: ExperienceRepository) -> _Strategy:
-    """Lit les `Experience` de la TaskRun `request.condition_on_run` (MÊME tâche — filtre `task_id` ET
-    `experiment_ref`, jamais une autre tâche) et applique la règle EXISTANTE `decide_strategy_from_experiences`.
-    Seuls des contenus constants et bornés en sortent (température, rappel générique ≤ 500 caractères) :
-    ni entrées ni réponses des cas cachés, ni texte produit par le modèle — aucune fuite du jeu de test,
-    aucune injection de prompt depuis une sortie de modèle."""
-    if not request.condition_on_run:
-        return _Strategy(conditioned=False)
-    from apex.metalearner.adaptive_solution_loop import decide_strategy_from_experiences
-    from apex.metalearner.generated_solution_cycle import CandidateStrategy
+def _base_genome(request: TaskRequest) -> dict[str, Any] | None:
+    """Température de base EXPLICITE (RUN 1, bras A et C du protocole v2) ; `None` : celle du fournisseur."""
+    if request.base_temperature is None:
+        return None
+    return {"generation": {"temperature": request.base_temperature}}
 
+
+def _strategy_for(
+    request: TaskRequest, *, experience_repo: ExperienceRepository, eval_run_repo: EvalRunRepository
+) -> _Strategy:
+    """Lit les `Experience` de la TaskRun `request.condition_on_run` (MÊME tâche — filtre `task_id` ET
+    `experiment_ref`, jamais une autre tâche), puis :
+    - `strategy="rule"` (bras B) : règle EXISTANTE `decide_strategy_from_experiences`, inchangée — seuls des
+      contenus constants et bornés en sortent (température, rappel générique ≤ 500 caractères) ;
+    - `strategy="failure_facts"` (bras C) : température de base + faits d'échec AUTORISÉS seuls, rendus comme
+      des observations (`apex.metalearner.failure_facts`, liste fermée).
+    Jamais d'entrée ni de réponse des cas cachés, de message d'exception, ni de texte produit par un modèle."""
+    if not request.condition_on_run:
+        return _Strategy(conditioned=False, genome_content=_base_genome(request))
     prior = [
         e for e in experience_repo.list_by_task(request.task_id, limit=500)
         if e.experiment_ref == request.condition_on_run
     ]
+    if request.strategy == "failure_facts":
+        return _failure_facts_strategy(request, prior, eval_run_repo=eval_run_repo)
+    from apex.metalearner.adaptive_solution_loop import decide_strategy_from_experiences
+    from apex.metalearner.generated_solution_cycle import CandidateStrategy
+
     decision = decide_strategy_from_experiences(prior, base_strategies=(CandidateStrategy(label="base"),))
     return _Strategy(
         conditioned=True, genome_content=decision.strategies[0].genome_content,
         description=decision.description, source=decision.source, read_count=len(prior),
+    )
+
+
+def _failure_facts_strategy(
+    request: TaskRequest, prior: list[Any], *, eval_run_repo: EvalRunRepository
+) -> _Strategy:
+    from apex.metalearner.failure_facts import PROMPT_VERSION, extract_failure_facts, render_failure_facts
+
+    if not prior:
+        return _Strategy(conditioned=True, genome_content=_base_genome(request),
+                         description="bras C : aucune expérience trouvée — aucun fait transmis", read_count=0)
+    source = max(prior, key=lambda e: e.created_at)  # la dernière tentative jugée du RUN précédent
+    eval_run = eval_run_repo.get(source.eval_run_id)
+    facts = extract_failure_facts(eval_run, source.failure_category) if eval_run is not None else None
+    if facts is None:
+        return _Strategy(
+            conditioned=True, genome_content=_base_genome(request), source=source, read_count=len(prior),
+            description=f"bras C : catégorie « {source.failure_category.value} » non couverte — aucun fait transmis",
+        )
+    generation = {"prompt_suffix": render_failure_facts(facts), "temperature": request.base_temperature}
+    return _Strategy(
+        conditioned=True, source=source, read_count=len(prior),
+        genome_content={
+            "generation": generation, "prompt_version": PROMPT_VERSION,
+            "failure_facts": facts.to_dict(), "source_eval_run_id": source.eval_run_id,
+        },
+        description=f"bras C : faits d'échec structurés ({PROMPT_VERSION}), sans consigne",
     )
 
 
@@ -383,7 +423,7 @@ def _run(
     stage = _advance_stage(stage, TaskLoopStage.PLAN)
 
     # -- STRATÉGIE (expérience d'un RUN précédent, si demandé) ---------------
-    strategy = _strategy_for(request, experience_repo=experience_repo)
+    strategy = _strategy_for(request, experience_repo=experience_repo, eval_run_repo=eval_run_repo)
     if strategy.conditioned:
         emit("strategy.decided", {"condition_on_run": request.condition_on_run, **strategy.event()})
     generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)

@@ -117,9 +117,19 @@ def _harness_summary(eval_run: EvalRun) -> dict | None:
 def _contract_category(eval_run: EvalRun) -> FailureCategory | None:
     """Harness au contrat de résultat (`apex.oracles.result_contract`) :
     `None` si le stdout ne porte aucune ligne de contrat (ancien format,
-    lu par `_harness_summary`). Contrat violé ou exception levée par le
-    candidat -> INVALID_CANDIDATE ; résultats publiés mais faux ->
-    INCORRECT_SOLUTION."""
+    lu par `_harness_summary`). Contrat violé, aucun résultat publié, ou
+    exception levée sur TOUS les cas -> INVALID_CANDIDATE (la fonction
+    candidate n'a produit aucune réponse exploitable : absente, mauvaise
+    signature, ...) ; résultats publiés dont AU MOINS UN est une valeur ->
+    INCORRECT_SOLUTION, même si d'autres cas ont levé une exception.
+
+    Changement de sémantique du 05/10/2026 (validité du protocole v2,
+    docs/PROTOCOLE_V2.md) : auparavant, UNE seule exception suffisait à
+    classer « candidat invalide » une fonction qui répondait sur les autres
+    cas — une réponse incorrecte sur certaines entrées, pas un candidat
+    inutilisable. La catégorie est calculée une fois, à la création de
+    l'`Experience`, et stockée : les Experiences existantes ne changent pas.
+    L'ancien format (`_harness_summary`) garde sa règle."""
     if (eval_run.oracle_detail or "").startswith(CONTRACT_VIOLATION):
         return FailureCategory.INVALID_CANDIDATE
     candidate_execution = eval_run.facts.get("candidate_execution")
@@ -129,7 +139,8 @@ def _contract_category(eval_run: EvalRun) -> FailureCategory | None:
     published = read_published_results(stdout)
     if published.results is None:
         return FailureCategory.INVALID_CANDIDATE
-    if any(isinstance(r, dict) and "error" in r for r in published.results):
+    errors = sum(1 for r in published.results if isinstance(r, dict) and "error" in r)
+    if errors and errors == len(published.results):
         return FailureCategory.INVALID_CANDIDATE
     return FailureCategory.INCORRECT_SOLUTION
 

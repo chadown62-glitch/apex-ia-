@@ -38,6 +38,9 @@ class TaskRunIn(BaseModel):
     generation_timeout_s: float = Field(default=120.0, gt=0, le=900)
     #: TaskRun TERMINÉE de la même tâche dont les Experience conditionnent la stratégie (None : baseline).
     condition_on_run: str | None = Field(default=None, max_length=36)
+    #: Protocole v2 : `rule` (bras B) ou `failure_facts` (bras C) ; et température de base explicite.
+    strategy: str = Field(default="rule", max_length=32)
+    base_temperature: float | None = Field(default=None, ge=0.0, le=2.0)
 
 
 def _plain(value: Any) -> Any:
@@ -56,8 +59,16 @@ def _eval_run_view(run: Any) -> dict[str, Any]:
     facts = run.facts or {}
     response = facts.get("model_response") or {}
     execution = facts.get("candidate_execution") or {}
+    from apex.metalearner.failure_facts import extract_failure_facts
+    from apex.metalearner.failure_taxonomy import classify_failure
+
+    category = classify_failure(run)
+    failure_facts = extract_failure_facts(run, category)
     return {
         "id": run.id,
+        "failure_category": category.value,
+        # Faits AUTORISÉS (liste fermée, apex.metalearner.failure_facts) — jamais messages ni cas cachés.
+        "failure_facts": failure_facts.to_dict() if failure_facts else None,
         "model_id": run.model_id,
         "oracle_verdict": _plain(run.oracle_verdict),
         "oracle_detail": run.oracle_detail,
@@ -152,6 +163,8 @@ def start_task_run(task_id: str, body: TaskRunIn) -> DataEnvelope[dict[str, Any]
             ),
             generation_timeout_s=body.generation_timeout_s,
             condition_on_run=body.condition_on_run,
+            strategy=body.strategy,
+            base_temperature=body.base_temperature,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

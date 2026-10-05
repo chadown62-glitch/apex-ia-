@@ -126,4 +126,7 @@ distribution (résultats dans `~/apex-experience-ab/`).
 ## 5. Suite
 
 Audit des causes possibles de l'absence d'amélioration et protocole v2 (A/B/C) pré-enregistré, non exécuté :
-`docs/APPRENTISSAGE_AUDIT_V2.md`. Le protocole v1 ci-dessus n'est pas modifié.
+`docs/APPRENTISSAGE_AUDIT_V2.md`. Le protocole v1 ci-dessus n'est pas modifié. Implémentation du v2 (non exécuté) :
+`docs/PROTOCOLE_V2.md`. Note : la correction de classification du v2 (une exception parmi des valeurs →
+`incorrect_solution`) s'applique aux Experience créées après elle ; celles des runs 25 et 26 gardent leur
+catégorie et leur interprétation ci-dessus.

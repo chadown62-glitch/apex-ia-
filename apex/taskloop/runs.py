@@ -73,6 +73,9 @@ class TaskRun:
     completed_at: datetime | None = None
     #: TaskRun dont les `Experience` conditionnent la stratégie ; None : bras « baseline ».
     condition_on_run: str | None = None
+    #: Protocole v2 : stratégie tirée de `condition_on_run` (`rule` | `failure_facts`) et température de base.
+    strategy: str | None = None
+    base_temperature: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -92,6 +95,8 @@ class TaskRun:
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "condition_on_run": self.condition_on_run,
+            "strategy": self.strategy,
+            "base_temperature": self.base_temperature,
         }
 
 
@@ -124,6 +129,8 @@ class TaskRunRepository:
                     started_at=run.started_at,
                     completed_at=run.completed_at,
                     condition_on_run=run.condition_on_run,
+                    strategy=run.strategy,
+                    base_temperature=run.base_temperature,
                 )
             )
 
@@ -227,6 +234,8 @@ def _from_row(row: Any) -> TaskRun:
         stop_reason=row.stop_reason,
         completed_at=row.completed_at,
         condition_on_run=row.condition_on_run,
+        strategy=row.strategy,
+        base_temperature=row.base_temperature,
     )
 
 
@@ -274,6 +283,8 @@ class TaskRunService:
         requested_by: Subject = Subject.HUMAN,
         wait: bool = False,
         condition_on_run: str | None = None,
+        strategy: str = "rule",
+        base_temperature: float | None = None,
     ) -> TaskRun:
         from apex.taskloop.registry import default_registry
         from apex.tasks.repository import TaskRepository
@@ -307,6 +318,8 @@ class TaskRunService:
             execution_mode=execution_mode,
             limits=limits,
             condition_on_run=condition_on_run,
+            strategy=strategy,
+            base_temperature=base_temperature,
         )  # `authorization` : défaut de `TaskRequest` (CORE), celui avec lequel la boucle est éprouvée
         run = TaskRun(
             id=str(uuid.uuid4()),
@@ -324,6 +337,8 @@ class TaskRunService:
             },
             started_at=_utcnow(),
             condition_on_run=condition_on_run,
+            strategy=strategy if condition_on_run else None,
+            base_temperature=base_temperature,
         )
         self.repo.create(run)
 

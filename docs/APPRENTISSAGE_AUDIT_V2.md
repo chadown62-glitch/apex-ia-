@@ -104,6 +104,11 @@ illisible » ; autres catégories → C n'est pas appliqué (paire exclue, voir 
 
 ## 4. Ce qu'il faudrait implémenter pour v2 (non fait, en attente d'approbation)
 
+> **Statut au 05/10/2026 (ajout postérieur, le texte ci-dessus reste celui du pré-enregistrement)** : les points
+> 1 à 4 sont implémentés et testés avec une doublure de modèle ; l'expérience n'est PAS exécutée et la machine
+> cible reste UNVERIFIED. Écarts d'implémentation (tous antérieurs à toute donnée v2) et état exact :
+> `docs/PROTOCOLE_V2.md`.
+
 1. Un paramètre de TaskRun pour la température de base (T0 explicite, tous bras) — infrastructure de mesure.
 2. Le bras C : une stratégie qui compose le texte du §2 à partir des seules informations autorisées (nouvelle
    stratégie : à approuver, puisque la stratégie d'apprentissage ne doit pas encore être modifiée).

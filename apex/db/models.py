@@ -1493,3 +1493,6 @@ class TaskRunRow(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     #: TaskRun dont les `Experience` ont conditionné la stratégie (migration e4b6d8f0a2c3) ; NULL : aucune.
     condition_on_run: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    #: Protocole v2 (migration b5d7f9a1c3e2) : stratégie tirée de `condition_on_run` et température de base.
+    strategy: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    base_temperature: Mapped[float | None] = mapped_column(Float, nullable=True)

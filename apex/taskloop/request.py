@@ -76,6 +76,9 @@ class TaskLimits:
             raise ValueError("max_wall_clock_s doit être > 0")
 
 
+STRATEGIES = ("rule", "failure_facts")
+
+
 @dataclass(frozen=True)
 class TaskRequest:
     """`task_id` référence une `apex.tasks.model.Task` DÉJÀ persistée
@@ -103,6 +106,24 @@ class TaskRequest:
     #: decide_strategy_from_experiences`). `None` (défaut) : aucune expérience lue, comportement inchangé —
     #: c'est le bras « baseline » de l'expérience RUN 1 -> RUN 2.
     condition_on_run: str | None = None
+    #: Ce que l'on tire des `Experience` de `condition_on_run` (protocole v2, docs/PROTOCOLE_V2.md) :
+    #: `rule` = règle existante (bras B) ; `failure_facts` = faits d'échec autorisés seuls, rendus comme des
+    #: observations (`apex.metalearner.failure_facts`, bras C). Sans `condition_on_run` : sans effet.
+    strategy: str = "rule"
+    #: Température EXPLICITE de la génération quand aucune règle ne la fixe (RUN 1, bras A et C).
+    #: `None` : celle du fournisseur (comportement historique). Le bras B garde celle de sa règle.
+    base_temperature: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.strategy not in STRATEGIES:
+            raise ValueError(f"stratégie « {self.strategy} » inconnue (attendu : {', '.join(STRATEGIES)})")
+        if self.strategy == "failure_facts" and not self.condition_on_run:
+            raise ValueError("la stratégie « failure_facts » exige « condition_on_run »")
+        if self.strategy == "failure_facts" and self.base_temperature is None:
+            # Bras C : température toujours explicite, jamais celle (implicite) du fournisseur.
+            raise ValueError("la stratégie « failure_facts » exige « base_temperature »")
+        if self.base_temperature is not None and not (0.0 <= self.base_temperature <= 2.0):
+            raise ValueError("base_temperature hors de [0, 2]")
 
     def effective_max_attempts(self) -> int:
         """`MANUAL`/`ASSISTED` forcent une seule tentative — voir la

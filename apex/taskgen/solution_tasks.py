@@ -169,6 +169,124 @@ _CONTROLLED_TASKS: dict[str, tuple[str, str, tuple[tuple[tuple, object], ...]]] 
             (([3, 1, 3, 2],), 2), (([10],), None), (([2, 2, 3, 3],), 2),
         ),
     ),
+    # -- Protocole v2 (docs/PROTOCOLE_V2.md) : 10 tâches ajoutées le 05/10/2026, AVANT toute calibration et
+    # toute mesure v2. Même règle : une contrainte précise par énoncé ; l'exemple de l'énoncé n'est jamais un
+    # cas caché. L'éligibilité (1 à 6 succès sur 8 tirages du RUN 1) est décidée par la calibration seule.
+    "roman_to_int": (
+        "roman_to_int",
+        "Écris une fonction Python nommée exactement `roman_to_int` qui prend une chaîne `s` écrite en chiffres "
+        "romains MAJUSCULES (I, V, X, L, C, D, M ; notation soustractive comme « XC » = 90) et retourne sa "
+        "valeur entière. Si la chaîne est vide ou contient le moindre autre caractère (minuscules comprises), "
+        "retourne None.",
+        (
+            (("III",), 3), (("IV",), 4), (("IX",), 9), (("LVIII",), 58), (("MCMXCIV",), 1994),
+            (("iv",), None), (("",), None), (("XLII",), 42),
+        ),
+    ),
+    "merge_intervals": (
+        "merge_intervals",
+        "Écris une fonction Python nommée exactement `merge_intervals` qui prend une liste d'intervalles "
+        "fermés `[début, fin]` (entiers, début <= fin), dans un ordre quelconque, et retourne la liste des "
+        "intervalles fusionnés, triée par début, chaque intervalle sous forme de liste `[début, fin]`. Deux "
+        "intervalles qui se TOUCHENT seulement par une borne (comme [1, 2] et [2, 7]) sont aussi fusionnés.",
+        (
+            (([[1, 3], [2, 6], [8, 10]],), [[1, 6], [8, 10]]), (([[1, 4], [4, 5]],), [[1, 5]]), (([],), []),
+            (([[5, 6], [1, 2]],), [[1, 2], [5, 6]]), (([[1, 10], [2, 3]],), [[1, 10]]),
+            (([[1, 2], [3, 4]],), [[1, 2], [3, 4]]), (([[0, 0]],), [[0, 0]]),
+            (([[3, 5], [1, 3], [6, 7]],), [[1, 5], [6, 7]]),
+        ),
+    ),
+    "luhn_valid": (
+        "luhn_valid",
+        "Écris une fonction Python nommée exactement `luhn_valid` qui prend une chaîne `s` et retourne True si "
+        "c'est un numéro valide selon l'algorithme de Luhn, False sinon. Les espaces sont ignorés ; tout autre "
+        "caractère non chiffre rend le numéro invalide ; un numéro de MOINS DE DEUX chiffres (après retrait "
+        "des espaces) est invalide.",
+        (
+            (("4539 3195 0343 6467",), True), (("8273 1232 7352 0569",), False), (("0",), False),
+            (("059",), True), (("59",), True), (("055 444 285",), True), (("055a 444 285",), False),
+            (("  ",), False),
+        ),
+    ),
+    "balanced": (
+        "balanced",
+        "Écris une fonction Python nommée exactement `balanced` qui prend une chaîne `s` et retourne True si "
+        "ses parenthèses (), crochets [] et accolades {} sont correctement appariés et imbriqués, False sinon. "
+        "Tous les AUTRES caractères sont ignorés. Une chaîne vide est équilibrée.",
+        (
+            (("([]{})",), True), (("([)]",), False), (("",), True), (("((",), False), (("a(b)c",), True),
+            (("}{",), False), (("{[()()]}",), True), (("(]",), False),
+        ),
+    ),
+    "camel_to_snake": (
+        "camel_to_snake",
+        "Écris une fonction Python nommée exactement `camel_to_snake` qui convertit un identifiant camelCase "
+        "ou PascalCase `s` en snake_case minuscule. Une suite de majuscules (acronyme) forme UN seul mot : "
+        "« getHTTPCode » donne « get_http_code ». Un chiffre reste collé au mot qui le précède. Un "
+        "identifiant déjà en snake_case est retourné inchangé.",
+        (
+            (("parseHTTPResponse",), "parse_http_response"), (("HTTPServer",), "http_server"),
+            (("simple",), "simple"), (("getX",), "get_x"), (("UserID",), "user_id"),
+            (("already_snake",), "already_snake"), (("XMLHttpRequest",), "xml_http_request"),
+            (("version2Update",), "version2_update"),
+        ),
+    ),
+    "median": (
+        "median",
+        "Écris une fonction Python nommée exactement `median` qui prend une liste de nombres `nums` (NON "
+        "triée) et retourne sa médiane : la valeur du milieu après tri, ou, pour un nombre pair d'éléments, la "
+        "MOYENNE des deux valeurs du milieu. Une liste vide donne None.",
+        (
+            (([3, 1, 2],), 2), (([4, 1, 3, 2],), 2.5), (([],), None), (([5],), 5), (([1, 1, 1, 1],), 1),
+            (([10, -1],), 4.5), (([7, 3, 5, 1, 9],), 5), (([2, 8],), 5),
+        ),
+    ),
+    "chunk": (
+        "chunk",
+        "Écris une fonction Python nommée exactement `chunk` qui prend une liste `lst` et un entier `n` et "
+        "retourne la liste des morceaux consécutifs de `n` éléments (le dernier peut être plus court), chaque "
+        "morceau étant une liste. Si `n` est inférieur ou égal à 0, retourne une liste vide.",
+        (
+            (([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]), (([], 3), []), (([1, 2], 5), [[1, 2]]),
+            (([1, 2, 3], 0), []), (([1, 2, 3], -1), []), (([1, 2, 3, 4], 2), [[1, 2], [3, 4]]),
+            (([1], 1), [[1]]), (([1, 2, 3], 3), [[1, 2, 3]]),
+        ),
+    ),
+    "parse_duration": (
+        "parse_duration",
+        "Écris une fonction Python nommée exactement `parse_duration` qui prend une chaîne `s` de la forme "
+        "« <h>h<m>m<s>s » et retourne la durée totale en secondes (« 2h3s » donne 7203). Chaque partie est "
+        "facultative mais les parties présentes apparaissent DANS CET ORDRE (h, puis m, puis s), sans espace, "
+        "avec au moins une partie. Toute autre chaîne (vide, nombre sans unité, ordre différent) donne None.",
+        (
+            (("1h",), 3600), (("30m",), 1800), (("1h30m",), 5400), (("45s",), 45), (("2h5s",), 7205),
+            (("",), None), (("10",), None), (("1m1h",), None),
+        ),
+    ),
+    "title_case": (
+        "title_case",
+        "Écris une fonction Python nommée exactement `title_case` qui prend une chaîne `s` de mots séparés par "
+        "un espace et retourne la chaîne où chaque mot a sa première lettre en majuscule et les suivantes en "
+        "minuscules, SAUF les petits mots de, la, le, et, du, des, entièrement en minuscules — sauf s'ils sont "
+        "le premier mot. Une chaîne vide donne une chaîne vide.",
+        (
+            (("le petit prince",), "Le Petit Prince"), (("la guerre et la paix",), "La Guerre et la Paix"),
+            (("HISTOIRE DE FRANCE",), "Histoire de France"), (("",), ""), (("du",), "Du"),
+            (("voyage au bout de la nuit",), "Voyage Au Bout de la Nuit"),
+            (("des souris et des hommes",), "Des Souris et des Hommes"), (("a",), "A"),
+        ),
+    ),
+    "dedupe_keep_last": (
+        "dedupe_keep_last",
+        "Écris une fonction Python nommée exactement `dedupe_keep_last` qui prend une liste `items` et retourne "
+        "une liste sans doublons où chaque valeur n'apparaît qu'une fois, à la position de sa DERNIÈRE "
+        "occurrence dans la liste d'origine (l'ordre relatif de ces dernières occurrences est conservé).",
+        (
+            (([1, 2, 1, 3],), [2, 1, 3]), (([],), []), (([1, 1, 1],), [1]), (([3, 2, 1],), [3, 2, 1]),
+            (([1, 2, 3, 2, 1],), [3, 2, 1]), ((["a", "b", "a"],), ["b", "a"]), (([5],), [5]),
+            (([2, 2, 3, 3, 2],), [3, 2]),
+        ),
+    ),
 }
 
 #: Toutes les tâches de référence disponibles (`POST /tasks/reference`, protocole RUN 1 -> RUN 2).

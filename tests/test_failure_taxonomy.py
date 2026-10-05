@@ -125,3 +125,44 @@ class TestClassifyFailure(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestContractClassificationSemantics(unittest.TestCase):
+    """Sémantique du 05/10/2026 (docs/PROTOCOLE_V2.md) sur le contrat de résultat : « candidat invalide » =
+    aucune réponse exploitable ; une fonction qui répond sur certains cas et lève sur d'autres donne une
+    réponse INCORRECTE, pas un candidat invalide."""
+
+    @staticmethod
+    def _run(results, *, detail="2/4 cas incorrects (indices [1, 3]), dont 1 exception(s) levée(s) par le candidat"):
+        from apex.oracles.result_contract import RESULT_LINE_PREFIX
+
+        stdout = RESULT_LINE_PREFIX + json.dumps({"results": results}) + "\n"
+        return _an_eval_run(
+            oracle_verdict=OracleVerdict.FAIL, oracle_detail=detail, exit_code=0,
+            facts={"candidate_execution": {"stdout": stdout, "stderr": ""}},
+        )
+
+    def test_one_exception_among_returned_values_is_an_incorrect_solution(self) -> None:
+        run = self._run(["a1", {"error": "IndexError('string index out of range')"}, "b2", "x"])
+        self.assertIs(classify_failure(run), FailureCategory.INCORRECT_SOLUTION)
+
+    def test_an_exception_on_every_case_is_an_invalid_candidate(self) -> None:
+        run = self._run([{"error": "NameError(\"name 'f' is not defined\")"}] * 4, detail="4/4 cas incorrects")
+        self.assertIs(classify_failure(run), FailureCategory.INVALID_CANDIDATE)
+
+    def test_wrong_values_without_exception_stay_incorrect(self) -> None:
+        self.assertIs(classify_failure(self._run(["x", "y", "z", "w"])), FailureCategory.INCORRECT_SOLUTION)
+
+    def test_a_contract_violation_stays_an_invalid_candidate(self) -> None:
+        from apex.oracles.result_contract import CONTRACT_VIOLATION
+
+        run = _an_eval_run(oracle_verdict=OracleVerdict.FAIL, oracle_detail=CONTRACT_VIOLATION + "résultat absent",
+                           facts={"candidate_execution": {"stdout": "rien", "stderr": ""}})
+        self.assertIs(classify_failure(run), FailureCategory.INVALID_CANDIDATE)
+
+    def test_the_legacy_harness_format_keeps_its_rule(self) -> None:
+        """Ancien format (`failures`) : inchangé, une exception -> candidat invalide (test_i ci-dessus)."""
+        stdout = _harness_stdout(failures=[{"input": "x", "error": "IndexError('x')"}])
+        run = _an_eval_run(oracle_verdict=OracleVerdict.FAIL, sandbox_status=ExecutionStatus.FAILED, exit_code=1,
+                           facts={"candidate_execution": {"stdout": stdout, "stderr": ""}})
+        self.assertIs(classify_failure(run), FailureCategory.INVALID_CANDIDATE)
