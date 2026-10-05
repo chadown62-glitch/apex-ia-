@@ -101,6 +101,21 @@ Gate), ContainerSandbox ; 60 TaskRuns réelles (5 tâches × 4 répliques × 3 b
 - Ce que ce résultat NE dit PAS : qu'il n'y a aucun effet (6 paires, puissance faible) ; quoi que ce soit sur le
   modèle 7B de la machine cible.
 
+### 4.1 bis Réplication CI — run 26 (commit e11efe4), même protocole v1, même modèle 1.5B, rapportée séparément
+
+Lancée automatiquement par le push des outils de mesure ; aucun changement de bras ni d'analyse. Nouvelles mesures :
+le modèle tourne entièrement sur CPU (Ollama `/api/ps` : 1,2 Go, 0 Go en VRAM ; nvidia-smi absent), génération
+de 1,3 à 18,5 s par TaskRun (durées rapportées par Ollama), mémoire disponible stable (~2,0–2,1 Go sur 3,9 Go).
+
+- **Analyse primaire** : 6 paires (is_palindrome ×4, word_count ×2) ; conditionné meilleur 0, **pire 1**
+  (word_count r1, 6 → 4 cas), égal 5 ; p = 1,0 ; PASS baseline 1/6, conditionné 1/6.
+  **Conclusion : AUCUNE différence démontrée** — identique au run 25.
+- is_palindrome : 16 échecs sur 16 RUN (tous bras confondus), toujours 9/12 — erreur systématique non corrigée
+  par la stratégie actuelle.
+- Bruit entre deux bras SANS expérience (RUN 1 contre RUN 2 baseline) : 6 paires discordantes sur 20 (30 %),
+  après 25 % au run 25.
+- Les deux runs (25 et 26) ne sont PAS agrégés : la règle pré-enregistrée s'applique à chacun séparément.
+
 ### 4.2 Machine cible (modèle de référence 7B) — UNVERIFIED
 
 Non exécutée. Avec APEX démarré par le Panel : `python scripts/apex_experience_ab.py --replicates 4` dans la

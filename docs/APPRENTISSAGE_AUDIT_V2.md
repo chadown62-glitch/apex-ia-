@@ -42,7 +42,7 @@ le 7B. Si le démarrage est refusé par `apex doctor` (`gpu.config_match`), la s
 | Bras non comparables | A = température du fournisseur (valeur exacte UNVERIFIED) ; B applique toujours une température explicite, même « inchangée » (0,7 après un succès). A et B diffèrent par la température ET le prompt ; l'effet de chaque levier n'est pas séparable. | TESTÉ |
 | Répliques suffisantes ? | Non. 6 paires analysables, 1 seule discordante. Test du signe bilatéral α = 0,05 : il faut au moins 6 paires discordantes TOUTES favorables pour conclure ; puissance ≈ 0,26 même pour un effet fort (80 % des discordances favorables). ≈ 25–30 paires discordantes par comparaison sont nécessaires (puissance 0,8–0,9). | MESURÉ (calcul exact) |
 | Tâches assez difficiles ? | Non : 3 tâches sur 5 réussies 4/4 au RUN 1 par le 1.5B → 14 paires sur 20 exclues ; le 7B en réussira probablement davantage (plafond). | MESURÉ (1.5B) / INFÉRÉ (7B) |
-| Hasard masquant l'effet ? | Oui : entre RUN 1 et RUN 2 baseline (même stratégie, aucune expérience), 5 paires sur 20 sont discordantes (25 %). Le bruit est du même ordre que tout effet plausible. | MESURÉ |
+| Hasard masquant l'effet ? | Oui : entre RUN 1 et RUN 2 baseline (même stratégie, aucune expérience), 5 paires sur 20 sont discordantes (25 %, run 25) ; 6 sur 20 (30 %) à la réplication du run 26. Le bruit est du même ordre que tout effet plausible. | MESURÉ |
 | Justification causale de la règle | Heuristique (règle N+20) : « réponse incorrecte → explorer », « candidat invalide → resserrer ». Aucune mesure antérieure de son effet sur un vrai modèle. | TESTÉ (code) |
 
 **Conclusion de l'audit.** L'absence d'amélioration en v1 a quatre causes plausibles, non exclusives :
