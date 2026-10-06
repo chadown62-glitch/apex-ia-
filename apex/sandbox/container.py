@@ -56,6 +56,7 @@ from typing import Any
 from apex.errors import IsolationUnavailable, NotImplementedYet
 from apex.obs.status import Measurement
 from apex.sandbox.detect import _check_docker_daemon
+from apex.sandbox.capture import BoundedCapture
 from apex.sandbox.model import (
     CancellationToken,
     ExecutionStatus,
@@ -261,12 +262,15 @@ class ContainerSandbox(SandboxProvider):
         proc: subprocess.Popen | None = None
         timed_out = False
         stdout_bytes = stderr_bytes = b""
+        stdout_cut = stderr_cut = False
         creation_error: str | None = None
 
         try:
+            archive = spec.input_archive()
             try:
                 proc = subprocess.Popen(
-                    argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self._child_env(),
+                    argv, stdin=subprocess.PIPE if archive is not None else None,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=self._child_env(),
                 )
             except OSError as exc:
                 creation_error = str(exc)
@@ -279,12 +283,13 @@ class ContainerSandbox(SandboxProvider):
                         on_cancel=lambda n=name: self._kill_container(n),
                         is_alive=lambda n=name: self._container_running(n),
                     )
-                try:
-                    stdout_bytes, stderr_bytes = proc.communicate(timeout=spec.limits.timeout_s)
-                except subprocess.TimeoutExpired:
+                # Capture BORNÉE (début + fin, le reste compté puis jeté) : jamais toute la sortie en mémoire
+                # de l'hôte — voir `apex.sandbox.capture`.
+                capture = BoundedCapture(proc, limit=_MAX_CAPTURE_BYTES, input_bytes=archive).start()
+                if not capture.wait(spec.limits.timeout_s):
                     timed_out = True
                     self._kill_container(name)
-                    stdout_bytes, stderr_bytes = proc.communicate()
+                stdout_bytes, stderr_bytes, stdout_cut, stderr_cut = capture.finish()
         finally:
             elapsed_s = time.perf_counter() - started
             # L'état final DOIT être lu avant suppression — `docker rm`
@@ -303,10 +308,8 @@ class ContainerSandbox(SandboxProvider):
         if state is None and proc.returncode == _DOCKER_DAEMON_ERROR and not timed_out:
             tail = stderr.strip().splitlines()[-1] if stderr.strip() else "aucun détail"
             raise self._never_started(f"docker run a échoué avant le démarrage du conteneur : {tail}")
-        stdout_truncated = len(stdout) > _MAX_CAPTURE_BYTES
-        stderr_truncated = len(stderr) > _MAX_CAPTURE_BYTES
-        stdout = stdout[:_MAX_CAPTURE_BYTES]
-        stderr = stderr[:_MAX_CAPTURE_BYTES]
+        stdout_truncated = stdout_cut
+        stderr_truncated = stderr_cut
 
         cancelled = cancel_token.is_cancel_requested if cancel_token is not None else False
         exit_code = state.get("ExitCode") if state is not None else None
@@ -363,6 +366,17 @@ class ContainerSandbox(SandboxProvider):
         # tests/test_sandbox_container.py::TestBuildArgv.
         for key, value in spec.env.items():
             argv += ["-e", f"{key}={value}"]
+        if spec.input_files:
+            # Instantané de l'espace de travail : archive tar sur l'entrée standard (`-i`), extraite dans
+            # /tmp/work (tmpfs) par l'utilisateur non root du conteneur, puis la commande y est exécutée.
+            # Toujours aucun montage d'un chemin hôte.
+            argv.insert(2, "-i")
+            argv += [
+                self._image, "sh", "-c",
+                'mkdir -p /tmp/work && tar -x -C /tmp/work -f - && cd /tmp/work && exec "$@"',
+                "apex-sandbox", *spec.command,
+            ]
+            return argv
         argv += [self._image, *spec.command]
         return argv
 

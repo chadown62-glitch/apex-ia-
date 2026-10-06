@@ -120,6 +120,40 @@ class SandboxSpec:
     command: tuple[str, ...]
     limits: ResourceLimits
     env: dict[str, str] = field(default_factory=dict)
+    #: Instantané de fichiers (chemin RELATIF, contenu) déposé dans le répertoire de travail de la sandbox
+    #: (`/tmp/work`) AVANT l'exécution (outil d'exécution/tests sur un espace de travail). Copie à sens
+    #: unique : rien de ce que la commande écrit ne revient vers l'hôte. Vide : comportement inchangé.
+    input_files: tuple[tuple[str, bytes], ...] = ()
+
+    def input_archive(self) -> bytes | None:
+        """Archive tar (déterministe) de `input_files`, ou `None` s'il n'y en a pas. Lève `ValueError` sur
+        un chemin non relatif, remontant (`..`), vide ou contenant un caractère nul — jamais extrait."""
+        if not self.input_files:
+            return None
+        import io
+        import tarfile
+
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as archive:
+            for path, content in self.input_files:
+                check_relative_path(path)
+                info = tarfile.TarInfo(path)
+                info.size = len(content)
+                info.mode = 0o644
+                info.mtime = 0
+                archive.addfile(info, io.BytesIO(content))
+        return buffer.getvalue()
+
+
+def check_relative_path(path: str) -> None:
+    """Chemin RELATIF sûr pour un fichier déposé dans la sandbox (aucune sortie du répertoire de travail)."""
+    import posixpath
+
+    if not path or "\x00" in path or path.startswith("/") or "\\" in path:
+        raise ValueError(f"chemin refusé : {path!r}")
+    normalized = posixpath.normpath(path)
+    if normalized != path or normalized.startswith("..") or normalized in (".", ""):
+        raise ValueError(f"chemin refusé : {path!r}")
 
 
 class CancellationToken:

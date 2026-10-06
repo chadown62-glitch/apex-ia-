@@ -29,6 +29,7 @@ from typing import Any
 from apex.errors import IsolationUnavailable
 from apex.obs.status import Measurement
 from apex.sandbox.detect import detect_capabilities
+from apex.sandbox.capture import BoundedCapture
 from apex.sandbox.model import (
     CancellationToken,
     ExecutionStatus,
@@ -108,13 +109,16 @@ class LinuxNamespaceSandbox(SandboxProvider):
         proc: subprocess.Popen | None = None
         timed_out = False
         stdout_bytes = stderr_bytes = b""
+        stdout_cut = stderr_cut = False
         creation_error: str | None = None
 
         try:
             argv = self._build_argv(spec, cgroup_paths)
+            archive = spec.input_archive()
             try:
                 proc = subprocess.Popen(
                     argv,
+                    stdin=subprocess.PIPE if archive is not None else None,
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     env=self._child_env(spec), start_new_session=True,
                 )
@@ -133,12 +137,13 @@ class LinuxNamespaceSandbox(SandboxProvider):
                         on_cancel=lambda p=proc: self._kill_process_group(p),
                         is_alive=lambda p=proc: self._process_group_alive(p),
                     )
-                try:
-                    stdout_bytes, stderr_bytes = proc.communicate(timeout=spec.limits.timeout_s)
-                except subprocess.TimeoutExpired:
+                # Capture BORNÉE (début + fin, le reste compté puis jeté) : jamais toute la sortie en mémoire
+                # de l'hôte — voir `apex.sandbox.capture`.
+                capture = BoundedCapture(proc, limit=_MAX_CAPTURE_BYTES, input_bytes=archive).start()
+                if not capture.wait(spec.limits.timeout_s):
                     timed_out = True
                     self._kill_process_group(proc)
-                    stdout_bytes, stderr_bytes = proc.communicate()
+                stdout_bytes, stderr_bytes, stdout_cut, stderr_cut = capture.finish()
         finally:
             elapsed_s = time.perf_counter() - started
             memory_peak_bytes, oom = self._read_memory_stats(cgroup_paths.get("memory"))
@@ -155,10 +160,8 @@ class LinuxNamespaceSandbox(SandboxProvider):
 
         stdout = stdout_bytes.decode("utf-8", errors="replace")
         stderr = stderr_bytes.decode("utf-8", errors="replace")
-        stdout_truncated = len(stdout) > _MAX_CAPTURE_BYTES
-        stderr_truncated = len(stderr) > _MAX_CAPTURE_BYTES
-        stdout = stdout[:_MAX_CAPTURE_BYTES]
-        stderr = stderr[:_MAX_CAPTURE_BYTES]
+        stdout_truncated = stdout_cut
+        stderr_truncated = stderr_cut
 
         # Annulation explicitement demandée : un drapeau distinct, jamais
         # deviné depuis le seul signal 9 (qui coïncide avec un timeout ou
@@ -255,6 +258,13 @@ class LinuxNamespaceSandbox(SandboxProvider):
             f"echo $$ > {shlex.quote(path)}/cgroup.procs 2>/dev/null || true"
             for path in cgroup_paths.values()
         )
+        # Instantané de l'espace de travail : archive lue sur l'entrée standard, extraite AVANT l'abaissement
+        # de privilège (propriétaire forcé, permissions par défaut), puis rendue à l'utilisateur non privilégié.
+        input_lines = (
+            "tar -x --no-same-owner --no-same-permissions -C /tmp/work -f -\n"
+            "chown -R 65534:65534 /tmp/work\n"
+            if spec.input_files else ""
+        )
         masked = project_root_to_mask()
         mask_line = ""
         if masked is not None:
@@ -266,6 +276,7 @@ class LinuxNamespaceSandbox(SandboxProvider):
             f"mount -t tmpfs -o size={spec.limits.disk_mb}m tmpfs /tmp\n"
             "mkdir -p /tmp/work\n"
             "chmod 1777 /tmp/work\n"
+            f"{input_lines}"
             f"{mask_line}"
             "mount -o remount,ro,bind /\n"
             "cd /tmp/work\n"

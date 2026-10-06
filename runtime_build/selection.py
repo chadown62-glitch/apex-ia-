@@ -70,6 +70,7 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "specialties",
         "taskloop",
         "tasks",
+        "tools",
         "util",
     }
 )

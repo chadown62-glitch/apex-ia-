@@ -121,6 +121,44 @@ class _FakePopen:
         self._communicated_once = True
         return self._stdout, self._stderr
 
+    # Interface utilisée par la capture bornée (`apex.sandbox.capture`, 06/10/2026) : mêmes données, même
+    # blocage `hang` jusqu'à `docker kill` — les flux ne se ferment qu'une fois le « conteneur » terminé.
+    stdin = None
+
+    @property
+    def stdout(self):
+        return _GatedPipe(self._stdout, self)
+
+    @property
+    def stderr(self):
+        return _GatedPipe(self._stderr, self)
+
+    def wait(self, timeout: float | None = None) -> int:
+        if self._hang and not self._kill_event.is_set():
+            if not self._kill_event.wait(timeout=timeout):
+                raise subprocess.TimeoutExpired(cmd=["docker", "run"], timeout=timeout)
+        return self.returncode
+
+
+class _GatedPipe:
+    """Tube simulé : ne rend ses données qu'une fois le processus simulé terminé (ou tué)."""
+
+    def __init__(self, data: bytes, proc: "_FakePopen") -> None:
+        self._data = data
+        self._proc = proc
+        self._done = False
+
+    def read(self, _size: int = -1) -> bytes:
+        if self._proc._hang:
+            self._proc._kill_event.wait(timeout=60)
+        if self._done:
+            return b""
+        self._done = True
+        return self._data
+
+    def close(self) -> None:
+        pass
+
 
 class _FakeDockerRuntime:
     """État mutable partagé entre les invocations `docker run/kill/inspect/rm`
@@ -206,6 +244,26 @@ class TestBuildArgv(unittest.TestCase):
             self.assertIn(flag, argv)
         self.assertIn(f"{_NON_ROOT_UID}:{_NON_ROOT_UID}", argv)
         self.assertIn("none", argv)  # --network none
+
+    def test_a_workspace_snapshot_goes_through_stdin_never_a_host_mount(self) -> None:
+        spec = SandboxSpec(
+            mission_id="m", clone_id="c", command=("python3", "-m", "unittest"), limits=_limits(),
+            input_files=(("pkg/a.py", b"x = 1\n"),),
+        )
+        argv = self.sandbox._build_argv(spec, "apex_test_name")
+        self.assertEqual(argv[:3], ["docker", "run", "-i"])
+        self.assertNotIn("-v", argv)
+        self.assertNotIn("--mount", argv)
+        self.assertEqual(argv[-3:], ["python3", "-m", "unittest"])  # argv de l'appelant, jamais réinterprété
+        self.assertIn('mkdir -p /tmp/work && tar -x -C /tmp/work -f - && cd /tmp/work && exec "$@"', argv)
+        self.assertIsNotNone(spec.input_archive())
+
+    def test_unsafe_snapshot_paths_are_refused_before_any_execution(self) -> None:
+        for path in ("../x.py", "/etc/passwd", "a/../../b", "", "a\\b"):
+            spec = SandboxSpec(mission_id="m", clone_id="c", command=("true",), limits=_limits(),
+                               input_files=((path, b"x"),))
+            with self.assertRaises(ValueError):
+                spec.input_archive()
 
     def test_never_contains_privileged_or_host_mounts_or_docker_socket(self) -> None:
         """Invariant de sécurité statique — même discipline que
