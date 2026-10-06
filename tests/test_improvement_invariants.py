@@ -258,7 +258,9 @@ class TestUnconfirmedExperienceIsRefused(_Fixture):
 
     @staticmethod
     def _old_behaviour():
-        from apex.metalearner import adaptive_solution_loop as loop
+        # `_mutate_from_experience` vit dans `apex.experience.strategy` depuis la frontière Runtime
+        # (`adaptive_solution_loop` n'en garde qu'un alias importé) : on patche là où la règle l'appelle.
+        from apex.experience import strategy as loop
         from apex.metalearner.experience import SuccessEvidence
         from apex.metalearner.failure_taxonomy import FailureCategory
 
