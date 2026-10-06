@@ -83,3 +83,52 @@ d'échec. Mesure `real-4` : bras A, B, C, D, graines {0, 1, 2, 3}, même protoco
 durée, comparaison à B et D de `real-2` (mêmes graines), et reproductibilité de A et C entre `real-2` et
 `real-4` (même code, même graine). Règle inchangée : un effet n'est affirmé qu'après réplication (graines
 {10, 11, 12, 13}) ; une correction qui n'améliore rien est rapportée « MESURÉ : aucun gain ».
+
+## 3. Résultats MESURÉS — `real-2` (06/10/2026, run GitHub Actions 37499709079, commit `5d44296`)
+
+Conditions : `Qwen/Qwen2.5-Coder-1.5B-Instruct` révision `2e1fd397…`, backend NATIF (`native_transformers`,
+torch 2.14 CPU, float32), runner Linux 2 vCPU, sandbox `ContainerSandbox` (namespaces indisponibles sur le
+runner : repli Docker, isolation vérifiée), **aucun Ollama** (le job échoue s'il en trouve un). Résultats bruts :
+`validation/results/real-2/*.json`, analyse : `analysis.json`. Preuve **CI, modèle 1.5B** : ni la machine
+cible, ni un 7B.
+
+### 3.1 Boucle réelle (smoke)
+| Maillon | Observé (persisté) |
+|---|---|
+| Génération par le modèle natif | oui — durée, tokens, vitesse (médiane 2,5 tokens/s, 39,5 s par génération) |
+| Plan rédigé | oui (événement `task.plan.generated`) |
+| Judge (cas cachés hors sandbox) | oui — score = fraction de cas réussis |
+| Nouvelle tentative adaptée (faits d'échec) | oui (`roman_to_int` : 2 tentatives, 0,88 → arrêt `no_progress`) |
+| Mode outillé, fonction | **le modèle appelle `fs.write` puis soumet ; réussite 1,00** (smoke-1 : 0 outil, soumission immédiate — corrigé, voir §4) |
+| Mode outillé, projet multi-fichiers | **`fs.read` puis `fs.write` ; réussite à la 2ᵉ tentative** (912 s) |
+Non observé : le modèle n'a jamais appelé `code.run` ni `tests.run` de lui-même.
+
+### 3.2 PLAN et adaptation (15 tâches × graines 0–3 = 60 instances appariées par bras)
+| Bras | Réussite | 1re tentative | Score Judge moyen | Tentatives | Corrections | Durée médiane | Erreurs (tentatives) |
+|---|---|---|---|---|---|---|---|
+| A — 1 tentative | 29/60 (48 %) | 29 | 0,767 | 1,00 | — | 32 s | 31 incorrectes |
+| B — PLAN + 1 | 27/60 (45 %) | 27 | 0,680 | 1,00 | — | 175 s | 28 incorrectes, 5 `invalid_candidate` |
+| R — 3 tentatives à l'identique | 34/60 (57 %) | 29 | 0,829 | 1,58 | 5 | 48 s | 61 incorrectes |
+| C — 3 tentatives + faits d'échec | 38/60 (63 %) | 29 | 0,800 | 1,62 | 9 | 49 s | 59 incorrectes |
+| D — PLAN + 3 + faits d'échec | 29/60 (48 %) | 27 | 0,657 | 1,65 | 2 | 220 s | 52 incorrectes, 18 `invalid_candidate` |
+
+Nombres aléatoires communs vérifiés : 1re tentative **identique** en A, R, C sur 60/60 instances (et B = D
+sur 60/60). Hypothèses principales (McNemar exact bilatéral, Holm 5 %) :
+- **H1 B vs A (plan)** : 5 instances gagnées, 7 perdues, p = 0,77 → **MESURÉ : aucun gain** (score du Judge
+  en baisse, durée × 5).
+- **H2 C vs R (faits d'échec au-delà du simple retry)** : 5 gagnées, 1 perdue, p = 0,22 → **non significatif** ;
+  direction favorable, à confirmer (réplication `real-3`).
+- **H3 D vs C (plan avec adaptation)** : 1 gagnée, 10 perdues, p = 0,012, **significatif après Holm : le plan
+  DÉGRADE** — à confirmer par la réplication pré-enregistrée (graines 10–13, `real-3`) avant d'être affirmé.
+Secondaires (descriptifs) : R vs A 5–0 (p = 0,06) ; C vs A 9–0 (p = 0,004) ; D vs A 6–6. Le gain de C sur A
+vient pour l'essentiel du **budget de tentatives** (R en capte 5 sur 9) ; les faits d'échec ajoutent 4
+instances nettes, non significatives à ce stade.
+
+Effet du plan par tâche (réussites sur 4 graines, A / B) : `word_count` 2 / 0 et 4 (R, C) / 0 (D), `chunk`
+1 / 4, `dedupe_keep_last` 3 / 2 : effet hétérogène, globalement nul seul et négatif avec adaptation.
+
+Cause de la dégradation (lue dans les réponses persistées) : malgré « N'écris AUCUN code », **58 plans sur
+60 contiennent du code**, parfois contraire à l'énoncé (`is_palindrome` : le plan retire espaces et
+ponctuation que l'énoncé impose de garder) ; réinjecté, ce code est souvent **commenté en prose** par le modèle
+au lieu d'une solution (« Le script fourni semble correct… ») → `invalid_candidate`. Correction pré-enregistrée
+§2.5, mesurée par `real-4`.
