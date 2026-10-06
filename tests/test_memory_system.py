@@ -207,7 +207,9 @@ def test_an_indexing_failure_is_logged_and_never_changes_the_run(factory, monkey
     def broken(*_a, **_k):
         raise RuntimeError("écriture refusée")
 
-    monkeypatch.setattr("apex.memory.indexing.index_task_run", broken)
+    import apex.memory.indexing as indexing
+
+    monkeypatch.setattr(indexing, "index_task_run", broken)
     run = _start(factory, _task(factory), RIGHT_ADD)
     assert run.status.value == "completed" and _execution_records(factory) == []
     (event,) = [e for e in _kinds(factory, run.id) if e["kind"] == "memory.index_failed"]
