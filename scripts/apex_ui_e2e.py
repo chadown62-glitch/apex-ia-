@@ -203,6 +203,29 @@ def run(out: Path) -> int:
             page.reload()
             page.wait_for_timeout(1500)
             audit.check("missions", "mission visible dans le centre", "Mission e2e" in page.inner_text("body"))
+            if mission["status"] == "real":
+                mission_id = mission["data"]["id"]
+                page.get_by_text("Mission e2e").first.click()
+                page.wait_for_timeout(800)
+                page.get_by_role("button", name="Lancer", exact=True).click()
+                deadline, state = time.time() + 900, None
+                while time.time() < deadline:
+                    current = api("GET", f"/missions/{mission_id}")["data"]
+                    state = current["state"]
+                    if state in ("review", "failed", "completed", "cancelled"):
+                        break
+                    time.sleep(2)
+                audit.check("missions", "« Lancer » exécute la mission par le TaskLoop (TaskRun liée)",
+                            state in ("review", "failed") and bool(current.get("task_run_id")),
+                            f"état {state}, task_run_id {current.get('task_run_id')}")
+                if current.get("task_run_id"):
+                    linked = api("GET", f"/task-runs/{current['task_run_id']}")["data"]
+                    audit.check("missions", "la TaskRun porte la mission", linked.get("mission_id") == mission_id)
+                page.reload()
+                page.get_by_text("Mission e2e").first.click()
+                page.wait_for_timeout(1500)
+                audit.check("missions", "l'interface montre la TaskRun de la mission",
+                            str(current.get("task_run_id")) in page.inner_text("body"))
             page.screenshot(path=str(out / "missions.png"), full_page=True)
 
         # -- TOUTES LES PAGES : aucune erreur console, rien de cassé ------------------------------------------
