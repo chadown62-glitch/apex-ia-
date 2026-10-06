@@ -98,4 +98,30 @@ describe("ChatPage", () => {
     await waitFor(() => expect(document.querySelector(".chat-layout")).toHaveAttribute("data-has-selection", "true"));
     expect(screen.getByPlaceholderText("Écrire un message…")).toBeInTheDocument();
   });
+
+  it("shows the memories really used for a reply and sends the memory choice", async () => {
+    const conv = makeConversation({ id: "c-1", title: "Projet" });
+    const reply: Message = {
+      id: "m-2", conversation_id: "c-1", role: "assistant", content: "Zéphyr.", model_id: "qwen", provider_id: "p",
+      status: "real", error: null, created_at: "2026-01-01T00:00:01Z",
+    } as Message;
+    const calls: Array<{ url: string; body?: string }> = [];
+    globalThis.fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: init?.body as string | undefined });
+      const path = url.replace(/^.*\/api\/v1/, "");
+      const env = (data: unknown) => ({ ok: true, status: 200, json: async () => ({ status: "real", data, detail: null }) });
+      if (path === "/conversations/c-1/recalls") return env({ "m-2": [{ id: "r1", source: "conversation:c-0:m-1", score: 1.2, category: "conversation" }] });
+      if (path === "/conversations/c-1/messages" && init?.method === "POST") return env({ user_message: reply, assistant_message: reply, memory: [] });
+      if (path === "/conversations/c-1/messages") return env([reply]);
+      if (path.startsWith("/conversations")) return env([conv]);
+      return env([]);
+    }) as unknown as typeof fetch;
+
+    renderPage();
+    expect(await screen.findByLabelText("Souvenirs utilisés")).toHaveTextContent("conversation · conversation:c-0:m-1");
+    fireEvent.click(screen.getByLabelText("Mémoire"));
+    fireEvent.change(screen.getByPlaceholderText("Écrire un message…"), { target: { value: "Et alors ?" } });
+    fireEvent.click(screen.getByText("Envoyer"));
+    await waitFor(() => expect(calls.some((c) => c.body?.includes('"use_memory":false'))).toBe(true));
+  });
 });

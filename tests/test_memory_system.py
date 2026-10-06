@@ -369,3 +369,35 @@ def test_generic_apex_instructions_never_make_unrelated_tasks_look_similar() -> 
     assert score_candidates(a, [_record(b)])  # énoncés complets : la consigne commune suffit à « matcher »
     assert retrieval_statement(a) == "Moyenne arithmétique.\nmean"
     assert score_candidates(retrieval_statement(a), [_record(retrieval_statement(b))]) == []
+
+
+def test_chat_api_reports_the_memories_used_for_each_reply(factory, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from apex.api import dependencies
+    from apex.api.app import create_app
+    from apex.conversations import service as conversations
+    from tests.api_test_support import TEST_API_TOKEN
+    from tests.test_conversations_service import _FakeProvider, a_config
+
+    provider = _FakeProvider(text="Noté.")
+    real_send = conversations.ConversationService.send_message
+
+    def send(self, conversation_id, **kwargs):
+        kwargs.update(config=a_config(), provider_factory=lambda c: provider)
+        return real_send(self, conversation_id, **kwargs)
+
+    monkeypatch.setattr(conversations.ConversationService, "send_message", send)
+    monkeypatch.setattr(dependencies, "get_session_factory", lambda: factory)
+    client = TestClient(create_app(), headers={"Authorization": f"Bearer {TEST_API_TOKEN}"})
+    a = client.post("/api/v1/conversations", json={"title": "a"}).json()["data"]["id"]
+    b = client.post("/api/v1/conversations", json={"title": "b"}).json()["data"]["id"]
+    client.post(f"/api/v1/conversations/{a}/messages", json={"content": "Mon projet s'appelle Zéphyr."})
+    reply = client.post(f"/api/v1/conversations/{b}/messages",
+                        json={"content": "Comment s'appelle mon projet ?"}).json()["data"]
+    assert [m["source"].split(":")[1] for m in reply["memory"]] == [a]
+    recalls = client.get(f"/api/v1/conversations/{b}/recalls").json()["data"]
+    assert recalls[reply["assistant_message"]["id"]] == reply["memory"]
+    isolated = client.post(f"/api/v1/conversations/{b}/messages",
+                           json={"content": "Et mon projet ?", "use_memory": False}).json()["data"]
+    assert isolated["memory"] == []

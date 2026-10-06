@@ -66,6 +66,16 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     category: "workspace",
   },
   {
+    id: "memory",
+    label: "Mémoire",
+    icon: "🗂️",
+    description: "Mémoire système réelle : ajouter des documents, rechercher par pertinence (BM25 lexical) avec provenance — la même mémoire que consultent le Chat et le TaskLoop.",
+    path: "/memory",
+    status: "real",
+    devStage: "connected",
+    category: "workspace",
+  },
+  {
     id: "task-runs",
     label: "Tâches",
     icon: "🧩",

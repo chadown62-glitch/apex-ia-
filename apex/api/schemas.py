@@ -246,6 +246,8 @@ class SendMessageOut(BaseModel):
 
     user_message: MessageOut
     assistant_message: MessageOut
+    #: Souvenirs système RÉELLEMENT joints au prompt de cette réponse (provenance, score) ; vide sinon.
+    memory: list[dict[str, Any]] = Field(default_factory=list)
 
 
 # -- agent templates (passe « Première interface utilisable ») ---------------
@@ -419,6 +421,8 @@ class CatalogModelOut(BaseModel):
     is_declared_available: bool
     capabilities: list[str]
     availability: str
+    #: Constat réel de la dernière sonde (raison d'une indisponibilité), `None` avant toute sonde.
+    availability_detail: str | None = None
     discovery: str
     provider_id: str
     runtime: str | None

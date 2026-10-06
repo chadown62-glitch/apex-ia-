@@ -371,11 +371,45 @@ export interface Message {
 export interface SendMessageInput {
   content: string;
   model_role?: string | null;
+  /** Mémoire système : souvenirs d'autres conversations/documents/exécutions + indexation de l'échange. */
+  use_memory?: boolean;
+}
+
+/** Un souvenir système RÉELLEMENT joint au prompt d'une réponse (provenance, score BM25). */
+export interface RecalledMemory {
+  id: string;
+  source: string;
+  score: number;
+  category: string | null;
 }
 
 export interface SendMessageResult {
   user_message: Message;
   assistant_message: Message;
+  memory?: RecalledMemory[];
+}
+
+export interface MemorySearchHit {
+  id: string;
+  category: string | null;
+  source: string;
+  score: number;
+  snippet: string;
+  created_at: string;
+}
+
+export interface MemoryDocumentResult {
+  document_id: string;
+  chunks: number;
+  record_ids: string[];
+}
+
+export interface ModelBackend {
+  runtime: string;
+  status: "implemented" | "planned";
+  adapter: string | null;
+  description: string;
+  lora: string;
 }
 
 // -- agent templates (passe « Première interface utilisable ») ---------------
@@ -433,6 +467,8 @@ export interface CatalogModel {
   is_declared_available: boolean;
   capabilities: string[];
   availability: CatalogAvailability;
+  /** Ce que le backend a réellement constaté à la dernière sonde (raison d'une indisponibilité). */
+  availability_detail?: string | null;
   discovery: DiscoverySource;
   provider_id: string;
   runtime: string | null;

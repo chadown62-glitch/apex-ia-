@@ -1,4 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+
+import { listModelBackends } from "../api/endpoints";
 
 import { useCatalogModels, useDiscoverModels, useProviders } from "../api/hooks";
 import type { CatalogAvailability } from "../api/types";
@@ -149,6 +152,9 @@ export function ModelsPage() {
                         <span className="status-badge__dot" aria-hidden="true" />
                         {AVAILABILITY_LABEL[m.availability]}
                       </span>
+                      {m.availability_detail && (
+                        <div className="models-page__model-id">{m.availability_detail}</div>
+                      )}
                     </td>
                     <td>
                       {m.history.usage_count === 0 ? (
@@ -175,6 +181,42 @@ export function ModelsPage() {
       </Panel>
 
       {discover.data && discover.data.status !== "real" && <ErrorState detail={discover.data.detail} />}
+
+      <BackendsPanel />
     </div>
+  );
+}
+
+/** Catalogue FERMÉ des runtimes d'inférence (`GET /models/backends`) : réels ou PLANNED. Un runtime PLANNED
+ * n'a aucun fournisseur actif — l'interface le dit au lieu de le laisser croire disponible. */
+function BackendsPanel() {
+  const backends = useQuery({ queryKey: ["model-backends"], queryFn: listModelBackends });
+  const list = backends.data?.status === "real" ? backends.data.data ?? [] : [];
+  return (
+    <Panel title="Backends d'inférence">
+      {backends.isError && <ErrorState detail={String(backends.error)} />}
+      <table className="models-page__table" aria-label="Backends d'inférence">
+        <thead>
+          <tr>
+            <th>Runtime</th>
+            <th>État</th>
+            <th>Description</th>
+            <th>LoRA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {list
+            .filter((b) => b.adapter !== "openai_compatible" || b.runtime === "openai_compatible")
+            .map((b) => (
+              <tr key={b.runtime}>
+                <td className="mono">{b.runtime}</td>
+                <td>{b.status === "implemented" ? "implémenté" : "PLANNED — non disponible"}</td>
+                <td>{b.description}</td>
+                <td>{b.lora}</td>
+              </tr>
+            ))}
+        </tbody>
+      </table>
+    </Panel>
   );
 }

@@ -199,7 +199,7 @@ function eventSummary(event: TaskRunEvent): string {
     case "agent.step":
       return event.submit
         ? `tour ${String(event.step)} : solution soumise`
-        : `tour ${String(event.step)} : ${String(event.tool ?? "action illisible")} ${event.ok ? "ok" : `échec (${String(event.error ?? "")})`}`;
+        : `tour ${String(event.step)} : ${String(event.tool ?? "action illisible")}${event.args ? ` ${String(event.args)}` : ""} ${event.ok ? "ok" : `échec (${String(event.error ?? "")})`}${event.raw ? ` — réponse : ${String(event.raw)}` : ""}`;
     case "memory.retrieved": {
       const items = (event.items as Array<{ source?: string }> | undefined) ?? [];
       return items.length ? `souvenirs : ${items.map((i) => String(i.source ?? "")).join(", ")}` : "aucun souvenir pertinent";

@@ -19,6 +19,8 @@ pas la génération) et `data.assistant_message.status="error"` (voir
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from apex.api.schemas import (
@@ -155,9 +157,48 @@ def send_message(conversation_id: str, payload: SendMessageIn) -> DataEnvelope[S
         )
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    recalls = _recalls(get_session_factory(), conversation_id, since=user_message.created_at)
     return DataEnvelope(
         status="real",
         data=SendMessageOut(
             user_message=_to_message_out(user_message), assistant_message=_to_message_out(assistant_message),
+            memory=recalls.get(assistant_message.id, []),
         ),
     )
+
+
+def _recalls(session_factory: Any, conversation_id: str, *, since: Any) -> dict[str, list[dict[str, Any]]]:
+    """Souvenirs joints à chaque réponse, relus dans le journal (`conversation.message_received`) :
+    message assistant -> souvenirs (provenance, score). Jamais reconstruits."""
+    from datetime import timedelta
+
+    from apex.db.engine import session_scope
+    from apex.db.repositories import EventRepository
+
+    with session_scope(session_factory) as session:
+        rows = EventRepository(session).in_window(logger="apex.conversations", since=since - timedelta(seconds=5),
+                                                  limit=5000)
+        return {
+            row.context["assistant_message_id"]: list(row.context.get("memory") or [])
+            for row in rows
+            if row.context.get("conversation_id") == conversation_id
+            and row.context.get("kind") == "conversation.message_received"
+            and row.context.get("assistant_message_id")
+        }
+
+
+@router.get("/{conversation_id}/recalls", response_model=DataEnvelope[dict[str, list[dict[str, Any]]]])
+def list_recalls(conversation_id: str) -> DataEnvelope[dict[str, list[dict[str, Any]]]]:
+    """Pour chaque réponse de la conversation : les souvenirs système réellement utilisés (provenance)."""
+    try:
+        from apex.api.dependencies import get_session_factory
+        from apex.conversations.service import ConversationService
+
+        factory = get_session_factory()
+        conversation = ConversationService(factory).get(conversation_id)
+        if conversation is None:
+            return DataEnvelope(status="unknown", data=None, detail=f"conversation « {conversation_id} » introuvable")
+        data = _recalls(factory, conversation_id, since=conversation.created_at)
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=data)

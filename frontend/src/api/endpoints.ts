@@ -7,6 +7,10 @@
 import { fetchEnvelope } from "./client";
 import type {
   BrainEvent,
+  MemoryDocumentResult,
+  MemorySearchHit,
+  ModelBackend,
+  RecalledMemory,
   BrainState,
   Agent,
   AgentExecution,
@@ -176,6 +180,24 @@ export function deleteConversation(conversationId: string): Promise<DataEnvelope
 
 export function listMessages(conversationId: string): Promise<DataEnvelope<Message[]>> {
   return fetchEnvelope<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+}
+
+export function listRecalls(conversationId: string): Promise<DataEnvelope<Record<string, RecalledMemory[]>>> {
+  return fetchEnvelope<Record<string, RecalledMemory[]>>(`/conversations/${encodeURIComponent(conversationId)}/recalls`);
+}
+
+export function addMemoryDocument(input: { title: string; content: string }): Promise<DataEnvelope<MemoryDocumentResult>> {
+  return fetchEnvelope<MemoryDocumentResult>("/memory/documents", { method: "POST", body: JSON.stringify(input) });
+}
+
+export function searchMemory(query: string, categories: string[]): Promise<DataEnvelope<MemorySearchHit[]>> {
+  const params = new URLSearchParams({ q: query, limit: "10" });
+  categories.forEach((c) => params.append("categories", c));
+  return fetchEnvelope<MemorySearchHit[]>(`/memory/search?${params.toString()}`);
+}
+
+export function listModelBackends(): Promise<DataEnvelope<ModelBackend[]>> {
+  return fetchEnvelope<ModelBackend[]>("/models/backends");
 }
 
 export function sendMessage(

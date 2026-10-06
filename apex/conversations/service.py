@@ -203,7 +203,9 @@ class ConversationService:
         self._record_event(
             conversation_id, "conversation.message_received",
             {"model_id": served.ref.id, "history_messages_sent": used,
-             "memory": [{"id": r.record.id, "source": r.record.source, "score": round(r.score, 4)}
+             "assistant_message_id": assistant_message.id, "use_memory": use_memory,
+             "memory": [{"id": r.record.id, "source": r.record.source, "score": round(r.score, 4),
+                         "category": r.record.category.value if r.record.category else None}
                         for r in recalled]},
         )
         if use_memory:

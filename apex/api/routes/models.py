@@ -39,6 +39,7 @@ def _to_catalog_model_out(model: object) -> CatalogModelOut:
         is_declared_available=candidate.is_available,
         capabilities=sorted(c.value for c in model.capabilities),  # type: ignore[attr-defined]
         availability=model.availability.value,  # type: ignore[attr-defined]
+        availability_detail=getattr(model, "availability_detail", None),
         discovery=model.discovery.value,  # type: ignore[attr-defined]
         provider_id=model.provider_id,  # type: ignore[attr-defined]
         runtime=endpoint.runtime if endpoint is not None else None,

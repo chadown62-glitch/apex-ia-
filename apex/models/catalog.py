@@ -126,6 +126,9 @@ class CatalogModel:
     availability: Availability
     discovery: DiscoverySource
     history: PerformanceHistory = field(default_factory=PerformanceHistory)
+    #: Ce que le backend a RÉELLEMENT constaté lors de la dernière sonde (`detect().detail`), ex. « poids
+    #: absents … `apex models fetch` » — `None` tant qu'aucune sonde n'a eu lieu.
+    availability_detail: str | None = None
 
     @property
     def model_id(self) -> str:
@@ -292,18 +295,23 @@ def discover_live(
         )
         try:
             report = provider.detect()
-        except (ModelProviderError, TimeoutExceeded):
-            resolved.append(_with_availability(model, Availability.UNAVAILABLE, DiscoverySource.CONFIGURED))
+        except (ModelProviderError, TimeoutExceeded) as exc:
+            resolved.append(_with_availability(model, Availability.UNAVAILABLE, DiscoverySource.CONFIGURED,
+                                               detail=str(exc)[:500]))
             continue
         if report.is_available:
-            resolved.append(_with_availability(model, Availability.AVAILABLE, DiscoverySource.DISCOVERED))
+            resolved.append(_with_availability(model, Availability.AVAILABLE, DiscoverySource.DISCOVERED,
+                                               detail=report.detail))
         else:
-            resolved.append(_with_availability(model, Availability.UNAVAILABLE, DiscoverySource.CONFIGURED))
+            resolved.append(_with_availability(model, Availability.UNAVAILABLE, DiscoverySource.CONFIGURED,
+                                               detail=report.detail))
     return tuple(resolved)
 
 
-def _with_availability(model: CatalogModel, availability: Availability, discovery: DiscoverySource) -> CatalogModel:
+def _with_availability(
+    model: CatalogModel, availability: Availability, discovery: DiscoverySource, *, detail: str | None = None,
+) -> CatalogModel:
     return CatalogModel(
         candidate=model.candidate, provider_id=model.provider_id, capabilities=model.capabilities,
-        availability=availability, discovery=discovery, history=model.history,
+        availability=availability, discovery=discovery, history=model.history, availability_detail=detail,
     )

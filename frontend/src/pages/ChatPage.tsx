@@ -1,4 +1,7 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+import { listRecalls } from "../api/endpoints";
 
 import {
   useCatalogModels,
@@ -9,43 +12,29 @@ import {
   useRenameConversation,
   useSendMessage,
 } from "../api/hooks";
-import type { Message } from "../api/types";
+import type { Message, RecalledMemory } from "../api/types";
 import { ErrorState, LoadingState } from "../components/common/EmptyState";
 import "./pages.css";
 import "./chat.css";
 
-/** Étapes SYNTHÉTIQUES affichées pendant qu'une génération réelle est en
- * cours (`useSendMessage().isPending`) — jamais une chaîne de pensée privée
- * du modèle, seulement un déroulé d'ÉTAPES SYSTÈME connu par construction
- * (c'est le pipeline réel que `ConversationService.send_message` traverse :
- * sélection via `select_model`, appel `generate_with_fallback`). La
- * temporisation ci-dessous est un simple indicateur visuel de progression
- * pendant l'attente d'UNE requête HTTP réelle — elle ne prétend mesurer
- * aucune étape individuellement. */
-const GENERATION_STEPS = [
-  "Analyse de la demande",
-  "Sélection du modèle",
-  "Génération",
-  "Évaluation",
-  "Réponse",
-];
-
-function useGenerationStepper(active: boolean): number {
-  const [step, setStep] = useState(0);
+/** Temps RÉEL écoulé depuis l'envoi — la seule progression que l'interface connaît d'une requête en cours
+ * (avant le 06/10/2026, une suite d'étapes minutées « Analyse, Sélection, Génération, Évaluation » défilait
+ * sans aucun lien avec le traitement réel). */
+function useElapsedSeconds(active: boolean): number {
+  const [seconds, setSeconds] = useState(0);
   useEffect(() => {
     if (!active) {
-      setStep(0);
+      setSeconds(0);
       return;
     }
-    const id = window.setInterval(() => {
-      setStep((s) => Math.min(s + 1, GENERATION_STEPS.length - 2));
-    }, 700);
+    const started = Date.now();
+    const id = window.setInterval(() => setSeconds(Math.floor((Date.now() - started) / 1000)), 500);
     return () => window.clearInterval(id);
   }, [active]);
-  return step;
+  return seconds;
 }
 
-function MessageBubble({ message }: { message: Message }) {
+function MessageBubble({ message, memory }: { message: Message; memory?: RecalledMemory[] }) {
   const isUser = message.role === "user";
   const isError = message.status === "error";
   return (
@@ -62,6 +51,11 @@ function MessageBubble({ message }: { message: Message }) {
         {!isUser && !isError && (
           <div className="chat-bubble__meta">
             {message.model_id ?? "—"} {message.provider_id ? `· ${message.provider_id}` : ""}
+          </div>
+        )}
+        {!isUser && memory && memory.length > 0 && (
+          <div className="chat-bubble__meta" aria-label="Souvenirs utilisés">
+            Souvenirs utilisés : {memory.map((m) => `${m.category ?? "?"} · ${m.source}`).join(" ; ")}
           </div>
         )}
       </div>
@@ -88,12 +82,20 @@ export function ChatPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [modelRole, setModelRole] = useState<string>("");
+  const recalls = useQuery({
+    queryKey: ["recalls", selectedId],
+    queryFn: () => listRecalls(selectedId as string),
+    enabled: Boolean(selectedId),
+  });
+  const recallMap = recalls.data?.status === "real" ? recalls.data.data ?? {} : {};
   const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const messages = useMessages(selectedId ?? undefined);
   const sendMessage = useSendMessage();
-  const stepIndex = useGenerationStepper(sendMessage.isPending);
+  const elapsed = useElapsedSeconds(sendMessage.isPending);
+  const [useMemory, setUseMemory] = useState(true);
+  const queryClient = useQueryClient();
 
   const conversationList = conversations.data?.status === "real" ? conversations.data.data ?? [] : [];
   const messageList = messages.data?.status === "real" ? messages.data.data ?? [] : [];
@@ -129,8 +131,9 @@ export function ChatPage() {
     setDraft("");
     const envelope = await sendMessage.mutateAsync({
       conversationId: selectedId,
-      input: { content, model_role: modelRole || null },
+      input: { content, model_role: modelRole || null, use_memory: useMemory },
     });
+    queryClient.invalidateQueries({ queryKey: ["recalls", selectedId] });
     if (envelope.status !== "real") {
       setSendError(envelope.detail ?? "Envoi refusé par le backend.");
     }
@@ -224,6 +227,10 @@ export function ChatPage() {
                     ))}
                   </select>
                 </label>
+                <label className="chat-toolbar__model">
+                  <input type="checkbox" checked={useMemory} onChange={(e) => setUseMemory(e.target.checked)} />
+                  <span>Mémoire</span>
+                </label>
               </div>
 
               <div className="chat-messages">
@@ -234,13 +241,13 @@ export function ChatPage() {
                     <p>Aucun message — écrivez le premier ci-dessous.</p>
                   </div>
                 ) : (
-                  messageList.map((m) => <MessageBubble key={m.id} message={m} />)
+                  messageList.map((m) => <MessageBubble key={m.id} message={m} memory={recallMap[m.id]} />)
                 )}
 
                 {sendMessage.isPending && (
                   <div className="chat-generating">
                     <span className="chat-generating__dot" aria-hidden="true" />
-                    APEX · {GENERATION_STEPS[stepIndex]}
+                    Génération en cours — {elapsed} s
                   </div>
                 )}
                 <div ref={bottomRef} />
