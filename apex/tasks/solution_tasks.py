@@ -89,6 +89,9 @@ class SolutionTaskSpec:
     command: tuple[str, ...]
     solution_harness: str
     expected_answer: str
+    #: `function` (défaut) ou `project` (voir `apex.tasks.model.TaskKind`) ; fichiers visibles de départ.
+    kind: str = "function"
+    workspace_seed: dict[str, str] | None = None
 
 
 def build_palindrome_task_spec() -> SolutionTaskSpec:
@@ -399,3 +402,91 @@ def build_user_function_task_spec(
 def _arity(parsed: list[tuple[tuple, Any]]) -> str:
     counts = sorted({len(args) for args, _ in parsed})
     return str(counts[0]) if len(counts) == 1 else " ou ".join(str(c) for c in counts)
+
+
+# -- Tâches « projet » (plusieurs fichiers) -----------------------------------------------------------------
+# Une codebase de départ VISIBLE (déposée dans l'espace de travail) et des vérifications CACHÉES
+# `module:fonction(args)` : le harnais, écrit par APEX, importe les modules du projet et publie les valeurs
+# obtenues ; les valeurs attendues restent sur l'hôte (même contrat que les tâches « fonction » : un candidat ne
+# peut pas fabriquer un succès sans les connaître). Le projet peut contenir ses propres tests (visibles).
+
+MAX_SEED_FILES = 500
+MAX_SEED_FILE_CHARS = 500_000
+MAX_SEED_TOTAL_CHARS = 2_000_000
+_MODULE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$")
+_IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+
+_PROJECT_HARNESS_TEMPLATE = """\
+import importlib as _apex_importlib
+import json as _apex_json
+
+_APEX_CASES = {cases!r}
+_apex_results = []
+for _apex_module, _apex_function, _apex_args in _APEX_CASES:
+    try:
+        _apex_target = getattr(_apex_importlib.import_module(_apex_module), _apex_function)
+        _apex_results.append(_apex_target(*_apex_args))
+    except Exception as _apex_exc:
+        _apex_results.append({{"error": repr(_apex_exc)}})
+print({prefix!r} + _apex_json.dumps({{"results": _apex_results}}, default=repr))
+"""
+
+
+def build_user_project_task_spec(
+    *, description: str, seed_files: dict[str, str], cases: list[dict[str, Any]], title: str | None = None
+) -> SolutionTaskSpec:
+    """`cases = [{"module": "pkg.calc", "function": "add", "args": [...], "expected": ...}, ...]`."""
+    from apex.sandbox.model import check_relative_path
+
+    text = description.strip()
+    if not text or len(text) > MAX_USER_DESCRIPTION_CHARS:
+        raise InvalidUserTask(f"énoncé vide ou trop long ({MAX_USER_DESCRIPTION_CHARS} caractères au plus)")
+    if not isinstance(seed_files, dict) or len(seed_files) > MAX_SEED_FILES:
+        raise InvalidUserTask(f"au plus {MAX_SEED_FILES} fichiers de départ")
+    total = 0
+    for path, content in seed_files.items():
+        try:
+            check_relative_path(path)
+        except ValueError as exc:
+            raise InvalidUserTask(f"fichier de départ refusé : {exc}") from exc
+        if path.split("/")[0].startswith(".apex"):
+            raise InvalidUserTask(f"chemin réservé : {path}")
+        if not isinstance(content, str) or len(content) > MAX_SEED_FILE_CHARS:
+            raise InvalidUserTask(f"fichier de départ {path} : texte de {MAX_SEED_FILE_CHARS} caractères au plus")
+        total += len(content)
+    if total > MAX_SEED_TOTAL_CHARS:
+        raise InvalidUserTask(f"projet de départ trop volumineux ({MAX_SEED_TOTAL_CHARS} caractères au plus)")
+    if not 1 <= len(cases) <= MAX_USER_CASES:
+        raise InvalidUserTask(f"entre 1 et {MAX_USER_CASES} vérifications exigées ({len(cases)} reçues)")
+    parsed: list[tuple[str, str, list[Any]]] = []
+    expected: list[Any] = []
+    for i, case in enumerate(cases):
+        if not isinstance(case, dict) or set(case) != {"module", "function", "args", "expected"}:
+            raise InvalidUserTask(f"vérification {i} : exactement « module », « function », « args », « expected »")
+        module, function, args = case["module"], case["function"], case["args"]
+        if not isinstance(module, str) or not _MODULE.match(module) or module.startswith("_apex"):
+            raise InvalidUserTask(f"vérification {i} : module « {module} » refusé")
+        if not isinstance(function, str) or not _IDENT.match(function) or function.startswith("_"):
+            raise InvalidUserTask(f"vérification {i} : fonction « {function} » refusée")
+        if not isinstance(args, list) or len(args) > MAX_USER_ARGS:
+            raise InvalidUserTask(f"vérification {i} : « args » doit être une liste de {MAX_USER_ARGS} au plus")
+        _check_json_value(args, f"vérification {i}.args")
+        _check_json_value(case["expected"], f"vérification {i}.expected")
+        parsed.append((module, function, args))
+        expected.append(case["expected"])
+    if len(json.dumps(cases)) > MAX_USER_CASES_JSON_CHARS:
+        raise InvalidUserTask(f"vérifications trop volumineuses ({MAX_USER_CASES_JSON_CHARS} caractères JSON au plus)")
+    targets = sorted({f"`{m}.{f}`" for m, f, _ in parsed})
+    statement = (
+        f"{text}\n\nLe projet se trouve dans ton espace de travail. Des vérifications cachées appelleront : "
+        f"{', '.join(targets)} (arguments positionnels, valeur RETOURNÉE comparée). Garde ces noms et "
+        "n'exécute aucun code au chargement des modules."
+    )
+    harness = _PROJECT_HARNESS_TEMPLATE.format(
+        cases=[[m, f, list(a)] for m, f, a in parsed], prefix=RESULT_LINE_PREFIX,
+    )
+    return SolutionTaskSpec(
+        title=title or "Projet utilisateur", description=statement, command=PLACEHOLDER_COMMAND,
+        solution_harness=harness, expected_answer=json.dumps(expected), kind="project",
+        workspace_seed=dict(seed_files),
+    )

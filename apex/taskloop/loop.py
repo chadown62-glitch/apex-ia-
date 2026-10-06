@@ -123,6 +123,7 @@ from apex.taskloop.progress import detect_no_progress
 from apex.taskloop.registry import TaskLoopHandle, TaskLoopRegistry, default_registry
 from apex.taskloop.request import TaskRequest
 from apex.taskloop.result import TaskLoopStatus, TaskResult
+from apex.tasks.model import TaskKind
 from apex.tasks.repository import TaskRepository
 
 
@@ -300,7 +301,8 @@ class _ToolSetup:
 
 
 def _tool_setup(
-    request: TaskRequest, *, trace_id: str, workspace_root: str | None, emit: Callable[[str, dict[str, Any]], None],
+    request: TaskRequest, *, task: Any, trace_id: str, workspace_root: str | None,
+    emit: Callable[[str, dict[str, Any]], None],
 ) -> _ToolSetup | None:
     """Espace de travail de la TaskRun (`<paths.workspaces>/<trace_id>`) et moteur d'outils — seulement si la
     requête accorde des permissions. Le même espace sert à toutes les tentatives (continuité du travail)."""
@@ -316,10 +318,16 @@ def _tool_setup(
 
         workspace_root = load_config().paths.workspaces
     workspace = Workspace.create(workspace_root, trace_id)
+    seeded = 0
+    if task.workspace_seed and not workspace.files():
+        # Projet de départ VISIBLE : déposé une seule fois (un espace déjà rempli n'est jamais écrasé).
+        for path, content in sorted(task.workspace_seed.items()):
+            workspace.write_bytes(path, content.encode("utf-8"))
+            seeded += 1
     granted = frozenset(Permission(p) for p in request.tool_permissions)
     engine = ToolEngine(default_registry())
     emit("workspace.created", {
-        "workspace_id": workspace.id, "granted": sorted(p.value for p in granted),
+        "workspace_id": workspace.id, "granted": sorted(p.value for p in granted), "seeded_files": seeded,
         "tools": [spec.name for spec in engine.registry.available_to(granted)],
     })
     return _ToolSetup(workspace=workspace, engine=engine, granted=granted)
@@ -329,7 +337,7 @@ def _run_episode(
     tools: _ToolSetup, *, request: TaskRequest, provider: ModelProvider, generation_request: GenerationRequest,
     agent_runtime: AgentRuntime, sandbox: SandboxProvider, pool: ComputePool, limits: ResourceLimits,
     clone_subject: Subject, trace_id: str, attempt_number: int, cancel_token: Any, deadline: float,
-    emit: Callable[[str, dict[str, Any]], None],
+    emit: Callable[[str, dict[str, Any]], None], task: Any,
 ) -> Any:
     from apex.taskloop.agent import run_tool_episode
     from apex.tools.engine import ToolContext
@@ -343,8 +351,9 @@ def _run_episode(
             label=f"taskloop:{trace_id}:{attempt_number}:tool", cancel_token=cancel_token,
         ),
     )
+    project = task.effective_kind is TaskKind.PROJECT
     generation, _episode = run_tool_episode(
-        task_prompt=generation_request.prompt, generate=provider.generate, endpoint=generation_request.endpoint,
+        task_prompt=generation_request.prompt, project=project, generate=provider.generate, endpoint=generation_request.endpoint,
         temperature=generation_request.temperature, timeout_s=generation_request.timeout_s,
         engine=tools.engine, context=context, max_steps=request.max_tool_steps, deadline_monotonic=deadline,
         cancel_requested=lambda: bool(getattr(cancel_token, "is_cancel_requested", False)),
@@ -484,7 +493,14 @@ def run_task_loop(
             f"la tâche « {request.task_id} » ne porte pas de « solution_harness » — "
             "run_task_loop() exige une tâche de ce genre (voir apex.taskloop.request.TaskRequest)"
         )
-    ensure_candidate_marker(task.solution_harness)
+    if task.effective_kind is TaskKind.PROJECT:
+        if "workspace.write" not in request.tool_permissions:
+            raise ValueError(
+                f"la tâche « {request.task_id} » est un projet : elle exige le mode outillé "
+                "(tool_permissions avec « workspace.write »)"
+            )
+    else:
+        ensure_candidate_marker(task.solution_harness)
 
     # `trace_id` fourni par `apex.taskloop.runs.TaskRunService` : la TaskRun persistée porte la MÊME clé
     # que les EvalRun (`experiment_ref`) et les événements de cette exécution.
@@ -642,7 +658,7 @@ def _run(
     )
 
     # -- OUTILS (mode outillé, permissions explicitement accordées par la requête) ----------------
-    tools = _tool_setup(request, trace_id=trace_id, workspace_root=workspace_root, emit=emit)
+    tools = _tool_setup(request, task=task, trace_id=trace_id, workspace_root=workspace_root, emit=emit)
 
     history = AttemptHistory()
     providers_tried: list[str] = []
@@ -714,7 +730,7 @@ def _run(
                     agent_runtime=agent_runtime, sandbox=sandbox, pool=pool, limits=limits,
                     clone_subject=clone_subject, trace_id=trace_id, attempt_number=attempt_number,
                     cancel_token=cancel_token, deadline=started_monotonic + request.limits.max_wall_clock_s,
-                    emit=emit,
+                    emit=emit, task=task,
                 )
         except (ModelProviderError, TimeoutExceeded) as exc:
             duration_s = time.perf_counter() - attempt_started_monotonic
@@ -758,13 +774,20 @@ def _run(
         )
 
         # -- EXECUTE -----------------------------------------------------
-        command = build_candidate_command(
-            solution_harness=task.solution_harness, candidate_code=generation.text,
-        )
         eval_run_id = str(uuid.uuid4())
-        spec = SandboxSpec(
-            mission_id=eval_run_id, clone_id=clone.clone_id, command=command, limits=limits,
-        )
+        if task.effective_kind is TaskKind.PROJECT and tools is not None:
+            # Projet : le harnais caché (écrit par APEX) importe les modules d'un INSTANTANÉ de l'espace.
+            spec = SandboxSpec(
+                mission_id=eval_run_id, clone_id=clone.clone_id, command=("python3", "-c", task.solution_harness),
+                limits=limits, input_files=tools.workspace.snapshot(),
+            )
+        else:
+            command = build_candidate_command(
+                solution_harness=task.solution_harness, candidate_code=generation.text,
+            )
+            spec = SandboxSpec(
+                mission_id=eval_run_id, clone_id=clone.clone_id, command=command, limits=limits,
+            )
         emit("execution.started", {"attempt_number": attempt_number, "clone_id": clone.clone_id})
         try:
             sandbox_result = agent_runtime.execute_in_sandbox(

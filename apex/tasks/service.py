@@ -19,7 +19,7 @@ from typing import Any
 from apex.policy.engine import PolicyEngine
 from apex.policy.model import Action, Subject
 from apex.specialties.registry import by_id as specialty_by_id
-from apex.tasks.model import Task, TaskSplit
+from apex.tasks.model import Task, TaskKind, TaskSplit
 from apex.tasks.repository import TaskRepository
 
 
@@ -45,8 +45,12 @@ class TaskBankService:
         dataset_ref: str | None = None,
         expected_answer: str | None = None,
         solution_harness: str | None = None,
+        kind: TaskKind | None = None,
+        workspace_seed: dict[str, str] | None = None,
     ) -> Task:
         self.policy.authorize(created_by, Action.CREATE_TASK)
+        if kind is TaskKind.PROJECT and not (solution_harness and expected_answer):
+            raise ValueError("une tâche « project » exige un harnais et des valeurs attendues")
 
         if not title.strip():
             raise ValueError("le titre de la tâche est obligatoire")
@@ -69,6 +73,7 @@ class TaskBankService:
             split=split, specialty=specialty, title=title, description=description,
             command=command, created_by=created_by.value, dataset_ref=dataset_ref,
             expected_answer=expected_answer, solution_harness=solution_harness,
+            kind=kind, workspace_seed=workspace_seed,
         )
         self._repo.create(task)
         self._record_event(task, "task.created", {})

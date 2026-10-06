@@ -44,6 +44,23 @@ class FunctionTaskIn(BaseModel):
     cases: list[FunctionCaseIn] = Field(min_length=1, max_length=50)
 
 
+class ProjectCaseIn(BaseModel):
+    module: str = Field(min_length=1, max_length=200)
+    function: str = Field(min_length=1, max_length=64)
+    args: list[Any] = Field(default_factory=list)
+    expected: Any = None
+
+
+class ProjectTaskIn(BaseModel):
+    """Projet Python à plusieurs fichiers : fichiers de départ VISIBLES et vérifications cachées
+    `module:fonction(args)` (valeurs attendues jamais montrées). Exécuté en mode outillé uniquement."""
+
+    title: str | None = Field(default=None, max_length=200)
+    description: str = Field(min_length=1, max_length=4000)
+    seed_files: dict[str, str] = Field(default_factory=dict)
+    cases: list[ProjectCaseIn] = Field(min_length=1, max_length=50)
+
+
 class TaskRunIn(BaseModel):
     objective: str = Field(default="résoudre la tâche", min_length=1, max_length=2000)
     execution_mode: str = Field(default="bounded")
@@ -213,6 +230,33 @@ def create_function_task(body: FunctionTaskIn) -> DataEnvelope[dict[str, Any]]:
             created_by=Subject.HUMAN,
             solution_harness=spec.solution_harness,
             expected_answer=spec.expected_answer,
+        )
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=_to_task_out(task).model_dump())
+
+
+@router.post("/tasks/project", response_model=DataEnvelope[dict[str, Any]])
+def create_project_task(body: ProjectTaskIn) -> DataEnvelope[dict[str, Any]]:
+    from apex.api.dependencies import get_session_factory
+    from apex.api.routes.evals import _to_task_out
+    from apex.policy.model import Subject
+    from apex.tasks.model import TaskKind, TaskSplit
+    from apex.tasks.service import TaskBankService
+    from apex.tasks.solution_tasks import InvalidUserTask, build_user_project_task_spec
+
+    try:
+        spec = build_user_project_task_spec(
+            description=body.description, seed_files=body.seed_files, title=body.title,
+            cases=[c.model_dump() for c in body.cases],
+        )
+    except InvalidUserTask as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    try:
+        task = TaskBankService(get_session_factory()).create(
+            split=TaskSplit.TRAIN, specialty="research", title=spec.title, description=spec.description,
+            command=spec.command, created_by=Subject.HUMAN, solution_harness=spec.solution_harness,
+            expected_answer=spec.expected_answer, kind=TaskKind.PROJECT, workspace_seed=spec.workspace_seed,
         )
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")

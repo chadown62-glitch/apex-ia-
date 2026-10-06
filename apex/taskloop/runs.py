@@ -323,6 +323,12 @@ class TaskRunService:
             raise ValueError(
                 f"la tâche « {task_id} » ne porte pas de « solution_harness » : rien à exécuter"
             )
+        from apex.tasks.model import TaskKind
+
+        if task.effective_kind is TaskKind.PROJECT and "workspace.write" not in tool_permissions:
+            raise ValueError(
+                f"la tâche « {task_id} » est un projet : elle exige le mode outillé (« workspace.write »)"
+            )
         if task_id in default_registry():
             raise RuntimeError(f"une exécution de la tâche « {task_id} » est déjà en cours")
         if condition_on_run == LATEST:

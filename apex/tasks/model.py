@@ -20,6 +20,20 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class TaskKind(str, Enum):
+    """Ce que le TaskLoop sait RÉELLEMENT exécuter et juger (06/10/2026) — rien d'autre n'est déclaré.
+
+    - `FUNCTION` : écrire UNE fonction Python ; le code candidat est inséré dans un harnais à cas cachés.
+    - `PROJECT` : faire évoluer un projet Python à plusieurs fichiers (codebase de départ VISIBLE, éventuellement
+      ses propres tests) dans l'espace de travail, en mode outillé ; jugé par des appels cachés
+      `module:fonction(args)` dont les valeurs attendues restent sur l'hôte.
+    Autres langages, dépôts Git importés, tests fournis comme juge : NON pris en charge (pas de valeur ici).
+    """
+
+    FUNCTION = "function"
+    PROJECT = "project"
+
+
 class TaskSplit(str, Enum):
     """Critère HELDOUT (ADR-0010). `TRAIN` : lisible par tout exécuteur
     autorisé. `HELDOUT` : la garantie de séparation n'est PAS portée par
@@ -81,6 +95,16 @@ class Task:
     expected_answer: str | None = None
     solution_harness: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
+    #: `None` pour une tâche antérieure à ce champ — voir `effective_kind`.
+    kind: TaskKind | None = None
+    #: Fichiers visibles de départ d'une tâche `PROJECT` (chemin relatif -> contenu texte).
+    workspace_seed: dict[str, str] | None = None
+
+    @property
+    def effective_kind(self) -> TaskKind | None:
+        if self.kind is not None:
+            return self.kind
+        return TaskKind.FUNCTION if self.solution_harness is not None else None
 
     @classmethod
     def new(
@@ -95,8 +119,12 @@ class Task:
         dataset_ref: str | None = None,
         expected_answer: str | None = None,
         solution_harness: str | None = None,
+        kind: TaskKind | None = None,
+        workspace_seed: dict[str, str] | None = None,
     ) -> Task:
         return cls(
+            kind=kind,
+            workspace_seed=workspace_seed,
             id=str(uuid.uuid4()),
             split=split,
             specialty=specialty,
@@ -123,4 +151,6 @@ class Task:
             expected_answer=row.expected_answer,
             solution_harness=getattr(row, "solution_harness", None),
             created_at=row.created_at,
+            kind=TaskKind(row.kind) if getattr(row, "kind", None) else None,
+            workspace_seed=getattr(row, "workspace_seed", None),
         )

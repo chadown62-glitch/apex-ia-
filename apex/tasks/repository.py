@@ -33,7 +33,8 @@ class TaskRepository:
                 title=task.title, description=task.description, command=task.command,
                 dataset_ref=task.dataset_ref, created_by=task.created_by,
                 expected_answer=task.expected_answer, solution_harness=task.solution_harness,
-                created_at=task.created_at,
+                created_at=task.created_at, kind=task.kind.value if task.kind else None,
+                workspace_seed=dict(task.workspace_seed) if task.workspace_seed else None,
             )
 
     def get(self, task_id: str) -> Task | None:

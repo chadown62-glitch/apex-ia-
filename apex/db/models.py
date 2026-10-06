@@ -443,6 +443,10 @@ class TaskRow(Base):
     #: run_generated_solution` (jamais par `run()`/`run_model_eval()`).
     #: `NULL` par défaut — aucune tâche existante n'a besoin de ce champ.
     solution_harness: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: Type de tâche (`apex.tasks.model.TaskKind`) ; NULL : tâche antérieure (« function » si elle porte un
+    #: harnais). `workspace_seed` : fichiers VISIBLES de départ d'une tâche « project » (chemin -> contenu).
+    kind: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    workspace_seed: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
