@@ -90,7 +90,7 @@ def evolve_population(specialty: str) -> DataEnvelope[EvolutionGenerationOut]:
     volontaire avec `POST /learning/cycles`, non bloquant (voir la
     docstring d'`apex.metalearner.autonomy` pour le raisonnement complet)."""
     _validate_specialty(specialty)
-    from apex.api.dependencies import get_evolution_service
+    from apex.research_api.dependencies import get_evolution_service
 
     try:
         result: "EvolutionGenerationResult" = get_evolution_service().evolve_generation(specialty)

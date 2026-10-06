@@ -33,15 +33,7 @@ from apex.policy.model import Subject
 from apex.sandbox.model import ResourceLimits
 
 
-@dataclass(frozen=True)
-class CandidateStrategy:
-    """Une variation RÉELLE de stratégie de génération — `label` est
-    purement descriptif (jamais consulté par la logique), `genome_content`
-    est le contenu de Genome RÉELLEMENT résolu par `apex.genome.clone_config`
-    (`None` -> comportement par défaut du provider, aucune influence)."""
-
-    label: str
-    genome_content: dict[str, Any] | None = None
+from apex.experience.strategy import CandidateStrategy  # noqa: E402,F401 — noyau runtime
 
 
 @dataclass(frozen=True)

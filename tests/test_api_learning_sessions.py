@@ -143,7 +143,7 @@ class TestNoClientControlledIdentity(unittest.TestCase):
     def test_resume_and_cancel_accept_no_request_body_at_all(self) -> None:
         import inspect
 
-        from apex.api.routes.learning_sessions import cancel_learning_session, resume_learning_session
+        from apex.research_api.routes.learning_sessions import cancel_learning_session, resume_learning_session
 
         for endpoint in (resume_learning_session, cancel_learning_session):
             signature = inspect.signature(endpoint)

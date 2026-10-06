@@ -297,10 +297,23 @@ def check_interfaces_integrity(ctx: CheckContext) -> CheckResult:
     Une abstraction déclarée IMPLEMENTED sans module importable est un
     mensonge du registre, et donc un échec bloquant.
     """
+    import importlib.util
+
+    from apex.util.extensions import load_research_extension
+
+    # Runtime LIVRÉ (06/10/2026) : les paquets de recherche n'y sont pas. Une abstraction dont le PAQUET
+    # entier est absent de cette distribution (et l'extension de recherche avec lui) n'est pas un mensonge du
+    # registre — elle est rapportée à part. Un module absent d'un paquet PRÉSENT reste un échec.
+    runtime_distribution = load_research_extension() is None
     lying: list[str] = []
+    not_in_distribution: list[str] = []
     for item in ABSTRACTIONS:
         if item.status in (ImplStatus.IMPLEMENTED, ImplStatus.STUB) and not module_importable(item):
-            lying.append(item.name)
+            package = ".".join((item.module or "").split(".")[:2])
+            if runtime_distribution and package and importlib.util.find_spec(package) is None:
+                not_in_distribution.append(item.name)
+            else:
+                lying.append(item.name)
 
     counts: dict[str, int] = {}
     for item in ABSTRACTIONS:
@@ -313,10 +326,12 @@ def check_interfaces_integrity(ctx: CheckContext) -> CheckResult:
             remediation="Corriger apex/interfaces/registry.py — le registre ne doit jamais anticiper.",
             lying=lying, counts=counts,
         )
+    detail = f"{len(ABSTRACTIONS)} abstractions déclarées, registre cohérent avec le code"
+    if not_in_distribution:
+        detail += f" ; {len(not_in_distribution)} de recherche absentes de cette distribution (Runtime)"
     return result(
-        "interfaces.integrity", CATEGORY_CFG, Severity.PASS,
-        f"{len(ABSTRACTIONS)} abstractions déclarées, registre cohérent avec le code",
-        counts=counts,
+        "interfaces.integrity", CATEGORY_CFG, Severity.PASS, detail,
+        counts=counts, not_in_distribution=not_in_distribution,
     )
 
 

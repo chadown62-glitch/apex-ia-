@@ -17,6 +17,13 @@ from pathlib import Path
 #: Sous-paquets de `apex/` (répertoires avec `__init__.py`) distribués dans
 #: l'artefact Runtime.
 #:
+#: Révision du 06/10/2026 (décision produit : le Runtime contient le cœur opérationnel) : la boucle de tâche
+#: (`taskloop`), ses tâches (`tasks`, dont les tâches « écrire une fonction »), le Judge (`judge`, `oracles`),
+#: les EvalRun (`evalrunner`), la configuration de génération des clones (`genome`) et le noyau d'expérience
+#: (`experience`, extrait de `metalearner`) rejoignent le Runtime. Fermeture d'imports vérifiée au niveau des
+#: modules : aucun de ces paquets n'importe un paquet de recherche. Les routes/commandes de recherche vivent
+#: dans `research_api`, chargée seulement si présente (`apex.util.extensions`).
+#:
 #: `artifacts` et `memory` y figurent par décision produit explicite, pas
 #: par nécessité d'import actuelle : aucun module Runtime ne les importe
 #: aujourd'hui (seul `apex.genome`, recherche, importe `apex.artifacts` ;
@@ -41,13 +48,18 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "design",
         "desktop",
         "doctor",
+        "evalrunner",
+        "experience",
         "gate",
+        "genome",
         "interfaces",
+        "judge",
         "memory",
         "missions",
         "models",
         "obs",
         "operator",
+        "oracles",
         "policy",
         "projects",
         "recovery",
@@ -56,6 +68,8 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "scheduler",
         "secrets",
         "specialties",
+        "taskloop",
+        "tasks",
         "util",
     }
 )
@@ -76,21 +90,16 @@ RESEARCH_PACKAGES: frozenset[str] = frozenset(
         "capabilities",
         "costgain",
         "curriculum",
-        "evalrunner",
-        "genome",
         "hypothesis",
         "improvement",
-        "judge",
         "knowledge",
         "metalearner",
         "neural",
-        "oracles",
+        "research_api",
         "selfmodel",
         "skills",
         "stattest",
         "taskgen",
-        "taskloop",
-        "tasks",
         "weakness",
     }
 )

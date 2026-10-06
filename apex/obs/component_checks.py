@@ -185,11 +185,13 @@ def check_brain(workdir: str | None = None) -> ComponentStatus:
     path = Path(root)
     if not path.is_dir():
         return ComponentStatus("brain", ERROR, f"répertoire du cerveau introuvable : {root}")
-    try:
-        from apex.neural.live import BrainWorkdir
+    from apex.util.extensions import load_research_extension
 
-        brain = BrainWorkdir(path)
-        champion = brain.champion(brain.registry_entries(), brain.journal())
+    research = load_research_extension()
+    if research is None:
+        return ComponentStatus("brain", OFFLINE, "cerveau neuronal absent de cette distribution (Runtime)")
+    try:
+        champion = research.check_brain(path)
     except Exception as exc:
         return ComponentStatus("brain", ERROR, f"{exc.__class__.__name__}: {exc}"[:300])
     if champion.get("status") == "not_available":

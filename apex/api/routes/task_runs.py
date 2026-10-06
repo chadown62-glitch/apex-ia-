@@ -5,7 +5,7 @@ Point d'entrée produit de la boucle existante `apex.taskloop.loop.run_task_loop
 que par des tests. Chaque donnée renvoyée vient de la base : la TaskRun, ses `EvalRun` (code RÉELLEMENT
 généré, exécution, verdict) et ses `Experience` — jamais reconstruite ni estimée.
 
-`POST /tasks/reference` crée la tâche de référence existante (`apex.taskgen.solution_tasks`,
+`POST /tasks/reference` crée la tâche de référence existante (`apex.tasks.solution_tasks`,
 `is_palindrome` : énoncé montré au modèle, tests cachés jamais montrés, réponses attendues jamais
 envoyées dans la sandbox) — l'écriture libre de tâches (harnais fourni par l'utilisateur) reste à
 concevoir."""
@@ -36,7 +36,7 @@ class FunctionCaseIn(BaseModel):
 
 class FunctionTaskIn(BaseModel):
     """Tâche définie par l'utilisateur : énoncé, nom de fonction, cas cachés. Aucun code fourni par
-    l'utilisateur n'est exécuté : APEX écrit le harnais (`apex.taskgen.solution_tasks`)."""
+    l'utilisateur n'est exécuté : APEX écrit le harnais (`apex.tasks.solution_tasks`)."""
 
     title: str | None = Field(default=None, max_length=200)
     description: str = Field(min_length=1, max_length=4000)
@@ -78,8 +78,8 @@ def _eval_run_view(run: Any) -> dict[str, Any]:
     facts = run.facts or {}
     response = facts.get("model_response") or {}
     execution = facts.get("candidate_execution") or {}
-    from apex.metalearner.failure_facts import extract_failure_facts
-    from apex.metalearner.failure_taxonomy import classify_failure
+    from apex.experience.failure_facts import extract_failure_facts
+    from apex.experience.failure_taxonomy import classify_failure
 
     category = classify_failure(run)
     failure_facts = extract_failure_facts(run, category)
@@ -111,7 +111,7 @@ def _eval_run_view(run: Any) -> dict[str, Any]:
 
 def _detail(run: Any, session_factory: Any) -> dict[str, Any]:
     from apex.evalrunner.repository import EvalRunRepository
-    from apex.metalearner.experience import ExperienceRepository
+    from apex.experience.store import ExperienceRepository
 
     eval_repo = EvalRunRepository(session_factory)
     eval_runs = [r for r in (eval_repo.get(i) for i in run.eval_run_ids) if r is not None]
@@ -150,7 +150,7 @@ def _trace(run: Any, session_factory: Any) -> list[dict[str, Any]]:
 
 @router.get("/tasks/reference/kinds", response_model=DataEnvelope[list[str]])
 def list_reference_task_kinds() -> DataEnvelope[list[str]]:
-    from apex.taskgen.solution_tasks import REFERENCE_TASK_KINDS
+    from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS
 
     return DataEnvelope(status="real", data=list(REFERENCE_TASK_KINDS))
 
@@ -160,7 +160,7 @@ def create_reference_task(body: ReferenceTaskIn) -> DataEnvelope[dict[str, Any]]
     from apex.api.dependencies import get_session_factory
     from apex.api.routes.evals import _to_task_out
     from apex.policy.model import Subject
-    from apex.taskgen.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
+    from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
     from apex.tasks.model import TaskSplit
     from apex.tasks.service import TaskBankService
 
@@ -188,7 +188,7 @@ def create_function_task(body: FunctionTaskIn) -> DataEnvelope[dict[str, Any]]:
     from apex.api.dependencies import get_session_factory
     from apex.api.routes.evals import _to_task_out
     from apex.policy.model import Subject
-    from apex.taskgen.solution_tasks import InvalidUserTask, build_user_function_task_spec
+    from apex.tasks.solution_tasks import InvalidUserTask, build_user_function_task_spec
     from apex.tasks.model import TaskSplit
     from apex.tasks.service import TaskBankService
 

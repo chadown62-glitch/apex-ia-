@@ -281,7 +281,7 @@ def get_learning_session_capability(session_id: str) -> DataEnvelope[CapabilityS
     """Délègue à la spécialité de CETTE session (`LearningSession.specialty`,
     N+7, inchangé) — jamais un second calcul, même patron qu'`apex.api.
     routes.learning_feedback.get_learning_session_weaknesses` (N+9)."""
-    from apex.api.dependencies import get_learning_orchestrator
+    from apex.research_api.dependencies import get_learning_orchestrator
 
     try:
         session = get_learning_orchestrator().get_session(session_id)

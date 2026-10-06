@@ -95,7 +95,7 @@ class TestNoClientControlledIdentity(unittest.TestCase):
         explicitement les ignorer (payload avec corps)."""
         import inspect
 
-        from apex.api.routes.population import evolve_population
+        from apex.research_api.routes.population import evolve_population
 
         signature = inspect.signature(evolve_population)
         self.assertEqual(list(signature.parameters), ["specialty"])

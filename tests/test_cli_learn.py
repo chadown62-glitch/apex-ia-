@@ -15,7 +15,7 @@ import os
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
-from apex.api.dependencies import reset_learning_service_for_tests
+from apex.research_api.dependencies import reset_learning_service_for_tests
 from apex.cli.main import main
 from apex.policy.model import Subject
 from tests import db_test_support as support

@@ -84,21 +84,14 @@ from apex.api.routes import (
     agent_templates,
     agents,
     audit,
-    brain,
-    capability,
     conversations,
     evals,
     events,
     gate,
-    gauntlets,
     health,
-    learning,
-    learning_feedback,
-    learning_sessions,
     missions,
     models,
     operator,
-    population,
     projects,
     registry,
     scheduler,
@@ -160,7 +153,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     voir `TestConfigurationFailure` dans `tests/test_api_auth.py`, inchangé
     par cet ajout)."""
     from apex.api.auth import get_or_create_api_token
-    from apex.api.dependencies import get_learning_scheduler
+    from apex.util.extensions import load_research_extension
 
     try:
         get_or_create_api_token()
@@ -176,10 +169,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     except Exception:
         pass
 
+    # Tâches de fond de RECHERCHE (planificateur d'apprentissage autonome) : seulement si l'extension est
+    # présente — le Runtime livré n'en a pas.
     scheduler_service = None
     try:
-        scheduler_service = get_learning_scheduler()
-        scheduler_service.start()
+        research = load_research_extension()
+        if research is not None:
+            scheduler_service = research.start_background()
     except Exception:
         pass
     try:
@@ -223,13 +219,16 @@ def create_app() -> FastAPI:
     # la boucle elle-même (aucun routeur ajouté ici ne peut oublier la
     # dépendance sans le faire visiblement, à cet unique endroit).
     auth_dependency = Depends(require_api_token)
+    from apex.util.extensions import load_research_extension
+
+    research = load_research_extension()
+    research_routers = research.routers() if research is not None else []
     for router in (
         health.router, gate.router, registry.router, events.router, audit.router,
         agents.router, missions.router, scheduler.router, operator.router,
         conversations.router, projects.router, agent_templates.router, models.router,
-        agent_registry.router, evals.router, learning.router, population.router,
-        learning_sessions.router, gauntlets.router, learning_feedback.router, capability.router,
-        brain.router, status.router, task_runs.router, ui.api_router,
+        agent_registry.router, evals.router, status.router, task_runs.router, ui.api_router,
+        *research_routers,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])
 

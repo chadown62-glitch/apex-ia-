@@ -88,8 +88,8 @@ from apex.evalrunner.model import EvalMethod, EvalRun
 from apex.evalrunner.repository import EvalRunRepository
 from apex.genome.clone_config import compose_generation_prompt, resolve_generation_temperature
 from apex.judge.provider import get_default_judge_tier
-from apex.metalearner.experience import ExperienceRepository, build_experience
-from apex.metalearner.population_fitness import compute_fitness
+from apex.experience.store import ExperienceRepository, build_experience
+from apex.experience.fitness import compute_fitness
 from apex.models.model import GenerationRequest
 from apex.models.provider import ModelProvider
 from apex.models.provider import get_default_provider as get_default_model_provider
@@ -179,7 +179,7 @@ def _strategy_for(
     - `strategy="rule"` (bras B) : règle EXISTANTE `decide_strategy_from_experiences`, inchangée — seuls des
       contenus constants et bornés en sortent (température, rappel générique ≤ 500 caractères) ;
     - `strategy="failure_facts"` (bras C) : température de base + faits d'échec AUTORISÉS seuls, rendus comme
-      des observations (`apex.metalearner.failure_facts`, liste fermée).
+      des observations (`apex.experience.failure_facts`, liste fermée).
     Jamais d'entrée ni de réponse des cas cachés, de message d'exception, ni de texte produit par un modèle."""
     if not request.condition_on_run:
         return _Strategy(conditioned=False, genome_content=_base_genome(request))
@@ -189,8 +189,8 @@ def _strategy_for(
     ]
     if request.strategy == "failure_facts":
         return _failure_facts_strategy(request, prior, eval_run_repo=eval_run_repo)
-    from apex.metalearner.adaptive_solution_loop import decide_strategy_from_experiences
-    from apex.metalearner.generated_solution_cycle import CandidateStrategy
+    from apex.experience.strategy import decide_strategy_from_experiences
+    from apex.experience.strategy import CandidateStrategy
 
     decision = decide_strategy_from_experiences(prior, base_strategies=(CandidateStrategy(label="base"),))
     return _Strategy(
@@ -202,7 +202,7 @@ def _strategy_for(
 def _failure_facts_strategy(
     request: TaskRequest, prior: list[Any], *, eval_run_repo: EvalRunRepository
 ) -> _Strategy:
-    from apex.metalearner.failure_facts import PROMPT_VERSION, extract_failure_facts, render_failure_facts
+    from apex.experience.failure_facts import PROMPT_VERSION, extract_failure_facts, render_failure_facts
 
     if not prior:
         return _Strategy(conditioned=True, genome_content=_base_genome(request),
@@ -228,11 +228,11 @@ def _failure_facts_strategy(
 
 def _adapted_strategy(current: _Strategy, experience: Any, eval_run: EvalRun, attempt_number: int) -> _Strategy | None:
     """DIAGNOSTIC -> CORRECTION entre deux tentatives d'une même TaskRun : la tentative suivante reçoit les
-    faits d'échec AUTORISÉS de celle qui vient d'échouer (`apex.metalearner.failure_facts` : liste fermée,
+    faits d'échec AUTORISÉS de celle qui vient d'échouer (`apex.experience.failure_facts` : liste fermée,
     observations sans consigne, jamais entrée cachée, réponse attendue, message d'exception ni code).
     La température en cours est conservée. `None` : aucun fait exploitable (catégorie non couverte, ex.
     délai dépassé) — la tentative suivante garde la stratégie en cours, et l'événement le dit."""
-    from apex.metalearner.failure_facts import PROMPT_VERSION, extract_failure_facts, render_failure_facts
+    from apex.experience.failure_facts import PROMPT_VERSION, extract_failure_facts, render_failure_facts
 
     facts = extract_failure_facts(eval_run, experience.failure_category)
     if facts is None:

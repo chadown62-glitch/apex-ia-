@@ -104,7 +104,7 @@ def start_learning_cycle(payload: LearningCycleStartIn) -> DataEnvelope[Learning
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"split « {payload.split} » inconnu") from exc
 
-    from apex.api.dependencies import get_learning_service
+    from apex.research_api.dependencies import get_learning_service
 
     try:
         status = get_learning_service().start_cycle(
@@ -122,7 +122,7 @@ def start_learning_cycle(payload: LearningCycleStartIn) -> DataEnvelope[Learning
 def cancel_learning_cycle() -> DataEnvelope[LearningCycleStatusOut]:
     """No-op (retourne l'état courant tel quel) si aucun cycle n'est
     `RUNNING` — jamais une erreur pour un appel redondant."""
-    from apex.api.dependencies import get_learning_service
+    from apex.research_api.dependencies import get_learning_service
 
     try:
         status = get_learning_service().cancel()
@@ -133,7 +133,7 @@ def cancel_learning_cycle() -> DataEnvelope[LearningCycleStatusOut]:
 
 @router.get("/status", response_model=DataEnvelope[AutonomousLearningStatusOut])
 def get_learning_status() -> DataEnvelope[AutonomousLearningStatusOut]:
-    from apex.api.dependencies import get_learning_scheduler, get_learning_service
+    from apex.research_api.dependencies import get_learning_scheduler, get_learning_service
 
     try:
         service = get_learning_service()
@@ -149,7 +149,7 @@ def get_learning_status() -> DataEnvelope[AutonomousLearningStatusOut]:
 
 @router.get("/history", response_model=DataEnvelope[list[LearningCycleHistoryEntryOut]])
 def get_learning_history(limit: int = 20) -> DataEnvelope[list[LearningCycleHistoryEntryOut]]:
-    from apex.api.dependencies import get_learning_service
+    from apex.research_api.dependencies import get_learning_service
 
     try:
         entries = get_learning_service().history(limit=limit)

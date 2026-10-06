@@ -16,7 +16,7 @@ import unittest
 from fastapi.testclient import TestClient
 
 from apex.api.app import create_app
-from apex.api.dependencies import reset_learning_service_for_tests
+from apex.research_api.dependencies import reset_learning_service_for_tests
 from apex.policy.model import Subject
 from tests import api_test_support
 from tests import db_test_support as support

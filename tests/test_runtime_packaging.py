@@ -100,12 +100,19 @@ class TestBuildRuntimeArtifact(_BuiltArtifactTestCase):
         self.assertEqual(src_versions, built_versions)
         self.assertGreater(len(built_versions), 0)
 
-    def test_migrations_never_reference_a_research_module(self) -> None:
+    def test_migrations_never_import_a_research_module(self) -> None:
+        """Les migrations s'exécutent dans le Runtime : aucune ne doit IMPORTER un module de recherche. Des
+        docstrings historiques MENTIONNENT des modules (`apex.metalearner...`) pour expliquer une table — ce
+        n'est pas une dépendance (06/10/2026 : contrôle par AST au lieu d'une recherche de texte)."""
+        import ast
+
         research_prefixes = tuple(f"apex.{pkg}" for pkg in selection.RESEARCH_PACKAGES)
         for py_file in (self.artifact_dir / "migrations").rglob("*.py"):
-            text = py_file.read_text(encoding="utf-8")
-            for prefix in research_prefixes:
-                self.assertNotIn(prefix, text, f"{py_file} référence {prefix}")
+            tree = ast.parse(py_file.read_text(encoding="utf-8"))
+            imported = [n.module for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) and n.module]
+            imported += [a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names]
+            for name in imported:
+                self.assertFalse(name.startswith(research_prefixes), f"{py_file} importe {name}")
 
     def test_artifacts_and_memory_packages_are_present_but_unwired_in_api(self) -> None:
         """`runtime-capable / currently unused` (décision produit) : présents,

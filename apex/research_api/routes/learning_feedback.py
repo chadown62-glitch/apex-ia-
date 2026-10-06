@@ -181,7 +181,8 @@ def get_learning_session_weaknesses(session_id: str) -> DataEnvelope[list[Gauntl
     """Délègue à `GET /weaknesses/{specialty}` pour la spécialité de CETTE
     session (`LearningSession.specialty`, N+7, inchangé) — jamais un
     second calcul de faiblesse."""
-    from apex.api.dependencies import get_learning_orchestrator, get_session_factory
+    from apex.api.dependencies import get_session_factory
+    from apex.research_api.dependencies import get_learning_orchestrator
     from apex.metalearner.weakness_engine import WeaknessEngineService
 
     try:

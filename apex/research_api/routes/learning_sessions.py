@@ -73,7 +73,7 @@ def start_learning_session(payload: LearningSessionStartIn) -> DataEnvelope[Lear
     _validate_specialty(payload.specialty)
     from apex.errors import LearningSessionAlreadyRunning
 
-    from apex.api.dependencies import get_learning_orchestrator
+    from apex.research_api.dependencies import get_learning_orchestrator
 
     try:
         session = get_learning_orchestrator().start_session(
@@ -91,7 +91,7 @@ def start_learning_session(payload: LearningSessionStartIn) -> DataEnvelope[Lear
 
 @router.get("", response_model=DataEnvelope[list[LearningSessionOut]])
 def list_learning_sessions(specialty: str | None = None, limit: int = 20) -> DataEnvelope[list[LearningSessionOut]]:
-    from apex.api.dependencies import get_learning_orchestrator
+    from apex.research_api.dependencies import get_learning_orchestrator
 
     try:
         sessions = get_learning_orchestrator().list_sessions(specialty=specialty, limit=limit)
@@ -102,7 +102,7 @@ def list_learning_sessions(specialty: str | None = None, limit: int = 20) -> Dat
 
 @router.get("/{session_id}", response_model=DataEnvelope[LearningSessionOut])
 def get_learning_session(session_id: str) -> DataEnvelope[LearningSessionOut]:
-    from apex.api.dependencies import get_learning_orchestrator
+    from apex.research_api.dependencies import get_learning_orchestrator
 
     try:
         session = get_learning_orchestrator().get_session(session_id)
@@ -117,7 +117,7 @@ def get_learning_session(session_id: str) -> DataEnvelope[LearningSessionOut]:
 def resume_learning_session(session_id: str) -> DataEnvelope[LearningSessionOut]:
     from apex.errors import LearningSessionAlreadyRunning
 
-    from apex.api.dependencies import get_learning_orchestrator
+    from apex.research_api.dependencies import get_learning_orchestrator
 
     try:
         session = get_learning_orchestrator().resume_session(session_id)
@@ -138,7 +138,7 @@ def cancel_learning_session(session_id: str) -> DataEnvelope[LearningSessionOut]
     `running` — jamais une erreur pour un appel redondant. Une génération
     déjà en cours va toujours à son terme (annulation vérifiée ENTRE deux
     générations, jamais en cours d'une — voir `LearningOrchestrator`)."""
-    from apex.api.dependencies import get_learning_orchestrator
+    from apex.research_api.dependencies import get_learning_orchestrator
 
     try:
         session = get_learning_orchestrator().cancel_session(session_id)
