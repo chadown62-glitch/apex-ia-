@@ -46,8 +46,10 @@ jobs:
       matrix:
         job: ${{ fromJson(needs.plan.outputs.jobs) }}
     env:
-      APEX_MODELS_DIR: ${{ github.workspace }}/../apex-models
-      APEX_DATA_ROOT: ${{ github.workspace }}/../apex-data
+      # Chemins absolus SANS « .. » : avec « workspace/../ », actions/cache refusait de sauvegarder les poids
+      # (« Relative pathing '.' and '..' is not allowed ») et chaque job les retéléchargeait.
+      APEX_MODELS_DIR: /home/runner/apex-models
+      APEX_DATA_ROOT: /home/runner/apex-data
       HF_HUB_DISABLE_TELEMETRY: "1"
     steps:
       - uses: actions/checkout@v4
@@ -87,13 +89,26 @@ jobs:
         run: |
           which ollama && { echo "Ollama présent : refus"; exit 2; } || echo "Ollama absent (attendu)"
           .venv/bin/apex models status
+      - name: Build the web UI and install a browser (UI phase only)
+        if: matrix.job.phase == 'ui'
+        run: |
+          cd frontend && npm ci --no-audit --no-fund && npm run build && cd ..
+          .venv/bin/pip install -q playwright
+          .venv/bin/python -m playwright install --with-deps chromium
+      - name: Run UI end-to-end bench with the real model
+        if: matrix.job.phase == 'ui'
+        run: |
+          mkdir -p "validation/results/${{ needs.plan.outputs.label }}/ui"
+          .venv/bin/python scripts/apex_ui_e2e.py --out "validation/results/${{ needs.plan.outputs.label }}/ui"
       - name: Run phase ${{ matrix.job.name }}
+        if: matrix.job.phase != 'ui'
         run: |
           mkdir -p "validation/results/${{ needs.plan.outputs.label }}"
           OUT="validation/results/${{ needs.plan.outputs.label }}/${{ matrix.job.name }}.json"
           EXTRA=""
           if [ -n "${{ matrix.job.arms }}" ]; then EXTRA="$EXTRA --arms ${{ matrix.job.arms }}"; fi
           if [ -n "${{ matrix.job.kinds }}" ]; then EXTRA="$EXTRA --kinds ${{ matrix.job.kinds }}"; fi
+          if [ -n "${{ matrix.job.sections }}" ]; then EXTRA="$EXTRA --sections ${{ matrix.job.sections }}"; fi
           APEX_COMMIT="${{ github.sha }}" .venv/bin/python scripts/apex_real_validation.py ${{ matrix.job.phase }} \
             --seeds "${{ matrix.job.seeds }}" $EXTRA --out "$OUT"
           .venv/bin/python scripts/apex_real_validation.py analyse "$OUT" || true
