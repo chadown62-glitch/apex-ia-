@@ -209,7 +209,7 @@ def collect(factory: Any, run: Any, *, keep_code: bool = True) -> dict[str, Any]
             "tokens_prompt": response.get("tokens_prompt"), "backend_facts": response.get("backend_facts"),
             "verdict": getattr(e.oracle_verdict, "value", str(e.oracle_verdict)),
             "category": classify_failure(e).value, "score": judge_score(e.oracle_detail),
-            "detail": (e.oracle_detail or "")[:200], "generation_s": e.elapsed_s,
+            "detail": (e.oracle_detail or "")[:200], "judge_exec_s": e.elapsed_s,  # exécution jugée (sandbox), PAS la génération
             "code": ((facts.get("model_response") or {}).get("text") or "")[:3000] if keep_code else None,
             "tool_steps": episode.get("steps"), "episode_stop": episode.get("stop_reason"),
         })

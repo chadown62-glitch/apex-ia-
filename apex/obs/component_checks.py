@@ -147,8 +147,8 @@ GENERATION_ROLES = ("coder_main", "fast")
 def check_models(config: Any = None) -> ComponentStatus:
     """Inférence RÉELLEMENT possible maintenant : `detect()` du backend de chaque endpoint des rôles de
     génération (poids présents pour le backend natif, serveur joignable et modèle présent pour Ollama…).
-    Avant le 06/10/2026 seul Ollama était sondé ici : un APEX servant un modèle natif s'affichait dégradé, et
-    un APEX sans aucun modèle exécutable n'avait aucune ligne pour le dire."""
+    Avant le 06/10/2026 seul Ollama était sondé ici : un APEX servant un modèle natif s'affichait dégradé,
+    et un APEX sans aucun modèle exécutable n'avait aucune ligne pour le dire."""
     from apex.config.loader import load_config
     from apex.models.provider import get_default_provider
     from apex.models.registry import resolve_candidates
@@ -167,13 +167,15 @@ def check_models(config: Any = None) -> ComponentStatus:
         if seen[key][0]:
             usable.append(f"{candidate.role} → {endpoint.served_model} ({endpoint.runtime})")
     if not seen:
-        return ComponentStatus("models", OFFLINE, "aucun endpoint de génération configuré (coder_main, fast)")
+        return ComponentStatus("models", OFFLINE,
+                               "aucun endpoint de génération configuré (coder_main, fast)")
     if usable:
         return ComponentStatus("models", READY, f"exécutable(s) : {', '.join(dict.fromkeys(usable))}"[:300])
     # Une raison par cause (plusieurs modèles d'un même serveur absent partagent la leur), le backend en
     # processus d'abord : c'est l'action la plus directe (`apex models fetch`).
     grouped: dict[str, list[str]] = {}
-    for (runtime, _url, served), (_ok, detail) in sorted(seen.items(), key=lambda kv: kv[0][0] != "transformers"):
+    native_first = sorted(seen.items(), key=lambda kv: kv[0][0] != "transformers")
+    for (runtime, _url, served), (_ok, detail) in native_first:
         grouped.setdefault(f"{runtime} : {detail}", []).append(served)
     reasons = " ; ".join(f"{', '.join(names)} ({why})" for why, names in grouped.items())
     return ComponentStatus("models", OFFLINE, f"aucun modèle exécutable — {reasons}"[:600])
