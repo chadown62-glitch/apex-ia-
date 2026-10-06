@@ -123,7 +123,7 @@ public static class StatusEngine
                     ? new ComponentState(key, ComponentStatus.Unknown, "non rapporté par le backend")
                     : new ComponentState(key, MapState(measured.State), measured.Detail));
             }
-            var notReady = rows.Where(r => r.Status != ComponentStatus.Ready).ToList();
+            var notReady = rows.Where(r => r.Status != ComponentStatus.Ready && !ComponentKeys.IsInformational(r.Key)).ToList();
             return notReady.Count == 0
                 ? Snapshot(PanelVerdict.Ready, NotReadyCause.None, "Tous les composants d'APEX répondent.")
                 : Snapshot(PanelVerdict.Degraded, NotReadyCause.PartialServices,

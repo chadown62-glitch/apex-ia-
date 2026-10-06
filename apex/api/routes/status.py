@@ -30,7 +30,8 @@ _STARTED_AT = datetime.now(UTC)
 
 
 def overall(components: list[dict[str, Any]]) -> dict[str, Any]:
-    not_ready = [c["component"] for c in components if c.get("state") != component_checks.READY]
+    not_ready = [c["component"] for c in components if c.get("state") != component_checks.READY
+                 and c["component"] not in component_checks.INFORMATIONAL]
     return {"verdict": "degraded" if not_ready else "ready", "not_ready": not_ready}
 
 

@@ -20,7 +20,7 @@ public class StatusEngineTests
         Assert.Equal("APEX READY", s.Headline);
         Assert.All(s.Components, c => Assert.Equal(ComponentStatus.Ready, c.Status));
         Assert.Equal(
-            [ComponentKey.Wsl, ComponentKey.Backend, ComponentKey.Api, ComponentKey.Database, ComponentKey.Redis, ComponentKey.Ollama, ComponentKey.Sandbox, ComponentKey.Brain, ComponentKey.Ui],
+            [ComponentKey.Wsl, ComponentKey.Backend, ComponentKey.Api, ComponentKey.Database, ComponentKey.Redis, ComponentKey.Ollama, ComponentKey.Models, ComponentKey.Sandbox, ComponentKey.Brain, ComponentKey.Ui],
             s.Components.Select(c => c.Key));
         Assert.Equal("0.1.2", s.Versions.BackendApexVersion);
     }
@@ -130,15 +130,27 @@ public class StatusEngineTests
     public void Partially_available_services_is_DEGRADED_and_names_them()
     {
         var states = ComponentKeys.BackendServices.ToDictionary(s => s.BackendName, _ => "ready");
-        states["ollama"] = "degraded";
+        states["models"] = "offline";
         states["redis"] = "offline";
         var s = Decide(WslRunning(), Discovery(), Fetch(StatusJson(states: states)), GoodToken(), alive: true);
 
         Assert.Equal(PanelVerdict.Degraded, s.Verdict);
-        Assert.Equal(ComponentStatus.Degraded, Of(s, ComponentKey.Ollama));
+        Assert.Equal(ComponentStatus.Offline, Of(s, ComponentKey.Models));
         Assert.Equal(ComponentStatus.Offline, Of(s, ComponentKey.Redis));
-        Assert.Contains("Ollama", s.Guidance);
+        Assert.Contains("Modèles", s.Guidance);
         Assert.Contains("Redis", s.Guidance);
+    }
+
+    [Fact]
+    public void Ollama_absent_while_a_model_is_executable_is_shown_but_does_not_degrade()
+    {
+        // Ollama est un backend FACULTATIF : APEX qui répond avec son backend natif n'est pas dégradé pour autant.
+        var states = ComponentKeys.BackendServices.ToDictionary(s => s.BackendName, _ => "ready");
+        states["ollama"] = "offline";
+        var s = Decide(WslRunning(), Discovery(), Fetch(StatusJson(states: states)), GoodToken(), alive: true);
+
+        Assert.Equal(PanelVerdict.Ready, s.Verdict);
+        Assert.Equal(ComponentStatus.Offline, Of(s, ComponentKey.Ollama)); // affiché tel que mesuré, jamais maquillé
     }
 
     [Fact]

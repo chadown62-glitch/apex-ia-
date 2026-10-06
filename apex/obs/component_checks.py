@@ -140,6 +140,45 @@ def check_ollama(address: tuple[str, int] | None = None) -> ComponentStatus:
     return ComponentStatus("ollama", READY, f"{len(models)} modèle(s) disponible(s)")
 
 
+#: Rôles avec lesquels APEX GÉNÈRE (Chat, TaskLoop, missions) : ce qu'il faut pour répondre.
+GENERATION_ROLES = ("coder_main", "fast")
+
+
+def check_models(config: Any = None) -> ComponentStatus:
+    """Inférence RÉELLEMENT possible maintenant : `detect()` du backend de chaque endpoint des rôles de
+    génération (poids présents pour le backend natif, serveur joignable et modèle présent pour Ollama…).
+    Avant le 06/10/2026 seul Ollama était sondé ici : un APEX servant un modèle natif s'affichait dégradé, et
+    un APEX sans aucun modèle exécutable n'avait aucune ligne pour le dire."""
+    from apex.config.loader import load_config
+    from apex.models.provider import get_default_provider
+    from apex.models.registry import resolve_candidates
+
+    config = config if config is not None else load_config()
+    seen: dict[tuple[str, str, str], tuple[bool, str]] = {}
+    usable: list[str] = []
+    for candidate in resolve_candidates(config):
+        endpoint = candidate.endpoint
+        if candidate.role not in GENERATION_ROLES or endpoint is None or not endpoint.enabled:
+            continue
+        key = (endpoint.runtime, endpoint.url, endpoint.served_model)
+        if key not in seen:
+            report = get_default_provider(endpoint).detect()
+            seen[key] = (report.is_available, report.detail)
+        if seen[key][0]:
+            usable.append(f"{candidate.role} → {endpoint.served_model} ({endpoint.runtime})")
+    if not seen:
+        return ComponentStatus("models", OFFLINE, "aucun endpoint de génération configuré (coder_main, fast)")
+    if usable:
+        return ComponentStatus("models", READY, f"exécutable(s) : {', '.join(dict.fromkeys(usable))}"[:300])
+    # Une raison par cause (plusieurs modèles d'un même serveur absent partagent la leur), le backend en
+    # processus d'abord : c'est l'action la plus directe (`apex models fetch`).
+    grouped: dict[str, list[str]] = {}
+    for (runtime, _url, served), (_ok, detail) in sorted(seen.items(), key=lambda kv: kv[0][0] != "transformers"):
+        grouped.setdefault(f"{runtime} : {detail}", []).append(served)
+    reasons = " ; ".join(f"{', '.join(names)} ({why})" for why, names in grouped.items())
+    return ComponentStatus("models", OFFLINE, f"aucun modèle exécutable — {reasons}"[:600])
+
+
 _sandbox_cache: tuple[float, ComponentStatus] | None = None
 _sandbox_lock = threading.Lock()
 
@@ -206,9 +245,15 @@ CHECKS: dict[str, Callable[[], ComponentStatus]] = {
     "database": check_database,
     "redis": check_redis,
     "ollama": check_ollama,
+    "models": check_models,
     "sandbox": check_sandbox,
     "brain": check_brain,
 }
+
+#: Composants rapportés mais hors du verdict global : Ollama n'est qu'un backend FACULTATIF parmi d'autres ;
+#: ce qui compte (un modèle exécutable) est mesuré par « models ». Un Ollama absent ne dégrade donc plus un
+#: APEX qui répond avec le backend natif — et un APEX sans aucun modèle reste dégradé via « models ».
+INFORMATIONAL = frozenset({"ollama"})
 
 
 def collect(

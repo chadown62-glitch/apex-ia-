@@ -9,6 +9,7 @@ public enum ComponentKey
     Database,
     Redis,
     Ollama,
+    Models,
     Sandbox,
     Brain,
     Ui,
@@ -22,6 +23,7 @@ public static class ComponentKeys
         (ComponentKey.Database, "database"),
         (ComponentKey.Redis, "redis"),
         (ComponentKey.Ollama, "ollama"),
+        (ComponentKey.Models, "models"),
         (ComponentKey.Sandbox, "sandbox"),
         (ComponentKey.Brain, "brain"),
         (ComponentKey.Ui, "ui"),
@@ -35,11 +37,16 @@ public static class ComponentKeys
         ComponentKey.Database => "Database",
         ComponentKey.Redis => "Redis",
         ComponentKey.Ollama => "Ollama",
+        ComponentKey.Models => "Modèles",
         ComponentKey.Sandbox => "Sandbox",
         ComponentKey.Brain => "Brain",
         ComponentKey.Ui => "Interface",
         _ => key.ToString(),
     };
+
+    /// <summary>Lignes affichées mais hors du verdict, comme côté backend (<c>component_checks.INFORMATIONAL</c>) :
+    /// Ollama n'est qu'un backend de modèles facultatif ; « Modèles » mesure s'il existe un modèle exécutable.</summary>
+    public static bool IsInformational(ComponentKey key) => key == ComponentKey.Ollama;
 }
 
 /// <summary>Un état affiché — toujours produit par une mesure réelle, jamais fabriqué.</summary>

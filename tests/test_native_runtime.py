@@ -186,3 +186,22 @@ def test_runtime_status_reports_what_each_backend_really_detects(models_dir, tmp
     assert native and native[0]["available"] is True
     others = [r for r in rows if r["runtime"] == "ollama"]
     assert others and all(not r["available"] and r["detail"] for r in others)  # Ollama absent : dit, jamais supposé
+
+
+def test_the_system_status_measures_whether_a_model_can_answer_not_whether_ollama_runs(
+        models_dir, tmp_path, monkeypatch) -> None:
+    """Panel/interface (`GET /api/v1/status`) : la ligne « models » sonde le backend de chaque endpoint de
+    génération ; Ollama absent reste affiché mais ne dégrade plus un APEX qui répond avec le backend natif."""
+    from apex.api.routes.status import overall
+    from apex.obs import component_checks as cc
+
+    monkeypatch.setenv("APEX_MODELS_DIR", str(tmp_path))
+    absent = cc.check_models()
+    assert absent.state == cc.OFFLINE and "apex models fetch" in absent.detail  # rien d'exécutable : dit
+    (tmp_path / "qwen2.5-coder-1.5b-instruct").symlink_to(models_dir / "tiny-qwen2", target_is_directory=True)
+    present = cc.check_models()
+    assert present.state == cc.READY and "qwen2.5-coder-1.5b-instruct (transformers)" in present.detail
+    rows = [{"component": "ollama", "state": cc.OFFLINE}, {"component": "models", "state": present.state}]
+    assert overall(rows) == {"verdict": "ready", "not_ready": []}
+    rows[1]["state"] = absent.state
+    assert overall(rows) == {"verdict": "degraded", "not_ready": ["models"]}
