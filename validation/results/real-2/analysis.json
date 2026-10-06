@@ -1,0 +1,158 @@
+{
+ "adaptation": {
+  "arms": {
+   "A": {
+    "n": 60,
+    "success": 29,
+    "success_rate": 0.483,
+    "first_attempt_pass": 29,
+    "mean_final_score": 0.767,
+    "mean_first_score": 0.767,
+    "mean_attempts": 1.0,
+    "corrected": 0,
+    "mean_duration_s": 45.8,
+    "plan_failed": 0,
+    "errors": {
+     "incorrect_solution": 31
+    }
+   },
+   "B": {
+    "n": 60,
+    "success": 27,
+    "success_rate": 0.45,
+    "first_attempt_pass": 27,
+    "mean_final_score": 0.68,
+    "mean_first_score": 0.68,
+    "mean_attempts": 1.0,
+    "corrected": 0,
+    "mean_duration_s": 173.0,
+    "plan_failed": 0,
+    "errors": {
+     "incorrect_solution": 28,
+     "invalid_candidate": 5
+    }
+   },
+   "C": {
+    "n": 60,
+    "success": 38,
+    "success_rate": 0.633,
+    "first_attempt_pass": 29,
+    "mean_final_score": 0.8,
+    "mean_first_score": 0.767,
+    "mean_attempts": 1.62,
+    "corrected": 9,
+    "mean_duration_s": 82.5,
+    "plan_failed": 0,
+    "errors": {
+     "incorrect_solution": 59
+    }
+   },
+   "D": {
+    "n": 60,
+    "success": 29,
+    "success_rate": 0.483,
+    "first_attempt_pass": 27,
+    "mean_final_score": 0.657,
+    "mean_first_score": 0.68,
+    "mean_attempts": 1.65,
+    "corrected": 2,
+    "mean_duration_s": 242.9,
+    "plan_failed": 0,
+    "errors": {
+     "incorrect_solution": 52,
+     "invalid_candidate": 18
+    }
+   },
+   "R": {
+    "n": 60,
+    "success": 34,
+    "success_rate": 0.567,
+    "first_attempt_pass": 29,
+    "mean_final_score": 0.829,
+    "mean_first_score": 0.767,
+    "mean_attempts": 1.58,
+    "corrected": 5,
+    "mean_duration_s": 70.1,
+    "plan_failed": 0,
+    "errors": {
+     "incorrect_solution": 61
+    }
+   }
+  },
+  "primary": {
+   "H1 plan (B vs A)": {
+    "n": 60,
+    "first": 29,
+    "second": 27,
+    "second_only": 5,
+    "first_only": 7,
+    "p": 0.7744140625
+   },
+   "H2 adaptation au-delà du simple retry (C vs R)": {
+    "n": 60,
+    "first": 34,
+    "second": 38,
+    "second_only": 5,
+    "first_only": 1,
+    "p": 0.21875
+   },
+   "H3 plan avec adaptation (D vs C)": {
+    "n": 60,
+    "first": 38,
+    "second": 29,
+    "second_only": 1,
+    "first_only": 10,
+    "p": 0.01171875
+   }
+  },
+  "holm_significant": {
+   "H3 plan avec adaptation (D vs C)": true,
+   "H2 adaptation au-delà du simple retry (C vs R)": false,
+   "H1 plan (B vs A)": false
+  },
+  "secondary": {
+   "R vs A": {
+    "n": 60,
+    "first": 29,
+    "second": 34,
+    "second_only": 5,
+    "first_only": 0,
+    "p": 0.0625
+   },
+   "C vs A": {
+    "n": 60,
+    "first": 29,
+    "second": 38,
+    "second_only": 9,
+    "first_only": 0,
+    "p": 0.00390625
+   },
+   "D vs A": {
+    "n": 60,
+    "first": 29,
+    "second": 29,
+    "second_only": 6,
+    "first_only": 6,
+    "p": 1.0
+   }
+  },
+  "environment": {
+   "model": "qwen2.5-coder:1.5b-instruct:bf16",
+   "endpoint": "qwen2.5-coder-1.5b-instruct",
+   "weights_source": {
+    "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+    "revision": "2e1fd397ee46e1388853d2af2c993145b0f1098a",
+    "commit": "2e1fd397ee46e1388853d2af2c993145b0f1098a"
+   },
+   "backend": "native_transformers",
+   "model_detail": "poids présents (3.10 Go) dans /home/runner/work/apex-ia-/apex-ia-/../apex-models/qwen2.5-coder-1.5b-instruct",
+   "device": "cpu",
+   "torch": "2.14.1+cpu",
+   "cpu_count": 2,
+   "python": "3.12.15",
+   "sandbox": "ContainerSandbox",
+   "sandbox_reason": "namespaces Linux indisponibles sur cet hôte (RLIMIT_ONLY — mécanismes manquants ou non fonctionnels : namespaces, cgroups, privilege_drop, network_isolation) ; repli sur Docker — garanties de sécurité (réseau coupé, utilisateur non-root, racine en lecture seule) vérifiées empiriquement sur un vrai c",
+   "commit": "5d4429681cb58ceddd672b7b323cfa323acbeda7"
+  }
+ }
+}
