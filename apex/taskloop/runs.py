@@ -327,6 +327,11 @@ class TaskRunService:
     #: Registre des boucles en cours où chercher la poignée d'annulation (`cancel`) ; `None` : celui par défaut.
     registry: Any = None
     _threads: dict[str, threading.Thread] = field(default_factory=dict)
+    #: Tâches RÉSERVÉES par une exécution acceptée (réservation atomique, avant le démarrage du fil) : deux
+    #: lancements simultanés de la même tâche ne sont jamais tous deux acceptés (le second est refusé AVANT
+    #: d'être créé, au lieu d'être accepté puis de finir en erreur `TaskAlreadyRunning` dans son fil).
+    _reserved: set[str] = field(default_factory=set)
+    _reserve_lock: threading.Lock = field(default_factory=threading.Lock)
 
     def __post_init__(self) -> None:
         if self.run_loop is None:
@@ -376,7 +381,7 @@ class TaskRunService:
             raise ValueError(
                 f"la tâche « {task_id} » est un projet : elle exige le mode outillé (« workspace.write »)"
             )
-        if task_id in default_registry():
+        if task_id in (self.registry if self.registry is not None else default_registry()):
             raise RuntimeError(f"une exécution de la tâche « {task_id} » est déjà en cours")
         if condition_on_run == LATEST:
             # Apprendre de la DERNIÈRE exécution terminée de cette même tâche (résolue ici, puis enregistrée
@@ -443,8 +448,26 @@ class TaskRunService:
             context=context or None,
             constraints=constraints or None,
         )
-        self.repo.create(run)
+        self._reserve(task_id)
+        try:
+            self.repo.create(run)
+        except Exception:
+            self._release(task_id)
+            raise
         return self._launch(run, request, task, generation_timeout_s=generation_timeout_s, wait=wait)
+
+    def _reserve(self, task_id: str) -> None:
+        from apex.taskloop.registry import default_registry
+
+        registry = self.registry if self.registry is not None else default_registry()
+        with self._reserve_lock:
+            if task_id in self._reserved or task_id in registry:
+                raise RuntimeError(f"une exécution de la tâche « {task_id} » est déjà en cours")
+            self._reserved.add(task_id)
+
+    def _release(self, task_id: str) -> None:
+        with self._reserve_lock:
+            self._reserved.discard(task_id)
 
     def _launch(self, run: TaskRun, request: TaskRequest, task: Any, *, generation_timeout_s: float,
                 wait: bool) -> TaskRun:
@@ -464,6 +487,7 @@ class TaskRunService:
                 self.repo.finish_with_error(run.id, f"{exc.__class__.__name__}: {exc}")
             finally:
                 self._threads.pop(run.id, None)
+                self._release(run.task_id)
 
         thread = threading.Thread(target=execute, name=f"apex-taskrun-{run.id[:8]}", daemon=True)
         self._threads[run.id] = thread
@@ -544,7 +568,9 @@ class TaskRunService:
             max_tool_steps=run.max_tool_steps or 8, use_memory=bool(run.use_memory),
             resume=True, resume_plan=self._prior_plan(run) if run.plan_first else None,
         )
+        self._reserve(run.task_id)
         if not self.repo.claim_resume(run_id):
+            self._release(run.task_id)
             raise RuntimeError(f"l'exécution « {run_id} » a déjà été reprise")
         resumed = self.repo.get(run_id) or run
         return self._launch(resumed, request, task,

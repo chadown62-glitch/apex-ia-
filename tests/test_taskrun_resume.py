@@ -168,3 +168,48 @@ def test_a_mission_run_is_not_resumed_behind_the_missions_back(factory, tmp_path
         session.get(TaskRunRow, run.id).mission_id = mission.id
     with pytest.raises(ValueError, match="recréer la mission"):
         fresh.resume(run.id)
+
+
+def test_two_simultaneous_starts_of_the_same_task_never_both_get_accepted(tmp_path) -> None:
+    import threading
+
+    from tests.db_test_support import threaded_sqlite_session_factory
+
+    factory = threaded_sqlite_session_factory()  # plusieurs fils touchent la base en même temps
+    task = _task(factory)
+    service = _service(factory, tmp_path)
+    gate = threading.Event()
+    _Script.script = []
+
+    class _Slow(_Script):
+        def generate(self, request):
+            gate.wait(10)
+            return super().generate(request)
+
+    import functools
+
+    from apex.taskloop.loop import run_task_loop
+
+    service.run_loop = functools.partial(run_task_loop, candidates=(a_candidate(),), registry=service.registry,
+                                         provider_factory=lambda _c: _Slow(), workspace_root=str(tmp_path))
+    outcomes = []
+
+    def start():
+        try:
+            outcomes.append(service.start(task_id=task.id, objective="o").id)
+        except RuntimeError as exc:
+            outcomes.append(f"refus : {exc}")
+
+    threads = [threading.Thread(target=start) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    gate.set()
+    accepted = [o for o in outcomes if not o.startswith("refus")]
+    assert len(accepted) == 1 and len(outcomes) == 4
+    finished = service.wait(accepted[0], timeout_s=60)
+    assert finished.status is not TaskRunStatus.ERROR, finished.failure  # l'exécution acceptée n'est pas sabotée
+    # Une fois terminée, la tâche peut être relancée.
+    _Script.script = [RIGHT]
+    assert service.start(task_id=task.id, objective="o", wait=True).status is TaskRunStatus.COMPLETED
