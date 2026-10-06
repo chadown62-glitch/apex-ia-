@@ -90,6 +90,10 @@ class TaskRun:
     use_memory: bool | None = None
     #: Mission (gouvernance) qui a lancé cette TaskRun — `apex.missions.execution.run_mission_task`.
     mission_id: str | None = None
+    context: str | None = None
+    constraints: str | None = None
+    #: Nombre de reprises après interruption (`TaskRunService.resume`) ; None : jamais reprise.
+    resume_count: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -117,6 +121,7 @@ class TaskRun:
             "max_tool_steps": self.max_tool_steps,
             "use_memory": self.use_memory,
             "mission_id": self.mission_id,
+            "resume_count": self.resume_count,
         }
 
 
@@ -157,6 +162,8 @@ class TaskRunRepository:
                     max_tool_steps=run.max_tool_steps,
                     use_memory=run.use_memory,
                     mission_id=run.mission_id,
+                    context=run.context,
+                    constraints=run.constraints,
                 )
             )
 
@@ -213,10 +220,32 @@ class TaskRunRepository:
                     status=TaskRunStatus.INTERRUPTED.value,
                     completed_at=_utcnow(),
                     stop_reason="process_restarted",
-                    failure="le processus APEX qui exécutait cette tâche s'est arrêté avant la fin (aucune reprise)",
+                    failure=(
+                        "le processus APEX qui exécutait cette tâche s'est arrêté avant la fin "
+                        "(reprise possible : TaskRunService.resume, POST /task-runs/{id}/resume)"
+                    ),
                 )
             )
             return int(result.rowcount or 0)
+
+    def claim_resume(self, run_id: str) -> bool:
+        """`interrupted` -> `running` par UN UPDATE conditionnel : deux reprises concurrentes (ou répétées) ne
+        peuvent jamais relancer deux boucles pour la même TaskRun — la seconde ne trouve plus `interrupted`."""
+        from sqlalchemy import update
+
+        from apex.db.engine import session_scope
+        from apex.db.models import TaskRunRow
+
+        with session_scope(self._session_factory) as session:
+            row = session.get(TaskRunRow, run_id)
+            count = (row.resume_count or 0) if row is not None else 0
+            result = session.execute(
+                update(TaskRunRow)
+                .where(TaskRunRow.id == run_id, TaskRunRow.status == TaskRunStatus.INTERRUPTED.value)
+                .values(status=TaskRunStatus.RUNNING.value, completed_at=None, failure=None, stop_reason=None,
+                        resume_count=count + 1)
+            )
+            return bool(result.rowcount)
 
     def get(self, run_id: str) -> TaskRun | None:
         from apex.db.engine import session_scope
@@ -268,6 +297,9 @@ def _from_row(row: Any) -> TaskRun:
         max_tool_steps=row.max_tool_steps,
         use_memory=row.use_memory,
         mission_id=getattr(row, "mission_id", None),
+        context=getattr(row, "context", None),
+        constraints=getattr(row, "constraints", None),
+        resume_count=getattr(row, "resume_count", None),
     )
 
 
@@ -408,9 +440,14 @@ class TaskRunService:
             max_tool_steps=max_tool_steps if tool_permissions else None,
             use_memory=use_memory,
             mission_id=mission_id,
+            context=context or None,
+            constraints=constraints or None,
         )
         self.repo.create(run)
+        return self._launch(run, request, task, generation_timeout_s=generation_timeout_s, wait=wait)
 
+    def _launch(self, run: TaskRun, request: TaskRequest, task: Any, *, generation_timeout_s: float,
+                wait: bool) -> TaskRun:
         def execute() -> None:
             try:
                 result = self.run_loop(
@@ -461,6 +498,72 @@ class TaskRunService:
                     context={"trace_id": run_id, "kind": "memory.index_failed",
                              "error": f"{exc.__class__.__name__}: {exc}"[:500]},
                 )
+
+    def resume(self, run_id: str, *, wait: bool = False) -> TaskRun:
+        """REPRISE RÉELLE d'une TaskRun `interrupted` (processus arrêté en cours de route) : même identifiant,
+        même requête reconstruite depuis la ligne persistée, et la boucle CONTINUE depuis l'état persisté —
+        tentatives déjà jugées (EvalRun/Experience) comptées dans le budget et non refaites, faits d'échec de la
+        dernière transmis, espace de travail conservé, plan déjà rédigé réutilisé. Une tentative coupée avant
+        son jugement n'a laissé aucune preuve : elle est refaite. Idempotente : la transition `interrupted` ->
+        `running` est atomique (`claim_resume`), une seconde reprise est refusée.
+
+        Refus explicites : TaskRun introuvable / pas `interrupted` ; TaskRun d'une MISSION (la mission orpheline a
+        été close FAILED au redémarrage par `apex.scheduler.recovery` : sa reprise est une décision humaine —
+        recréer la mission) ; une autre exécution de la même tâche en cours."""
+        from apex.taskloop.registry import default_registry
+        from apex.tasks.repository import TaskRepository
+
+        run = self.repo.get(run_id)
+        if run is None:
+            raise LookupError(f"exécution « {run_id} » introuvable")
+        if run.status is not TaskRunStatus.INTERRUPTED:
+            raise ValueError(f"seule une exécution interrompue peut reprendre (état : {run.status.value})")
+        if run.mission_id is not None:
+            raise ValueError(
+                f"l'exécution « {run_id} » appartient à la mission « {run.mission_id} », close au redémarrage : "
+                "recréer la mission (décision humaine)"
+            )
+        task = TaskRepository(self.session_factory).get(run.task_id)
+        if task is None:
+            raise LookupError(f"tâche « {run.task_id} » introuvable")
+        registry = self.registry if self.registry is not None else default_registry()
+        if run.task_id in registry:
+            raise RuntimeError(f"une exécution de la tâche « {run.task_id} » est déjà en cours")
+        limits = dict(run.limits or {})
+        request = TaskRequest(
+            task_id=run.task_id, objective=run.objective, context=run.context or "",
+            constraints=run.constraints or "", execution_mode=TaskExecutionMode(run.execution_mode),
+            limits=TaskLimits(
+                max_attempts=int(limits.get("max_attempts", 1)), max_retries=int(limits.get("max_retries", 0)),
+                max_candidates=int(limits.get("max_candidates", 1)),
+                max_wall_clock_s=float(limits.get("max_wall_clock_s", 300.0)),
+            ),
+            condition_on_run=run.condition_on_run, strategy=run.strategy or "rule",
+            base_temperature=run.base_temperature, retry_adaptation=run.retry_adaptation or "failure_facts",
+            plan_first=bool(run.plan_first), tool_permissions=tuple(run.tool_permissions or ()),
+            max_tool_steps=run.max_tool_steps or 8, use_memory=bool(run.use_memory),
+            resume=True, resume_plan=self._prior_plan(run) if run.plan_first else None,
+        )
+        if not self.repo.claim_resume(run_id):
+            raise RuntimeError(f"l'exécution « {run_id} » a déjà été reprise")
+        resumed = self.repo.get(run_id) or run
+        return self._launch(resumed, request, task,
+                            generation_timeout_s=float(limits.get("generation_timeout_s", 120.0)), wait=wait)
+
+    def _prior_plan(self, run: TaskRun) -> str | None:
+        """Dernier plan rédigé par le modèle pour cette TaskRun avant l'interruption (événement persisté)."""
+        from datetime import timedelta
+
+        from apex.db.engine import session_scope
+        from apex.db.repositories import EventRepository
+
+        with session_scope(self.session_factory) as session:
+            rows = EventRepository(session).in_window(
+                logger="apex.taskloop", since=run.started_at - timedelta(seconds=5))
+            plans = [r.context.get("plan") for r in rows
+                     if (r.context or {}).get("trace_id") == run.id
+                     and r.context.get("kind") in ("task.plan.generated", "task.plan.reused")]
+        return plans[-1] if plans else None
 
     def cancel(self, run_id: str) -> bool:
         """Demande l'arrêt RÉEL d'une TaskRun en cours dans CE processus : le jeton d'annulation de sa boucle

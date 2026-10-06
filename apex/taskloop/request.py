@@ -137,6 +137,11 @@ class TaskRequest:
     #: Mission (gouvernance) au nom de laquelle cette boucle s'exécute : chaque clone de tentative la référence
     #: (`Clone.mission_id`), la trace reste reliée. `None` : TaskRun lancée directement.
     mission_id: str | None = None
+    #: REPRISE d'une TaskRun interrompue (`TaskRunService.resume`) : la boucle relit l'état PERSISTÉ de
+    #: `trace_id` (tentatives déjà jugées : EvalRun + Experience, espace de travail) et CONTINUE — jamais un
+    #: redémarrage à zéro. `resume_plan` : plan déjà rédigé avant l'interruption, réutilisé tel quel.
+    resume: bool = False
+    resume_plan: str | None = None
 
     def __post_init__(self) -> None:
         from apex.tools.model import Permission

@@ -1517,3 +1517,8 @@ class TaskRunRow(Base):
     use_memory: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     #: Mission (gouvernance) qui a lancé cette TaskRun, le cas échéant.
     mission_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    #: Reprise réelle (06/10/2026) : textes additifs de la requête (nécessaires pour reprendre À L'IDENTIQUE)
+    #: et nombre de reprises effectuées. NULL : TaskRun antérieure à ces champs.
+    context: Mapped[str | None] = mapped_column(Text, nullable=True)
+    constraints: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resume_count: Mapped[int | None] = mapped_column(Integer, nullable=True)

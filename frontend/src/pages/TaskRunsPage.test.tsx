@@ -142,3 +142,20 @@ describe("RunDetail", () => {
     expect(screen.getByText(/souvenirs : task_run:r0/)).toBeInTheDocument();
   });
 });
+
+describe("RunDetail — reprise", () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("offers to resume an interrupted run and calls the real resume endpoint", async () => {
+    const calls = mockRoutes([
+      { match: (u, i) => u.endsWith("/task-runs/r1/resume") && i?.method === "POST", body: { status: "real", data: { ...RUN_DETAIL, status: "running" }, detail: null } },
+      { match: (u) => u.endsWith("/task-runs/r1"), body: { status: "real", data: { ...RUN_DETAIL, status: "interrupted", stop_reason: "process_restarted" }, detail: null } },
+    ]);
+    renderWithQueryClient(<RunDetail runId="r1" />);
+    fireEvent.click(await screen.findByText("Reprendre là où elle s'est arrêtée"));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/task-runs/r1/resume"))).toBe(true));
+  });
+});

@@ -3,12 +3,14 @@ import { useState } from "react";
 
 import { ApiError } from "../api/client";
 import {
+  cancelTaskRun,
   createFunctionTask,
   createReferenceTask,
   getTaskRun,
   listReferenceTaskKinds,
   listTaskRuns,
   listTasks,
+  resumeTaskRun,
   startTaskRun,
 } from "../api/endpoints";
 import type { FunctionCaseInput, RetryAdaptation, TaskRunDetail, TaskRunEvent } from "../api/types";
@@ -204,6 +206,10 @@ function eventSummary(event: TaskRunEvent): string {
     }
     case "memory.unavailable":
       return `mémoire indisponible : ${String(event.error ?? "")}`;
+    case "task.resumed":
+      return `reprise : ${String(event.judged_attempts ?? 0)} tentative(s) déjà jugée(s) conservée(s)`;
+    case "task.plan.reused":
+      return "plan d'avant l'interruption réutilisé";
     case "workspace.created":
       return `espace ${String(event.workspace_id ?? "")} — outils : ${(event.tools as string[] | undefined)?.join(", ") ?? ""}`;
     default:
@@ -212,11 +218,15 @@ function eventSummary(event: TaskRunEvent): string {
 }
 
 export function RunDetail({ runId }: { runId: string }) {
+  const queryClient = useQueryClient();
   const run = useQuery({
     queryKey: ["task-run", runId],
     queryFn: () => getTaskRun(runId),
     refetchInterval: (query) => (query.state.data?.data?.status === "running" ? 2000 : false),
   });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["task-run", runId] });
+  const resume = useMutation({ mutationFn: () => resumeTaskRun(runId), onSuccess: refresh });
+  const cancel = useMutation({ mutationFn: () => cancelTaskRun(runId), onSuccess: refresh });
   if (run.isLoading) return <LoadingState />;
   if (run.isError) return <ErrorState detail={errorText(run.error)} />;
   const detail: TaskRunDetail | null | undefined = run.data?.data;
@@ -228,6 +238,18 @@ export function RunDetail({ runId }: { runId: string }) {
         {detail.stop_reason ? ` (${detail.stop_reason})` : ""} — {detail.attempts.length} tentative(s)
       </p>
       {detail.failure && <p className="muted">Échec : {detail.failure}</p>}
+      {detail.status === "interrupted" && (
+        <Button variant="primary" onClick={() => resume.mutate()} disabled={resume.isPending}>
+          Reprendre là où elle s'est arrêtée
+        </Button>
+      )}
+      {detail.status === "running" && (
+        <Button onClick={() => cancel.mutate()} disabled={cancel.isPending}>
+          Arrêter
+        </Button>
+      )}
+      {resume.isError && <ErrorState detail={errorText(resume.error)} />}
+      {cancel.isError && <ErrorState detail={errorText(cancel.error)} />}
       <h3>Tentatives</h3>
       <ol>
         {detail.eval_runs.map((ev) => (

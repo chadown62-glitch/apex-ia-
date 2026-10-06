@@ -348,3 +348,18 @@ def cancel_task_run(run_id: str) -> DataEnvelope[dict[str, Any]]:
     requested = service.cancel(run_id) if not run.status.terminal else False
     return DataEnvelope(status="real", data={"run_id": run_id, "status": run.status.value,
                                              "cancel_requested": requested})
+
+
+@router.post("/task-runs/{run_id}/resume", response_model=DataEnvelope[dict[str, Any]], status_code=202)
+def resume_task_run(run_id: str) -> DataEnvelope[dict[str, Any]]:
+    """Reprise RÉELLE d'une exécution `interrupted` (`TaskRunService.resume`) : même identifiant, la boucle
+    continue depuis l'état persisté. Refus explicites (409/404) plutôt qu'une relance silencieuse."""
+    from apex.api.dependencies import get_task_run_service
+
+    try:
+        run = get_task_run_service().resume(run_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return DataEnvelope(status="real", data=run.to_dict())

@@ -107,6 +107,7 @@ from apex.recovery import (
     classify_sandbox_outcome,
     decide,
 )
+from apex.recovery.classify import classify_execution_status
 from apex.routing.availability import probe_physical_availability
 from apex.routing.model import RoutingRequest
 from apex.routing.router import select_model
@@ -678,10 +679,15 @@ def _run(
 
     # -- PLAN par le modèle (optionnel) : analyse sans code, réinjectée dans la génération -------------
     if request.plan_first:
-        plan = _generate_plan(
-            prompt, candidate=eligible_candidates[0], provider_factory=provider_factory,
-            temperature=generation_temperature, timeout_s=generation_timeout_s, emit=emit,
-        )
+        if request.resume and request.resume_plan:
+            # Reprise : le plan rédigé AVANT l'interruption est réutilisé tel quel (aucun nouvel appel).
+            plan = request.resume_plan
+            emit("task.plan.reused", {"plan": plan})
+        else:
+            plan = _generate_plan(
+                prompt, candidate=eligible_candidates[0], provider_factory=provider_factory,
+                temperature=generation_temperature, timeout_s=generation_timeout_s, emit=emit,
+            )
         if plan is not None:
             prompt = f"{prompt}\n\n{_PLAN_HEADER}\n{plan}"
             from dataclasses import replace as _replace
@@ -713,6 +719,52 @@ def _run(
     retries_used = 0
     started_monotonic = time.monotonic()
     attempt_number = 0
+
+    # -- REPRISE (TaskRun interrompue) : l'état persisté est relu, la boucle CONTINUE ---------------------
+    if request.resume:
+        prior = _judged_attempts(request, trace_id=trace_id, experience_repo=experience_repo,
+                                 eval_run_repo=eval_run_repo)
+        emit("task.resumed", {
+            "judged_attempts": len(prior), "eval_run_ids": [e.id for e, _ in prior],
+            "workspace_files": len(tools.workspace.files()) if tools is not None else None,
+        })
+        for number, (prior_eval, prior_experience) in enumerate(prior, start=1):
+            eval_run_ids.append(prior_eval.id)
+            stdout = ((prior_eval.facts or {}).get("candidate_execution") or {}).get("stdout") or ""
+            passed = (prior_eval.oracle_verdict is OracleVerdict.PASS
+                      and prior_eval.sandbox_status is ExecutionStatus.SUCCESS)
+            if passed:
+                category = None
+            elif prior_eval.sandbox_status is ExecutionStatus.SUCCESS:
+                category = _judged_failure_category(task, stdout)
+            else:
+                category = classify_execution_status(prior_eval.sandbox_status or ExecutionStatus.FAILED)
+            history.add(AttemptRecord(
+                attempt_number=number, provider_name=prior_eval.model_id or "inconnu",
+                sandbox_level=str((prior_eval.facts or {}).get("isolation_level") or "inconnu"),
+                category=category, reason="tentative jugée avant l'interruption (reprise)", strategy=None,
+                judge_result=prior_eval.oracle_verdict.value if passed else None,
+                started_at=prior_eval.started_at or _utcnow(), duration_s=float(prior_eval.elapsed_s or 0.0),
+                reassigned=False, decision=None if passed else RecoveryAction.RETRY,
+            ))
+            if passed:
+                # Le Judge avait DÉJÀ validé avant l'interruption : rien n'est régénéré ni rejugé.
+                return _finalize(
+                    task_id=request.task_id, trace_id=trace_id, status=TaskLoopStatus.COMPLETED,
+                    final_output=stdout, attempts=tuple(history.records), providers_tried=tuple(providers_tried),
+                    eval_run_ids=tuple(eval_run_ids), failure=None, stop_reason=StopReason.SUCCESS.value, emit=emit,
+                )
+        attempt_number = len(prior)
+        retries_used = len(prior)
+        if prior and request.retry_adaptation == "failure_facts":
+            last_eval, last_experience = prior[-1]
+            if last_experience is not None:
+                adapted = _adapted_strategy(strategy, last_experience, last_eval, attempt_number)
+                if adapted is not None:
+                    strategy = adapted
+                    generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+                    generation_temperature = resolve_generation_temperature(strategy.genome_content)
+                    emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
 
     while True:
         # `attempt_number` porte ici le nombre de tentatives DÉJÀ terminées
@@ -987,6 +1039,20 @@ def _run(
                 generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
                 generation_temperature = resolve_generation_temperature(strategy.genome_content)
                 emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
+
+
+def _judged_attempts(
+    request: TaskRequest, *, trace_id: str, experience_repo: ExperienceRepository, eval_run_repo: EvalRunRepository,
+) -> list[tuple[EvalRun, Any]]:
+    """Tentatives de `trace_id` RÉELLEMENT jugées avant l'interruption (une `EvalRun` persistée = une tentative
+    achevée ; une tentative coupée avant son jugement n'a rien laissé et sera refaite), dans l'ordre, chacune
+    avec son `Experience` si elle a été écrite."""
+    runs = [r for r in eval_run_repo.list_by_experiment_ref_prefix(trace_id, limit=200)
+            if r.experiment_ref == trace_id and r.task_id == request.task_id]
+    runs.sort(key=lambda r: (r.started_at or _utcnow(), r.id))
+    experiences = {e.eval_run_id: e for e in experience_repo.list_by_task(request.task_id, limit=500)
+                   if e.experiment_ref == trace_id}
+    return [(r, experiences.get(r.id)) for r in runs]
 
 
 def _effective_policy(request: TaskRequest, config: Any) -> Any:

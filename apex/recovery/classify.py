@@ -84,6 +84,18 @@ def classify_sandbox_outcome(
     return category
 
 
+def classify_execution_status(status: ExecutionStatus) -> FailureCategory:
+    """Même table FERMÉE que `classify_sandbox_outcome`, pour un statut RELU depuis une preuve persistée
+    (`EvalRun.sandbox_status`, reprise d'une TaskRun interrompue — `apex.taskloop.loop`) quand le
+    `SandboxResult` d'origine n'existe plus. Refuse un succès, comme `classify_sandbox_outcome`."""
+    if status is ExecutionStatus.SUCCESS:
+        raise ValueError("un statut SUCCESS n'est pas un échec à classifier")
+    category = _EXECUTION_STATUS_TO_CATEGORY.get(status)
+    if category is None:  # pragma: no cover - vocabulaire ExecutionStatus fermé
+        raise ValueError(f"ExecutionStatus « {status.value} » sans catégorie de recovery connue")
+    return category
+
+
 def classify_model_error_category(category: ModelErrorCategory) -> FailureCategory:
     """Traduit un `ModelErrorCategory` DÉJÀ connu (extrait d'un
     `ModelProviderError.category` réel, ou reconstruit depuis une preuve

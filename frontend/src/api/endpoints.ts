@@ -317,6 +317,15 @@ export function getTaskRun(runId: string): Promise<DataEnvelope<TaskRunDetail>> 
   return fetchEnvelope<TaskRunDetail>(`/task-runs/${encodeURIComponent(runId)}`);
 }
 
+/** Reprise RÉELLE d'une exécution interrompue — `ApiError(409)` si elle n'est pas reprenable. */
+export function resumeTaskRun(runId: string): Promise<DataEnvelope<TaskRun>> {
+  return fetchEnvelope<TaskRun>(`/task-runs/${encodeURIComponent(runId)}/resume`, { method: "POST" });
+}
+
+export function cancelTaskRun(runId: string): Promise<DataEnvelope<{ run_id: string; status: string; cancel_requested: boolean }>> {
+  return fetchEnvelope(`/task-runs/${encodeURIComponent(runId)}/cancel`, { method: "POST" });
+}
+
 export function listEvalRuns(params?: { taskId?: string; cloneId?: string }): Promise<DataEnvelope<EvalRun[]>> {
   const query = new URLSearchParams();
   if (params?.taskId) query.set("task_id", params.taskId);
