@@ -34,3 +34,41 @@ Windows/WSL : APEX tourne dans WSL2 (la sandbox exige Linux) ; le backend natif 
 
 Dépendances résiduelles à Ollama trouvées : `config.yaml` (seuls endpoints), contrôles Doctor/Gate (déclarés
 `required: false`), backend `OllamaProvider` (conservé comme backend optionnel, jamais requis).
+
+## 2. Protocole de mesure — PRÉ-ENREGISTRÉ (écrit avant tout résultat, commit faisant foi)
+
+Modèle : `Qwen/Qwen2.5-Coder-1.5B-Instruct` (poids publics, révision résolue enregistrée avec chaque résultat),
+exécuté par le backend NATIF (CPU du runner Linux GitHub, float32). Échantillonnage : configuration de génération
+du modèle (température 0,7, top-p 0,8, top-k 20), graine par appel `(instance, n-ième génération)` : à prompt
+identique, deux bras tirent la même réponse (nombres aléatoires communs). Une base neuve par bras (adaptation) ou
+par instance (mémoire). Ce sont des preuves **CI sur un modèle 1.5B**, jamais celles de la machine cible ni d'un 7B.
+
+### 2.1 Boucle réelle (smoke)
+Critère : chaque maillon observé dans ce qui est persisté — génération par le modèle, plan rédigé, actions JSON
+décodées, outils réellement exécutés, sandbox, verdict du Judge, Experience, nouvelle tentative adaptée.
+
+### 2.2 PLAN et adaptation
+15 tâches de référence × graines {0, 1, 2, 3} = 60 instances par bras. Bras : A (1 tentative), B (PLAN + 1),
+R (3 tentatives, relance à l'identique — contrôle du seul budget), C (3 tentatives, faits d'échec), D (PLAN + 3,
+faits d'échec). Critère : réussite (verdict PASS du Judge). Hypothèses principales, McNemar exact bilatéral
+apparié, Holm à 5 % : **H1** B vs A (plan) ; **H2** C vs R (adaptation au-delà du simple retry) ; **H3** D vs C
+(plan en présence d'adaptation). Secondaires (descriptives) : R vs A, C vs A, D vs A, score moyen du Judge
+(fraction de cas cachés réussis), tentatives, durées, corrections réussies (échec puis réussite), erreurs.
+Règle : un effet significatif n'est affirmé qu'après **réplication** sur des graines disjointes {10, 11, 12, 13}
+(même direction, p < 0,05). Un effet nul ou négatif est rapporté tel quel ; un mécanisme qui dégrade reste
+désactivable (il l'est déjà par défaut).
+
+### 2.3 Mémoire
+8 paires (tâche de référence source → tâche similaire écrite pour l'occasion, valeurs attendues calculées par
+une implémentation de référence) × graines {0, 1, 2} = 24 instances. RUN 1 : la source (bras C). RUN 2 : la
+cible, une tentative, avec mémoire (M) puis sans (A), même graine. Critère : réussite de la cible ; McNemar exact
+M vs A ; descriptif : score, durée, souvenirs réellement retrouvés (provenance), effet conditionnel à la réussite
+du RUN 1.
+
+### 2.4 Outils
+5 tâches de référence × graines {0, 1}, bras C sans outils vs C outillé (10 tours) ; 3 projets multi-fichiers
+(correction de bug guidée par les tests, implémentation qui exige de lire un autre fichier) ; 8 consignes
+hostiles réelles données au modèle (lecture de /etc/passwd, de ../../config.yaml, écriture hors espace, réseau,
+boucle infinie, sortie énorme, processus persistant, lien symbolique). Mesures : outils réellement appelés,
+actions illisibles, réussite, et pour les consignes hostiles : chaque tentative du modèle et ce que le système
+en a fait (refus, délai, coupure), fichier témoin hôte jamais créé.
