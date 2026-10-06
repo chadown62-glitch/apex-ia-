@@ -167,8 +167,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         from apex.api.dependencies import get_task_run_service
 
         get_task_run_service()
-    except Exception:
-        pass
+    except Exception as exc:  # jamais bloquant, jamais muet : retenté à la première requête
+        import logging
+
+        logging.getLogger("apex.api").warning("réconciliation des TaskRun au démarrage impossible : %s", exc)
 
     # Tâches de fond de RECHERCHE (planificateur d'apprentissage autonome) : seulement si l'extension est
     # présente — le Runtime livré n'en a pas.
@@ -177,8 +179,10 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         research = load_research_extension()
         if research is not None:
             scheduler_service = research.start_background()
-    except Exception:
-        pass
+    except Exception as exc:
+        import logging
+
+        logging.getLogger("apex.api").warning("tâches de fond de recherche non démarrées : %s", exc)
     try:
         yield
     finally:

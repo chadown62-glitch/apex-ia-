@@ -1110,7 +1110,9 @@ class ApexConfig:
             e
             for e in self.endpoints
             for role in self.model_roles.values()
-            if role.resident and e.served_model.startswith(role.reference.family)
+            # Même appariement que `apex.models.registry.serves` (famille ET version) : sans la version, un
+            # autre modèle de la même famille (ex. le 1.5B natif) était compté avec la référence 7B.
+            if role.resident and _serves(e, role.reference)
         ]
         needed = sum(e.effective_vram_gb or 0.0 for e in resident)
         if vram and needed > vram:
@@ -1118,3 +1120,11 @@ class ApexConfig:
                 f"les modèles résidents demandent {needed:.1f} Go de VRAM pour {vram:.1f} Go disponibles",
                 field="models.roles",
             )
+
+
+def _serves(endpoint: ModelEndpoint, ref: ModelRef) -> bool:
+    """Copie locale de `apex.models.registry.serves` (ce module ne dépend d'aucun autre module d'APEX)."""
+    served, family = endpoint.served_model.lower(), ref.family.lower()
+    if served == family:
+        return True
+    return served.startswith(family) and ref.version.lower() in served

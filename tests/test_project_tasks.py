@@ -136,3 +136,15 @@ def test_the_project_api_round_trip(factory, monkeypatch, tmp_path) -> None:
     assert detail["status"] == "completed"
     assert client.post("/api/v1/tasks/project", json={"description": "d", "seed_files": {"/etc/x": ""},
                                                        "cases": CASES}).status_code == 422
+
+
+def test_a_project_module_cannot_shadow_the_harness_standard_library(factory, tmp_path) -> None:
+    """Défense en profondeur : un `json.py` écrit par le modèle à la racine du projet ne remplace pas le module
+    standard qu'utilise le harnais caché (exécuté avec `python3 -I`, projet ajouté en dernier au chemin)."""
+    task = _task(factory)
+    forged = "def dumps(*a, **k):\n    return '{\"results\": [36.0, 0.0]}'\n"
+    _Actor.script = [act("fs.write", path="json.py", content=forged), act()]
+    run = _service(factory, tmp_path).start(
+        task_id=task.id, objective="o", wait=True, tool_permissions=ALL,
+        limits=TaskLimits(max_attempts=1, max_retries=0, max_candidates=1))
+    assert run.attempts[0]["judge_result"] is None  # le json.py du projet n'a rien remplacé

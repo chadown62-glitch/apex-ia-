@@ -955,7 +955,7 @@ def _run(
         if task.effective_kind is TaskKind.PROJECT and tools is not None:
             # Projet : le harnais caché (écrit par APEX) importe les modules d'un INSTANTANÉ de l'espace.
             spec = SandboxSpec(
-                mission_id=eval_run_id, clone_id=clone.clone_id, command=("python3", "-c", task.solution_harness),
+                mission_id=eval_run_id, clone_id=clone.clone_id, command=("python3", "-I", "-c", task.solution_harness),
                 limits=limits, input_files=tools.workspace.snapshot(),
             )
         else:

@@ -20,12 +20,15 @@ Rien n'est démarré sans votre clic.
 - APEX tourne sous le **compte Linux par défaut** de WSL : le Panel lit `~/.apex/runtime/` de ce
   compte. Le dépôt est cherché dans `~/apex` ; s'il est ailleurs, indiquez-le une fois dans
   **Paramètres** (« Dossier APEX dans WSL »).
-- Pour qu'APEX **exécute** des tâches (pas seulement démarre) : Ollama dans la distribution avec un
-  modèle de génération de code déclaré par `config.yaml` (référence : `ollama pull
-  qwen2.5-coder:7b-instruct`), et soit l'isolation par namespaces, soit Docker pour la sandbox
-  conteneur (image `python:3.12-slim`, téléchargée au premier usage). Sans modèle, APEX démarre
-  (ligne **Ollama** OFFLINE ou DEGRADED) mais une exécution de tâche s'arrête « blocked » : aucun
-  candidat disponible — jamais une réponse simulée.
+- Pour qu'APEX **exécute** des tâches (pas seulement démarre) : un modèle exécutable. Depuis le
+  06/10/2026, **sans Ollama** : le backend NATIF exécute le modèle dans le processus APEX —
+  `.venv/bin/pip install -e '.[db,api,native]'` puis, une fois (réseau, ~3 Go) :
+  `.venv/bin/apex models fetch Qwen/Qwen2.5-Coder-1.5B-Instruct --name qwen2.5-coder-1.5b-instruct`
+  (poids placés dans `$APEX_MODELS_DIR`, par défaut `/home/apex/apex-data/models`) ; `apex models status` dit ce
+  qui est réellement exécutable. Ollama reste un backend **optionnel**. Il faut aussi soit l'isolation
+  par namespaces, soit Docker pour la sandbox conteneur (image `python:3.12-slim`, téléchargée au
+  premier usage). Sans modèle, APEX démarre (Doctor : `models.native` en WARN, avec la commande) mais
+  une exécution de tâche s'arrête « blocked » : aucun candidat disponible — jamais une réponse simulée.
 - Base de données : son schéma est créé et mis à jour **automatiquement** à chaque démarrage
   (`launch.sh` exécute `apex db upgrade` après avoir démarré PostgreSQL, avant `apex doctor`). Les
   mots de passe `APEX_DB_*_PASSWORD` de `.env` (présents dans `.env.example`) sont nécessaires ; s'ils

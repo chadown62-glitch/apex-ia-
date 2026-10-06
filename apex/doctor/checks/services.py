@@ -335,6 +335,30 @@ def check_interfaces_integrity(ctx: CheckContext) -> CheckResult:
     )
 
 
+def check_native_models(ctx: CheckContext) -> CheckResult:
+    """Backend NATIF (en processus, sans serveur) : bibliothèques présentes ET poids réellement en place pour
+    chaque endpoint `runtime: transformers` déclaré (`detect`, aucun téléchargement). Sans lui ni Ollama, APEX
+    ne peut exécuter AUCUN modèle : WARN explicite, avec la commande à lancer."""
+    if ctx.config is None:
+        return result("models.native", CATEGORY_SVC, Severity.SKIP, "configuration non chargée")
+    native = [e for e in ctx.config.endpoints if e.runtime == "transformers" and e.enabled]
+    if not native:
+        return result("models.native", CATEGORY_SVC, Severity.SKIP, "aucun endpoint natif déclaré")
+    from apex.models.provider import get_default_provider
+
+    reports = {e.served_model: get_default_provider(e).detect() for e in native}
+    available = sorted(name for name, r in reports.items() if r.is_available)
+    details = {name: r.detail for name, r in reports.items()}
+    if available:
+        return result("models.native", CATEGORY_SVC, Severity.PASS,
+                      f"modèle(s) natif(s) exécutable(s) : {', '.join(available)}", details=details)
+    return result("models.native", CATEGORY_SVC, Severity.WARN,
+                  "aucun modèle natif exécutable — " + "; ".join(details.values())[:400],
+                  remediation="pip install -e '.[native]' puis "
+                              "`apex models fetch Qwen/Qwen2.5-Coder-1.5B-Instruct --name qwen2.5-coder-1.5b-instruct`",
+                  details=details)
+
+
 CHECKS = (
     ("config.valid", check_config_loaded),
     ("config.external", check_external_policy),
@@ -345,4 +369,5 @@ CHECKS = (
     ("service.minio", check_minio),
     ("service.ollama", check_ollama),
     ("ollama.models", check_ollama_models),
+    ("models.native", check_native_models),
 )

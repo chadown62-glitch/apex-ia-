@@ -437,6 +437,12 @@ _IDENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 _PROJECT_HARNESS_TEMPLATE = """\
 import importlib as _apex_importlib
 import json as _apex_json
+import os as _apex_os
+import sys as _apex_sys
+
+# Lancé en mode isolé (`python3 -I`) : la bibliothèque standard est résolue AVANT le projet ; le dossier du
+# projet n'est ajouté qu'ensuite, EN DERNIER — un `json.py` du projet ne peut pas remplacer celui du harnais.
+_apex_sys.path.append(_apex_os.getcwd())
 
 _APEX_CASES = {cases!r}
 _apex_results = []

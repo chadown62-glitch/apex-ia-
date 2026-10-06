@@ -111,7 +111,7 @@ main_preflight() {
     local python_bin=""
     if ! python_bin="$(detect_python "${project_root}")"; then
         log_err "aucun interpréteur Python 3.12+ utilisable (ni .venv, ni python3 système)."
-        log_err "remédiation : python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev,db,api]'"
+        log_err "remédiation : python3.12 -m venv .venv && .venv/bin/pip install -e '.[dev,db,api,native]'"
         blocked=1
     else
         preflight_log "interpréteur retenu : ${python_bin}"

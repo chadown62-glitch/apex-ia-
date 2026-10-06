@@ -684,21 +684,33 @@ def gate_16_tools(ctx: GateContext) -> GateCheckResult:
     title = "Outils requis"
     import importlib.util
 
-    tools = {name: ctx.probe.which(name) is not None for name in ("git", "curl", "ollama", "make")}
+    tools = {name: ctx.probe.which(name) is not None for name in ("git", "curl", "make")}
     tools["pyyaml"] = importlib.util.find_spec("yaml") is not None
+    # Moteur d'inférence (06/10/2026) : le backend NATIF (torch + transformers, en processus) OU Ollama —
+    # Ollama n'est plus requis. Seule la présence des bibliothèques/binaires est mesurée ici ; les poids et la
+    # disponibilité réelle d'un modèle relèvent de `apex models status` (detect).
+    inference = {
+        "native": importlib.util.find_spec("torch") is not None
+        and importlib.util.find_spec("transformers") is not None,
+        "ollama": ctx.probe.which("ollama") is not None,
+    }
     missing = [name for name, present in tools.items() if not present]
     hard_missing = [name for name in missing if name in {"git", "pyyaml"}]
+    facts = {"tools": tools, "inference": inference}
 
     if hard_missing:
         return _fail("GATE-16", title, f"outils indispensables absents : {', '.join(hard_missing)}",
                      remediation="sudo apt install git ; pip install pyyaml",
-                     facts={"tools": tools}, blocks_phases=(1,))
+                     facts=facts, blocks_phases=(1,))
+    if not any(inference.values()):
+        return _degraded("GATE-16", title, "aucun moteur d'inférence : ni backend natif ni Ollama",
+                         remediation="pip install -e '.[native]' puis `apex models fetch` (backend natif, sans "
+                                     "serveur) — Ollama reste un backend optionnel.",
+                         facts=facts)
     if missing:
         return _degraded("GATE-16", title, f"outils absents : {', '.join(missing)}",
-                     remediation="ollama est requis à partir de la phase 6 ; "
-                                 "repli : llama.cpp derrière la même interface ModelProvider.",
-                     facts={"tools": tools})
-    return _ok("GATE-16", title, "tous les outils présents", facts={"tools": tools})
+                         remediation="outils souples : aucun n'est requis pour démarrer.", facts=facts)
+    return _ok("GATE-16", title, "tous les outils présents", facts=facts)
 
 
 # ---------------------------------------------------------------------------

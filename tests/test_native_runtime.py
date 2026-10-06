@@ -158,3 +158,15 @@ def test_the_real_task_loop_drives_the_native_backend_end_to_end(models_dir, tmp
     assert run.status.value == "failed" and len(run.eval_run_ids) == 2
     assert [a["judge_result"] for a in run.attempts] == [None, None]
     assert run.providers_tried == (candidate.ref.id,)
+
+
+def test_waiting_for_a_busy_model_is_bounded_by_the_request_timeout(models_dir) -> None:
+    provider = get_default_provider(endpoint(models_dir))
+    provider.generate(request(endpoint(models_dir), max_tokens=2, temperature=0))  # charge le modèle
+    loaded = next(iter(native._CACHE.values()))
+    loaded.lock.acquire()  # une autre génération occupe le modèle
+    try:
+        with pytest.raises(TimeoutExceeded):
+            provider.generate(request(endpoint(models_dir), max_tokens=2, temperature=0, timeout_s=0.3))
+    finally:
+        loaded.lock.release()

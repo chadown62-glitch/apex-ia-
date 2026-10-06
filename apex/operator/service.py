@@ -216,8 +216,10 @@ class OperatorService:
             active = tuple(h.mission_id for h in self._scheduler.registry.snapshot())
             queued_count = len(self._mission_service.list_queued())
             max_concurrent = self._scheduler.capacity().max_concurrent_missions
-        except Exception:
-            pass
+        except Exception as exc:
+            # Jamais « 0 mission en file » présenté comme un fait quand la base n'a pas répondu : l'erreur
+            # est rapportée dans `last_error` (les compteurs à 0 sont alors explicitement non mesurés).
+            last_error = f"état des missions non mesuré : {exc.__class__.__name__}: {str(exc)[:200]}"
 
         return OperatorStatus(
             state=state, since=since, active_task_ids=active,

@@ -200,7 +200,11 @@ class NativeTransformersProvider(ModelProvider):
                 kwargs.update(do_sample=True, temperature=request.temperature)
         if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
             kwargs["pad_token_id"] = tokenizer.eos_token_id
-        with loaded.lock:
+        # Une génération à la fois par modèle chargé ; l'ATTENTE du tour est bornée par le délai de la requête
+        # (sinon un appel court — le Chat — pouvait attendre bien au-delà de son délai derrière une TaskRun).
+        if not loaded.lock.acquire(timeout=max(0.0, deadline - time.perf_counter())):
+            raise TimeoutExceeded("NativeTransformersProvider.generate (modèle occupé)", request.timeout_s)
+        try:
             if request.seed is not None:
                 torch.manual_seed(request.seed)
             gen_started = time.perf_counter()
@@ -209,6 +213,8 @@ class NativeTransformersProvider(ModelProvider):
                     input_ids.to(loaded.device), attention_mask=torch.ones_like(input_ids).to(loaded.device),
                     **kwargs)
             gen_s = time.perf_counter() - gen_started
+        finally:
+            loaded.lock.release()
         new_tokens = output[0][prompt_tokens:]
         if stop_state.get("reason") == "timeout":
             raise TimeoutExceeded("NativeTransformersProvider.generate", request.timeout_s)
