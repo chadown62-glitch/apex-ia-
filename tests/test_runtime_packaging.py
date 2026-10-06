@@ -187,18 +187,19 @@ class TestAntiLeakVerification(_BuiltArtifactTestCase):
             self.assertTrue(any("weakness" in v for v in report.violations))
 
     def test_checker_detects_a_planted_forbidden_import_without_the_directory(self) -> None:
-        """Un import mort vers `apex.genome` doit être détecté même si
-        `apex/genome/` lui-même n'est jamais copié — la vérification
-        statique des imports ne dépend pas de la vérification des
-        répertoires."""
+        """Un import mort vers `apex.metalearner` (recherche) doit être détecté
+        même si `apex/metalearner/` lui-même n'est jamais copié — la
+        vérification statique des imports ne dépend pas de la vérification
+        des répertoires. (`apex.genome`, utilisé ici avant le 06/10/2026, fait
+        désormais partie du Runtime.)"""
         with tempfile.TemporaryDirectory() as poisoned_tmp:
             poisoned = Path(poisoned_tmp) / "poisoned"
             shutil.copytree(self.artifact_dir, poisoned)
             sneaky = poisoned / "apex" / "missions" / "_sneaky.py"
-            sneaky.write_text("from apex.genome import service\n", encoding="utf-8")
+            sneaky.write_text("from apex.metalearner import evolution\n", encoding="utf-8")
             report = verify_runtime_artifact(poisoned)
             self.assertFalse(report.ok)
-            self.assertTrue(any("apex.genome" in v for v in report.violations))
+            self.assertTrue(any("apex.metalearner" in v for v in report.violations))
 
 
 class TestRuntimeCliFromCleanEnvironment(_BuiltArtifactTestCase):

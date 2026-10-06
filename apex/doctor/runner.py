@@ -20,6 +20,9 @@ from apex.obs.logging import get_logger
 from apex.obs.metrics import REGISTRY
 from apex.util.probe import Probe, SystemProbe
 
+#: Version du contrat JSON du Doctor (`apex doctor --json`).
+DOCTOR_SCHEMA_VERSION = 1
+
 log = get_logger("doctor")
 
 CheckFunc = Callable[[CheckContext], CheckResult]
@@ -59,7 +62,17 @@ class DoctorReport:
         return 1 if self.worst is Severity.FAIL else 0
 
     def to_dict(self) -> dict[str, Any]:
+        """Contrat JSON du Doctor, version `DOCTOR_SCHEMA_VERSION` — lu par ApexSetup
+        (`RuntimeContractParser.ParseDoctor`, qui connaît la version 1 et traite ces trois champs comme
+        optionnels pour rester compatible avec les runtimes antérieurs)."""
+        from datetime import datetime, timezone
+
+        from apex.version import __version__
+
         return {
+            "schema_version": DOCTOR_SCHEMA_VERSION,
+            "apex_version": __version__,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "status": self.worst.value,
             "counts": self.counts,
             "duration_ms": round(self.duration_ms, 1),
