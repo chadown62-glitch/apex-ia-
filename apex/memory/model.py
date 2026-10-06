@@ -57,6 +57,16 @@ class MemoryKind(str, Enum):
     EXPERIMENTAL = "experimental"
 
 
+class MemoryCategory(str, Enum):
+    """Mémoire SYSTÈME (06/10/2026) — d'où vient un souvenir, pour une récupération ciblée. `None` sur un
+    `MemoryRecord` : mémoire privée d'un clone (modèle d'origine, inchangé)."""
+
+    CONVERSATION = "conversation"
+    EXECUTION = "execution"
+    KNOWLEDGE = "knowledge"
+    PROJECT = "project"
+
+
 class VerificationStatus(str, Enum):
     """Statut épistémique d'une affirmation — distinct de `confidence`
     (probabiliste) et de tout autre vocabulaire fermé du dépôt. Une absence
@@ -112,6 +122,7 @@ class MemoryRecord:
     supersedes_id: str | None
     expires_at: datetime | None
     created_at: datetime = field(default_factory=_utcnow)
+    category: MemoryCategory | None = None
 
     @classmethod
     def new(
@@ -130,6 +141,7 @@ class MemoryRecord:
         external_source: str | None = None,
         supersedes_id: str | None = None,
         expires_at: datetime | None = None,
+        category: MemoryCategory | None = None,
     ) -> MemoryRecord:
         if not content.strip():
             raise ValueError("le contenu d'un MemoryRecord est obligatoire")
@@ -153,6 +165,7 @@ class MemoryRecord:
             external_source=external_source,
             supersedes_id=supersedes_id,
             expires_at=expires_at,
+            category=category,
         )
 
     @classmethod
@@ -174,6 +187,7 @@ class MemoryRecord:
             supersedes_id=row.supersedes_id,
             expires_at=row.expires_at,
             created_at=row.created_at,
+            category=MemoryCategory(row.category) if getattr(row, "category", None) else None,
         )
 
 

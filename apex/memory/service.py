@@ -26,10 +26,12 @@ périmètre de cette étape.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Any
 
 from apex.memory.model import (
+    MemoryCategory,
     MemoryKind,
     MemoryRecord,
     MemoryRelation,
@@ -38,8 +40,13 @@ from apex.memory.model import (
     VerificationStatus,
 )
 from apex.memory.repository import MemoryRepository
+from apex.memory.retrieval import Retrieved, score_candidates, snippet
 from apex.policy.engine import PolicyEngine
 from apex.policy.model import Action, Subject
+
+
+#: Taille maximale d'un souvenir système (un document est découpé en plusieurs souvenirs).
+MAX_SYSTEM_RECORD_CHARS = 8_000
 
 
 def _utcnow() -> datetime:
@@ -156,6 +163,46 @@ class MemoryService:
     def read_shared(self, *, requested_by: Subject, limit: int = 200) -> list[MemoryRecord]:
         self.policy.authorize(requested_by, Action.READ_SHARED_MEMORY)
         return self._repo.list_records(visibility=MemoryVisibility.SHARED.value, limit=limit)
+
+    # -- mémoire SYSTÈME (conversations, exécutions, documents, projets — 06/10/2026) ------------------
+
+    def write_system(
+        self, *, category: MemoryCategory, content: str, source: str, created_by: Subject,
+        kind: MemoryKind = MemoryKind.EPISODIC, confidence: float = 0.5,
+        verification_status: VerificationStatus = VerificationStatus.UNCERTAIN,
+    ) -> MemoryRecord:
+        """Écrit un souvenir SYSTÈME (CORE/HUMAN seulement — `WRITE_SYSTEM_MEMORY`), avec sa provenance."""
+        self.policy.authorize(created_by, Action.WRITE_SYSTEM_MEMORY)
+        record = MemoryRecord.new(
+            kind=kind, content=content[:MAX_SYSTEM_RECORD_CHARS], source=source, created_by=created_by.value,
+            confidence=confidence, verification_status=verification_status, category=category,
+        )
+        self._repo.create_record(record)
+        self._record_event(record.id, "memory.written", {
+            "record_kind": record.kind.value, "category": category.value, "source": source,
+        })
+        return record
+
+    def retrieve(
+        self, query: str, *, requested_by: Subject, categories: Sequence[MemoryCategory],
+        limit: int = 3, max_snippet_chars: int = 600, exclude_source_prefixes: Sequence[str] = (),
+        candidate_limit: int = 2000,
+    ) -> list[Retrieved]:
+        """Souvenirs SYSTÈME les plus pertinents pour `query` (BM25 lexical, `apex.memory.retrieval`), parmi
+        les `candidate_limit` plus récents des catégories demandées ; révisions remplacées et sources exclues
+        écartées. Lecture réservée à CORE/HUMAN (`READ_SYSTEM_MEMORY`)."""
+        self.policy.authorize(requested_by, Action.READ_SYSTEM_MEMORY)
+        records = self._repo.list_system_records(
+            categories=[c.value for c in categories], limit=candidate_limit,
+        )
+        superseded = {r.supersedes_id for r in records if r.supersedes_id}
+        candidates = [
+            r for r in records
+            if r.id not in superseded and not any(r.source.startswith(p) for p in exclude_source_prefixes)
+        ]
+        scored = score_candidates(query, candidates)[:limit]
+        return [Retrieved(record=r, score=s, snippet=snippet(r.content, query, max_snippet_chars))
+                for r, s in scored]
 
     # -- relations SUPPORTS/CONTRADICTS --------------------------------------
 

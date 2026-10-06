@@ -57,6 +57,11 @@ class Action(str, Enum):
     SPAWN_CLONE = "spawn_clone"
     TERMINATE_CLONE = "terminate_clone"
     READ_SHARED_MEMORY = "read_shared_memory"
+    #: Mémoire SYSTÈME d'APEX (conversations, exécutions, documents, artefacts de projet — 06/10/2026) :
+    #: écrite et lue par CORE et HUMAN seulement, JAMAIS par un clone (une conversation peut contenir des
+    #: informations personnelles). Distincte des mémoires privées de clones (`WRITE_OWN_MEMORY`).
+    WRITE_SYSTEM_MEMORY = "write_system_memory"
+    READ_SYSTEM_MEMORY = "read_system_memory"
     READ_REPO_SNAPSHOT = "read_repo_snapshot"
     # -- Mission Engine (docs/COGNITIVE_ARCHITECTURE.md, étape 6) ------------
     # Toutes réservées à HUMAN/CORE — jamais à un type de clone : un agent ne

@@ -81,6 +81,8 @@ class TaskRunIn(BaseModel):
     #: `sandbox.execute`) ; vide : une tentative = un appel au modèle.
     tool_permissions: list[str] = Field(default_factory=list, max_length=3)
     max_tool_steps: int = Field(default=8, ge=1, le=30)
+    #: Joindre au prompt les souvenirs SYSTÈME les plus pertinents (exécutions passées, documents, projets).
+    use_memory: bool = False
 
 
 def _plain(value: Any) -> Any:
@@ -295,6 +297,7 @@ def start_task_run(task_id: str, body: TaskRunIn) -> DataEnvelope[dict[str, Any]
             plan_first=body.plan_first,
             tool_permissions=tuple(body.tool_permissions),
             max_tool_steps=body.max_tool_steps,
+            use_memory=body.use_memory,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

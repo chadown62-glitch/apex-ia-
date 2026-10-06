@@ -225,6 +225,9 @@ class MessageOut(BaseModel):
 class SendMessageIn(BaseModel):
     content: str = Field(min_length=1)
     model_role: str | None = None
+    #: Mémoire système : joindre les souvenirs pertinents d'autres conversations/documents/exécutions et
+    #: indexer cet échange. `False` : conversation isolée (ni lue ni écrite dans la mémoire système).
+    use_memory: bool = True
 
 
 class SendMessageOut(BaseModel):

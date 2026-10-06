@@ -56,6 +56,7 @@ const RUN_DETAIL = {
     { ts: "4", kind: "strategy.adapted", description: "tentative 2 : faits d'échec de la tentative 1", trace_id: "r1" },
     { ts: "4b", kind: "agent.step", step: 3, tool: "tests.run", ok: true, error: null, submit: false, trace_id: "r1" },
     { ts: "4c", kind: "agent.step", step: 4, tool: null, ok: true, error: null, submit: true, trace_id: "r1" },
+    { ts: "4d", kind: "memory.retrieved", items: [{ id: "m1", source: "task_run:r0", score: 1.2 }], trace_id: "r1" },
     { ts: "5", kind: "task.completed", trace_id: "r1" },
   ],
 };
@@ -138,5 +139,6 @@ describe("RunDetail", () => {
     expect(screen.getByText(/verdict pass/)).toBeInTheDocument();
     expect(screen.getByText(/tour 3 : tests.run ok/)).toBeInTheDocument();
     expect(screen.getByText(/tour 4 : solution soumise/)).toBeInTheDocument();
+    expect(screen.getByText(/souvenirs : task_run:r0/)).toBeInTheDocument();
   });
 });

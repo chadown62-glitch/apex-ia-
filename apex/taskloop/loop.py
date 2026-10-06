@@ -293,6 +293,39 @@ def _generate_plan(
     return text
 
 
+_MEMORY_HEADER = (
+    "Mémoire pertinente d'APEX (expériences et connaissances passées, avec leur source — à utiliser seulement "
+    "si elles s'appliquent à cette tâche) :"
+)
+
+
+def _recall(
+    request: TaskRequest, *, task: Any, trace_id: str, prompt: str, session_factory: Any,
+    emit: Callable[[str, dict[str, Any]], None],
+) -> tuple[str, list[str]]:
+    """RETRIEVAL -> contexte : les souvenirs système les plus pertinents pour l'énoncé (jamais toute la
+    mémoire), provenance comprise. Une mémoire indisponible n'arrête jamais la tâche (`memory.unavailable`)."""
+    from apex.memory.model import MemoryCategory
+    from apex.memory.retrieval import render_context
+    from apex.memory.service import MemoryService
+
+    try:
+        items = MemoryService(session_factory).retrieve(
+            task.description, requested_by=request.authorization,
+            categories=(MemoryCategory.EXECUTION, MemoryCategory.KNOWLEDGE, MemoryCategory.PROJECT),
+            exclude_source_prefixes=(f"task_run:{trace_id}", f"workspace:{trace_id}:"),
+        )
+    except Exception as exc:
+        emit("memory.unavailable", {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
+        return prompt, []
+    emit("memory.retrieved", {"items": [
+        {"id": i.record.id, "category": i.record.category.value if i.record.category else None,
+         "source": i.record.source, "score": round(i.score, 4)} for i in items]})
+    if not items:
+        return prompt, []
+    return f"{prompt}\n\n{render_context(items, header=_MEMORY_HEADER)}", [i.record.id for i in items]
+
+
 @dataclass(frozen=True)
 class _ToolSetup:
     workspace: Any
@@ -568,10 +601,22 @@ def _run(
     if request.constraints.strip():
         prompt = f"{prompt}\n\nContraintes :\n{request.constraints}"
     emit("task.planning.completed", {"mode": planning_mode})
+
+    # -- MÉMOIRE (souvenirs pertinents, sur demande) ------------------------------------------------
+    memory_ids: list[str] = []
+    if request.use_memory:
+        prompt, memory_ids = _recall(request, task=task, trace_id=trace_id, prompt=prompt,
+                                     session_factory=session_factory, emit=emit)
     stage = _advance_stage(stage, TaskLoopStage.PLAN)
 
     # -- STRATÉGIE (expérience d'un RUN précédent, si demandé) ---------------
     strategy = _strategy_for(request, experience_repo=experience_repo, eval_run_repo=eval_run_repo)
+    if memory_ids:
+        from dataclasses import replace as _replace_strategy
+
+        strategy = _replace_strategy(
+            strategy, genome_content={**(strategy.genome_content or {}), "memory": memory_ids},
+        )
     if strategy.conditioned:
         emit("strategy.decided", {"condition_on_run": request.condition_on_run, **strategy.event()})
     generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)

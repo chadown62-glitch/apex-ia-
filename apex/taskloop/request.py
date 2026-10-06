@@ -130,6 +130,10 @@ class TaskRequest:
     tool_permissions: tuple[str, ...] = ()
     #: Nombre maximal de tours (appels au modèle) d'un épisode outillé, par tentative.
     max_tool_steps: int = 8
+    #: Récupérer dans la mémoire SYSTÈME (exécutions passées, documents, projets) les souvenirs les plus
+    #: PERTINENTS pour la tâche et les joindre au prompt, avec leur provenance. Défaut : non (les protocoles de
+    #: mesure RUN 1 -> RUN 2 ne doivent pas être contaminés).
+    use_memory: bool = False
 
     def __post_init__(self) -> None:
         from apex.tools.model import Permission

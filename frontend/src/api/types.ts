@@ -980,6 +980,7 @@ export interface TaskRunStartInput {
   condition_on_run?: string;
   tool_permissions?: string[];
   max_tool_steps?: number;
+  use_memory?: boolean;
 }
 
 export type TaskRunStatus = "running" | "completed" | "failed" | "blocked" | "cancelled" | "error" | "interrupted";
@@ -1010,6 +1011,7 @@ export interface TaskRun {
   plan_first: boolean | null;
   tool_permissions: string[] | null;
   max_tool_steps: number | null;
+  use_memory?: boolean | null;
 }
 
 export interface TaskRunEvalRun {

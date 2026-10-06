@@ -124,12 +124,14 @@ function RunLauncher({ taskId, onStarted }: { taskId: string; onStarted: (runId:
   const [adaptation, setAdaptation] = useState<RetryAdaptation>("failure_facts");
   const [learnFromLatest, setLearnFromLatest] = useState(false);
   const [toolMode, setToolMode] = useState(false);
+  const [useMemory, setUseMemory] = useState(false);
   const start = useMutation({
     mutationFn: () =>
       startTaskRun(taskId, {
         max_attempts: maxAttempts,
         plan_first: planFirst,
         retry_adaptation: adaptation,
+        use_memory: useMemory,
         ...(learnFromLatest ? { condition_on_run: "latest" } : {}),
         // Permissions EXPLICITES : l'utilisateur les accorde ici, jamais le modèle.
         ...(toolMode ? { tool_permissions: ["workspace.read", "workspace.write", "sandbox.execute"], max_tool_steps: 10 } : {}),
@@ -164,6 +166,11 @@ function RunLauncher({ taskId, onStarted }: { taskId: string; onStarted: (runId:
         checked={toolMode}
         onChange={(e) => setToolMode(e.target.checked)}
       />
+      <Checkbox
+        label="Consulter la mémoire (exécutions passées, documents)"
+        checked={useMemory}
+        onChange={(e) => setUseMemory(e.target.checked)}
+      />
       <Button variant="primary" onClick={() => start.mutate()} disabled={start.isPending}>
         Lancer
       </Button>
@@ -191,6 +198,12 @@ function eventSummary(event: TaskRunEvent): string {
       return event.submit
         ? `tour ${String(event.step)} : solution soumise`
         : `tour ${String(event.step)} : ${String(event.tool ?? "action illisible")} ${event.ok ? "ok" : `échec (${String(event.error ?? "")})`}`;
+    case "memory.retrieved": {
+      const items = (event.items as Array<{ source?: string }> | undefined) ?? [];
+      return items.length ? `souvenirs : ${items.map((i) => String(i.source ?? "")).join(", ")}` : "aucun souvenir pertinent";
+    }
+    case "memory.unavailable":
+      return `mémoire indisponible : ${String(event.error ?? "")}`;
     case "workspace.created":
       return `espace ${String(event.workspace_id ?? "")} — outils : ${(event.tools as string[] | undefined)?.join(", ") ?? ""}`;
     default:

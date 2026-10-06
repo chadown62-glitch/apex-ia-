@@ -364,8 +364,10 @@ class MemoryRepository:
         supersedes_id: str | None,
         expires_at: datetime | None,
         created_at: datetime,
+        category: str | None = None,
     ) -> MemoryRecordRow:
         row = MemoryRecordRow(
+            category=category,
             id=id, kind=kind, domain=domain, content=content, source=source, created_by=created_by,
             confidence=confidence, verification_status=verification_status, visibility=visibility,
             evidence_for=list(evidence_for), evidence_against=list(evidence_against),
@@ -399,6 +401,16 @@ class MemoryRepository:
         if visibility is not None:
             stmt = stmt.where(MemoryRecordRow.visibility == visibility)
         stmt = stmt.order_by(MemoryRecordRow.created_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
+
+    def list_system_records(self, *, categories: list[str], limit: int) -> list[MemoryRecordRow]:
+        """Mémoire système (catégorisée) la plus récente — jamais une mémoire privée de clone."""
+        stmt = (
+            select(MemoryRecordRow)
+            .where(MemoryRecordRow.category.in_(categories))
+            .order_by(MemoryRecordRow.created_at.desc())
+            .limit(limit)
+        )
         return list(self._session.scalars(stmt))
 
     def find_successor(self, record_id: str) -> MemoryRecordRow | None:

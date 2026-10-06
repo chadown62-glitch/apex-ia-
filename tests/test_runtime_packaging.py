@@ -114,14 +114,17 @@ class TestBuildRuntimeArtifact(_BuiltArtifactTestCase):
             for name in imported:
                 self.assertFalse(name.startswith(research_prefixes), f"{py_file} importe {name}")
 
-    def test_artifacts_and_memory_packages_are_present_but_unwired_in_api(self) -> None:
-        """`runtime-capable / currently unused` (décision produit) : présents,
-        mais rien ne les active implicitement."""
+    def test_artifacts_package_is_present_but_unwired_and_memory_is_wired(self) -> None:
+        """`apex.artifacts` : `runtime-capable / currently unused` (présent, rien
+        ne l'active). `apex.memory` : branché depuis le 06/10/2026 (mémoire
+        système du Chat et du TaskLoop, route `/memory`) — il doit donc être
+        présent ET exposé dans le Runtime."""
         self.assertTrue((self.artifact_dir / "apex" / "artifacts").is_dir())
         self.assertTrue((self.artifact_dir / "apex" / "memory").is_dir())
+        self.assertTrue((self.artifact_dir / "apex" / "api" / "routes" / "memory.py").is_file())
         app_source = (self.artifact_dir / "apex" / "api" / "app.py").read_text(encoding="utf-8")
         self.assertNotIn("apex.artifacts", app_source)
-        self.assertNotIn("apex.memory", app_source)
+        self.assertIn("memory.router", app_source)
 
     def test_frontend_bundle_copy_is_a_graceful_no_op_since_dist_is_gitignored(self) -> None:
         """`frontend/dist` est exclu de Git (`frontend/.gitignore`) — `git

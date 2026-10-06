@@ -87,6 +87,7 @@ class TaskRun:
     #: Mode outillé : permissions explicitement accordées et tours maximaux par tentative (None : sans outils).
     tool_permissions: tuple[str, ...] | None = None
     max_tool_steps: int | None = None
+    use_memory: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -112,6 +113,7 @@ class TaskRun:
             "plan_first": self.plan_first,
             "tool_permissions": list(self.tool_permissions) if self.tool_permissions is not None else None,
             "max_tool_steps": self.max_tool_steps,
+            "use_memory": self.use_memory,
         }
 
 
@@ -150,6 +152,7 @@ class TaskRunRepository:
                     plan_first=run.plan_first,
                     tool_permissions=list(run.tool_permissions) if run.tool_permissions is not None else None,
                     max_tool_steps=run.max_tool_steps,
+                    use_memory=run.use_memory,
                 )
             )
 
@@ -259,6 +262,7 @@ def _from_row(row: Any) -> TaskRun:
         plan_first=row.plan_first,
         tool_permissions=tuple(row.tool_permissions) if row.tool_permissions is not None else None,
         max_tool_steps=row.max_tool_steps,
+        use_memory=row.use_memory,
     )
 
 
@@ -312,6 +316,7 @@ class TaskRunService:
         plan_first: bool = False,
         tool_permissions: tuple[str, ...] = (),
         max_tool_steps: int = 8,
+        use_memory: bool = False,
     ) -> TaskRun:
         from apex.taskloop.registry import default_registry
         from apex.tasks.repository import TaskRepository
@@ -364,6 +369,7 @@ class TaskRunService:
             plan_first=plan_first,
             tool_permissions=tuple(tool_permissions),
             max_tool_steps=max_tool_steps,
+            use_memory=use_memory,
         )  # `authorization` : défaut de `TaskRequest` (CORE), celui avec lequel la boucle est éprouvée
         run = TaskRun(
             id=str(uuid.uuid4()),
@@ -387,6 +393,7 @@ class TaskRunService:
             plan_first=plan_first,
             tool_permissions=tuple(tool_permissions) if tool_permissions else None,
             max_tool_steps=max_tool_steps if tool_permissions else None,
+            use_memory=use_memory,
         )
         self.repo.create(run)
 
@@ -401,6 +408,7 @@ class TaskRunService:
                     trace_id=run.id,
                 )
                 self.repo.finish_with_result(run.id, result)
+                self._remember(run.id, task)
             except Exception as exc:  # erreur d'appel ou panne inattendue : enregistrée, jamais avalée
                 self.repo.finish_with_error(run.id, f"{exc.__class__.__name__}: {exc}")
             finally:
@@ -413,6 +421,32 @@ class TaskRunService:
             thread.join()
             return self.repo.get(run.id) or run
         return run
+
+    def _remember(self, run_id: str, task: Any) -> None:
+        """Indexe l'exécution terminée dans la mémoire SYSTÈME (`apex.memory.indexing.index_task_run` : énoncé
+        public, code produit, verdict, faits autorisés). Un échec d'indexation n'affecte jamais la TaskRun : il
+        est journalisé (`memory.index_failed`), jamais avalé silencieusement."""
+        from apex.evalrunner.repository import EvalRunRepository
+        from apex.memory.indexing import index_task_run
+        from apex.memory.service import MemoryService
+
+        try:
+            finished = self.repo.get(run_id)
+            if finished is None:
+                return
+            eval_repo = EvalRunRepository(self.session_factory)
+            eval_runs = [r for r in (eval_repo.get(i) for i in finished.eval_run_ids) if r is not None]
+            index_task_run(MemoryService(self.session_factory), run=finished, task=task, eval_runs=eval_runs)
+        except Exception as exc:
+            from apex.db.engine import session_scope
+            from apex.db.repositories import EventRepository
+
+            with session_scope(self.session_factory) as session:
+                EventRepository(session).add(
+                    ts=_utcnow(), level="WARNING", logger="apex.taskloop", msg="memory.index_failed",
+                    context={"trace_id": run_id, "kind": "memory.index_failed",
+                             "error": f"{exc.__class__.__name__}: {exc}"[:500]},
+                )
 
     def wait(self, run_id: str, timeout_s: float | None = None) -> TaskRun | None:
         thread = self._threads.get(run_id)

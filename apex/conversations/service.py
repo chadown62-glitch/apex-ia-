@@ -121,6 +121,7 @@ class ConversationService:
         timeout_s: float = 60.0,
         max_tokens: int | None = None,
         temperature: float | None = None,
+        use_memory: bool = True,
     ) -> tuple[Message, Message]:
         """UI -> API -> `ConversationService.send_message` -> `apex.routing.
         select_model` -> `apex.routing.generate_with_fallback` -> `apex.
@@ -146,6 +147,9 @@ class ConversationService:
         # nouveau message. Avant le 05/10/2026, seul le dernier message était envoyé au modèle.
         history = self._messages.recent_by_conversation(conversation_id, limit=_HISTORY_SCAN_LIMIT)
         prompt, used = compose_conversation_prompt(history, content)
+        recalled: list[Any] = []
+        if use_memory:
+            prompt, recalled = self._recall(conversation_id, content, prompt)
         user_message = self._messages.create(
             conversation_id=conversation_id, role=MessageRole.USER, content=content,
             model_id=None, provider_id=None, status=MessageStatus.REAL, error=None,
@@ -198,9 +202,49 @@ class ConversationService:
         self._conversations.touch(conversation_id)
         self._record_event(
             conversation_id, "conversation.message_received",
-            {"model_id": served.ref.id, "history_messages_sent": used},
+            {"model_id": served.ref.id, "history_messages_sent": used,
+             "memory": [{"id": r.record.id, "source": r.record.source, "score": round(r.score, 4)}
+                        for r in recalled]},
         )
+        if use_memory:
+            self._remember(conversation_id, assistant_message.id, content, fallback_result.result.text)
         return user_message, assistant_message
+
+    def _recall(self, conversation_id: str, content: str, prompt: str) -> tuple[str, list[Any]]:
+        """Mémoire LONG TERME : souvenirs système pertinents d'AUTRES conversations, de documents et d'exécutions
+        (la conversation courante est déjà dans la transcription). Rien n'est ajouté sans pertinence ; une
+        mémoire indisponible n'empêche jamais de répondre."""
+        from apex.memory.model import MemoryCategory
+        from apex.memory.retrieval import render_context
+        from apex.memory.service import MemoryService
+
+        try:
+            items = MemoryService(self._session_factory).retrieve(
+                content, requested_by=Subject.HUMAN,
+                categories=(MemoryCategory.CONVERSATION, MemoryCategory.KNOWLEDGE, MemoryCategory.EXECUTION),
+                exclude_source_prefixes=(f"conversation:{conversation_id}:",), limit=3, max_snippet_chars=500,
+            )
+        except Exception as exc:
+            self._record_event(conversation_id, "conversation.memory_unavailable",
+                               {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
+            return prompt, []
+        if not items:
+            return prompt, []
+        header = "Souvenirs pertinents d'APEX (autres conversations, documents, exécutions — avec leur source) :"
+        return f"{render_context(items, header=header)}\n\n{prompt}", items
+
+    def _remember(self, conversation_id: str, message_id: str, question: str, answer: str) -> None:
+        from apex.memory.indexing import index_conversation_exchange
+        from apex.memory.service import MemoryService
+
+        try:
+            index_conversation_exchange(
+                MemoryService(self._session_factory), conversation_id=conversation_id, message_id=message_id,
+                user_text=question, assistant_text=answer,
+            )
+        except Exception as exc:
+            self._record_event(conversation_id, "conversation.memory_index_failed",
+                               {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
 
     @staticmethod
     def _load_config() -> "ApexConfig":

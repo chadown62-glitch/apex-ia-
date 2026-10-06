@@ -80,12 +80,16 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # Agents V1 : CORE lance une exécution déjà créée/assignée par
             # HUMAIN — même chaîne que LAUNCH_MISSION, jamais CREATE_AGENT.
             Action.RUN_AGENT_EXECUTION,
+            # Mémoire système (06/10/2026) : CORE indexe les exécutions et y puise pour décider.
+            Action.WRITE_SYSTEM_MEMORY, Action.READ_SYSTEM_MEMORY,
         }
     ),
     Subject.HUMAN: frozenset(
         {
             Action.SPAWN_CLONE, Action.TERMINATE_CLONE, Action.PROPOSE_INTEGRATION,
             Action.WRITE_AUDIT_LOG, Action.READ_SHARED_MEMORY, Action.READ_REPO_SNAPSHOT,
+            # Mémoire système (06/10/2026) : l'utilisateur ajoute ses documents et lit la mémoire.
+            Action.WRITE_SYSTEM_MEMORY, Action.READ_SYSTEM_MEMORY,
             # Le cycle de vie humain d'une mission au complet : créer, annuler,
             # et la décision de revue (valider/rejeter/renvoyer en révision).
             # Jamais LAUNCH_MISSION : le lancement effectif reste au CORE.

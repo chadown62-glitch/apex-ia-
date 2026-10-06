@@ -151,6 +151,7 @@ def send_message(conversation_id: str, payload: SendMessageIn) -> DataEnvelope[S
 
         user_message, assistant_message = ConversationService(get_session_factory()).send_message(
             conversation_id, content=payload.content, created_by=Subject.HUMAN, model_role=payload.model_role,
+            use_memory=payload.use_memory,
         )
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")

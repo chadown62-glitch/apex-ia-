@@ -35,7 +35,7 @@ class MemoryRepository:
                 evidence_for=record.evidence_for, evidence_against=record.evidence_against,
                 external_provenance=record.external_provenance, external_source=record.external_source,
                 supersedes_id=record.supersedes_id, expires_at=record.expires_at,
-                created_at=record.created_at,
+                created_at=record.created_at, category=record.category.value if record.category else None,
             )
 
     def promote_to_shared(self, record_id: str) -> bool:
@@ -59,6 +59,14 @@ class MemoryRepository:
 
         with session_scope(self._session_factory) as session:
             rows = _DbMemoryRepository(session).list_records(visibility=visibility, limit=limit)
+            return [MemoryRecord.from_row(row) for row in rows]
+
+    def list_system_records(self, *, categories: list[str], limit: int) -> list[MemoryRecord]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import MemoryRepository as _DbMemoryRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbMemoryRepository(session).list_system_records(categories=categories, limit=limit)
             return [MemoryRecord.from_row(row) for row in rows]
 
     def has_successor(self, record_id: str) -> bool:

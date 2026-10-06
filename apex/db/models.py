@@ -330,6 +330,8 @@ class MemoryRecordRow(Base):
     external_source: Mapped[str | None] = mapped_column(String(256), nullable=True)
     supersedes_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    #: Mémoire système : `conversation` | `execution` | `knowledge` | `project` ; NULL : mémoire de clone.
+    category: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
@@ -1504,3 +1506,4 @@ class TaskRunRow(Base):
     plan_first: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     tool_permissions: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     max_tool_steps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    use_memory: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
