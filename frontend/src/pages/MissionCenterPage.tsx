@@ -67,6 +67,7 @@ export function MissionCenterPage() {
   const [configuredAgentId, setConfiguredAgentId] = useState("");
   const [priority, setPriority] = useState<MissionPriority>("normal");
   const [constraints, setConstraints] = useState("");
+  const [taskId, setTaskId] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
 
@@ -96,6 +97,8 @@ export function MissionCenterPage() {
       title, description, specialty: specialtyId, objective, priority,
       constraints: constraints || null, assigned_agent: agentId || null,
       agent_id: configuredAgentId || null,
+      // Task vérifiable : la mission sera exécutée par le TaskLoop (Judge à cas cachés), puis revue humaine.
+      ...(taskId ? { task_id: taskId } : {}),
     });
     if (envelope.status === "real" && envelope.data) {
       setSelectedMissionId(envelope.data.id);
@@ -105,6 +108,7 @@ export function MissionCenterPage() {
       setAgentId("");
       setConfiguredAgentId("");
       setConstraints("");
+      setTaskId("");
     } else {
       setCreateError(envelope.detail ?? "Création refusée par le backend.");
     }
@@ -201,6 +205,10 @@ export function MissionCenterPage() {
                 <span>Contraintes</span>
                 <input value={constraints} onChange={(e) => setConstraints(e.target.value)} placeholder="ex. pas d'accès réseau" />
               </label>
+              <label className="mission-form__field">
+                <span>Tâche vérifiable (id, optionnel)</span>
+                <input value={taskId} onChange={(e) => setTaskId(e.target.value)} placeholder="exécutée par le TaskLoop" />
+              </label>
             </div>
 
             <label className="mission-form__field mission-form__field--checkbox">
@@ -243,6 +251,9 @@ export function MissionCenterPage() {
                     <tr><th>Agent assigné (Clone)</th><td className="mono">{selectedMission.assigned_agent ?? "— aucun —"}</td></tr>
                     <tr><th>Mon Agent assigné</th><td className="mono">{selectedMission.agent_id ?? "— aucun —"}</td></tr>
                     <tr><th>Priorité</th><td>{selectedMission.priority}</td></tr>
+                    {selectedMission.task_id && (
+                      <tr><th>Tâche (TaskLoop)</th><td className="mono">{selectedMission.task_id} — exécution {selectedMission.task_run_id ?? "pas encore lancée"}</td></tr>
+                    )}
                     <tr><th>Décision humaine</th><td>{selectedMission.validation_status ?? "— aucune —"}</td></tr>
                     {latestExecution && (
                       <>

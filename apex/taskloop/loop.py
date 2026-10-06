@@ -750,7 +750,7 @@ def _run(
         )
         clone = agent_runtime.spawn(
             clone_subject, pool=pool, genome_ref=f"taskloop:{trace_id}:{attempt_number}",
-            spawned_by=request.authorization, mission_id=None,
+            spawned_by=request.authorization, mission_id=request.mission_id,
         )
         attempt_started_at = _utcnow()
         attempt_started_monotonic = time.perf_counter()
@@ -817,6 +817,14 @@ def _run(
             "candidate.generated",
             {"attempt_number": attempt_number, "model_id": generation.model_used},
         )
+        if cancel_token is not None and cancel_token.is_cancel_requested:
+            # Annulation demandée PENDANT la génération : rien n'est exécuté ni jugé ensuite.
+            agent_runtime.terminate(clone, requested_by=request.authorization, reason="annulation demandée")
+            return _finalize(
+                task_id=request.task_id, trace_id=trace_id, status=TaskLoopStatus.CANCELLED,
+                final_output=None, attempts=tuple(history.records), providers_tried=tuple(providers_tried),
+                eval_run_ids=tuple(eval_run_ids), failure=None, stop_reason=StopReason.CANCELLED.value, emit=emit,
+            )
 
         # -- EXECUTE -----------------------------------------------------
         eval_run_id = str(uuid.uuid4())

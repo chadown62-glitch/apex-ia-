@@ -92,6 +92,8 @@ def get_scheduler_service() -> "SchedulerService":
         agent_runtime = AgentRuntime(session_factory)
         service = SchedulerService(
             session_factory, mission_service=mission_service, agent_runtime=agent_runtime,
+            # Chemin autonome canonique des missions à Task vérifiable (unification Missions/TaskLoop).
+            task_run_service=get_task_run_service(),
         )
         # Réconciliation « au démarrage » (étape 8) : ici, PAS au sens du
         # processus FastAPI, mais au sens du Scheduler lui-même — la première

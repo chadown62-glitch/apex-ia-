@@ -62,6 +62,8 @@ class MissionService:
         assigned_agent: str | None = None,
         agent_id: str | None = None,
         depends_on: tuple[str, ...] = (),
+        task_id: str | None = None,
+        task_options: dict[str, Any] | None = None,
     ) -> Mission:
         self.policy.authorize(created_by, Action.CREATE_MISSION)
 
@@ -96,6 +98,24 @@ class MissionService:
             if not configured.enabled:
                 raise ValueError(f"agent « {agent_id} » désactivé — ne peut être assigné à une mission")
 
+        normalized_options: dict[str, Any] | None = None
+        if task_id is not None:
+            # Unification Missions/TaskLoop : une mission à Task vérifiable suit UN SEUL chemin, le TaskLoop
+            # (qui crée lui-même ses clones) — jamais un mélange implicite avec un clone ou un Agent assigné.
+            if assigned_agent is not None or agent_id is not None:
+                raise ValueError("une mission à tâche vérifiable (task_id) n'accepte ni assigned_agent ni agent_id")
+            from apex.missions.task_options import normalize_task_options
+            from apex.tasks.repository import TaskRepository
+
+            task = TaskRepository(self._session_factory).get(task_id)
+            if task is None:
+                raise ValueError(f"tâche « {task_id} » introuvable")
+            if task.solution_harness is None:
+                raise ValueError(f"la tâche « {task_id} » n'a pas de juge (« solution_harness ») : rien à vérifier")
+            normalized_options = normalize_task_options(task_options, task=task)
+        elif task_options:
+            raise ValueError("task_options exige task_id")
+
         depends_on = tuple(depends_on)
         if depends_on:
             # Vérification TRANSACTIONNELLE (étape 8) : un seul aller-retour
@@ -114,6 +134,7 @@ class MissionService:
             title=title, description=description, specialty=specialty, objective=objective,
             created_by=created_by.value, priority=priority, constraints=constraints,
             assigned_agent=assigned_agent, agent_id=agent_id, depends_on=depends_on,
+            task_id=task_id, task_options=normalized_options,
         )
         self._repo.create(mission)
         self._record_event(mission, "mission.created", {})
@@ -123,8 +144,16 @@ class MissionService:
         self._record_event(mission, "mission.queued", {})
         self._record_audit(
             mission, actor=created_by.value, action="mission.created",
-            details={"specialty": specialty, "assigned_agent": assigned_agent},
+            details={"specialty": specialty, "assigned_agent": assigned_agent, "task_id": task_id},
         )
+        return mission
+
+    def attach_task_run(self, mission_id: str, task_run_id: str) -> Mission:
+        """Relie la mission (RUNNING) à la TaskRun que le TaskLoop exécute pour elle — trace, jamais décision."""
+        mission = self._require(mission_id)
+        mission.task_run_id = task_run_id
+        self._repo.update(mission, state=mission.state.value, task_run_id=task_run_id)
+        self._record_event(mission, "mission.task_run_started", {"task_run_id": task_run_id})
         return mission
 
     # -- décisions humaines ------------------------------------------------

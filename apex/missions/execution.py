@@ -1,6 +1,19 @@
 """Orchestrateur qui relie Mission Engine, AgentRuntime et Sandbox — la
 chaîne obligatoire de l'étape 7, dans cet ordre exact, sans raccourci :
 
+**Unification Missions/TaskLoop (06/10/2026) — LE chemin d'exécution autonome.** Une mission qui porte une
+Task vérifiable (`Mission.task_id`) est exécutée par `run_mission_task`, une enveloppe MINCE autour du seul
+cœur autonome d'APEX, le TaskLoop (`apex.taskloop.runs.TaskRunService` -> `run_task_loop` : génération,
+outils, sandbox, Judge à cas cachés, correction, nouvelle tentative, Experience, mémoire). La Mission n'y
+ajoute que sa GOUVERNANCE : file et dépendances (Scheduler), état RUNNING, puis REVIEW si le Judge a validé
+— la validation finale reste HUMAINE — ou FAILED sinon. Aucune boucle de tentative, aucun jugement ici.
+
+Les trois chemins historiques ci-dessous restent pour compatibilité et NE SONT PAS autonomes : une commande
+sandbox fixe (`launch_mission`, diagnostic RESEARCH, recovery d'infrastructure seulement) ou UN appel au modèle
+sans juge (`generate_mission_response*`, comme `/missions/{id}/run`). Ils ne doivent pas grandir en seconde
+boucle autonome : toute exécution à vérifier passe par une Task et `run_mission_task`.
+
+
     CORE -> POLICY -> AGENT RUNTIME -> SANDBOX -> MISSION -> RESULT
     -> REVIEW -> HUMAN -> PROMOTION éventuelle
 
@@ -458,3 +471,77 @@ def generate_mission_response_via_router(
         )
 
     return mission_service.mark_review(mission_id, result=fallback_result.result.text)
+
+
+def run_mission_task(
+    mission_id: str,
+    *,
+    mission_service: MissionService,
+    task_run_service: Any,
+    requested_by: Subject = Subject.CORE,
+    on_task_run_started: Callable[[str], None] | None = None,
+) -> Mission:
+    """Exécute une mission à Task vérifiable par le TaskLoop — voir la docstring du module.
+
+    Pré-vol (mission introuvable, sans `task_id`) : levé, la mission reste QUEUED. Après `mark_running`, la
+    mission atteint TOUJOURS REVIEW ou FAILED (ou reste CANCELLED si on l'a annulée entre-temps) : un refus de
+    démarrage de la TaskRun (tâche déjà en cours, capacité) devient un échec explicite, jamais une mission
+    orpheline en RUNNING. `on_task_run_started(run_id)` : permet au Scheduler de suivre la TaskRun (annulation)."""
+    import json
+
+    from apex.missions.states import InvalidMissionTransition, MissionState
+
+    mission = mission_service.get(mission_id)
+    if mission is None:
+        raise LookupError(f"mission « {mission_id} » introuvable")
+    if mission.task_id is None:
+        raise ValueError(f"mission « {mission_id} » sans tâche vérifiable (task_id) — chemin TaskLoop impossible")
+    options = dict(mission.task_options or {})
+
+    mission = mission_service.mark_running(mission_id, requested_by=requested_by)
+    from apex.taskloop.request import TaskLimits
+
+    attempts = int(options.get("max_attempts", 3))
+    try:
+        run = task_run_service.start(
+            task_id=mission.task_id, objective=mission.objective, context=mission.description,
+            constraints=mission.constraints or "", mission_id=mission.id, requested_by=Subject.CORE,
+            limits=TaskLimits(max_attempts=attempts, max_retries=attempts - 1, max_candidates=2,
+                              max_wall_clock_s=900.0),
+            plan_first=bool(options.get("plan_first", False)),
+            retry_adaptation=str(options.get("retry_adaptation", "failure_facts")),
+            tool_permissions=tuple(options.get("tool_permissions", ())),
+            max_tool_steps=int(options.get("max_tool_steps", 8)),
+            use_memory=bool(options.get("use_memory", False)),
+        )
+    except Exception as exc:  # refus de démarrage : un échec de mission explicite, jamais RUNNING à vie
+        return mission_service.mark_failed(
+            mission_id, error=f"TaskRun non démarrée : {exc.__class__.__name__}: {exc}",
+        )
+    mission_service.attach_task_run(mission_id, run.id)
+    if on_task_run_started is not None:
+        on_task_run_started(run.id)
+    racing = mission_service.get(mission_id)
+    if racing is not None and racing.state is MissionState.CANCELLED:
+        task_run_service.cancel(run.id)  # annulée pendant le démarrage : la TaskRun ne doit pas continuer seule
+    finished = task_run_service.wait(run.id) or run
+
+    current = mission_service.get(mission_id)
+    if current is not None and current.state is not MissionState.RUNNING:
+        return current  # annulée (ou tranchée ailleurs) pendant l'exécution : l'état réel, tel quel
+    summary = {
+        "task_run_id": finished.id, "status": finished.status.value, "stop_reason": finished.stop_reason,
+        "attempts": len(finished.attempts),
+        "verdicts": [a.get("judge_result") for a in finished.attempts],
+    }
+    try:
+        if finished.status.value == "completed":
+            # Le Judge (cas cachés) a validé : la mission passe en REVUE HUMAINE, jamais directement COMPLETED.
+            summary["final_output"] = finished.final_output
+            return mission_service.mark_review(mission_id, result=json.dumps(summary, ensure_ascii=False))
+        return mission_service.mark_failed(
+            mission_id,
+            error=f"TaskRun {finished.id} {finished.status.value} : {finished.failure or finished.stop_reason}",
+        )
+    except InvalidMissionTransition:
+        return mission_service.get(mission_id) or mission

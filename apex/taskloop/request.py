@@ -134,6 +134,9 @@ class TaskRequest:
     #: PERTINENTS pour la tâche et les joindre au prompt, avec leur provenance. Défaut : non (les protocoles de
     #: mesure RUN 1 -> RUN 2 ne doivent pas être contaminés).
     use_memory: bool = False
+    #: Mission (gouvernance) au nom de laquelle cette boucle s'exécute : chaque clone de tentative la référence
+    #: (`Clone.mission_id`), la trace reste reliée. `None` : TaskRun lancée directement.
+    mission_id: str | None = None
 
     def __post_init__(self) -> None:
         from apex.tools.model import Permission

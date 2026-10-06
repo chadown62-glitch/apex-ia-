@@ -88,6 +88,8 @@ class TaskRun:
     tool_permissions: tuple[str, ...] | None = None
     max_tool_steps: int | None = None
     use_memory: bool | None = None
+    #: Mission (gouvernance) qui a lancé cette TaskRun — `apex.missions.execution.run_mission_task`.
+    mission_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -114,6 +116,7 @@ class TaskRun:
             "tool_permissions": list(self.tool_permissions) if self.tool_permissions is not None else None,
             "max_tool_steps": self.max_tool_steps,
             "use_memory": self.use_memory,
+            "mission_id": self.mission_id,
         }
 
 
@@ -153,6 +156,7 @@ class TaskRunRepository:
                     tool_permissions=list(run.tool_permissions) if run.tool_permissions is not None else None,
                     max_tool_steps=run.max_tool_steps,
                     use_memory=run.use_memory,
+                    mission_id=run.mission_id,
                 )
             )
 
@@ -263,6 +267,7 @@ def _from_row(row: Any) -> TaskRun:
         tool_permissions=tuple(row.tool_permissions) if row.tool_permissions is not None else None,
         max_tool_steps=row.max_tool_steps,
         use_memory=row.use_memory,
+        mission_id=getattr(row, "mission_id", None),
     )
 
 
@@ -287,6 +292,8 @@ class TaskRunService:
     agent_runtime: Any
     pool: Any
     run_loop: Any = None  # `run_task_loop` (injectable pour les tests du SERVICE, jamais de la boucle)
+    #: Registre des boucles en cours où chercher la poignée d'annulation (`cancel`) ; `None` : celui par défaut.
+    registry: Any = None
     _threads: dict[str, threading.Thread] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -317,6 +324,9 @@ class TaskRunService:
         tool_permissions: tuple[str, ...] = (),
         max_tool_steps: int = 8,
         use_memory: bool = False,
+        context: str = "",
+        constraints: str = "",
+        mission_id: str | None = None,
     ) -> TaskRun:
         from apex.taskloop.registry import default_registry
         from apex.tasks.repository import TaskRepository
@@ -370,6 +380,9 @@ class TaskRunService:
             tool_permissions=tuple(tool_permissions),
             max_tool_steps=max_tool_steps,
             use_memory=use_memory,
+            context=context,
+            constraints=constraints,
+            mission_id=mission_id,
         )  # `authorization` : défaut de `TaskRequest` (CORE), celui avec lequel la boucle est éprouvée
         run = TaskRun(
             id=str(uuid.uuid4()),
@@ -394,6 +407,7 @@ class TaskRunService:
             tool_permissions=tuple(tool_permissions) if tool_permissions else None,
             max_tool_steps=max_tool_steps if tool_permissions else None,
             use_memory=use_memory,
+            mission_id=mission_id,
         )
         self.repo.create(run)
 
@@ -447,6 +461,20 @@ class TaskRunService:
                     context={"trace_id": run_id, "kind": "memory.index_failed",
                              "error": f"{exc.__class__.__name__}: {exc}"[:500]},
                 )
+
+    def cancel(self, run_id: str) -> bool:
+        """Demande l'arrêt RÉEL d'une TaskRun en cours dans CE processus : le jeton d'annulation de sa boucle
+        est déclenché (le processus sandbox en cours est tué, `check_stop` arrête la boucle avant la tentative
+        suivante, l'épisode outillé s'arrête au tour suivant) ; la TaskRun se termine alors `cancelled`.
+        `False` : aucune boucle de cette TaskRun ne tourne ici (déjà terminée, ou autre processus)."""
+        from apex.taskloop.registry import default_registry
+
+        registry = self.registry if self.registry is not None else default_registry()
+        for handle in registry.snapshot():
+            if handle.trace_id == run_id:
+                handle.cancel_token.request_cancel()
+                return True
+        return False
 
     def wait(self, run_id: str, timeout_s: float | None = None) -> TaskRun | None:
         thread = self._threads.get(run_id)

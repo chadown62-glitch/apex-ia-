@@ -198,6 +198,10 @@ export interface Mission {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  /** Unification Missions/TaskLoop : Task vérifiable exécutée par le TaskLoop et la TaskRun lancée. */
+  task_id?: string | null;
+  task_options?: Record<string, unknown> | null;
+  task_run_id?: string | null;
 }
 
 export interface MissionCreateInput {
@@ -209,6 +213,8 @@ export interface MissionCreateInput {
   constraints?: string | null;
   assigned_agent?: string | null;
   agent_id?: string | null;
+  task_id?: string | null;
+  task_options?: Record<string, unknown> | null;
 }
 
 // -- configured agents (passe « Agents V1 ») ----------------------------------

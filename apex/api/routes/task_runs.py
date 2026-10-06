@@ -333,3 +333,18 @@ def get_task_run(run_id: str) -> DataEnvelope[dict[str, Any]]:
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=data)
+
+
+@router.post("/task-runs/{run_id}/cancel", response_model=DataEnvelope[dict[str, Any]])
+def cancel_task_run(run_id: str) -> DataEnvelope[dict[str, Any]]:
+    """Demande l'arrêt RÉEL d'une exécution en cours dans ce processus (`TaskRunService.cancel`) ; la TaskRun se
+    termine `cancelled` au prochain point de contrôle. `cancel_requested: false` : rien ne tourne ici."""
+    from apex.api.dependencies import get_task_run_service
+
+    service = get_task_run_service()
+    run = service.repo.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"exécution « {run_id} » introuvable")
+    requested = service.cancel(run_id) if not run.status.terminal else False
+    return DataEnvelope(status="real", data={"run_id": run_id, "status": run.status.value,
+                                             "cancel_requested": requested})

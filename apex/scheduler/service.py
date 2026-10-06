@@ -39,7 +39,7 @@ from typing import Any
 from apex.agents.runtime import AgentRuntime
 from apex.config.schema import ApexConfig
 from apex.missions.model import Mission, MissionPriority
-from apex.missions.execution import launch_mission
+from apex.missions.execution import launch_mission, run_mission_task
 from apex.missions.service import MissionService
 from apex.missions.states import InvalidMissionTransition
 from apex.policy.model import Subject
@@ -72,6 +72,7 @@ class SchedulerService:
         max_concurrent_missions: int | None = None,
         registry: ExecutionRegistry | None = None,
         cancel_wait_timeout_s: float = 5.0,
+        task_run_service: Any | None = None,
     ) -> None:
         from apex.config.loader import load_config
 
@@ -87,6 +88,8 @@ class SchedulerService:
         )
         self._registry = registry or ExecutionRegistry()
         self._cancel_wait_timeout_s = cancel_wait_timeout_s
+        #: Chemin autonome canonique des missions à Task vérifiable (`apex.missions.execution.run_mission_task`).
+        self._task_run_service = task_run_service
         # Borné une fois pour toutes : quel que soit le nombre de tâches
         # soumises, jamais plus de `max_workers` threads n'existent — c'est
         # la garantie structurelle "aucune croissance illimitée de threads"
@@ -120,12 +123,18 @@ class SchedulerService:
         submitted: list[str] = []
         skipped_no_capacity: list[str] = []
         skipped_no_agent: list[str] = []
+        skipped_no_task_runner: list[str] = []
 
         eligible, blocked = self._eligible_queued_missions()
         for mission in eligible:
             if mission.id in self._registry:
                 continue  # déjà soumise, en attente d'un slot ou en cours
-            if mission.assigned_agent is None:
+            if mission.task_id is not None:
+                # Mission à Task vérifiable : le TaskLoop crée ses propres clones, aucun agent n'est requis.
+                if self._task_run_service is None:
+                    skipped_no_task_runner.append(mission.id)
+                    continue
+            elif mission.assigned_agent is None:
                 # Étape 8 : aucune résolution automatique d'agent — la
                 # mission reste QUEUED, visible, jamais perdue.
                 skipped_no_agent.append(mission.id)
@@ -133,7 +142,9 @@ class SchedulerService:
             if len(self._registry) >= self._max_concurrent:
                 skipped_no_capacity.append(mission.id)
                 continue
-            handle = ExecutionHandle(mission_id=mission.id, clone_id=mission.assigned_agent, started_at=_utcnow())
+            handle = ExecutionHandle(
+                mission_id=mission.id, clone_id=mission.assigned_agent or "", started_at=_utcnow(),
+            )
             self._registry.track(handle)
             self._executor.submit(self._launch_and_track, mission, handle)
             submitted.append(mission.id)
@@ -141,6 +152,7 @@ class SchedulerService:
         return SchedulerTickResult(
             submitted=tuple(submitted), blocked=tuple(blocked),
             skipped_no_capacity=tuple(skipped_no_capacity), skipped_no_agent=tuple(skipped_no_agent),
+            skipped_no_task_runner=tuple(skipped_no_task_runner),
         )
 
     def _eligible_queued_missions(self) -> tuple[list[Mission], list[str]]:
@@ -171,11 +183,17 @@ class SchedulerService:
 
     def _launch_and_track(self, mission: Mission, handle: ExecutionHandle) -> None:
         try:
-            result_mission = launch_mission(
-                mission.id, session_factory=self._session_factory,
-                mission_service=self._mission_service, agent_runtime=self._agent_runtime,
-                sandbox=self._sandbox, cancel_token=handle.cancel_token, requested_by=Subject.CORE,
-            )
+            if mission.task_id is not None:
+                result_mission = run_mission_task(
+                    mission.id, mission_service=self._mission_service, task_run_service=self._task_run_service,
+                    requested_by=Subject.CORE, on_task_run_started=lambda run_id: setattr(handle, "task_run_id", run_id),
+                )
+            else:
+                result_mission = launch_mission(
+                    mission.id, session_factory=self._session_factory,
+                    mission_service=self._mission_service, agent_runtime=self._agent_runtime,
+                    sandbox=self._sandbox, cancel_token=handle.cancel_token, requested_by=Subject.CORE,
+                )
             self._record_scheduler_event(
                 mission.id, "scheduler.mission_finished", {"state": result_mission.state.value},
             )
@@ -207,6 +225,25 @@ class SchedulerService:
         """
         handle = self._registry.get(mission_id)
         process_group_verified_terminated: bool | None = None
+        if handle is not None and handle.task_run_id is not None and self._task_run_service is not None:
+            # Mission exécutée par le TaskLoop : la mission est annulée D'ABORD (l'enveloppe voit alors
+            # CANCELLED et n'écrit rien par-dessus), puis la TaskRun est réellement arrêtée et on CONSTATE
+            # qu'elle s'est terminée — jamais une confiance aveugle dans la demande.
+            try:
+                mission = self._mission_service.cancel(mission_id, requested_by=requested_by)
+            except InvalidMissionTransition:
+                mission = self._mission_service.get(mission_id)
+                if mission is None:
+                    raise
+            self._task_run_service.cancel(handle.task_run_id)
+            finished = self._task_run_service.wait(handle.task_run_id, timeout_s=self._cancel_wait_timeout_s)
+            terminated = finished is not None and finished.status.terminal
+            self._record_scheduler_event(
+                mission_id, "scheduler.cancel_requested",
+                {"had_tracked_execution": True, "task_run_id": handle.task_run_id,
+                 "task_run_verified_terminated": terminated, "requested_by": requested_by.value},
+            )
+            return mission
         if handle is not None:
             handle.cancel_token.request_cancel()
             process_group_verified_terminated = handle.cancel_token.wait_until_terminated(

@@ -25,6 +25,9 @@ class ExecutionHandle:
     clone_id: str
     cancel_token: CancellationToken = field(default_factory=CancellationToken)
     started_at: datetime | None = None
+    #: Mission à Task vérifiable : la TaskRun que le TaskLoop exécute pour elle (`clone_id` vide — le TaskLoop
+    #: crée lui-même un clone par tentative). Renseigné dès que la TaskRun a démarré.
+    task_run_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -36,6 +39,8 @@ class SchedulerTickResult:
     blocked: tuple[str, ...] = ()
     skipped_no_capacity: tuple[str, ...] = ()
     skipped_no_agent: tuple[str, ...] = ()
+    #: Missions à Task vérifiable laissées QUEUED faute de TaskRunService injecté dans ce Scheduler.
+    skipped_no_task_runner: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

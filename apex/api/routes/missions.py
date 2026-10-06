@@ -72,6 +72,9 @@ def _to_mission_out(mission: object) -> MissionOut:
         created_at=mission.created_at.isoformat(),  # type: ignore[attr-defined]
         started_at=mission.started_at.isoformat() if mission.started_at else None,  # type: ignore[attr-defined]
         completed_at=mission.completed_at.isoformat() if mission.completed_at else None,  # type: ignore[attr-defined]
+        task_id=getattr(mission, "task_id", None),
+        task_options=getattr(mission, "task_options", None),
+        task_run_id=getattr(mission, "task_run_id", None),
     )
 
 
@@ -115,6 +118,7 @@ def create_mission(payload: MissionCreateIn) -> DataEnvelope[MissionOut]:
             objective=payload.objective, created_by=Subject.HUMAN,
             priority=MissionPriority(payload.priority), constraints=payload.constraints,
             assigned_agent=payload.assigned_agent, agent_id=payload.agent_id,
+            task_id=payload.task_id, task_options=payload.task_options,
         )
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")

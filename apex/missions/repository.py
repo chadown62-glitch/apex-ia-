@@ -31,7 +31,8 @@ class MissionRepository:
                 priority=mission.priority.value, constraints=mission.constraints,
                 assigned_agent=mission.assigned_agent, agent_id=mission.agent_id, state=mission.state.value,
                 created_by=mission.created_by, created_at=mission.created_at,
-                depends_on=mission.depends_on,
+                depends_on=mission.depends_on, task_id=mission.task_id,
+                task_options=dict(mission.task_options) if mission.task_options is not None else None,
             )
 
     def update(self, mission: Mission, **overrides: Any) -> None:
@@ -49,6 +50,7 @@ class MissionRepository:
                 started_at=overrides.get("started_at"),
                 completed_at=overrides.get("completed_at"),
                 clear_validation_status=overrides.get("clear_validation_status", False),
+                task_run_id=overrides.get("task_run_id"),
             )
 
     def get(self, mission_id: str) -> Mission | None:

@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from apex.missions.states import MissionState, assert_transition_allowed
 
@@ -63,6 +63,12 @@ class Mission:
     #: délibérément DISTINCT d'`assigned_agent` ci-dessus (un clone OS-level
     #: réel). Voir `apex.db.models.MissionRow.agent_id` pour le motif complet.
     agent_id: str | None = None
+    #: Unification Missions/TaskLoop (06/10/2026) : Task vérifiable exécutée par le chemin autonome canonique
+    #: (`apex.missions.execution.run_mission_task` -> `apex.taskloop`), options EXPLICITES de cette exécution
+    #: (`apex.missions.task_options`) et TaskRun réellement lancée. `None` : chemins historiques.
+    task_id: str | None = None
+    task_options: dict[str, Any] | None = None
+    task_run_id: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     started_at: datetime | None = None
     completed_at: datetime | None = None
@@ -81,6 +87,8 @@ class Mission:
         assigned_agent: str | None = None,
         agent_id: str | None = None,
         depends_on: tuple[str, ...] = (),
+        task_id: str | None = None,
+        task_options: dict[str, Any] | None = None,
     ) -> Mission:
         return cls(
             id=str(uuid.uuid4()),
@@ -98,6 +106,8 @@ class Mission:
             validation_status=None,
             created_by=created_by,
             depends_on=depends_on,
+            task_id=task_id,
+            task_options=task_options,
         )
 
     @classmethod
@@ -118,6 +128,9 @@ class Mission:
             validation_status=ValidationStatus(row.validation_status) if row.validation_status else None,
             created_by=row.created_by,
             depends_on=tuple(row.depends_on or ()),
+            task_id=getattr(row, "task_id", None),
+            task_options=getattr(row, "task_options", None),
+            task_run_id=getattr(row, "task_run_id", None),
             created_at=row.created_at,
             started_at=row.started_at,
             completed_at=row.completed_at,

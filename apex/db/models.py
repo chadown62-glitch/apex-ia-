@@ -272,6 +272,12 @@ class MissionRow(Base):
     #: garantir l'absence de cycle par construction). Liste vide par défaut,
     #: jamais NULL, pour éviter un cas particulier côté lecture.
     depends_on: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    #: Unification Missions/TaskLoop (06/10/2026) — Task VÉRIFIABLE (TaskBank) que la mission fait exécuter
+    #: par le chemin autonome canonique (`apex.taskloop`), ses options d'exécution EXPLICITES (permissions
+    #: d'outils comprises) et la TaskRun effectivement lancée. NULL : mission des chemins historiques.
+    task_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    task_options: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    task_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
@@ -295,6 +301,8 @@ class MissionRow(Base):
             "validation_status": self.validation_status,
             "created_by": self.created_by,
             "depends_on": list(self.depends_on or []),
+            "task_id": self.task_id,
+            "task_run_id": self.task_run_id,
             "created_at": self.created_at.isoformat(),
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
@@ -1507,3 +1515,5 @@ class TaskRunRow(Base):
     tool_permissions: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     max_tool_steps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     use_memory: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: Mission (gouvernance) qui a lancé cette TaskRun, le cas échéant.
+    mission_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)

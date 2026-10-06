@@ -360,6 +360,9 @@ def test_the_migration_matches_the_model() -> None:
         for name in ("c8e2f4a6b9d1_task_runs.py", "e4b6d8f0a2c3_task_runs_condition_on_run.py",
                      "b5d7f9a1c3e2_task_runs_strategy.py", "d8f1a3c5e7b9_task_runs_adaptation_plan.py", "f2a4c6e8b0d1_task_runs_tools.py",
                      "c3e5a7b9d1f3_task_runs_use_memory.py")
+    ) + "".join(  # la migration Missions/TaskLoop ajoute aussi des colonnes à `missions` : seules celles de task_runs
+        line for line in (versions / "d5f7a9c1e3b5_missions_task_loop.py").read_text().splitlines()
+        if '"task_runs"' in line
     )
     migrated = set(re.findall(r'sa\.Column\("(\w+)"', source))
     assert migrated == {c.name for c in TaskRunRow.__table__.columns}

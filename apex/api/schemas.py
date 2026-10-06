@@ -155,6 +155,11 @@ class MissionOut(BaseModel):
     created_at: str
     started_at: str | None
     completed_at: str | None
+    #: Unification Missions/TaskLoop : Task vérifiable exécutée par le TaskLoop, ses options explicites et la
+    #: TaskRun effectivement lancée (`GET /task-runs/{id}` pour la trace complète).
+    task_id: str | None = None
+    task_options: dict[str, Any] | None = None
+    task_run_id: str | None = None
 
 
 class MissionCreateIn(BaseModel):
@@ -170,6 +175,10 @@ class MissionCreateIn(BaseModel):
     constraints: str | None = None
     assigned_agent: str | None = None
     agent_id: str | None = None
+    #: Task vérifiable (TaskBank, `POST /tasks/function|project`) : la mission sera exécutée par le TaskLoop.
+    task_id: str | None = None
+    #: Options EXPLICITES (`apex.missions.task_options.ALLOWED_KEYS`), permissions d'outils comprises.
+    task_options: dict[str, Any] | None = None
 
 
 class MissionRejectIn(BaseModel):

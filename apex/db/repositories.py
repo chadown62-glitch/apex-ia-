@@ -228,13 +228,15 @@ class MissionRepository:
         created_at: datetime,
         depends_on: tuple[str, ...] = (),
         agent_id: str | None = None,
+        task_id: str | None = None,
+        task_options: dict[str, Any] | None = None,
     ) -> MissionRow:
         row = MissionRow(
             id=id, title=title, description=description, specialty=specialty,
             objective=objective, priority=priority, constraints=constraints,
             assigned_agent=assigned_agent, agent_id=agent_id, state=state, result=None, error=None,
             validation_status=None, created_by=created_by, created_at=created_at,
-            depends_on=list(depends_on),
+            depends_on=list(depends_on), task_id=task_id, task_options=task_options,
         )
         self._session.add(row)
         self._session.flush()
@@ -253,12 +255,15 @@ class MissionRepository:
         started_at: datetime | None = None,
         completed_at: datetime | None = None,
         clear_validation_status: bool = False,
+        task_run_id: str | None = None,
     ) -> MissionRow | None:
         row = self._session.get(MissionRow, mission_id)
         if row is None:
             return None
         if state is not None:
             row.state = state
+        if task_run_id is not None:
+            row.task_run_id = task_run_id
         if assigned_agent is not None:
             row.assigned_agent = assigned_agent
         if agent_id is not None:

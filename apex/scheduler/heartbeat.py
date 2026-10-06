@@ -57,7 +57,7 @@ class HeartbeatService:
         battements réellement écrits — jamais un compte optimiste."""
         written = 0
         for handle in self._registry.snapshot():
-            if handle.cancel_token.is_alive():
+            if handle.clone_id and handle.cancel_token.is_alive():
                 if self._write_heartbeat(handle.clone_id):
                     written += 1
         return written
