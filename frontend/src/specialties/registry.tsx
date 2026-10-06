@@ -28,8 +28,19 @@ import { SystemPage } from "../pages/SystemPage";
 import { MemoryPage } from "../pages/MemoryPage";
 import { TaskRunsPage } from "../pages/TaskRunsPage";
 import { WeaknessesPage } from "../pages/WeaknessesPage";
+import { ResearchOnly } from "../components/common/ResearchOnly";
 import { SPECIALTY_DEFINITIONS } from "./data";
 import type { Specialty } from "./types";
+
+function researchOnly(Page: () => JSX.Element, feature: string): Specialty["component"] {
+  return function ResearchPage() {
+    return (
+      <ResearchOnly feature={feature}>
+        <Page />
+      </ResearchOnly>
+    );
+  };
+}
 
 const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   dashboard: DashboardPage,
@@ -48,10 +59,11 @@ const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   "evolution-timeline": EvolutionTimelinePage,
   "mission-center": MissionCenterPage,
   system: SystemPage,
-  skills: SkillsPage,
-  weaknesses: WeaknessesPage,
-  "experiment-lab": ExperimentLabPage,
-  "brain-live": BrainLivePage,
+  // Pages de l'extension RECHERCHE : absentes du Runtime packagé, elles le disent (ResearchOnly).
+  skills: researchOnly(SkillsPage, "Skills"),
+  weaknesses: researchOnly(WeaknessesPage, "Faiblesses"),
+  "experiment-lab": researchOnly(ExperimentLabPage, "Experiment Lab"),
+  "brain-live": researchOnly(BrainLivePage, "Brain Live"),
 };
 
 export const SPECIALTIES: Specialty[] = SPECIALTY_DEFINITIONS.map((def) => ({

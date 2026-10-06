@@ -44,6 +44,11 @@ def start_backend(root: Path, port: int) -> Any:
     from apex.db.engine import build_session_factory
     from apex.db.models import Base
 
+    if os.environ.get("APEX_E2E_RUNTIME_ONLY") == "1":
+        # Comme le Runtime packagé : AUCUNE extension Recherche (routes et commandes absentes).
+        import apex.util.extensions as extensions
+
+        extensions.load_research_extension = lambda: None
     engine = create_engine(f"sqlite:///{root / 'apex.db'}", connect_args={"check_same_thread": False, "timeout": 60},
                            future=True)
     Base.metadata.create_all(engine)
@@ -213,6 +218,10 @@ def run(out: Path) -> int:
             body = page.inner_text("body")
             audit.check("navigation", f"{route} se charge", len(body.strip()) > 20 and len(console_errors) == before,
                         "; ".join(console_errors[before:])[:300])
+            if os.environ.get("APEX_E2E_RUNTIME_ONLY") == "1" and route in ("/brain", "/skills", "/weaknesses",
+                                                                             "/experiment-lab"):
+                audit.check("distribution", f"{route} dit être absent du Runtime",
+                            "absent de cette distribution" in body)
         browser.close()
 
     server.should_exit = True

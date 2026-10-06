@@ -401,3 +401,18 @@ def test_chat_api_reports_the_memories_used_for_each_reply(factory, monkeypatch)
     isolated = client.post(f"/api/v1/conversations/{b}/messages",
                            json={"content": "Et mon projet ?", "use_memory": False}).json()["data"]
     assert isolated["memory"] == []
+
+
+def test_the_distribution_endpoint_tells_whether_research_is_present(monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    import apex.util.extensions as extensions
+    from apex.api.app import create_app
+    from tests.api_test_support import TEST_API_TOKEN
+
+    client = TestClient(create_app(), headers={"Authorization": f"Bearer {TEST_API_TOKEN}"})
+    dev = client.get("/api/v1/status/distribution").json()["data"]
+    assert dev["research"] is True and dev["edition"] == "dev"
+    monkeypatch.setattr(extensions, "load_research_extension", lambda: None)
+    runtime = client.get("/api/v1/status/distribution").json()["data"]
+    assert runtime == {**runtime, "research": False, "edition": "runtime"}

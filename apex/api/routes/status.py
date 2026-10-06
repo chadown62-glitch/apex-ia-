@@ -80,3 +80,21 @@ def get_status() -> DataEnvelope[dict[str, Any]]:
         "measured_at": datetime.now(UTC).isoformat(),
     }
     return DataEnvelope(status="real", data=data)
+
+
+@router.get("/distribution", response_model=DataEnvelope[dict[str, Any]])
+def get_distribution() -> DataEnvelope[dict[str, Any]]:
+    """Ce que CETTE distribution contient réellement : l'extension Recherche (routes brain, learning,
+    population, self-model, weakness…) est absente du Runtime packagé ; l'inférence native exige ses
+    bibliothèques. L'interface s'y fie pour ne jamais présenter une capacité absente comme disponible."""
+    from apex.models.native import _libraries
+    from apex.util.extensions import load_research_extension
+
+    research = load_research_extension() is not None
+    missing = _libraries()
+    return DataEnvelope(status="real", data={
+        "edition": "dev" if research else "runtime",
+        "research": research,
+        "native_inference": missing is None,
+        "native_inference_detail": missing,
+    })

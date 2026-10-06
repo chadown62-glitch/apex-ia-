@@ -1079,3 +1079,11 @@ export interface TaskRunDetail extends TaskRun {
   experiences: Array<Record<string, unknown>>;
   events: TaskRunEvent[];
 }
+
+/** Ce que contient réellement la distribution servie (`GET /status/distribution`). */
+export interface Distribution {
+  edition: "dev" | "runtime";
+  research: boolean;
+  native_inference: boolean;
+  native_inference_detail: string | null;
+}

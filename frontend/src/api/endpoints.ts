@@ -7,6 +7,7 @@
 import { fetchEnvelope } from "./client";
 import type {
   BrainEvent,
+  Distribution,
   MemoryDocumentResult,
   MemorySearchHit,
   ModelBackend,
@@ -194,6 +195,10 @@ export function searchMemory(query: string, categories: string[]): Promise<DataE
   const params = new URLSearchParams({ q: query, limit: "10" });
   categories.forEach((c) => params.append("categories", c));
   return fetchEnvelope<MemorySearchHit[]>(`/memory/search?${params.toString()}`);
+}
+
+export function getDistribution(): Promise<DataEnvelope<Distribution>> {
+  return fetchEnvelope<Distribution>("/status/distribution");
 }
 
 export function listModelBackends(): Promise<DataEnvelope<ModelBackend[]>> {
