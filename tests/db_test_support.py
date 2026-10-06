@@ -151,3 +151,28 @@ def role_connection(role: str):
         user=role, password=os.environ[var], autocommit=True,
     )
     return contextlib.closing(conn)
+
+
+def threaded_sqlite_session_factory():
+    """Base SQLite FICHIER (répertoire temporaire supprimé à la fin du processus), UNE connexion par fil.
+
+    À utiliser dès qu'un fil d'arrière-plan (boucle d'apprentissage, TaskRun, Scheduler) et le fil du test
+    touchent la base en même temps : avec `sqlite://` + `StaticPool`, ils partageraient UNE connexion, dont
+    l'usage concurrent mélange les transactions (lectures fantômes) et peut faire planter `sqlite3`
+    (segfault constaté dans `tests/test_learning_orchestrator.py`)."""
+    import atexit
+    import shutil
+    import tempfile
+
+    from sqlalchemy import create_engine
+
+    from apex.db.engine import build_session_factory
+    from apex.db.models import Base
+
+    directory = tempfile.mkdtemp(prefix="apex-test-db-")
+    atexit.register(shutil.rmtree, directory, True)
+    engine = create_engine(
+        f"sqlite:///{directory}/apex.db", connect_args={"check_same_thread": False, "timeout": 30}, future=True,
+    )
+    Base.metadata.create_all(engine)
+    return build_session_factory(engine)

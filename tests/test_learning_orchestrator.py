@@ -12,13 +12,9 @@ import threading
 import time
 import unittest
 
-from sqlalchemy import create_engine
-from sqlalchemy.pool import StaticPool
 
 from apex.agents.runtime import AgentRuntime
 from apex.config.schema import Capability, ComputePool, GauntletPolicy, PoolLocation, PopulationPolicy, TrustLevel
-from apex.db.engine import build_session_factory
-from apex.db.models import Base
 from apex.errors import LearningSessionAlreadyRunning
 from apex.genome.service import GenomeStoreService
 from apex.metalearner.learning_orchestrator import LearningOrchestrator
@@ -28,11 +24,9 @@ from tests import db_test_support as support
 
 
 def sqlite_session_factory():
-    engine = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool, future=True,
-    )
-    Base.metadata.create_all(engine)
-    return build_session_factory(engine)
+    # Une connexion PAR FIL : la boucle de session tourne en arrière-plan pendant que le test sonde la base
+    # (une connexion partagée `StaticPool` mélangeait les transactions et faisait planter sqlite3).
+    return support.threaded_sqlite_session_factory()
 
 
 def a_pool(**overrides) -> ComputePool:

@@ -112,7 +112,10 @@ def test_without_a_task_runner_the_scheduler_leaves_the_mission_queued(factory) 
     assert MissionService(factory).get(mission.id).state is MissionState.QUEUED
 
 
-def test_cancelling_a_running_task_mission_really_stops_its_taskrun(factory) -> None:
+def test_cancelling_a_running_task_mission_really_stops_its_taskrun() -> None:
+    from tests.db_test_support import threaded_sqlite_session_factory
+
+    factory = threaded_sqlite_session_factory()  # le test sonde la base PENDANT que la TaskRun tourne
     provider = _FakeModelProvider(mode="blocked", text=RIGHT)
     provider.release = threading.Event()
     registry = TaskLoopRegistry()
