@@ -69,3 +69,26 @@ def test_paired_analysis_counts_discordant_instances() -> None:
                             "n_attempts": 1, "duration_s": 1.0, "plan_failed": False, "attempts": []})
     result = harness.analyse_adaptation(records)
     assert result["secondary"]["C vs A"]["second_only"] == 2 and result["secondary"]["C vs A"]["first_only"] == 1
+
+
+def test_tool_results_split_across_jobs_are_analysed_as_one(tmp_path) -> None:
+    import json
+
+    def rec(**kw):
+        return {"success": False, "final_score": 0.0, "tools_used": {}, "invalid_actions": 0, "agent_steps": 1,
+                "tool_errors": [], "attempts": [], **kw}
+
+    files = []
+    for i, (section, records, pwned) in enumerate((
+            ("function", [rec(seed=0, kind="k", arm="sans_outils"), rec(seed=0, kind="k", arm="outillé", success=True,
+                                                                       tools_used={"fs.write": 2})], False),
+            ("hostile", [rec(seed=0, hostile="etc_passwd")], True))):
+        path = tmp_path / f"t{i}.json"
+        path.write_text(json.dumps({"phase": "tools", "sections": [section], "host_sentinel_created": pwned,
+                                    "records": {section: records}}), encoding="utf-8")
+        files.append(path)
+    out = tmp_path / "analysis.json"
+    harness.phase_analyse(files, out)
+    tools = json.loads(out.read_text(encoding="utf-8"))["tools"]
+    assert tools["tools_vs_no_tools"]["outillé_only"] == 1 and tools["function"]["outillé"]["tools_used"] == {"fs.write": 2}
+    assert len(tools["hostile"]) == 1 and tools["host_sentinel_created"] is True  # un seul témoin créé suffit
