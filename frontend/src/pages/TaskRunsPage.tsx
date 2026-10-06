@@ -123,6 +123,7 @@ function RunLauncher({ taskId, onStarted }: { taskId: string; onStarted: (runId:
   const [planFirst, setPlanFirst] = useState(false);
   const [adaptation, setAdaptation] = useState<RetryAdaptation>("failure_facts");
   const [learnFromLatest, setLearnFromLatest] = useState(false);
+  const [toolMode, setToolMode] = useState(false);
   const start = useMutation({
     mutationFn: () =>
       startTaskRun(taskId, {
@@ -130,6 +131,8 @@ function RunLauncher({ taskId, onStarted }: { taskId: string; onStarted: (runId:
         plan_first: planFirst,
         retry_adaptation: adaptation,
         ...(learnFromLatest ? { condition_on_run: "latest" } : {}),
+        // Permissions EXPLICITES : l'utilisateur les accorde ici, jamais le modèle.
+        ...(toolMode ? { tool_permissions: ["workspace.read", "workspace.write", "sandbox.execute"], max_tool_steps: 10 } : {}),
       }),
     onSuccess: (env) => env.data && onStarted(env.data.id),
   });
@@ -156,6 +159,11 @@ function RunLauncher({ taskId, onStarted }: { taskId: string; onStarted: (runId:
         checked={learnFromLatest}
         onChange={(e) => setLearnFromLatest(e.target.checked)}
       />
+      <Checkbox
+        label="Mode outillé (fichiers, exécution et tests en sandbox)"
+        checked={toolMode}
+        onChange={(e) => setToolMode(e.target.checked)}
+      />
       <Button variant="primary" onClick={() => start.mutate()} disabled={start.isPending}>
         Lancer
       </Button>
@@ -179,6 +187,12 @@ function eventSummary(event: TaskRunEvent): string {
       return String(event.reason ?? "");
     case "provider.selected":
       return String(event.model_id ?? "");
+    case "agent.step":
+      return event.submit
+        ? `tour ${String(event.step)} : solution soumise`
+        : `tour ${String(event.step)} : ${String(event.tool ?? "action illisible")} ${event.ok ? "ok" : `échec (${String(event.error ?? "")})`}`;
+    case "workspace.created":
+      return `espace ${String(event.workspace_id ?? "")} — outils : ${(event.tools as string[] | undefined)?.join(", ") ?? ""}`;
     default:
       return "";
   }

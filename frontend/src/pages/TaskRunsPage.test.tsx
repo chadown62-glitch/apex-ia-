@@ -35,6 +35,7 @@ const RUN_DETAIL = {
   id: "r1", task_id: "t1", status: "completed", objective: "o", failure: null, stop_reason: "success",
   started_at: "2026-10-05T10:00:00", completed_at: "2026-10-05T10:00:05", condition_on_run: null,
   strategy: null, base_temperature: null, retry_adaptation: "failure_facts", plan_first: true,
+  tool_permissions: ["workspace.read", "workspace.write", "sandbox.execute"], max_tool_steps: 10,
   attempts: [
     { attempt_number: 1, provider_name: "m", judge_result: null, reason: "x", category: "incorrect_solution", duration_s: 1 },
     { attempt_number: 2, provider_name: "m", judge_result: "pass", reason: "succès", category: null, duration_s: 1 },
@@ -53,6 +54,8 @@ const RUN_DETAIL = {
     { ts: "2", kind: "task.plan.generated", plan: "Additionner les deux entiers.", trace_id: "r1" },
     { ts: "3", kind: "judge.completed", verdict: "fail", detail: "1/3 cas incorrects", trace_id: "r1" },
     { ts: "4", kind: "strategy.adapted", description: "tentative 2 : faits d'échec de la tentative 1", trace_id: "r1" },
+    { ts: "4b", kind: "agent.step", step: 3, tool: "tests.run", ok: true, error: null, submit: false, trace_id: "r1" },
+    { ts: "4c", kind: "agent.step", step: 4, tool: null, ok: true, error: null, submit: true, trace_id: "r1" },
     { ts: "5", kind: "task.completed", trace_id: "r1" },
   ],
 };
@@ -133,5 +136,7 @@ describe("RunDetail", () => {
     expect(screen.getByText(/tentative 2 : faits d'échec de la tentative 1/)).toBeInTheDocument();
     expect(screen.getByText(/verdict fail/)).toBeInTheDocument();
     expect(screen.getByText(/verdict pass/)).toBeInTheDocument();
+    expect(screen.getByText(/tour 3 : tests.run ok/)).toBeInTheDocument();
+    expect(screen.getByText(/tour 4 : solution soumise/)).toBeInTheDocument();
   });
 });

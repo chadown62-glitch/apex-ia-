@@ -1498,3 +1498,5 @@ class TaskRunRow(Base):
     base_temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
     retry_adaptation: Mapped[str | None] = mapped_column(String(32), nullable=True)
     plan_first: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    tool_permissions: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    max_tool_steps: Mapped[int | None] = mapped_column(Integer, nullable=True)

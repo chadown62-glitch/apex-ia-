@@ -292,6 +292,67 @@ def _generate_plan(
     return text
 
 
+@dataclass(frozen=True)
+class _ToolSetup:
+    workspace: Any
+    engine: Any
+    granted: frozenset[Any]
+
+
+def _tool_setup(
+    request: TaskRequest, *, trace_id: str, workspace_root: str | None, emit: Callable[[str, dict[str, Any]], None],
+) -> _ToolSetup | None:
+    """Espace de travail de la TaskRun (`<paths.workspaces>/<trace_id>`) et moteur d'outils — seulement si la
+    requête accorde des permissions. Le même espace sert à toutes les tentatives (continuité du travail)."""
+    if not request.tool_permissions:
+        return None
+    from apex.tools.builtin import default_registry
+    from apex.tools.engine import ToolEngine
+    from apex.tools.model import Permission
+    from apex.tools.workspace import Workspace
+
+    if workspace_root is None:
+        from apex.config.loader import load_config
+
+        workspace_root = load_config().paths.workspaces
+    workspace = Workspace.create(workspace_root, trace_id)
+    granted = frozenset(Permission(p) for p in request.tool_permissions)
+    engine = ToolEngine(default_registry())
+    emit("workspace.created", {
+        "workspace_id": workspace.id, "granted": sorted(p.value for p in granted),
+        "tools": [spec.name for spec in engine.registry.available_to(granted)],
+    })
+    return _ToolSetup(workspace=workspace, engine=engine, granted=granted)
+
+
+def _run_episode(
+    tools: _ToolSetup, *, request: TaskRequest, provider: ModelProvider, generation_request: GenerationRequest,
+    agent_runtime: AgentRuntime, sandbox: SandboxProvider, pool: ComputePool, limits: ResourceLimits,
+    clone_subject: Subject, trace_id: str, attempt_number: int, cancel_token: Any, deadline: float,
+    emit: Callable[[str, dict[str, Any]], None],
+) -> Any:
+    from apex.taskloop.agent import run_tool_episode
+    from apex.tools.engine import ToolContext
+    from apex.tools.sandbox_runner import sandbox_runner
+
+    context = ToolContext(
+        workspace=tools.workspace, granted=tools.granted, emit=emit,
+        run_in_sandbox=sandbox_runner(
+            agent_runtime=agent_runtime, sandbox=sandbox, pool=pool, base_limits=limits,
+            requested_by=request.authorization, clone_subject=clone_subject,
+            label=f"taskloop:{trace_id}:{attempt_number}:tool", cancel_token=cancel_token,
+        ),
+    )
+    generation, _episode = run_tool_episode(
+        task_prompt=generation_request.prompt, generate=provider.generate, endpoint=generation_request.endpoint,
+        temperature=generation_request.temperature, timeout_s=generation_request.timeout_s,
+        engine=tools.engine, context=context, max_steps=request.max_tool_steps, deadline_monotonic=deadline,
+        cancel_requested=lambda: bool(getattr(cancel_token, "is_cancel_requested", False)),
+        requested_by=f"taskloop:{trace_id}:{attempt_number}", emit=emit,
+    )
+    return generation
+
+
 def _default_provider_factory(candidate: ModelCandidate) -> ModelProvider:
     """Même patron qu'`apex.routing.generation._default_provider_factory` —
     injectable pour les tests (double de test fidèle au contrat
@@ -406,6 +467,7 @@ def run_task_loop(
     generation_timeout_s: float = _DEFAULT_GENERATION_TIMEOUT_S,
     no_progress_patience: int = _DEFAULT_NO_PROGRESS_PATIENCE,
     trace_id: str | None = None,
+    workspace_root: str | None = None,
 ) -> TaskResult:
     """Exécute intégralement UNE tâche, du premier attempt au `TaskResult`
     final. Ne lève QUE pour des erreurs d'appel (tâche introuvable/mal
@@ -455,6 +517,7 @@ def run_task_loop(
             ),
             provider_factory=provider_factory,
             generation_timeout_s=generation_timeout_s, no_progress_patience=no_progress_patience,
+            workspace_root=workspace_root,
         )
     finally:
         active_registry.discard(request.task_id)
@@ -468,7 +531,7 @@ def _run(
     sandbox: SandboxProvider, limits: ResourceLimits, clone_subject: Subject,
     experience_repo: ExperienceRepository, eval_run_repo: EvalRunRepository,
     provider_factory: Callable[[ModelCandidate], ModelProvider],
-    generation_timeout_s: float, no_progress_patience: int,
+    generation_timeout_s: float, no_progress_patience: int, workspace_root: str | None = None,
 ) -> TaskResult:
     def emit(kind: str, details: dict[str, Any]) -> None:
         _record_task_event(
@@ -578,6 +641,9 @@ def _run(
         failure_criteria=lambda _r: False,
     )
 
+    # -- OUTILS (mode outillé, permissions explicitement accordées par la requête) ----------------
+    tools = _tool_setup(request, trace_id=trace_id, workspace_root=workspace_root, emit=emit)
+
     history = AttemptHistory()
     providers_tried: list[str] = []
     eval_run_ids: list[str] = []
@@ -640,7 +706,16 @@ def _run(
         )
         provider = provider_factory(current_candidate)
         try:
-            generation = provider.generate(generation_request)
+            if tools is None:
+                generation = provider.generate(generation_request)
+            else:
+                generation = _run_episode(
+                    tools, request=request, provider=provider, generation_request=generation_request,
+                    agent_runtime=agent_runtime, sandbox=sandbox, pool=pool, limits=limits,
+                    clone_subject=clone_subject, trace_id=trace_id, attempt_number=attempt_number,
+                    cancel_token=cancel_token, deadline=started_monotonic + request.limits.max_wall_clock_s,
+                    emit=emit,
+                )
         except (ModelProviderError, TimeoutExceeded) as exc:
             duration_s = time.perf_counter() - attempt_started_monotonic
             category = (
@@ -990,6 +1065,8 @@ def _persist_eval_run(
         from apex.evalrunner.service import EvalRunnerService
 
         facts.update(EvalRunnerService._model_response_facts(generation))
+        if isinstance(getattr(generation, "facts", None), dict) and "tool_episode" in generation.facts:
+            facts["tool_episode"] = generation.facts["tool_episode"]
     stdout = sandbox_result.stdout
     stderr = sandbox_result.stderr
     facts["candidate_execution"] = {

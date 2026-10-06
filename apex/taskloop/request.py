@@ -123,8 +123,22 @@ class TaskRequest:
     #: Étape PLAN réelle : le modèle rédige d'abord une analyse et un plan (sans code), réinjectés dans
     #: la génération. `False` : l'étape PLAN se limite à composer le prompt (énoncé, contexte, contraintes).
     plan_first: bool = False
+    #: Mode OUTILLÉ : permissions EXPLICITEMENT accordées aux outils (`apex.tools.model.Permission`, ex.
+    #: `workspace.read`, `workspace.write`, `sandbox.execute`). Vide (défaut) : une tentative = un appel au
+    #: modèle. Non vide : une tentative = un épisode « action -> outil -> observation » dans l'espace de travail
+    #: de la TaskRun, puis `solution.py` est jugé comme d'habitude (cas cachés). Jamais de permission implicite.
+    tool_permissions: tuple[str, ...] = ()
+    #: Nombre maximal de tours (appels au modèle) d'un épisode outillé, par tentative.
+    max_tool_steps: int = 8
 
     def __post_init__(self) -> None:
+        from apex.tools.model import Permission
+
+        unknown = [p for p in self.tool_permissions if p not in {perm.value for perm in Permission}]
+        if unknown:
+            raise ValueError(f"permission(s) d'outil inconnue(s) : {unknown}")
+        if not 1 <= self.max_tool_steps <= 30:
+            raise ValueError("max_tool_steps hors de [1, 30]")
         if self.retry_adaptation not in RETRY_ADAPTATIONS:
             raise ValueError(
                 f"adaptation « {self.retry_adaptation} » inconnue (attendu : {', '.join(RETRY_ADAPTATIONS)})"

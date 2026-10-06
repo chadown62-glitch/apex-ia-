@@ -358,7 +358,7 @@ def test_the_migration_matches_the_model() -> None:
     source = "".join(
         (versions / name).read_text()
         for name in ("c8e2f4a6b9d1_task_runs.py", "e4b6d8f0a2c3_task_runs_condition_on_run.py",
-                     "b5d7f9a1c3e2_task_runs_strategy.py", "d8f1a3c5e7b9_task_runs_adaptation_plan.py")
+                     "b5d7f9a1c3e2_task_runs_strategy.py", "d8f1a3c5e7b9_task_runs_adaptation_plan.py", "f2a4c6e8b0d1_task_runs_tools.py")
     )
     migrated = set(re.findall(r'sa\.Column\("(\w+)"', source))
     assert migrated == {c.name for c in TaskRunRow.__table__.columns}

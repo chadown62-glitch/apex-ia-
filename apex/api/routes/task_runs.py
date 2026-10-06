@@ -60,6 +60,10 @@ class TaskRunIn(BaseModel):
     retry_adaptation: str = Field(default="failure_facts", max_length=32)
     #: Étape PLAN réelle (analyse et plan rédigés par le modèle avant la génération).
     plan_first: bool = False
+    #: Mode outillé : permissions EXPLICITEMENT accordées (`workspace.read`, `workspace.write`,
+    #: `sandbox.execute`) ; vide : une tentative = un appel au modèle.
+    tool_permissions: list[str] = Field(default_factory=list, max_length=3)
+    max_tool_steps: int = Field(default=8, ge=1, le=30)
 
 
 def _plain(value: Any) -> Any:
@@ -245,6 +249,8 @@ def start_task_run(task_id: str, body: TaskRunIn) -> DataEnvelope[dict[str, Any]
             base_temperature=body.base_temperature,
             retry_adaptation=body.retry_adaptation,
             plan_first=body.plan_first,
+            tool_permissions=tuple(body.tool_permissions),
+            max_tool_steps=body.max_tool_steps,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

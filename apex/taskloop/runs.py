@@ -84,6 +84,9 @@ class TaskRun:
     #: a demandé une analyse au modèle (`TaskRequest.plan_first`). `None` : TaskRun antérieure à ces champs.
     retry_adaptation: str | None = None
     plan_first: bool | None = None
+    #: Mode outillé : permissions explicitement accordées et tours maximaux par tentative (None : sans outils).
+    tool_permissions: tuple[str, ...] | None = None
+    max_tool_steps: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -107,6 +110,8 @@ class TaskRun:
             "base_temperature": self.base_temperature,
             "retry_adaptation": self.retry_adaptation,
             "plan_first": self.plan_first,
+            "tool_permissions": list(self.tool_permissions) if self.tool_permissions is not None else None,
+            "max_tool_steps": self.max_tool_steps,
         }
 
 
@@ -143,6 +148,8 @@ class TaskRunRepository:
                     base_temperature=run.base_temperature,
                     retry_adaptation=run.retry_adaptation,
                     plan_first=run.plan_first,
+                    tool_permissions=list(run.tool_permissions) if run.tool_permissions is not None else None,
+                    max_tool_steps=run.max_tool_steps,
                 )
             )
 
@@ -250,6 +257,8 @@ def _from_row(row: Any) -> TaskRun:
         base_temperature=row.base_temperature,
         retry_adaptation=row.retry_adaptation,
         plan_first=row.plan_first,
+        tool_permissions=tuple(row.tool_permissions) if row.tool_permissions is not None else None,
+        max_tool_steps=row.max_tool_steps,
     )
 
 
@@ -301,6 +310,8 @@ class TaskRunService:
         base_temperature: float | None = None,
         retry_adaptation: str = "failure_facts",
         plan_first: bool = False,
+        tool_permissions: tuple[str, ...] = (),
+        max_tool_steps: int = 8,
     ) -> TaskRun:
         from apex.taskloop.registry import default_registry
         from apex.tasks.repository import TaskRepository
@@ -345,6 +356,8 @@ class TaskRunService:
             base_temperature=base_temperature,
             retry_adaptation=retry_adaptation,
             plan_first=plan_first,
+            tool_permissions=tuple(tool_permissions),
+            max_tool_steps=max_tool_steps,
         )  # `authorization` : défaut de `TaskRequest` (CORE), celui avec lequel la boucle est éprouvée
         run = TaskRun(
             id=str(uuid.uuid4()),
@@ -366,6 +379,8 @@ class TaskRunService:
             base_temperature=base_temperature,
             retry_adaptation=retry_adaptation,
             plan_first=plan_first,
+            tool_permissions=tuple(tool_permissions) if tool_permissions else None,
+            max_tool_steps=max_tool_steps if tool_permissions else None,
         )
         self.repo.create(run)
 

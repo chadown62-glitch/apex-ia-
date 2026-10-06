@@ -978,6 +978,8 @@ export interface TaskRunStartInput {
   plan_first?: boolean;
   retry_adaptation?: RetryAdaptation;
   condition_on_run?: string;
+  tool_permissions?: string[];
+  max_tool_steps?: number;
 }
 
 export type TaskRunStatus = "running" | "completed" | "failed" | "blocked" | "cancelled" | "error" | "interrupted";
@@ -1006,6 +1008,8 @@ export interface TaskRun {
   base_temperature: number | null;
   retry_adaptation: string | null;
   plan_first: boolean | null;
+  tool_permissions: string[] | null;
+  max_tool_steps: number | null;
 }
 
 export interface TaskRunEvalRun {
