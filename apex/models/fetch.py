@@ -23,7 +23,31 @@ def fetch_model(repo_id: str, *, models_dir: Path, name: str, revision: str | No
     target = Path(models_dir).expanduser() / name
     target.mkdir(parents=True, exist_ok=True)
     snapshot_download(repo_id=repo_id, revision=revision, local_dir=str(target), allow_patterns=ALLOWED_PATTERNS)
+    _record_source(target, repo_id, revision)
     return target
+
+
+def _record_source(target: Path, repo_id: str, revision: str | None) -> None:
+    """Provenance des poids (dépôt, révision demandée, commit résolu) — `.apex_source.json`, relu par
+    `source_of` : un résultat mesuré dit exactement QUELS poids l'ont produit."""
+    import json
+
+    resolved = None
+    try:
+        from huggingface_hub import model_info
+
+        resolved = model_info(repo_id, revision=revision).sha
+    except Exception:  # la provenance reste « non résolue », jamais inventée
+        resolved = None
+    (target / ".apex_source.json").write_text(json.dumps(
+        {"repo": repo_id, "revision": revision, "commit": resolved}), encoding="utf-8")
+
+
+def source_of(weights: Path) -> dict | None:
+    import json
+
+    path = Path(weights) / ".apex_source.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
 
 
 def default_models_dir() -> Path | None:

@@ -88,7 +88,7 @@ def _load(path: Path) -> tuple[_Loaded, bool]:
         cuda = torch.cuda.is_available()
         dtype = torch.bfloat16 if cuda else torch.float32
         tokenizer = AutoTokenizer.from_pretrained(key, local_files_only=True)
-        model = AutoModelForCausalLM.from_pretrained(key, local_files_only=True, torch_dtype=dtype)
+        model = AutoModelForCausalLM.from_pretrained(key, local_files_only=True, dtype=dtype)
         device = "cuda" if cuda else "cpu"
         model.to(device)
         model.eval()
@@ -170,10 +170,14 @@ class NativeTransformersProvider(ModelProvider):
         else:
             input_ids = tokenizer(request.prompt, return_tensors="pt").input_ids
         prompt_tokens = int(input_ids.shape[-1])
-        budget = self._endpoint.max_context - prompt_tokens
+        # Contexte RÉEL : le plus petit du contexte déclaré et de celui du modèle (jamais au-delà de ce qu'il
+        # a été construit pour traiter).
+        model_context = getattr(loaded.model.config, "max_position_embeddings", None) or self._endpoint.max_context
+        context = min(self._endpoint.max_context, int(model_context))
+        budget = context - prompt_tokens
         if budget <= 0:
             raise ModelProviderError("NativeTransformersProvider.generate", endpoint_url=self._endpoint.url,
-                                     detail=f"prompt de {prompt_tokens} tokens ≥ contexte {self._endpoint.max_context}",
+                                     detail=f"prompt de {prompt_tokens} tokens ≥ contexte {context}",
                                      category=ModelErrorCategory.CONTEXT_TOO_LONG)
         max_new = min(request.max_tokens or DEFAULT_MAX_NEW_TOKENS, budget)
         stop_state: dict[str, str] = {}

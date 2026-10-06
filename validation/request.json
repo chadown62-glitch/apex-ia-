@@ -1,0 +1,9 @@
+{
+  "label": "smoke-1",
+  "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+  "served_name": "qwen2.5-coder-1.5b-instruct",
+  "revision": "main",
+  "jobs": [
+    {"name": "smoke", "phase": "smoke", "seeds": "0"}
+  ]
+}

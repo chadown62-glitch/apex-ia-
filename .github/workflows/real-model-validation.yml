@@ -1,0 +1,133 @@
+# Validation RÉELLE d'APEX avec un vrai modèle pré-entraîné (docs/VALIDATION_REELLE.md).
+# Runner Linux hébergé par GitHub (CPU, sans GPU) : preuve CI, jamais celle de la machine cible.
+# Le modèle est exécuté par le backend NATIF d'APEX (runtime « transformers », en processus) : AUCUN Ollama,
+# aucun serveur de modèles. Les phases à exécuter sont décrites par validation/request.json (versionné) ;
+# les résultats bruts sont publiés en artefacts et versionnés dans validation/results/<label>/.
+name: real-model-validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/apex-official-development-4kao8t]
+    paths:
+      - ".github/workflows/real-model-validation.yml"
+      - "validation/request.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: real-model-validation
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      jobs: ${{ steps.plan.outputs.jobs }}
+      label: ${{ steps.plan.outputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        run: |
+          python3 - <<'EOF' >> "$GITHUB_OUTPUT"
+          import json
+          req = json.load(open("validation/request.json"))
+          print("jobs=" + json.dumps(req["jobs"]))
+          print("label=" + req["label"])
+          EOF
+
+  run:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        job: ${{ fromJson(needs.plan.outputs.jobs) }}
+    env:
+      APEX_MODELS_DIR: ${{ github.workspace }}/../apex-models
+      APEX_DATA_ROOT: ${{ github.workspace }}/../apex-data
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install APEX (db, api, native ; torch CPU)
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -q --upgrade pip
+          .venv/bin/pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          .venv/bin/pip install -q -e ".[db,api,native]"
+          .venv/bin/python -c "import torch, transformers; print('torch', torch.__version__, 'transformers', transformers.__version__)"
+      - name: Machine facts
+        run: |
+          nproc; free -g; df -h .; uname -a
+          docker version --format '{{.Server.Version}}' || true
+          docker pull -q python:3.12-slim || true
+      - name: Model identity
+        id: model
+        run: |
+          python3 -c "import json;r=json.load(open('validation/request.json'));print('key='+r['served_name']+'-'+(r.get('revision') or 'main'))" >> "$GITHUB_OUTPUT"
+      - name: Restore model weights
+        id: weights
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.APEX_MODELS_DIR }}
+          key: weights-${{ steps.model.outputs.key }}-v1
+      - name: Fetch model weights (explicit, Hugging Face)
+        if: steps.weights.outputs.cache-hit != 'true'
+        run: |
+          REPO=$(python3 -c "import json;print(json.load(open('validation/request.json'))['model'])")
+          NAME=$(python3 -c "import json;print(json.load(open('validation/request.json'))['served_name'])")
+          REV=$(python3 -c "import json;print(json.load(open('validation/request.json')).get('revision') or 'main')")
+          .venv/bin/apex models fetch "$REPO" --name "$NAME" --dir "$APEX_MODELS_DIR" --revision "$REV"
+      - name: What APEX really detects (no Ollama installed on this runner)
+        run: |
+          which ollama && { echo "Ollama présent : refus"; exit 2; } || echo "Ollama absent (attendu)"
+          .venv/bin/apex models status
+      - name: Run phase ${{ matrix.job.name }}
+        run: |
+          mkdir -p "validation/results/${{ needs.plan.outputs.label }}"
+          OUT="validation/results/${{ needs.plan.outputs.label }}/${{ matrix.job.name }}.json"
+          EXTRA=""
+          if [ -n "${{ matrix.job.arms }}" ]; then EXTRA="$EXTRA --arms ${{ matrix.job.arms }}"; fi
+          if [ -n "${{ matrix.job.kinds }}" ]; then EXTRA="$EXTRA --kinds ${{ matrix.job.kinds }}"; fi
+          APEX_COMMIT="${{ github.sha }}" .venv/bin/python scripts/apex_real_validation.py ${{ matrix.job.phase }} \
+            --seeds "${{ matrix.job.seeds }}" $EXTRA --out "$OUT"
+          .venv/bin/python scripts/apex_real_validation.py analyse "$OUT" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results-${{ matrix.job.name }}
+          path: validation/results/
+          if-no-files-found: warn
+
+  collect:
+    needs: [plan, run]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Merge, analyse and version the raw results
+        run: |
+          mkdir -p validation/results
+          for f in $(find artifacts -name '*.json'); do
+            rel=${f#artifacts/*/}; mkdir -p "validation/results/$(dirname "$rel")"; cp "$f" "validation/results/$rel"
+          done
+          python3 -m pip install -q pyyaml
+          LABEL="${{ needs.plan.outputs.label }}"
+          ls -la "validation/results/$LABEL" || true
+          python3 scripts/apex_real_validation.py analyse validation/results/$LABEL/*.json \
+            --out "validation/results/$LABEL/analysis.json" || true
+          git config user.name "apex-validation-bot"
+          git config user.email "apex-validation-bot@users.noreply.github.com"
+          git add "validation/results/$LABEL"
+          git commit -m "Real-model validation results: $LABEL (run ${{ github.run_id }})" || exit 0
+          for i in 1 2 3; do git pull --rebase -q && git push && break; sleep 5; done

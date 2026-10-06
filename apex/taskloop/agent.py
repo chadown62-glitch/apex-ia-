@@ -49,18 +49,30 @@ _PROJECT_INSTRUCTIONS = (
 _MAX_PROJECT_TEXT_CHARS = 50_000
 
 
+_PREVIEW_CHARS = 240
+
+
 @dataclass
 class Step:
     number: int
     action: dict[str, Any] | None
     observation: dict[str, Any]
+    #: Début de la réponse du modèle quand elle n'était pas une action lisible (diagnostic, borné).
+    raw: str | None = None
 
     def summary(self) -> dict[str, Any]:
+        """Trace persistée d'un tour : l'outil, ses arguments (aperçu borné : un chemin en entier, un contenu
+        ou un code tronqué) et le résultat — de quoi savoir CE QUE le modèle a tenté, refus compris."""
         action = self.action or {}
-        return {
+        summary = {
             "step": self.number, "tool": action.get("tool"), "submit": action.get("action") == "submit",
             "ok": self.observation.get("ok"), "error": (self.observation.get("error") or {}).get("code"),
         }
+        if action.get("arguments"):
+            summary["args"] = _clip(action["arguments"], _PREVIEW_CHARS)
+        if self.raw is not None:
+            summary["raw"] = self.raw[:_PREVIEW_CHARS]
+        return summary
 
 
 @dataclass
@@ -124,6 +136,8 @@ def run_tool_episode(
     episode = Episode()
     started = time.perf_counter()
     model_used = ""
+    tokens_prompt: int | None = 0
+    tokens_completion: int | None = 0
     for number in range(1, max_steps + 1):
         if cancel_requested():
             episode.stop_reason = "cancelled"
@@ -137,9 +151,20 @@ def run_tool_episode(
             temperature=temperature, timeout_s=min(timeout_s, remaining),
         ))
         model_used = response.model_used
+        # Somme RÉELLE des tokens de l'épisode, seulement si chaque tour les a réellement mesurés.
+        for attr in ("tokens_prompt", "tokens_completion"):
+            measured = getattr(response, attr)
+            current = tokens_prompt if attr == "tokens_prompt" else tokens_completion
+            value = measured.value if measured.status.value == "real" and current is not None else None
+            total = None if value is None else current + int(value)
+            if attr == "tokens_prompt":
+                tokens_prompt = total
+            else:
+                tokens_completion = total
         action, refusal = parse_action(response.text)
         if action is None:
-            step = Step(number, None, {"ok": False, "error": {"code": "invalid_action", "message": refusal}})
+            step = Step(number, None, {"ok": False, "error": {"code": "invalid_action", "message": refusal}},
+                        raw=response.text)
         elif action.get("action") == "submit":
             step = Step(number, action, {"ok": True, "submitted": True})
             episode.steps.append(step)
@@ -161,8 +186,11 @@ def run_tool_episode(
 
     code = _project_text(context.workspace) if project else _solution_text(context.workspace)
     return GenerationResult(
-        text=code, model_used=model_used, tokens_prompt=Measurement.unknown(),
-        tokens_completion=Measurement.unknown(), finish_reason=episode.stop_reason,
+        text=code, model_used=model_used,
+        tokens_prompt=Measurement.real(tokens_prompt) if tokens_prompt and episode.steps else Measurement.unknown(),
+        tokens_completion=(Measurement.real(tokens_completion) if tokens_completion and episode.steps
+                           else Measurement.unknown()),
+        finish_reason=episode.stop_reason,
         elapsed_s=time.perf_counter() - started,
         facts={"tool_episode": {"steps": [s.summary() for s in episode.steps], "submitted": episode.submitted,
                                 "stop_reason": episode.stop_reason,
