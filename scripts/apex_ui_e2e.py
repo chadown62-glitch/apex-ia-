@@ -113,6 +113,17 @@ def run(out: Path) -> int:
         page.wait_for_load_state("networkidle")
         audit.check("session", "connexion par code à usage unique", "/ui/login" not in page.url, page.url)
 
+        # -- ÉTAT DU SYSTÈME : l'inférence réellement possible, pas la présence d'Ollama ---------------------
+        status_data = api("GET", "/status")["data"]
+        rows = {c["component"]: c for c in status_data["components"]}
+        audit.check("état", "ligne « models » mesurée (backend natif exécutable)",
+                    rows.get("models", {}).get("state") == "ready", json.dumps(rows.get("models"), ensure_ascii=False))
+        audit.check("état", "Ollama absent ne dégrade pas le verdict", "ollama" not in status_data["overall"]["not_ready"],
+                    json.dumps(status_data["overall"], ensure_ascii=False))
+        page.goto(base + "/")
+        page.wait_for_timeout(2000)
+        audit.check("état", "le tableau de bord affiche la ligne « models »", "models" in page.inner_text("body"))
+
         # -- MODÈLES : disponibilité réelle et raison --------------------------------------------------------
         page.goto(base + "/models")
         page.get_by_role("button", name="Vérifier la connexion").click()
