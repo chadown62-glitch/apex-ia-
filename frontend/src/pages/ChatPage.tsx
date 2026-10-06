@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { listRecalls } from "../api/endpoints";
+import { getRuntimeStatus, listRecalls } from "../api/endpoints";
 
 import {
   useCatalogModels,
@@ -88,6 +88,16 @@ export function ChatPage() {
     enabled: Boolean(selectedId),
   });
   const recallMap = recalls.data?.status === "real" ? recalls.data.data ?? {} : {};
+  // Statut RÉEL du runtime pour le rôle choisi (ou tous) : quel modèle peut répondre, sinon pourquoi.
+  const runtime = useQuery({
+    queryKey: ["runtime-status", modelRole],
+    queryFn: () => getRuntimeStatus(modelRole || undefined),
+    staleTime: 30_000,
+  });
+  const runtimeRows = runtime.data?.status === "real" ? runtime.data.data ?? [] : [];
+  const executable = runtimeRows
+    .filter((r) => r.available)
+    .filter((r, i, all) => all.findIndex((o) => o.model_id === r.model_id && o.runtime === r.runtime) === i);
   const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -231,6 +241,13 @@ export function ChatPage() {
                   <input type="checkbox" checked={useMemory} onChange={(e) => setUseMemory(e.target.checked)} />
                   <span>Mémoire</span>
                 </label>
+                <span className="chat-toolbar__model" aria-label="Statut du runtime">
+                  {runtime.isLoading
+                    ? "Vérification des modèles…"
+                    : executable.length > 0
+                      ? `Exécutable : ${executable.map((r) => `${r.model_id} (${r.runtime})`).join(", ")}`
+                      : `Aucun modèle exécutable — ${runtimeRows.map((r) => r.detail).filter(Boolean)[0] ?? "voir la page Modèles"}`}
+                </span>
               </div>
 
               <div className="chat-messages">

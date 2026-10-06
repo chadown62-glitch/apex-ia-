@@ -1087,3 +1087,14 @@ export interface Distribution {
   native_inference: boolean;
   native_inference_detail: string | null;
 }
+
+/** Ce que le backend d'un modèle candidat constate maintenant (`GET /models/runtime-status`). */
+export interface RuntimeModelStatus {
+  role: string;
+  model_id: string;
+  runtime: string | null;
+  served_model?: string;
+  available: boolean;
+  status?: string;
+  detail: string;
+}

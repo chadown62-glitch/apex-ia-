@@ -153,3 +153,28 @@ def list_model_backends() -> DataEnvelope[list[dict[str, Any]]]:
          "lora": b.lora}
         for b in BACKENDS
     ])
+
+
+@router.get("/models/runtime-status", response_model=DataEnvelope[list[dict[str, Any]]])
+def runtime_status(role: str | None = None) -> DataEnvelope[list[dict[str, Any]]]:
+    """Par rôle : chaque modèle candidat et ce que son backend constate RÉELLEMENT maintenant (`detect`) —
+    disponible ou pourquoi pas (poids absents, serveur injoignable, backend PLANNED). Ce que l'interface
+    affiche comme « statut du runtime » : jamais déduit de la seule configuration."""
+    from apex.config.loader import load_config
+    from apex.models.provider import get_default_provider
+    from apex.models.registry import resolve_candidates
+
+    rows = []
+    for candidate in resolve_candidates(load_config()):
+        if role is not None and candidate.role != role:
+            continue
+        endpoint = candidate.endpoint
+        if endpoint is None or not endpoint.enabled:
+            rows.append({"role": candidate.role, "model_id": candidate.ref.id, "runtime": None, "available": False,
+                         "detail": "aucun endpoint" if endpoint is None else "désactivé en configuration"})
+            continue
+        report = get_default_provider(endpoint).detect()
+        rows.append({"role": candidate.role, "model_id": candidate.ref.id, "runtime": endpoint.runtime,
+                     "served_model": endpoint.served_model, "available": report.is_available,
+                     "status": report.status.value, "detail": report.detail})
+    return DataEnvelope(status="real", data=rows)

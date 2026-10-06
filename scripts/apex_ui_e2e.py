@@ -126,6 +126,10 @@ def run(out: Path) -> int:
         page.goto(base + "/chat")
         page.get_by_role("button", name="+ Nouvelle conversation").first.click()
         page.wait_for_timeout(800)
+        page.wait_for_selector("[aria-label='Statut du runtime']:not(:has-text('Vérification'))", timeout=30000)
+        status = page.locator("[aria-label='Statut du runtime']").inner_text()
+        audit.check("chat", "statut réel du runtime affiché (modèle natif exécutable)",
+                    "Exécutable" in status and "transformers" in status, status)
         page.get_by_placeholder("Écrire un message…").fill("Mon projet s'appelle Zéphyr.")
         page.get_by_role("button", name="Envoyer").click()
         page.wait_for_selector("text=Génération en cours", timeout=5000)

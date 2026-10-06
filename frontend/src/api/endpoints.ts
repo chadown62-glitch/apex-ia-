@@ -7,6 +7,7 @@
 import { fetchEnvelope } from "./client";
 import type {
   BrainEvent,
+  RuntimeModelStatus,
   Distribution,
   MemoryDocumentResult,
   MemorySearchHit,
@@ -199,6 +200,10 @@ export function searchMemory(query: string, categories: string[]): Promise<DataE
 
 export function getDistribution(): Promise<DataEnvelope<Distribution>> {
   return fetchEnvelope<Distribution>("/status/distribution");
+}
+
+export function getRuntimeStatus(role?: string): Promise<DataEnvelope<RuntimeModelStatus[]>> {
+  return fetchEnvelope<RuntimeModelStatus[]>(`/models/runtime-status${role ? `?role=${encodeURIComponent(role)}` : ""}`);
 }
 
 export function listModelBackends(): Promise<DataEnvelope<ModelBackend[]>> {

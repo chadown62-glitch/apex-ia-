@@ -170,3 +170,19 @@ def test_waiting_for_a_busy_model_is_bounded_by_the_request_timeout(models_dir) 
             provider.generate(request(endpoint(models_dir), max_tokens=2, temperature=0, timeout_s=0.3))
     finally:
         loaded.lock.release()
+
+
+def test_runtime_status_reports_what_each_backend_really_detects(models_dir, tmp_path, monkeypatch) -> None:
+    from fastapi.testclient import TestClient
+
+    from apex.api.app import create_app
+    from tests.api_test_support import TEST_API_TOKEN
+
+    (tmp_path / "qwen2.5-coder-1.5b-instruct").symlink_to(models_dir / "tiny-qwen2", target_is_directory=True)
+    monkeypatch.setenv("APEX_MODELS_DIR", str(tmp_path))
+    client = TestClient(create_app(), headers={"Authorization": f"Bearer {TEST_API_TOKEN}"})
+    rows = client.get("/api/v1/models/runtime-status", params={"role": "coder_main"}).json()["data"]
+    native = [r for r in rows if r["runtime"] == "transformers"]
+    assert native and native[0]["available"] is True
+    others = [r for r in rows if r["runtime"] == "ollama"]
+    assert others and all(not r["available"] and r["detail"] for r in others)  # Ollama absent : dit, jamais supposé
