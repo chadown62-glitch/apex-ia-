@@ -1,9 +1,133 @@
 {
-  "label": "smoke-1",
-  "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
-  "served_name": "qwen2.5-coder-1.5b-instruct",
-  "revision": "main",
-  "jobs": [
-    {"name": "smoke", "phase": "smoke", "seeds": "0"}
-  ]
+ "label": "real-2",
+ "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+ "served_name": "qwen2.5-coder-1.5b-instruct",
+ "revision": "2e1fd397ee46e1388853d2af2c993145b0f1098a",
+ "jobs": [
+  {
+   "name": "smoke",
+   "phase": "smoke",
+   "seeds": "0"
+  },
+  {
+   "name": "adapt-A-s0",
+   "phase": "adaptation",
+   "seeds": "0",
+   "arms": "A"
+  },
+  {
+   "name": "adapt-A-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "A"
+  },
+  {
+   "name": "adapt-A-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "A"
+  },
+  {
+   "name": "adapt-A-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "A"
+  },
+  {
+   "name": "adapt-B-s0",
+   "phase": "adaptation",
+   "seeds": "0",
+   "arms": "B"
+  },
+  {
+   "name": "adapt-B-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "B"
+  },
+  {
+   "name": "adapt-B-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "B"
+  },
+  {
+   "name": "adapt-B-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "B"
+  },
+  {
+   "name": "adapt-R-s0",
+   "phase": "adaptation",
+   "seeds": "0",
+   "arms": "R"
+  },
+  {
+   "name": "adapt-R-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "R"
+  },
+  {
+   "name": "adapt-R-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "R"
+  },
+  {
+   "name": "adapt-R-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "R"
+  },
+  {
+   "name": "adapt-C-s0",
+   "phase": "adaptation",
+   "seeds": "0",
+   "arms": "C"
+  },
+  {
+   "name": "adapt-C-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "C"
+  },
+  {
+   "name": "adapt-C-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "C"
+  },
+  {
+   "name": "adapt-C-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "C"
+  },
+  {
+   "name": "adapt-D-s0",
+   "phase": "adaptation",
+   "seeds": "0",
+   "arms": "D"
+  },
+  {
+   "name": "adapt-D-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "D"
+  },
+  {
+   "name": "adapt-D-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "D"
+  },
+  {
+   "name": "adapt-D-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "D"
+  }
+ ]
 }

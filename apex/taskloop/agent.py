@@ -35,7 +35,10 @@ _INSTRUCTIONS = (
     '- quand ta solution est prête dans le fichier solution.py : {"action": "submit"}\n'
     "Écris la fonction demandée dans solution.py, sans code exécuté au chargement du module. Tu peux écrire "
     "tes propres tests (par exemple tests/test_solution.py, avec unittest) et les lancer avec tests.run. Les "
-    "tests qui jugeront ta solution sont cachés : tu ne les verras jamais.\n\nOutils disponibles :\n"
+    "tests qui jugeront ta solution sont cachés : tu ne les verras jamais.\n"
+    "Exemple de premier tour : "
+    '{"tool": "fs.write", "arguments": {"path": "solution.py", "content": "def f(x):\\n    return x\\n"}}\n'
+    "Ne soumets qu'une fois solution.py écrit.\n\nOutils disponibles :\n"
 )
 _PROJECT_INSTRUCTIONS = (
     "Tu fais évoluer le projet Python de ton espace de travail pour réaliser la tâche ci-dessous, avec des "
@@ -43,8 +46,9 @@ _PROJECT_INSTRUCTIONS = (
     '- pour utiliser un outil : {"tool": "<nom>", "arguments": {...}}\n'
     '- quand le projet est prêt : {"action": "submit"}\n'
     "Commence par inspecter le projet (project.inspect, fs.read). Tu peux lancer ses tests et en écrire "
-    "d'autres. Les vérifications qui jugeront le projet sont cachées : tu ne les verras jamais.\n\n"
-    "Outils disponibles :\n"
+    "d'autres. Les vérifications qui jugeront le projet sont cachées : tu ne les verras jamais.\n"
+    'Exemple de premier tour : {"tool": "project.inspect", "arguments": {}}\n'
+    "Ne soumets qu'après avoir modifié le projet.\n\nOutils disponibles :\n"
 )
 _MAX_PROJECT_TEXT_CHARS = 50_000
 
@@ -123,6 +127,17 @@ def compose_prompt(task_prompt: str, tools: list[dict[str, Any]], steps: list[St
             f"récent) :\n{past}\n\nTon action suivante (un seul objet JSON) :")
 
 
+def _has_worked(episode: "Episode", *, project: bool, context: ToolContext) -> bool:
+    """Une soumission a-t-elle quelque chose à soumettre ? Fonction : solution.py existe. Projet : au moins
+    une écriture réussie dans l'espace de travail pendant l'épisode."""
+    if not project:
+        try:
+            return context.workspace.resolve(SOLUTION_FILE).is_file()
+        except Exception:
+            return False
+    return any(s.action and s.action.get("tool") == "fs.write" and s.observation.get("ok") for s in episode.steps)
+
+
 def run_tool_episode(
     *, task_prompt: str, generate: Callable[[GenerationRequest], GenerationResult], endpoint: Any,
     temperature: float | None, timeout_s: float, engine: ToolEngine, context: ToolContext, max_steps: int,
@@ -165,6 +180,13 @@ def run_tool_episode(
         if action is None:
             step = Step(number, None, {"ok": False, "error": {"code": "invalid_action", "message": refusal}},
                         raw=response.text)
+        elif action.get("action") == "submit" and not _has_worked(episode, project=project, context=context):
+            # Soumettre sans avoir rien produit ne peut rien prouver : refus OBSERVÉ (le modèle le lit au
+            # tour suivant), jamais une donnée cachée — seulement l'état de son propre espace de travail.
+            step = Step(number, action, {"ok": False, "error": {
+                "code": "nothing_to_submit",
+                "message": ("solution.py n'existe pas encore : écris-la d'abord avec fs.write" if not project
+                            else "aucune modification du projet : utilise d'abord les outils (fs.write…)")}})
         elif action.get("action") == "submit":
             step = Step(number, action, {"ok": True, "submitted": True})
             episode.steps.append(step)

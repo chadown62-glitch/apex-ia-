@@ -469,6 +469,11 @@ class EvalRunnerService:
                     for key, value in (generation.facts or {}).items()
                     if key.endswith("_duration") and isinstance(value, int | float)
                 },
+                # Backend NATIF : mesures du processus lui-même (durée de génération, débit, chargement).
+                "backend_facts": {
+                    key: value for key, value in (generation.facts or {}).items()
+                    if key in ("backend", "device", "dtype", "generation_s", "load_s", "loaded_now", "tokens_per_s")
+                },
             }
         }
 

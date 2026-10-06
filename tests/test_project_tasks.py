@@ -78,12 +78,14 @@ def test_a_multi_file_project_is_inspected_fixed_tested_and_judged_by_hidden_cal
 
 def test_an_unfixed_project_fails_with_failure_facts_for_the_next_attempt(factory, tmp_path) -> None:
     task = _task(factory)
-    _Actor.script = [act(), act("fs.write", path="shop/pricing.py", content=FIXED), act()]
+    # Tentative 1 : une écriture qui ne corrige rien, puis soumission ; tentative 2 : la correction.
+    _Actor.script = [act("fs.write", path="NOTES.md", content="à voir"), act(),
+                     act("fs.write", path="shop/pricing.py", content=FIXED), act()]
     run = _service(factory, tmp_path).start(
         task_id=task.id, objective="o", wait=True, tool_permissions=ALL,
         limits=TaskLimits(max_attempts=2, max_retries=1, max_candidates=1))
     assert [a["judge_result"] for a in run.attempts] == [None, "pass"]
-    assert "cas en échec : 1 sur 2" in _Actor.prompts[1]  # total([]) == 0 passait déjà, total([10,20]) non
+    assert "cas en échec : 1 sur 2" in _Actor.prompts[2]  # total([]) == 0 passait déjà, total([10,20]) non
 
 
 def test_a_project_requires_tool_mode(factory, tmp_path) -> None:

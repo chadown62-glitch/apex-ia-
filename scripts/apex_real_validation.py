@@ -203,7 +203,10 @@ def collect(factory: Any, run: Any, *, keep_code: bool = True) -> dict[str, Any]
     for e in evals:
         facts = e.facts or {}
         episode = facts.get("tool_episode") or {}
+        response = facts.get("model_response") or {}
         attempts.append({
+            "model_elapsed_s": response.get("elapsed_s"), "tokens_completion": response.get("tokens_completion"),
+            "tokens_prompt": response.get("tokens_prompt"), "backend_facts": response.get("backend_facts"),
             "verdict": getattr(e.oracle_verdict, "value", str(e.oracle_verdict)),
             "category": classify_failure(e).value, "score": judge_score(e.oracle_detail),
             "detail": (e.oracle_detail or "")[:200], "generation_s": e.elapsed_s,

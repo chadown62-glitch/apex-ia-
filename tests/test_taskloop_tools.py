@@ -146,3 +146,12 @@ def test_action_parsing_and_prompt_composition() -> None:
     assert parse_action("[1, 2]")[0] is None
     prompt = compose_prompt("Énoncé", [{"name": "fs.read"}], [])
     assert prompt.index("Outils disponibles") < prompt.index("Énoncé") and "aucun tour" in prompt
+
+
+def test_submitting_before_writing_solution_py_is_refused_and_observed(factory, tmp_path) -> None:
+    """Constat RÉEL (smoke CI, vrai modèle 1.5B) : le modèle soumettait dès le premier tour, sans rien
+    écrire. Le refus est une observation sur SON espace de travail, jamais une donnée cachée."""
+    _, run, workspace = _run(factory, tmp_path, [act(), act("fs.write", path="solution.py", content=RIGHT), act()])
+    assert run.status.value == "completed"
+    assert "nothing_to_submit" in _Actor.prompts[1] and "fs.write" in _Actor.prompts[1]
+    assert "Exemple de premier tour" in _Actor.prompts[0]
