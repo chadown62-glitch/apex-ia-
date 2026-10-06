@@ -1,154 +1,104 @@
 {
- "label": "real-3",
+ "label": "real-4",
  "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
  "served_name": "qwen2.5-coder-1.5b-instruct",
  "revision": "2e1fd397ee46e1388853d2af2c993145b0f1098a",
  "jobs": [
   {
-   "name": "rep-A-s10",
+   "name": "plan2-A-s0",
    "phase": "adaptation",
-   "seeds": "10",
-   "arms": "A"
-  },
-  {
-   "name": "rep-A-s11",
-   "phase": "adaptation",
-   "seeds": "11",
-   "arms": "A"
-  },
-  {
-   "name": "rep-A-s12",
-   "phase": "adaptation",
-   "seeds": "12",
-   "arms": "A"
-  },
-  {
-   "name": "rep-A-s13",
-   "phase": "adaptation",
-   "seeds": "13",
-   "arms": "A"
-  },
-  {
-   "name": "rep-R-s10",
-   "phase": "adaptation",
-   "seeds": "10",
-   "arms": "R"
-  },
-  {
-   "name": "rep-R-s11",
-   "phase": "adaptation",
-   "seeds": "11",
-   "arms": "R"
-  },
-  {
-   "name": "rep-R-s12",
-   "phase": "adaptation",
-   "seeds": "12",
-   "arms": "R"
-  },
-  {
-   "name": "rep-R-s13",
-   "phase": "adaptation",
-   "seeds": "13",
-   "arms": "R"
-  },
-  {
-   "name": "rep-C-s10",
-   "phase": "adaptation",
-   "seeds": "10",
-   "arms": "C"
-  },
-  {
-   "name": "rep-C-s11",
-   "phase": "adaptation",
-   "seeds": "11",
-   "arms": "C"
-  },
-  {
-   "name": "rep-C-s12",
-   "phase": "adaptation",
-   "seeds": "12",
-   "arms": "C"
-  },
-  {
-   "name": "rep-C-s13",
-   "phase": "adaptation",
-   "seeds": "13",
-   "arms": "C"
-  },
-  {
-   "name": "rep-D-s10",
-   "phase": "adaptation",
-   "seeds": "10",
-   "arms": "D"
-  },
-  {
-   "name": "rep-D-s11",
-   "phase": "adaptation",
-   "seeds": "11",
-   "arms": "D"
-  },
-  {
-   "name": "rep-D-s12",
-   "phase": "adaptation",
-   "seeds": "12",
-   "arms": "D"
-  },
-  {
-   "name": "rep-D-s13",
-   "phase": "adaptation",
-   "seeds": "13",
-   "arms": "D"
-  },
-  {
-   "name": "mem-s0",
-   "phase": "memory",
-   "seeds": "0"
-  },
-  {
-   "name": "mem-s1",
-   "phase": "memory",
-   "seeds": "1"
-  },
-  {
-   "name": "mem-s2",
-   "phase": "memory",
-   "seeds": "2"
-  },
-  {
-   "name": "tools-function-s0",
-   "phase": "tools",
    "seeds": "0",
-   "sections": "function"
+   "arms": "A"
   },
   {
-   "name": "tools-function-s1",
-   "phase": "tools",
+   "name": "plan2-A-s1",
+   "phase": "adaptation",
    "seeds": "1",
-   "sections": "function"
+   "arms": "A"
   },
   {
-   "name": "tools-project-s0",
-   "phase": "tools",
+   "name": "plan2-A-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "A"
+  },
+  {
+   "name": "plan2-A-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "A"
+  },
+  {
+   "name": "plan2-B-s0",
+   "phase": "adaptation",
    "seeds": "0",
-   "sections": "project"
+   "arms": "B"
   },
   {
-   "name": "tools-project-s1",
-   "phase": "tools",
+   "name": "plan2-B-s1",
+   "phase": "adaptation",
    "seeds": "1",
-   "sections": "project"
+   "arms": "B"
   },
   {
-   "name": "tools-hostile-s0",
-   "phase": "tools",
+   "name": "plan2-B-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "B"
+  },
+  {
+   "name": "plan2-B-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "B"
+  },
+  {
+   "name": "plan2-C-s0",
+   "phase": "adaptation",
    "seeds": "0",
-   "sections": "hostile"
+   "arms": "C"
   },
   {
-   "name": "ui",
-   "phase": "ui",
-   "seeds": "0"
+   "name": "plan2-C-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "C"
+  },
+  {
+   "name": "plan2-C-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "C"
+  },
+  {
+   "name": "plan2-C-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "C"
+  },
+  {
+   "name": "plan2-D-s0",
+   "phase": "adaptation",
+   "seeds": "0",
+   "arms": "D"
+  },
+  {
+   "name": "plan2-D-s1",
+   "phase": "adaptation",
+   "seeds": "1",
+   "arms": "D"
+  },
+  {
+   "name": "plan2-D-s2",
+   "phase": "adaptation",
+   "seeds": "2",
+   "arms": "D"
+  },
+  {
+   "name": "plan2-D-s3",
+   "phase": "adaptation",
+   "seeds": "3",
+   "arms": "D"
   }
  ]
 }

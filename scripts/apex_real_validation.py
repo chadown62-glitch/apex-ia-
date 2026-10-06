@@ -231,6 +231,7 @@ def collect(factory: Any, run: Any, *, keep_code: bool = True) -> dict[str, Any]
         "duration_s": round((run.completed_at - run.started_at).total_seconds(), 1) if run.completed_at else None,
         "plan": next((e.get("plan") for e in events if e.get("kind") == "task.plan.generated"), None),
         "plan_failed": any(e.get("kind") == "task.plan.failed" for e in events),
+        "plan_code_removed": any(e.get("kind") == "task.plan.generated" and e.get("code_removed") for e in events),
         "adapted": sum(1 for e in events if e.get("kind") == "strategy.adapted"),
         "memory": next((e.get("items") for e in events if e.get("kind") == "memory.retrieved"), None),
         "agent_steps": len(steps), "tools_used": tools_used, "tool_errors": tool_errors,
@@ -619,6 +620,7 @@ def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
             "corrected": sum(r["corrected"] for r in rs),
             "mean_duration_s": round(sum(r["duration_s"] or 0 for r in rs) / n, 1),
             "plan_failed": sum(r["plan_failed"] for r in rs),
+            "plan_code_removed": sum(r.get("plan_code_removed", False) for r in rs),
             "errors": _count([a["category"] for r in rs for a in r["attempts"] if a["verdict"] != "pass"]),
         }
     primary = {}

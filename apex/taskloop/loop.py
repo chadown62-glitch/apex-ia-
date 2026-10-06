@@ -73,6 +73,7 @@ une reprise devinée."""
 
 from __future__ import annotations
 
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -264,6 +265,28 @@ _PLAN_INSTRUCTION = (
 )
 
 
+#: Mesuré le 06/10/2026 (validation réelle `real-2`, docs/VALIDATION_REELLE.md §3) : malgré
+#: « N'écris AUCUN code », le modèle mettait du code dans 58 plans sur 60 ; réinjecté, ce code (parfois
+#: contraire à l'énoncé) était ensuite COMMENTÉ en prose au lieu d'une solution. Le contrat « analyse sans
+#: code » est donc appliqué : les blocs ``` sont retirés du plan avant réinjection (le texte brut reste
+#: journalisé), et la consigne de format est rappelée EN DERNIER, après le plan et les faits d'échec (hors
+#: mode outillé, qui a son propre protocole).
+_PLAN_CODE_BLOCK = re.compile(r"```.*?(?:```|\Z)", re.DOTALL)
+_PLAN_CLOSING = (
+    "Fin de l'analyse. Écris maintenant la solution : réponds UNIQUEMENT avec le code Python complet "
+    "demandé par l'énoncé (aucune explication, aucun commentaire sur l'analyse)."
+)
+
+
+def _plan_without_code(plan: str) -> str:
+    return re.sub(r"\n{3,}", "\n\n", _PLAN_CODE_BLOCK.sub("", plan)).strip()
+
+
+def _compose_prompt(prompt: str, genome_content: dict[str, Any] | None, *, plan_closing: bool) -> str:
+    text = compose_generation_prompt(prompt, genome_content)
+    return f"{text}\n\n{_PLAN_CLOSING}" if plan_closing else text
+
+
 def _generate_plan(
     prompt: str, *, candidate: ModelCandidate, provider_factory: Callable[[ModelCandidate], ModelProvider],
     temperature: float | None, timeout_s: float, emit: Callable[[str, dict[str, Any]], None],
@@ -285,13 +308,21 @@ def _generate_plan(
     if not text:
         emit("task.plan.failed", {"model_id": candidate.ref.id, "reason": "réponse vide"})
         return None
-    truncated = len(text) > _PLAN_MAX_CHARS
-    text = text[:_PLAN_MAX_CHARS]
+    analysis = _plan_without_code(text)
+    code_removed = _PLAN_CODE_BLOCK.search(text) is not None
+    if not analysis:
+        emit("task.plan.failed", {"model_id": candidate.ref.id,
+                                  "reason": "le plan ne contenait que du code",
+                                  "raw_plan": text[:_PLAN_MAX_CHARS]})
+        return None
+    truncated = len(analysis) > _PLAN_MAX_CHARS
+    analysis = analysis[:_PLAN_MAX_CHARS]
     emit("task.plan.generated", {
-        "model_id": result.model_used, "plan": text, "truncated": truncated,
+        "model_id": result.model_used, "plan": analysis, "truncated": truncated,
+        "code_removed": code_removed, "raw_plan": text[:_PLAN_MAX_CHARS] if code_removed else None,
         "elapsed_s": round(time.perf_counter() - started, 3),
     })
-    return text
+    return analysis
 
 
 _MEMORY_HEADER = (
@@ -687,7 +718,8 @@ def _run(
         )
     if strategy.conditioned:
         emit("strategy.decided", {"condition_on_run": request.condition_on_run, **strategy.event()})
-    generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+    plan_closing = False  # consigne de format rappelée en dernier : seulement avec un plan injecté
+    generation_prompt = _compose_prompt(prompt, strategy.genome_content, plan_closing=plan_closing)
     generation_temperature = resolve_generation_temperature(strategy.genome_content)
 
     # -- PROVIDER SELECTION (initiale) -----------------------------------
@@ -762,10 +794,11 @@ def _run(
             )
         if plan is not None:
             prompt = f"{prompt}\n\n{_PLAN_HEADER}\n{plan}"
+            plan_closing = not request.tool_permissions
             from dataclasses import replace as _replace
 
             strategy = _replace(strategy, genome_content={**(strategy.genome_content or {}), "plan": plan})
-            generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+            generation_prompt = _compose_prompt(prompt, strategy.genome_content, plan_closing=plan_closing)
     stage = _advance_stage(stage, TaskLoopStage.EXECUTION)
 
     effective_policy = _effective_policy(request, load_config())
@@ -834,7 +867,8 @@ def _run(
                 adapted = _adapted_strategy(strategy, last_experience, last_eval, attempt_number)
                 if adapted is not None:
                     strategy = adapted
-                    generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+                    generation_prompt = _compose_prompt(prompt, strategy.genome_content,
+                                                        plan_closing=plan_closing)
                     generation_temperature = resolve_generation_temperature(strategy.genome_content)
                     emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
 
@@ -1108,7 +1142,8 @@ def _run(
                 })
             else:
                 strategy = adapted
-                generation_prompt = compose_generation_prompt(prompt, strategy.genome_content)
+                generation_prompt = _compose_prompt(prompt, strategy.genome_content,
+                                                    plan_closing=plan_closing)
                 generation_temperature = resolve_generation_temperature(strategy.genome_content)
                 emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
 

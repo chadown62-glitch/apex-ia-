@@ -11,7 +11,7 @@ import pytest
 
 from apex.errors import ModelProviderError
 from apex.metalearner.experience import ExperienceRepository
-from apex.taskloop.loop import _PLAN_HEADER, _PLAN_INSTRUCTION
+from apex.taskloop.loop import _PLAN_CLOSING, _PLAN_HEADER, _PLAN_INSTRUCTION
 from apex.taskloop.request import TaskLimits
 from tests.test_taskloop_adaptation import (
     _kinds,
@@ -29,7 +29,7 @@ def test_the_model_plans_first_and_the_plan_reaches_the_generation(factory) -> N
     task, run = _run(factory, [PLAN, _CORRECT_IS_PALINDROME], limits=ONE, plan_first=True)
     plan_request, code_request = _Scripted.requests
     assert plan_request.prompt == _PLAN_INSTRUCTION + task.description
-    assert code_request.prompt == f"{task.description}\n\n{_PLAN_HEADER}\n{PLAN}"
+    assert code_request.prompt == f"{task.description}\n\n{_PLAN_HEADER}\n{PLAN}\n\n{_PLAN_CLOSING}"
     assert run.status.value == "completed" and run.plan_first is True
     events = _kinds(factory, run.id)
     generated = [e for e in events if e["kind"] == "task.plan.generated"]
@@ -44,8 +44,12 @@ def test_the_plan_is_kept_across_adapted_retries(factory) -> None:  # noqa: F811
 
     task, _ = _run(factory, [PLAN, WRONG, _CORRECT_IS_PALINDROME], plan_first=True)
     _, first, second = _Scripted.requests
-    assert first.prompt == f"{task.description}\n\n{_PLAN_HEADER}\n{PLAN}"
-    assert second.prompt.startswith(first.prompt + "\n\nObservations factuelles")
+    base = f"{task.description}\n\n{_PLAN_HEADER}\n{PLAN}"
+    assert first.prompt == f"{base}\n\n{_PLAN_CLOSING}"
+    # La consigne de format reste la DERNIÈRE chose lue, après les faits d'échec (mesuré : sinon le modèle
+    # commentait le plan en prose au lieu d'écrire une solution).
+    assert second.prompt.startswith(base + "\n\nObservations factuelles")
+    assert second.prompt.endswith(f"\n\n{_PLAN_CLOSING}") and second.prompt.count(_PLAN_CLOSING) == 1
 
 
 class _PlanFails(_Scripted):
@@ -86,3 +90,23 @@ def test_an_empty_plan_is_refused_and_a_long_plan_is_bounded(factory, plan) -> N
     else:
         (generated,) = [e for e in events if e["kind"] == "task.plan.generated"]
         assert generated["truncated"] is True and len(generated["plan"]) == 2000
+
+
+def test_code_written_in_the_plan_is_removed_before_it_reaches_the_generation(factory) -> None:  # noqa: F811
+    """Contrat « analyse sans code » appliqué : le code d'un plan (58 plans sur 60 avec un vrai modèle 1.5B,
+    parfois contraire à l'énoncé) n'est jamais réinjecté ; le texte brut reste journalisé."""
+    raw = f"{PLAN}\n```python\ndef is_palindrome(s):\n    return s == s[::-1]\n```\nFin."
+    task, run = _run(factory, [raw, _CORRECT_IS_PALINDROME], limits=ONE, plan_first=True)
+    code_request = _Scripted.requests[1]
+    assert "```" not in code_request.prompt and "def is_palindrome" not in code_request.prompt
+    assert f"{PLAN}\n\nFin." in code_request.prompt
+    (generated,) = [e for e in _kinds(factory, run.id) if e["kind"] == "task.plan.generated"]
+    assert generated["code_removed"] is True and generated["raw_plan"] == raw
+
+
+def test_a_plan_made_only_of_code_is_a_failed_plan_not_a_plan(factory) -> None:  # noqa: F811
+    task, run = _run(factory, ["```python\ndef is_palindrome(s):\n    return True\n```",
+                               _CORRECT_IS_PALINDROME], limits=ONE, plan_first=True)
+    assert _Scripted.requests[1].prompt == task.description  # rien d'inventé, aucune consigne de plan
+    (failed,) = [e for e in _kinds(factory, run.id) if e["kind"] == "task.plan.failed"]
+    assert "que du code" in failed["reason"] and "def is_palindrome" in failed["raw_plan"]

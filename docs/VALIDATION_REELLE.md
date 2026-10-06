@@ -72,3 +72,14 @@ hostiles réelles données au modèle (lecture de /etc/passwd, de ../../config.y
 boucle infinie, sortie énorme, processus persistant, lien symbolique). Mesures : outils réellement appelés,
 actions illisibles, réussite, et pour les consignes hostiles : chaque tentative du modèle et ce que le système
 en a fait (refus, délai, coupure), fichier témoin hôte jamais créé.
+
+### 2.5 PLAN corrigé — PRÉ-ENREGISTRÉ (après `real-2`, avant toute mesure de la correction)
+Constat `real-2` (§3) : le modèle écrit du code dans 58 plans sur 60 malgré la consigne, et, plan réinjecté,
+répond souvent par de la prose commentant ce code (5 `invalid_candidate` en B, 18 en D). Correction (voie PLAN
+seulement ; A, R, C inchangés octet pour octet) : blocs de code retirés du plan avant réinjection (un plan fait
+uniquement de code devient un plan échoué), consigne de format rappelée en dernier, après le plan et les faits
+d'échec. Mesure `real-4` : bras A, B, C, D, graines {0, 1, 2, 3}, même protocole que §2.2. Hypothèses
+(McNemar exact, Holm à 5 %) : **H1'** B vs A, **H3'** D vs C. Descriptif : `invalid_candidate`, score du Judge,
+durée, comparaison à B et D de `real-2` (mêmes graines), et reproductibilité de A et C entre `real-2` et
+`real-4` (même code, même graine). Règle inchangée : un effet n'est affirmé qu'après réplication (graines
+{10, 11, 12, 13}) ; une correction qui n'améliore rien est rapportée « MESURÉ : aucun gain ».
