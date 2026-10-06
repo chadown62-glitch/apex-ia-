@@ -35,6 +35,9 @@ class GenerationRequest:
     temperature: float | None = None
     timeout_s: float = 30.0
     cancel_event: threading.Event | None = None
+    #: Graine d'échantillonnage (reproductibilité des expériences) — honorée par le backend natif ; les
+    #: backends HTTP qui ne l'exposent pas l'ignorent (jamais présentée comme appliquée par eux).
+    seed: int | None = None
 
 
 @dataclass(frozen=True)

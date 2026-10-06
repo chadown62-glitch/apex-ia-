@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
+from typing import Any
 
 from apex.config.schema import ApexConfig, ModelEndpoint, ModelRef
 
@@ -56,6 +57,15 @@ class ModelCandidate:
         return self.ref.quantization != "external"
 
 
+def serves(endpoint: Any, ref: Any) -> bool:
+    """L'endpoint sert-il CE modèle ? Même famille ET même version dans le nom servi (06/10/2026 : la famille
+    seule appariait une référence 7B à un endpoint 1.5B de la même famille — un modèle déclaré pour un autre)."""
+    served, family = endpoint.served_model.lower(), ref.family.lower()
+    if served == family:
+        return True  # nom servi = famille (API externe : la version n'apparaît pas dans le nom)
+    return served.startswith(family) and ref.version.lower() in served
+
+
 def resolve_candidates(config: ApexConfig) -> tuple[ModelCandidate, ...]:
     """Un `ModelCandidate` par (rôle, `ModelRef` candidat) déclaré dans
     `config.model_roles` — apparié à son `ModelEndpoint` si un endpoint
@@ -64,7 +74,7 @@ def resolve_candidates(config: ApexConfig) -> tuple[ModelCandidate, ...]:
     candidates: list[ModelCandidate] = []
     for role in config.model_roles.values():
         for ref in role.candidates:
-            matches = tuple(e for e in config.endpoints if e.served_model.startswith(ref.family))
+            matches = tuple(e for e in config.endpoints if serves(e, ref))
             if matches:
                 for endpoint in matches:
                     candidates.append(

@@ -106,6 +106,10 @@ models:
         - {family: qwen3-coder,   version: 30b-a3b-instruct, quantization: q4_k_m, capability_class: coder}
         - {family: qwen3.6,       version: 27b,              quantization: q4_k_m, capability_class: coder}
         - {family: devstral-2,    version: 22b,              quantization: q4_k_m, capability_class: coder}
+        # Backend NATIF (06/10/2026, `runtime: transformers`) : exécuté dans le processus APEX, sans serveur
+        # de modèles ; poids à placer avec `apex models fetch` (action explicite). Seul candidat utilisable
+        # sans Ollama.
+        - {family: qwen2.5-coder, version: 1.5b-instruct,   quantization: bf16,   capability_class: coder}
 
     reasoner:
       selection: benchmark_driven
@@ -148,6 +152,7 @@ models:
         RTX 4060 Ti 8 Go : téléchargé et testé, génère réellement).
       candidates:
         - {family: qwen2.5-coder, version: 7b-instruct, quantization: q4_k_m, capability_class: fast}
+        - {family: qwen2.5-coder, version: 1.5b-instruct, quantization: bf16, capability_class: fast}
 
     embed:
       selection: static_prior
@@ -171,6 +176,10 @@ models:
        served_model: "qwen2.5-coder:7b-instruct", max_context: 32768, vram_gb: 5.0}
     - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
        served_model: "bge-m3:latest", max_context: 8192, vram_gb: 0.6}
+    # Natif, en processus (apex.models.native) : `url` = répertoire des modèles, `served_model` = sous-répertoire
+    # aux fichiers Hugging Face (config.json, tokenizer, *.safetensors). GPU CUDA si réellement présent, sinon CPU.
+    - {pool_id: local-gpu, runtime: transformers, url: "file://${APEX_MODELS_DIR:-/home/apex/apex-data/models}",
+       served_model: "qwen2.5-coder-1.5b-instruct", max_context: 32768, vram_gb: 3.5}
 
 # ----------------------------------------------------------------------------
 # Modèles externes — PRINCIPE 3.

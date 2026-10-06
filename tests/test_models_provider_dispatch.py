@@ -44,7 +44,7 @@ class TestDispatchByRuntime(unittest.TestCase):
         from apex.models.provider import UnavailableRuntimeProvider
         from apex.obs.capability import CapabilityStatus
 
-        for runtime, status in (("airllm", CapabilityStatus.PLANNED), ("transformers", CapabilityStatus.PLANNED),
+        for runtime, status in (("airllm", CapabilityStatus.PLANNED),
                                 ("mon_runtime_maison", CapabilityStatus.UNSUPPORTED)):
             endpoint = an_endpoint(runtime=runtime, url="http://127.0.0.1:9")
             provider = get_default_provider(endpoint)
@@ -60,8 +60,14 @@ class TestDispatchByRuntime(unittest.TestCase):
 
         for backend in BACKENDS:
             self.assertEqual(backend.adapter is None, backend.status is BackendStatus.PLANNED, backend.runtime)
-        self.assertEqual({b.runtime for b in BACKENDS if b.status is BackendStatus.PLANNED},
-                         {"airllm", "transformers"})
+        self.assertEqual({b.runtime for b in BACKENDS if b.status is BackendStatus.PLANNED}, {"airllm"})
+
+    def test_the_transformers_runtime_is_the_native_in_process_backend(self) -> None:
+        from apex.models.native import NativeTransformersProvider
+
+        provider = get_default_provider(an_endpoint(runtime="transformers", url="file:///nulle/part"))
+        self.assertIsInstance(provider, NativeTransformersProvider)
+        self.assertFalse(provider.detect().is_available)  # poids absents : indisponible, jamais simulé
 
     def test_the_backend_catalogue_is_exposed_as_is(self) -> None:
         from fastapi.testclient import TestClient

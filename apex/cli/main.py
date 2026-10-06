@@ -313,6 +313,33 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_models(args: argparse.Namespace) -> int:
+    """`apex models status` : chaque endpoint déclaré et ce que son backend constate RÉELLEMENT (`detect`).
+    `apex models fetch` : place les poids d'un modèle natif (action explicite, réseau)."""
+    from pathlib import Path
+
+    if args.models_cmd == "fetch":
+        from apex.models.fetch import default_models_dir, fetch_model
+
+        models_dir = Path(args.dir) if args.dir else default_models_dir()
+        if models_dir is None:
+            print("aucun endpoint natif (runtime: transformers) dans la configuration — préciser --dir")
+            return 2
+        path = fetch_model(args.repo, models_dir=models_dir, name=args.name, revision=args.revision)
+        print(f"poids placés dans {path}")
+        return 0
+    from apex.config.loader import load_config
+    from apex.models.provider import get_default_provider
+
+    for endpoint in load_config().endpoints:
+        if not endpoint.enabled:
+            print(f"{endpoint.runtime:<14} {endpoint.served_model:<40} désactivé")
+            continue
+        report = get_default_provider(endpoint).detect()
+        print(f"{endpoint.runtime:<14} {endpoint.served_model:<40} {report.status.value:<20} {report.detail}")
+    return 0
+
+
 def _cmd_start(args: argparse.Namespace) -> int:
     """Launcher auto-réparant — N+19, AXE B : UN SEUL point d'entrée
     DIAGNOSTIC -> AUTO-REPAIR -> VERIFY -> GATE -> START. Réutilise
@@ -457,6 +484,16 @@ def build_parser() -> argparse.ArgumentParser:
              "seulement une mesure de capacité",
     )
     start_cmd.set_defaults(func=_cmd_start)
+
+    models_cmd = sub.add_parser("models", help="modèles : état réel des endpoints, placement des poids natifs")
+    models_sub = models_cmd.add_subparsers(dest="models_cmd", required=True)
+    models_sub.add_parser("status", help="ce que chaque backend constate réellement (detect)")
+    fetch_cmd = models_sub.add_parser("fetch", help="télécharger les poids d'un modèle natif (réseau, explicite)")
+    fetch_cmd.add_argument("repo", help="dépôt Hugging Face, ex. Qwen/Qwen2.5-Coder-1.5B-Instruct")
+    fetch_cmd.add_argument("--name", required=True, help="nom servi (= served_model de l'endpoint)")
+    fetch_cmd.add_argument("--dir", default=None, help="répertoire des modèles (défaut : celui de la config)")
+    fetch_cmd.add_argument("--revision", default=None)
+    models_cmd.set_defaults(func=_cmd_models)
 
     # Commandes de RECHERCHE (`learn`, `learning`, `solve`) : ajoutées par l'extension `apex.research_api`
     # seulement quand elle est présente — jamais déclarées dans un Runtime qui ne les contient pas.

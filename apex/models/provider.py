@@ -62,6 +62,10 @@ def get_default_provider(endpoint: ModelEndpoint) -> ModelProvider:
         return UnavailableRuntimeProvider(endpoint)
     if backend.adapter == "ollama":
         return OllamaProvider(endpoint)
+    if backend.adapter == "native":
+        from apex.models.native import NativeTransformersProvider
+
+        return NativeTransformersProvider(endpoint)
     return OpenAICompatibleProvider(endpoint)
 
 

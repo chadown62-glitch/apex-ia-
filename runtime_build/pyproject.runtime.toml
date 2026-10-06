@@ -24,6 +24,8 @@ dependencies = [
 # qu'aucun module Runtime n'utilise encore de colonne `Vector` en Python.
 db  = ["sqlalchemy>=2.0", "alembic>=1.13", "psycopg[binary]>=3.2", "pgvector>=0.3"]
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9"]
+# Inférence NATIVE en processus (apex.models.native) : le Runtime exécute un vrai modèle sans serveur.
+native = ["torch>=2.4", "transformers>=4.45,<5", "safetensors>=0.4", "huggingface_hub>=0.25"]
 
 [project.scripts]
 apex = "apex.cli.main:main"
