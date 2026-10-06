@@ -321,7 +321,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     id: "rag",
     label: "RAG",
     icon: "📚",
-    description: "Retrieval-augmented generation — aucun pipeline réel connecté à ce jour.",
+    description: "Retrieval-augmented generation DENSE (embeddings) — non implémentée. La récupération LEXICALE (BM25) réelle, branchée au Chat et au TaskLoop, est dans « Mémoire ».",
     path: "/rag",
     status: "planned",
     devStage: "concept",

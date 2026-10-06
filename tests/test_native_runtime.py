@@ -40,7 +40,7 @@ def build_tiny_model(directory) -> None:
     tokenizer.chat_template = CHAT_TEMPLATE
     tokenizer.save_pretrained(directory)
     config = Qwen2Config(vocab_size=len(tokenizer), hidden_size=32, intermediate_size=64, num_hidden_layers=2,
-                         num_attention_heads=2, num_key_value_heads=1, max_position_embeddings=512,
+                         num_attention_heads=2, num_key_value_heads=1, max_position_embeddings=4096,
                          eos_token_id=tokenizer.eos_token_id, pad_token_id=tokenizer.pad_token_id)
     Qwen2ForCausalLM(config).save_pretrained(directory, safe_serialization=True)
 
