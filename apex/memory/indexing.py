@@ -71,9 +71,11 @@ def index_task_run(memory: Any, *, run: Any, task: Any, eval_runs: list[Any]) ->
     category = classify_failure(last)
     verdict = getattr(last.oracle_verdict, "value", str(last.oracle_verdict))
     code = ((last.facts or {}).get("model_response") or {}).get("text") or ""
+    from apex.tasks.solution_tasks import retrieval_statement
+
     lines = [
         f"Tâche : {task.title}",
-        f"Énoncé : {task.description[:1_500]}",
+        f"Énoncé : {retrieval_statement(task.description)[:1_500]}",
         f"Résultat : {run.status.value} après {len(eval_runs)} tentative(s) jugée(s), dernier verdict {verdict}",
     ]
     if verdict == "pass":

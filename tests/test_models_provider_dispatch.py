@@ -30,12 +30,51 @@ class TestDispatchByRuntime(unittest.TestCase):
         provider = get_default_provider(an_endpoint(runtime="openai_compatible", url="https://api.example.com/v1"))
         self.assertIsInstance(provider, OpenAICompatibleProvider)
 
-    def test_unknown_runtime_falls_back_to_openai_compatible_never_ollama(self) -> None:
-        """Un `runtime` non reconnu ne doit jamais silencieusement devenir
-        Ollama — le seul autre backend réel est le générique
-        OpenAI-compatible."""
-        provider = get_default_provider(an_endpoint(runtime="vllm", url="https://vllm.example.com/v1"))
-        self.assertIsInstance(provider, OpenAICompatibleProvider)
+    def test_known_openai_compatible_runtimes_use_the_generic_adapter_never_ollama(self) -> None:
+        """vLLM/llama.cpp/LM Studio et les fournisseurs compatibles parlent l'API OpenAI : un seul adapter."""
+        for runtime in ("vllm", "llama_cpp", "lmstudio", "external", "openrouter"):
+            provider = get_default_provider(an_endpoint(runtime=runtime, url="https://vllm.example.com/v1"))
+            self.assertIsInstance(provider, OpenAICompatibleProvider, runtime)
+
+    def test_planned_or_unknown_runtimes_are_honestly_unavailable_never_guessed(self) -> None:
+        """06/10/2026 : un runtime PLANNED (AirLLM, transformers en processus) ou inconnu n'est plus envoyé à
+        l'adapter HTTP OpenAI : fournisseur indisponible, `generate` refuse sans aucun appel réseau."""
+        from apex.errors import ModelProviderError
+        from apex.models.model import GenerationRequest
+        from apex.models.provider import UnavailableRuntimeProvider
+        from apex.obs.capability import CapabilityStatus
+
+        for runtime, status in (("airllm", CapabilityStatus.PLANNED), ("transformers", CapabilityStatus.PLANNED),
+                                ("mon_runtime_maison", CapabilityStatus.UNSUPPORTED)):
+            endpoint = an_endpoint(runtime=runtime, url="http://127.0.0.1:9")
+            provider = get_default_provider(endpoint)
+            self.assertIsInstance(provider, UnavailableRuntimeProvider, runtime)
+            report = provider.detect()
+            self.assertEqual(report.status, status)
+            self.assertFalse(report.is_available)
+            with self.assertRaises(ModelProviderError):
+                provider.generate(GenerationRequest(endpoint=endpoint, prompt="x"))
+
+    def test_the_backend_catalogue_never_claims_a_planned_backend(self) -> None:
+        from apex.models.backends import BACKENDS, BackendStatus
+
+        for backend in BACKENDS:
+            self.assertEqual(backend.adapter is None, backend.status is BackendStatus.PLANNED, backend.runtime)
+        self.assertEqual({b.runtime for b in BACKENDS if b.status is BackendStatus.PLANNED},
+                         {"airllm", "transformers"})
+
+    def test_the_backend_catalogue_is_exposed_as_is(self) -> None:
+        from fastapi.testclient import TestClient
+
+        from apex.api.app import create_app
+        from tests.api_test_support import TEST_API_TOKEN
+
+        client = TestClient(create_app(), headers={"Authorization": f"Bearer {TEST_API_TOKEN}"})
+        data = client.get("/api/v1/models/backends").json()["data"]
+        by_runtime = {b["runtime"]: b for b in data}
+        self.assertEqual(by_runtime["airllm"]["status"], "planned")
+        self.assertIsNone(by_runtime["airllm"]["adapter"])
+        self.assertEqual(by_runtime["ollama"]["adapter"], "ollama")
 
 
 if __name__ == "__main__":

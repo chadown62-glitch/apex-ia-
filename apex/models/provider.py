@@ -51,9 +51,46 @@ def get_default_provider(endpoint: ModelEndpoint) -> ModelProvider:
     fournisseur). Aucun autre backend n'est réel aujourd'hui — `"vllm"`
     resterait `OpenAICompatibleProvider` (l'API vLLM native est déjà
     compatible OpenAI) tant qu'un besoin réel n'exige pas davantage."""
+    from apex.models.backends import BackendStatus, backend_for
     from apex.models.ollama import OllamaProvider
     from apex.models.openai_compatible import OpenAICompatibleProvider
 
-    if endpoint.runtime == "ollama":
+    # Catalogue FERMÉ (`apex.models.backends`, 06/10/2026) : un runtime PLANNED (airllm, transformers) ou
+    # inconnu n'est plus « deviné » OpenAI-compatible — il obtient un fournisseur honnêtement indisponible.
+    backend = backend_for(endpoint.runtime)
+    if backend is None or backend.status is not BackendStatus.IMPLEMENTED:
+        return UnavailableRuntimeProvider(endpoint)
+    if backend.adapter == "ollama":
         return OllamaProvider(endpoint)
     return OpenAICompatibleProvider(endpoint)
+
+
+class UnavailableRuntimeProvider(ModelProvider):
+    """Runtime PLANNED ou inconnu : `detect()` le dit (PLANNED/UNSUPPORTED), `generate()` refuse — jamais une
+    réponse simulée, jamais un appel réseau vers un serveur qui ne parle pas ce protocole."""
+
+    def __init__(self, endpoint: ModelEndpoint) -> None:
+        self._endpoint = endpoint
+
+    def detect(self) -> ModelCapabilityReport:
+        from apex.models.backends import backend_for
+        from apex.obs.capability import CapabilityStatus
+
+        backend = backend_for(self._endpoint.runtime)
+        if backend is None:
+            return ModelCapabilityReport(
+                status=CapabilityStatus.UNSUPPORTED, backend=self._endpoint.runtime,
+                detail=f"runtime « {self._endpoint.runtime} » inconnu (catalogue apex.models.backends)",
+            )
+        return ModelCapabilityReport(
+            status=CapabilityStatus.PLANNED, backend=backend.runtime,
+            detail=f"runtime « {backend.runtime} » PLANNED : {backend.description}",
+        )
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        from apex.errors import ModelProviderError
+
+        raise ModelProviderError(
+            "UnavailableRuntimeProvider.generate", endpoint_url=self._endpoint.url,
+            detail=self.detect().detail,
+        )

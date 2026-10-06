@@ -147,3 +147,97 @@ Couche d'outils sandboxée ; mémoire/RAG branchés sur le Chat et le TaskLoop ;
 Python ; reprise d'exécution ; unification Missions/TaskLoop ; mesure réelle de chaque mécanisme
 d'adaptation ; frontière Runtime cohérente et release verte ; modèle de variantes (quantification, adaptateurs)
 le jour où un backend réel le justifie.
+
+---
+
+# Chantier du 06/10/2026 — construction du cœur autonome
+
+Ordre suivi (celui demandé) : frontière Runtime/Research et release → Tool Engine → outils réels → outils
+branchés au TaskLoop → diagnostic/correction/vérification → abstraction Task/Workspace → mémoire/RAG →
+unification Missions/TaskLoop → reprise réelle → expérience → récupération → décision → interfaces de backends.
+Aucune mesure sur un vrai modèle n'a été lancée ; l'expérience primaire v2 n'a pas été lancée.
+
+## 6. État des problèmes de l'audit du 05/10
+
+| Problème | État |
+|---|---|
+| P0-4 frontière Runtime/Research | **corrigé** (`7479ef4`) : le Runtime embarque le cœur opérationnel (`taskloop`, `tasks`, `judge`, `experience`, `tools`, `memory`…) ; la recherche est une extension explicite (`apex.research_api`) ; vérification anti-fuite verte, artefact Runtime exécutant une TaskRun de bout en bout (`tests/test_runtime_core_loop.py`). |
+| P1-5 couche d'outils | **corrigé** (`55e7aac`, `9601b4c`) : `apex/tools` — `fs.read/list/write`, `project.inspect`, `code.run`, `tests.run` ; schémas d'entrée/sortie, permissions explicites, limites, délai, erreurs structurées, provenance, journal ; exécution par `AgentRuntime` en sandbox (réseau coupé, un clone par exécution). |
+| P1-6 mémoire/RAG | **corrigé, lexical** (`059dc21`) : mémoire système catégorisée (conversation, exécution, connaissance, projet), BM25, provenance ; branchée au Chat et au TaskLoop (`use_memory`) ; `POST /memory/documents`, `GET /memory/search`. Embeddings : **non implémentés**. |
+| P1-7 types de tâches | **partiellement** (`ca132f1`) : fonction Python et projet Python multi-fichiers (fichiers de départ visibles, vérifications cachées `module:fonction`). Aucun autre langage. |
+| P1-8 reprise | **corrigé** (`d5e70fd`) : `TaskRunService.resume`, voir §7.3. |
+| P1-9 deux moteurs | **corrigé** (`4fc51a2`) : une mission à tâche vérifiable s'exécute par le TaskLoop ; voir §7.2. |
+| P1-10 variantes de modèles | **interfaces seulement** : voir §7.5. |
+| P1-11 effet d'apprentissage | **inchangé : non mesuré.** |
+
+## 7. Ajouts de cette fin de chantier
+
+### 7.1 Mémoire/RAG
+Indexation : exécution terminée (énoncé public, code jugé, verdict, faits d'échec autorisés — jamais les cas
+cachés ni les valeurs attendues), échange de Chat, document découpé (1500 caractères, chevauchement 200),
+fichiers d'un projet. Récupération : BM25 sur les 2000 souvenirs les plus récents des catégories demandées,
+extraits bornés avec source ; rien n'est injecté sans recouvrement de termes. Politique : `WRITE/READ_SYSTEM_MEMORY`
+réservés à CORE et HUMAN, jamais à un clone. Une mémoire indisponible n'arrête ni une tâche ni une réponse.
+**Défaut trouvé et corrigé** : les consignes génériques ajoutées par APEX à chaque énoncé (contrat d'appel,
+format de réponse) rendaient « pertinente » n'importe quelle exécution passée ; la requête et l'index utilisent
+désormais l'énoncé sans ces consignes (`retrieval_statement`).
+
+### 7.2 Unification Missions/TaskLoop
+`Mission.task_id` + options explicites (permissions d'outils comprises, validées à la création, clés inconnues
+refusées, projet sans `workspace.write` refusé). `run_mission_task` est une enveloppe de gouvernance :
+QUEUED → RUNNING → TaskRun → REVIEW si le Judge valide (validation finale humaine inchangée) ou FAILED. Le
+Scheduler l'exécute sans clone assigné ; l'annulation annule la mission puis arrête réellement la TaskRun
+(`TaskRunService.cancel`, `POST /task-runs/{id}/cancel`) ; la boucle respecte une annulation demandée pendant la
+génération. Les chemins historiques (`launch_mission` : commande sandbox fixe ; `generate_mission_response*`,
+`/missions/{id}/run` : un appel modèle sans juge) restent pour compatibilité et sont documentés comme NON
+autonomes.
+
+### 7.3 Reprise réelle
+Même identifiant, requête reconstruite depuis la ligne persistée (contexte et contraintes désormais stockés),
+transition `interrupted → running` atomique (une seconde reprise est refusée par la base). La boucle relit les
+tentatives déjà jugées (EvalRun + Experience) : comptées dans les budgets, jamais refaites ; une tentative déjà
+validée avant l'arrêt termine la TaskRun sans nouvelle génération ; la tentative suivante reçoit les faits
+d'échec de la dernière ; l'espace de travail est conservé ; le plan déjà rédigé est réutilisé. Une tentative
+coupée avant son jugement n'a laissé aucune preuve et est refaite. Une TaskRun appartenant à une mission n'est pas
+reprise (la mission orpheline est close FAILED au redémarrage : décision humaine).
+
+### 7.4 Expérience → récupération → décision
+Avec `use_memory`, en plus du contexte, l'**ordre d'essai des modèles** est ajusté d'après les exécutions
+passées de tâches similaires : pour chaque modèle, tentatives validées moins échecs jugés imputables au code ;
+tri stable, aucun modèle retiré, rien sans au moins 2 tentatives observées, événement
+`routing.experience_adjusted|confirmed|insufficient` avec les preuves. C'est une règle de décision explicite, pas
+un apprentissage ; son effet sur la réussite n'est pas mesuré.
+
+### 7.5 Backends de modèles (interfaces)
+Catalogue fermé `apex.models.backends` (`GET /models/backends`) : Ollama et l'adaptateur OpenAI-compatible
+(vLLM, llama.cpp server, LM Studio, fournisseurs compatibles) sont réels ; AirLLM et transformers en processus
+sont PLANNED. Quantification : propriété du modèle servi. LoRA : réel seulement quand le runtime charge
+l'adaptateur et l'expose sous un nom de modèle servi ; PEFT en processus non implémenté. **Défaut corrigé** : un
+runtime inconnu ou PLANNED était silencieusement envoyé à l'adaptateur HTTP OpenAI ; il obtient désormais un
+fournisseur indisponible (`detect` PLANNED/UNSUPPORTED, `generate` refuse sans appel réseau).
+
+## 8. Preuves de ce chantier
+
+- **TESTÉ** (modèle doublure, vraie boucle, vraie sandbox, vrai Judge, vraie base) : outils et attaques
+  (`tests/test_tool_engine.py` : traversée de chemin, lien symbolique, FIFO, hors espace, commande interdite,
+  délai, débordement mémoire, sortie énorme, processus persistant, tentative réseau), mode outillé
+  (`test_taskloop_tools.py`), projets (`test_project_tasks.py`), mémoire et décision par l'expérience
+  (`test_memory_system.py`), missions par le TaskLoop (`test_mission_taskloop.py`), reprise après arrêt du fil
+  d'exécution (`test_taskrun_resume.py`), backends (`test_models_provider_dispatch.py`), Runtime
+  (`test_runtime_packaging.py`, `test_runtime_core_loop.py`) ; frontend (vitest, build).
+- **MESURÉ** : rien sur un modèle. Graphe d'imports du Runtime (anti-fuite) vérifié.
+- **JUGÉ** : rien sur un vrai modèle.
+- **INFÉRÉ** : outils, mémoire, reprise et routage par l'expérience peuvent aider un vrai modèle — non démontré.
+- **UNVERIFIED** : comportement d'un vrai modèle avec le protocole d'actions JSON des outils ; qualité de la
+  récupération lexicale sur une grande mémoire ; sandbox namespace (racine visible en lecture seule).
+- **BLOCKED** : expérience primaire v2 (machine cible), non lancée par consigne.
+
+## 9. Reste à construire (P0/P1 restants)
+
+- **P1** : aucun effet mesuré de la moindre adaptation (outils, mémoire, plan, routage par l'expérience) ;
+  embeddings (`EmbeddingProvider`) ; autres langages que Python ; reprise d'une TaskRun de mission (aujourd'hui
+  refusée) et unicité inter-processus d'une exécution par tâche (registre par processus) ; le modèle n'apprend
+  rien en poids (aucun backend LoRA/PEFT réel).
+- **P2** : `pytest` absent de l'image sandbox (le runner l'indique `UNAVAILABLE`) ; en mode outillé, un candidat
+  peut lire à l'exécution les entrées du harnais (pas les valeurs attendues, qui restent sur l'hôte) ;
+  récupération limitée aux 2000 souvenirs les plus récents ; `ruff`/`mypy` hors CI.

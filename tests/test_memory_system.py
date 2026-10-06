@@ -280,3 +280,90 @@ def test_memory_api_ingests_a_document_and_searches_it_with_provenance(factory, 
     assert client.get("/api/v1/memory/search", params={"q": "x", "categories": "inconnue"}).status_code == 422
     assert client.post("/api/v1/memory/documents", json={"title": "t", "content": ""}).status_code == 422
     assert json.dumps(found)  # sérialisable tel quel
+
+
+# -- EXPÉRIENCE -> RÉCUPÉRATION -> DÉCISION (ordre d'essai des modèles) -----------------------------------
+
+
+def _two_models():
+    from tests.test_taskloop_execution import a_ref, an_endpoint
+
+    a = a_candidate(ref=a_ref(family="model-a"), endpoint=an_endpoint(served_model="model-a"))
+    b = a_candidate(ref=a_ref(family="model-b"), endpoint=an_endpoint(served_model="model-b"))
+    return a, b
+
+
+def _routed_start(factory, task, candidates, codes, calls, **kwargs):
+    """`codes[family]` : ce que « répond » chaque modèle ; `calls` reçoit la famille de chaque appel."""
+    def provider_for(candidate):
+        calls.append(candidate.ref.family)
+        return _FakeModelProvider(mode="ok", text=codes[candidate.ref.family])
+
+    loop = functools.partial(run_task_loop, candidates=candidates, registry=TaskLoopRegistry(),
+                             provider_factory=provider_for)
+    return TaskRunService(factory, AgentRuntime(factory), a_pool(), run_loop=loop).start(
+        task_id=task.id, objective="o", wait=True,
+        limits=TaskLimits(max_attempts=1, max_retries=0, max_candidates=2), **kwargs)
+
+
+def _history(factory, description):
+    """Deux exécutions passées d'une tâche d'addition : model-a s'est trompé, model-b a réussi."""
+    a, b = _two_models()
+    wrong = {"model-a": "def add(a, b):\n    return a - b\n", "model-b": RIGHT_ADD}
+    _routed_start(factory, _task(factory, description=description), (a,), wrong, [])
+    _routed_start(factory, _task(factory, description=description), (b,), wrong, [])
+
+
+ADD3 = {"model-a": "def add_three(a, b, c):\n    return a - b - c\n",
+        "model-b": "def add_three(a, b, c):\n    return a + b + c\n"}
+
+
+def _add3(factory):
+    return _task(factory, function="add_three", description="Additionne a, b et c.",
+                 cases=[{"args": [1, 2, 3], "expected": 6}])
+
+
+def test_past_executions_of_similar_tasks_reorder_the_models_tried(factory) -> None:
+    _history(factory, "Additionne a et b.")
+    a, b = _two_models()
+    calls: list[str] = []
+    run = _routed_start(factory, _add3(factory), (a, b), ADD3, calls, use_memory=True)
+    probes = [c for c in calls]  # la sonde de disponibilité appelle aussi la fabrique, dans l'ordre déclaré
+    assert run.status.value == "completed" and probes[-1] == "model-b"
+    assert run.attempts[0]["provider_name"] == b.ref.id and len(run.attempts) == 1
+    (event,) = [e for e in _kinds(factory, run.id) if e["kind"] == "routing.experience_adjusted"]
+    assert event["before"] == [a.ref.id, b.ref.id] and event["after"] == [b.ref.id, a.ref.id]
+    assert event["per_candidate"][b.ref.id] == {"pass": 1, "fail": 0}
+    assert event["per_candidate"][a.ref.id] == {"pass": 0, "fail": 1} and len(event["evidence"]) == 2
+
+
+def test_without_use_memory_the_declared_order_is_kept(factory) -> None:
+    _history(factory, "Additionne a et b.")
+    a, b = _two_models()
+    run = _routed_start(factory, _add3(factory), (a, b), ADD3, [])
+    assert run.attempts[0]["provider_name"] == a.ref.id
+    assert not [e for e in _kinds(factory, run.id) if e["kind"].startswith("routing.experience")]
+
+
+def test_unrelated_experience_never_changes_the_decision(factory) -> None:
+    _history(factory, "Inverse une liste chaînée.")
+    a, b = _two_models()
+    run = _routed_start(factory, _task(factory, function="mean", description="Moyenne arithmétique.",
+                                       cases=[{"args": [[2, 4]], "expected": 3}]), (a, b),
+                        {"model-a": "def mean(x):\n    return sum(x) / len(x)\n", "model-b": "x"}, [],
+                        use_memory=True)
+    assert run.attempts[0]["provider_name"] == a.ref.id
+    (event,) = [e for e in _kinds(factory, run.id) if e["kind"].startswith("routing.experience")]
+    assert event["kind"] == "routing.experience_insufficient" and event["observed_attempts"] == 0
+
+
+def test_generic_apex_instructions_never_make_unrelated_tasks_look_similar() -> None:
+    from apex.tasks.solution_tasks import retrieval_statement
+
+    a = build_user_function_task_spec(function="mean", description="Moyenne arithmétique.",
+                                      cases=[{"args": [[2, 4]], "expected": 3}]).description
+    b = build_user_function_task_spec(function="reverse_list", description="Inverse une liste chaînée.",
+                                      cases=[{"args": [[1]], "expected": [1]}]).description
+    assert score_candidates(a, [_record(b)])  # énoncés complets : la consigne commune suffit à « matcher »
+    assert retrieval_statement(a) == "Moyenne arithmétique.\nmean"
+    assert score_candidates(retrieval_statement(a), [_record(retrieval_statement(b))]) == []

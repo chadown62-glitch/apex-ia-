@@ -122,7 +122,11 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     ),
     Abstraction(
         "EmbeddingProvider", "vectorisation pour la mémoire", 4, 8,
-        ImplStatus.PLANNED, "bge-m3 local",
+        ImplStatus.PLANNED, "récupération LEXICALE (BM25, apex.memory.retrieval) — aucun embedding",
+        notes="06/10/2026 : la mémoire système est interrogée par pertinence LEXICALE (BM25 déterministe, "
+              "`apex.memory.retrieval.score_candidates`). Aucune représentation dense n'existe : elle se "
+              "brancherait derrière `score_candidates` le jour où un modèle d'embedding réel sera disponible, "
+              "jamais simulée.",
     ),
     Abstraction(
         "ModelRouter", "sélection d'un ModelProvider selon capacité/coût/latence/préférence", 6, 6,
@@ -396,11 +400,25 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     ),
     Abstraction(
         "ToolProvider", "outils à effet de bord", 7, 7,
-        ImplStatus.PLANNED, "fs, git, shell",
+        ImplStatus.STUB, "outils d'espace de travail uniquement (pas de git, de shell libre ni de réseau)",
+        module="apex.tools.engine",
+        notes="STUB et non IMPLEMENTED délibérément (06/10/2026) : `ToolEngine` exécute des outils RÉELS — "
+              "`fs.read/list/write`, `project.inspect` (espace de travail confiné, chemins absolus, `..`, liens "
+              "symboliques et fichiers spéciaux refusés), `code.run` et `tests.run` (Python en sandbox via "
+              "`AgentRuntime`, un clone par exécution, réseau coupé, délais et limites) — avec schémas "
+              "d'entrée/sortie validés, permissions EXPLICITES (`workspace.read/write`, `sandbox.execute`, "
+              "jamais implicites), erreurs structurées, provenance et journal. Branché au TaskLoop (mode "
+              "outillé). Absents : git, shell libre, accès réseau, autres langages ; `pytest` absent de l'image "
+              "sandbox (signalé UNAVAILABLE).",
     ),
     Abstraction(
         "ToolRegistry", "catalogue et métadonnées d'outils", 7, 7,
-        ImplStatus.PLANNED, "aucun",
+        ImplStatus.STUB, "catalogue fermé des six outils intégrés",
+        module="apex.tools.builtin",
+        notes="`ToolRegistry` (`apex.tools.engine`) : catalogue des `ToolSpec` (identité, description, schémas, "
+              "permissions, limites, délai) ; `available_to(permissions)` ne présente au modèle que les outils "
+              "accordés. Catalogue FERMÉ (`apex.tools.builtin.default_registry`) : aucun outil ajouté "
+              "dynamiquement ni fourni par un tiers.",
     ),
     Abstraction(
         "PolicyEngine", "autorisation avant tout effet de bord", 2, 7,
@@ -463,7 +481,13 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "aucun moteur de traversée de graphe ni de visualisation "
               "(les arêtes sont une structure de données, pas un graphe "
               "interrogeable), aucun raccordement automatique depuis "
-              "`MissionEngine`/`AgentRuntime` (un futur pas, pas celui-ci).",
+              "`MissionEngine`/`AgentRuntime` (un futur pas, pas celui-ci). "
+              "**06/10/2026 — mémoire SYSTÈME branchée** : catégories conversation/exécution/connaissance/"
+              "projet (`MemoryCategory`), écriture/lecture réservées à CORE et HUMAN (`WRITE/READ_SYSTEM_"
+              "MEMORY`, jamais un clone), indexation des TaskRun terminées (sans données cachées), des échanges "
+              "du Chat, des documents et des projets (`apex.memory.indexing`), récupération BM25 avec "
+              "provenance consommée par le Chat, le TaskLoop (`use_memory`) et `GET /memory/search`. Reste "
+              "lexicale (aucun embedding).",
     ),
     Abstraction(
         "GenomeStore", "configuration mutable versionnée", 4, 17,
@@ -881,7 +905,11 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "sautant ce qui est déjà enregistré, sans abstraction dédiée. "
               "Même raisonnement que le report de `PromotionGovernor` "
               "(Phase 16) : ne pas construire une coquille sans "
-              "consommateur réel.",
+              "consommateur réel. 06/10/2026 : la reprise d'une TaskRun "
+              "interrompue (`TaskRunService.resume`) suit exactement ce principe "
+              "— état relu en base (EvalRun, Experience, événements) et espace de "
+              "travail sur disque — sans `CheckpointStore` générique, qui reste "
+              "PLANNED.",
     ),
     # -- Ajouts issus de la Master Architecture Specification -----------------
     # Chacune a été confrontée au registre existant (§58) : elles sont ajoutées
@@ -1619,7 +1647,7 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
     Abstraction(
         "TaskLoop", "OBJECTIVE -> PLAN -> PROVIDER SELECTION -> GENERATE -> EXECUTE -> TEST -> JUDGE",
         30, 30,
-        ImplStatus.STUB, "aucune reprise persistée d'une exécution interrompue — voir les notes",
+        ImplStatus.STUB, "MANUAL/ASSISTED identiques ; unicité d'exécution par processus — voir les notes",
         module="apex.taskloop.loop",
         notes="STUB et non IMPLEMENTED délibérément (N+27) : "
               "`apex.taskloop.loop.run_task_loop` est une boucle RÉELLE et "
@@ -1646,9 +1674,11 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "limite honnête, voir sa docstring) empêche un second "
               "`run_task_loop` concurrent pour la même tâche. **Limites "
               "honnêtes, jamais présentées comme résolues** (mises à jour le "
-              "05/10/2026) : (1) les TaskRun sont persistées (`apex.taskloop."
-              "runs`) mais une exécution interrompue n'est JAMAIS reprise — au "
-              "démarrage elle devient `interrupted` ; (2) `TaskExecutionMode."
+              "06/10/2026) : (1) une TaskRun interrompue devient `interrupted` "
+              "au démarrage et se REPREND explicitement (`TaskRunService."
+              "resume` : tentatives déjà jugées relues et jamais refaites, "
+              "transition atomique) — sauf celle d'une mission (refus "
+              "explicite) ; (2) `TaskExecutionMode."
               "MANUAL`/`ASSISTED` restent mécaniquement IDENTIQUES (une seule "
               "tentative, aucune confirmation humaine intermédiaire) ; (3) "
               "PLAN : par défaut simple composition du prompt (énoncé, "
@@ -1657,11 +1687,14 @@ ABSTRACTIONS: tuple[Abstraction, ...] = (
               "sur la réussite n'est PAS mesuré ; (4) entre deux tentatives, "
               "`retry_adaptation=failure_facts` transmet les faits d'échec "
               "autorisés de la tentative précédente (liste fermée, jamais "
-              "d'entrée cachée ni de message) — effet NON mesuré ; aucun "
-              "outil (fichiers, tests interactifs, recherche) n'est encore à "
-              "la disposition du modèle (`ToolProvider` PLANNED) ; seules les "
-              "tâches « écrire une fonction Python » jugées par cas cachés "
-              "sont exécutables (référence ou définies par l'utilisateur). "
+              "d'entrée cachée ni de message) — effet NON mesuré ; (5) mode "
+              "outillé (`tool_permissions` explicites) : fichiers, exécution "
+              "et tests Python en sandbox (`apex.tools`) — effet NON mesuré ; "
+              "(6) tâches exécutables : fonction Python ou projet Python "
+              "multi-fichiers, jugés par cas cachés ; aucun autre langage ; "
+              "(7) `use_memory` : souvenirs pertinents (BM25) dans le prompt "
+              "et ordre d'essai des modèles ajusté par les exécutions "
+              "similaires — effet NON mesuré. "
               "N+28 (`apex.metalearner.recommendation`) reste hors du champ "
               "d'exécution de ce module — aucun import croisé, vérifié par "
               "test.",

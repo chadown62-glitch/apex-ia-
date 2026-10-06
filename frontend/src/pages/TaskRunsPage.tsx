@@ -206,6 +206,11 @@ function eventSummary(event: TaskRunEvent): string {
     }
     case "memory.unavailable":
       return `mémoire indisponible : ${String(event.error ?? "")}`;
+    case "routing.experience_adjusted":
+    case "routing.experience_confirmed":
+      return `ordre des modèles d'après les exécutions similaires : ${((event.after as string[] | undefined) ?? []).join(" → ")}`;
+    case "routing.experience_insufficient":
+      return `expérience insuffisante pour décider (${String(event.observed_attempts ?? 0)} tentative(s) observée(s))`;
     case "task.resumed":
       return `reprise : ${String(event.judged_attempts ?? 0)} tentative(s) déjà jugée(s) conservée(s)`;
     case "task.plan.reused":

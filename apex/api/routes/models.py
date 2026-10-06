@@ -14,6 +14,8 @@ par un simple GET.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 
 from apex.api.schemas import CatalogModelOut, DataEnvelope, ModelHistoryOut, ProviderInfoOut
@@ -137,3 +139,16 @@ def discover_models() -> DataEnvelope[list[CatalogModelOut]]:
     except Exception as exc:
         return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
     return DataEnvelope(status="real", data=views)
+
+
+@router.get("/models/backends", response_model=DataEnvelope[list[dict[str, Any]]])
+def list_model_backends() -> DataEnvelope[list[dict[str, Any]]]:
+    """Catalogue FERMÉ des runtimes d'inférence (`apex.models.backends`) : réels ou PLANNED (AirLLM, transformers
+    en processus), et comment la quantification/LoRA y passent. Un runtime PLANNED n'a aucun fournisseur actif."""
+    from apex.models.backends import BACKENDS
+
+    return DataEnvelope(status="real", data=[
+        {"runtime": b.runtime, "status": b.status.value, "adapter": b.adapter, "description": b.description,
+         "lora": b.lora}
+        for b in BACKENDS
+    ])

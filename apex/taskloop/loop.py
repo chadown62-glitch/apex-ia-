@@ -310,9 +310,11 @@ def _recall(
     from apex.memory.retrieval import render_context
     from apex.memory.service import MemoryService
 
+    from apex.tasks.solution_tasks import retrieval_statement
+
     try:
         items = MemoryService(session_factory).retrieve(
-            task.description, requested_by=request.authorization,
+            retrieval_statement(task.description), requested_by=request.authorization,
             categories=(MemoryCategory.EXECUTION, MemoryCategory.KNOWLEDGE, MemoryCategory.PROJECT),
             exclude_source_prefixes=(f"task_run:{trace_id}", f"workspace:{trace_id}:"),
         )
@@ -325,6 +327,71 @@ def _recall(
     if not items:
         return prompt, []
     return f"{prompt}\n\n{render_context(items, header=_MEMORY_HEADER)}", [i.record.id for i in items]
+
+
+#: Échecs JUGÉS imputables au code produit (jamais une panne de fournisseur ou d'infrastructure).
+_COMPETENCE_FAILURES = frozenset({"incorrect_solution", "execution_failure", "invalid_candidate", "timeout"})
+_ROUTING_MIN_EVIDENCE = 2
+
+
+def _experience_routing(
+    request: TaskRequest, *, task: Any, trace_id: str, eligible: tuple[ModelCandidate, ...],
+    session_factory: Any, emit: Callable[[str, dict[str, Any]], None],
+) -> tuple[ModelCandidate, ...]:
+    """EXPÉRIENCE -> RÉCUPÉRATION PERTINENTE -> DÉCISION : l'ordre d'essai des modèles éligibles est ajusté
+    d'après les exécutions PASSÉES de tâches SIMILAIRES (mémoire système, BM25 sur l'énoncé) — pour chaque
+    modèle, tentatives validées par le Judge moins échecs jugés imputables au code. Règle explicite et
+    déterministe (tri stable, aucun modèle retiré, rien sans au moins `_ROUTING_MIN_EVIDENCE` tentatives
+    observées), journalisée avec ses preuves. C'est une heuristique de décision, pas un apprentissage : son
+    effet sur la réussite n'est pas mesuré ici."""
+    if len(eligible) < 2:
+        return eligible
+    from collections import Counter
+
+    from apex.memory.model import MemoryCategory
+    from apex.memory.service import MemoryService
+    from apex.taskloop.runs import TaskRunRepository
+
+    from apex.tasks.solution_tasks import retrieval_statement
+
+    try:
+        items = MemoryService(session_factory).retrieve(
+            retrieval_statement(task.description), requested_by=request.authorization,
+            categories=(MemoryCategory.EXECUTION,),
+            limit=10, exclude_source_prefixes=(f"task_run:{trace_id}",),
+        )
+    except Exception as exc:
+        emit("routing.experience_unavailable", {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
+        return eligible
+    runs = TaskRunRepository(session_factory)
+    wins: Counter[str] = Counter()
+    losses: Counter[str] = Counter()
+    evidence = []
+    for item in items:
+        if not item.record.source.startswith("task_run:"):
+            continue
+        past = runs.get(item.record.source.split(":", 1)[1])
+        if past is None:
+            continue
+        evidence.append({"task_run_id": past.id, "score": round(item.score, 4)})
+        for attempt in past.attempts:
+            name = str(attempt.get("provider_name"))
+            if attempt.get("judge_result") == "pass":
+                wins[name] += 1
+            elif attempt.get("category") in _COMPETENCE_FAILURES:
+                losses[name] += 1
+    per_candidate = {c.ref.id: {"pass": wins[c.ref.id], "fail": losses[c.ref.id]} for c in eligible}
+    observed = sum(v["pass"] + v["fail"] for v in per_candidate.values())
+    if observed < _ROUTING_MIN_EVIDENCE:
+        emit("routing.experience_insufficient", {"observed_attempts": observed, "evidence": evidence})
+        return eligible
+    ranked = tuple(sorted(eligible, key=lambda c: -(wins[c.ref.id] - losses[c.ref.id])))
+    emit("routing.experience_adjusted" if ranked != eligible else "routing.experience_confirmed", {
+        "before": [c.ref.id for c in eligible], "after": [c.ref.id for c in ranked],
+        "per_candidate": per_candidate, "evidence": evidence,
+        "rule": "tri stable par (validées - échecs jugés) sur les exécutions similaires",
+    })
+    return ranked
 
 
 @dataclass(frozen=True)
@@ -671,6 +738,11 @@ def _run(
             task_id=request.task_id, trace_id=trace_id, status=TaskLoopStatus.BLOCKED, final_output=None,
             attempts=(), providers_tried=(), eval_run_ids=(), failure=routing_decision.reason,
             stop_reason="recovery_block", emit=emit,
+        )
+    if request.use_memory:
+        eligible_candidates = _experience_routing(
+            request, task=task, trace_id=trace_id, eligible=eligible_candidates,
+            session_factory=session_factory, emit=emit,
         )
     emit(
         "provider.selected",

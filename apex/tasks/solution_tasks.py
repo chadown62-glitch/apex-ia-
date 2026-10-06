@@ -399,6 +399,24 @@ def build_user_function_task_spec(
     return _function_spec(function, statement, parsed, title=title or f"Tâche utilisateur — {function}")
 
 
+#: Débuts des consignes GÉNÉRIQUES qu'APEX ajoute après l'énoncé d'une tâche utilisateur.
+_GENERATED_INSTRUCTIONS = ("\n\nÉcris une fonction Python nommée exactement `", "\n\nLe projet se trouve dans ton espace")
+_NAMED_FUNCTION = re.compile(r"nommée exactement `([A-Za-z_][A-Za-z0-9_]*)`")
+
+
+def retrieval_statement(description: str) -> str:
+    """Ce qui DISTINGUE une tâche d'une autre, pour la récupération en mémoire : l'énoncé sans les consignes
+    génériques ajoutées par APEX (contrat d'appel, format de réponse — identiques d'une tâche à l'autre, elles
+    rendraient « pertinente » n'importe quelle exécution passée), plus le nom de la fonction demandée."""
+    match = _NAMED_FUNCTION.search(description)
+    cuts = [i for marker in _GENERATED_INSTRUCTIONS if (i := description.find(marker)) > 0]
+    text = description[: min(cuts)] if cuts else description
+    text = text.replace(_ANSWER_FORMAT.strip(), "").strip()
+    if match and match.group(1) not in text:
+        text = f"{text}\n{match.group(1)}"
+    return text
+
+
 def _arity(parsed: list[tuple[tuple, Any]]) -> str:
     counts = sorted({len(args) for args, _ in parsed})
     return str(counts[0]) if len(counts) == 1 else " ou ".join(str(c) for c in counts)

@@ -1,0 +1,66 @@
+"""Catalogue FERMÉ des backends d'inférence (`ModelEndpoint.runtime`) — ce qui est réel, ce qui est prévu.
+
+Interface préparée pour les variantes de modèles (quantification, chargement couche par couche type AirLLM,
+adaptateurs LoRA) SANS aucun faux backend :
+
+- **Quantification** : une propriété du modèle SERVI (`ModelRef.quantization`, ex. `q4_k_m`), choisie au niveau
+  du runtime (Ollama/llama.cpp : fichier GGUF ; vLLM : AWQ/GPTQ). APEX la décrit et la route, il ne quantifie
+  rien lui-même.
+- **LoRA** : réel aujourd'hui uniquement quand le RUNTIME charge l'adaptateur et l'expose sous un nom de modèle
+  servi (Ollama : `ADAPTER` dans un Modelfile ; vLLM : `--lora-modules nom=chemin`) — `served_model` désigne
+  alors l'adaptateur. Charger/entraîner un adaptateur DANS APEX (PEFT) : PLANNED, rien n'est implémenté.
+- **AirLLM / transformers en processus** : PLANNED. Un endpoint qui les demande obtient un fournisseur
+  honnêtement INDISPONIBLE (`UnavailableRuntimeProvider`) — jamais redirigé vers un adaptateur HTTP qui ne
+  parlerait pas son protocole, jamais une réponse simulée.
+
+Un runtime inconnu est traité comme PLANNED inconnu : refusé (fail-closed), plus jamais « deviné »
+OpenAI-compatible.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
+
+
+class BackendStatus(str, Enum):
+    IMPLEMENTED = "implemented"
+    PLANNED = "planned"
+
+
+@dataclass(frozen=True)
+class RuntimeBackend:
+    runtime: str
+    status: BackendStatus
+    #: `ollama` | `openai_compatible` : l'adaptateur réel utilisé ; `None` si PLANNED.
+    adapter: str | None
+    description: str
+    lora: str
+
+
+_HTTP_LORA = "via le modèle servi (adaptateur chargé par le serveur et exposé sous un nom de modèle)"
+
+BACKENDS: tuple[RuntimeBackend, ...] = (
+    RuntimeBackend("ollama", BackendStatus.IMPLEMENTED, "ollama",
+                   "serveur Ollama local (GGUF quantifié)", "via Modelfile ADAPTER (modèle servi dédié)"),
+    RuntimeBackend("openai_compatible", BackendStatus.IMPLEMENTED, "openai_compatible",
+                   "toute API compatible OpenAI (chat completions)", _HTTP_LORA),
+    *(
+        RuntimeBackend(alias, BackendStatus.IMPLEMENTED, "openai_compatible",
+                       f"{alias} : API compatible OpenAI", _HTTP_LORA)
+        for alias in ("vllm", "llama_cpp", "lmstudio", "external", "openai", "openrouter", "together", "groq",
+                      "fireworks", "deepseek", "mistral", "xai", "qwen")
+    ),
+    RuntimeBackend("airllm", BackendStatus.PLANNED, None,
+                   "inférence en processus couche par couche (gros modèles sur peu de VRAM) — non implémentée",
+                   "non applicable"),
+    RuntimeBackend("transformers", BackendStatus.PLANNED, None,
+                   "inférence en processus (Hugging Face transformers) — non implémentée",
+                   "PEFT en processus — non implémenté"),
+)
+_BY_RUNTIME = {b.runtime: b for b in BACKENDS}
+
+
+def backend_for(runtime: str) -> RuntimeBackend | None:
+    """Le backend déclaré pour `runtime`, ou `None` s'il est inconnu (à traiter comme indisponible)."""
+    return _BY_RUNTIME.get(runtime)
