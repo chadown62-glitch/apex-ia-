@@ -12,6 +12,7 @@ réelle du processus de construction ou de la frontière Runtime/Research.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -125,6 +126,19 @@ class TestBuildRuntimeArtifact(_BuiltArtifactTestCase):
         app_source = (self.artifact_dir / "apex" / "api" / "app.py").read_text(encoding="utf-8")
         self.assertNotIn("apex.artifacts", app_source)
         self.assertIn("memory.router", app_source)
+
+    def test_native_inference_ships_in_the_runtime(self) -> None:
+        """Question « le Runtime packagé contient-il ce qu'il faut pour exécuter un vrai modèle sans
+        Ollama ? » (06/10/2026) : le backend natif, la récupération EXPLICITE des poids, l'extra « native »
+        et un endpoint `transformers` dans la configuration livrée."""
+        for module in ("native.py", "fetch.py", "backends.py"):
+            self.assertTrue((self.artifact_dir / "apex" / "models" / module).is_file(), module)
+        extras = tomllib.loads((self.artifact_dir / "pyproject.toml").read_text(encoding="utf-8"))[
+            "project"]["optional-dependencies"]
+        native = " ".join(extras["native"]).lower()
+        for package in ("torch", "transformers", "safetensors", "huggingface_hub"):
+            self.assertIn(package, native)
+        self.assertIn("runtime: transformers", (self.artifact_dir / "config.yaml").read_text(encoding="utf-8"))
 
     def test_frontend_bundle_copy_is_a_graceful_no_op_since_dist_is_gitignored(self) -> None:
         """`frontend/dist` est exclu de Git (`frontend/.gitignore`) — `git
@@ -264,6 +278,18 @@ class TestRuntimeCliFromCleanEnvironment(_BuiltArtifactTestCase):
         result = self._run_cli("interfaces", "--json")
         self.assertEqual(result.returncode, 0)
         json.loads(result.stdout)  # sortie JSON valide
+
+    def test_models_status_runs_from_the_artifact_and_never_downloads(self) -> None:
+        """`apex models status` depuis l'artefact : le modèle natif est listé ; poids absents → dit
+        indisponible avec la commande explicite, jamais téléchargé implicitement."""
+        with tempfile.TemporaryDirectory() as empty:
+            result = subprocess.run(
+                [sys.executable, "-m", "apex.cli.main", "models", "status"], cwd=self.artifact_dir,
+                capture_output=True, text=True, timeout=60, env={**os.environ, "APEX_MODELS_DIR": empty})
+            self.assertEqual(result.returncode, 0, result.stderr[-500:])
+            self.assertIn("transformers", result.stdout)
+            self.assertIn("apex models fetch", result.stdout)
+            self.assertEqual(os.listdir(empty), [])  # rien n'a été écrit (aucun téléchargement)
 
     def test_apex_module_imported_from_the_artifact_is_not_the_dev_repo_copy(self) -> None:
         probe = "import apex, json; print(json.dumps({'file': apex.__file__}))"
