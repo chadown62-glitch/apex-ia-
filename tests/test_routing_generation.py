@@ -129,6 +129,33 @@ class TestGenerateWithFallback(unittest.TestCase):
         self.assertFalse(result.attempts[0].succeeded)
         self.assertIn("aucun ModelEndpoint", result.attempts[0].error)
 
+    def test_the_same_served_model_is_not_retried_after_a_timeout(self) -> None:
+        """Mesuré avec le backend natif (06/10/2026) : deux rôles désignent le même modèle servi ; après un
+        dépassement de délai, le relancer doublait l'attente du Chat sans chance d'un autre résultat."""
+        slow = _FakeProvider(mode="timeout")
+        shared = an_endpoint(runtime="transformers", url="file:///models", served_model="m-1.5b")
+        other = _FakeProvider(mode="ok", text="autre modèle")
+        result = generate_with_fallback(
+            [a_candidate(role="coder_main", endpoint=shared), a_candidate(role="fast", endpoint=shared),
+             a_candidate(role="fast", endpoint=an_endpoint(served_model="model-b"))],
+            prompt="x", provider_factory=lambda c: slow if c.endpoint.served_model == "m-1.5b" else other,
+        )
+        self.assertEqual(slow.calls, 1)  # jamais relancé
+        self.assertEqual(result.result.text, "autre modèle")
+        skipped = result.attempts[1]
+        self.assertFalse(skipped.succeeded)
+        self.assertIn("non retenté", skipped.error)  # tracé, jamais silencieux
+        self.assertEqual(len(result.attempts), 3)
+
+    def test_a_provider_error_on_a_shared_model_may_still_be_retried(self) -> None:
+        """Seuls le délai et l'indisponibilité épuisent un modèle servi ; une autre erreur peut être
+        transitoire (comportement antérieur conservé)."""
+        flaky = _FakeProvider(mode="provider_error")
+        shared = an_endpoint(served_model="m")
+        generate_with_fallback([a_candidate(endpoint=shared), a_candidate(role="fast", endpoint=shared)],
+                               prompt="x", provider_factory=lambda c: flaky)
+        self.assertEqual(flaky.calls, 2)
+
     def test_stops_at_first_success_never_calls_later_candidates(self) -> None:
         provider = _FakeProvider(mode="ok")
         first = a_candidate(role="first")

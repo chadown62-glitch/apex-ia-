@@ -81,6 +81,11 @@ def _default_provider_factory(candidate: ModelCandidate) -> ModelProvider:
     return get_default_provider(candidate.endpoint)
 
 
+def _served_key(candidate: ModelCandidate) -> tuple[str, str, str] | None:
+    endpoint = candidate.endpoint
+    return None if endpoint is None else (endpoint.runtime, endpoint.url, endpoint.served_model)
+
+
 def generate_with_fallback(
     candidates: Sequence[ModelCandidate],
     *,
@@ -96,12 +101,27 @@ def generate_with_fallback(
     test), `get_default_provider` par défaut (toujours `OllamaProvider`
     aujourd'hui, réel)."""
     attempts: list[GenerationAttempt] = []
+    # Modèles servis déjà en échec par délai ou indisponibilité dans CET appel. Plusieurs rôles peuvent
+    # désigner le MÊME modèle servi (mesuré le 06/10/2026 avec le backend natif : `coder_main` et `fast` →
+    # le même modèle 1.5B) ; le relancer après un dépassement de délai doublait l'attente du Chat sans
+    # aucune chance d'un autre résultat. Le saut reste une tentative tracée, jamais silencieuse.
+    exhausted: dict[tuple[str, str, str], str] = {}
     for candidate in candidates:
+        key = _served_key(candidate)
+        if key is not None and key in exhausted:
+            attempts.append(GenerationAttempt(
+                candidate=candidate, succeeded=False, result=None, category=ModelErrorCategory.UNKNOWN,
+                error=(f"non retenté : même modèle servi que « {exhausted[key]} », "
+                       "déjà en échec dans cet appel"),
+            ))
+            continue
         attempt = _attempt(
             candidate, prompt=prompt, max_tokens=max_tokens, temperature=temperature,
             timeout_s=timeout_s, provider_factory=provider_factory,
         )
         attempts.append(attempt)
+        if key is not None and attempt.category in (ModelErrorCategory.TIMEOUT, ModelErrorCategory.OFFLINE):
+            exhausted[key] = candidate.ref.id
         if attempt.succeeded:
             return FallbackResult(result=attempt.result, succeeded_with=candidate, attempts=tuple(attempts))
     return FallbackResult(result=None, succeeded_with=None, attempts=tuple(attempts))
