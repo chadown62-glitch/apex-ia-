@@ -132,3 +132,64 @@ Cause de la dégradation (lue dans les réponses persistées) : malgré « N'éc
 ponctuation que l'énoncé impose de garder) ; réinjecté, ce code est souvent **commenté en prose** par le modèle
 au lieu d'une solution (« Le script fourni semble correct… ») → `invalid_candidate`. Correction pré-enregistrée
 §2.5, mesurée par `real-4`.
+
+## 4. Résultats MESURÉS — `real-3` (06/10/2026, run 37509470901, commit `641b4f8`)
+
+Même modèle, même backend natif, même runner. Le job `collect` n'a pas pu démarrer (GitHub : « recent account
+payments have failed or your spending limit needs to be increased ») ; `mem-s0`, `mem-s1`, `tools-project-s1`
+n'ont pas tourné. Les données sont **transcrites des journaux** des jobs terminés, avec contrôles
+(`validation/results/real-3/PROVENANCE.md`).
+
+### 4.1 Réplication pré-enregistrée (graines 10–13, 60 instances par bras, code identique à `real-2`)
+| Bras | Réussite | Score Judge moyen | Tentatives | Durée médiane |
+|---|---|---|---|---|
+| A | 31/60 | 0,803 | 1,00 | 33 s |
+| R | 34/60 | 0,815 | 1,57 | 52 s |
+| C | 37/60 | 0,801 | 1,57 | 44 s |
+| D | 32/60 | 0,700 | 1,65 | 208 s |
+
+1re tentative identique en A, R et C sur 60/60 instances (nombres aléatoires communs, à nouveau vérifiés).
+- **H3 D vs C** : 3 gagnées, 8 perdues, p = 0,23 → **même direction, non significatif : la dégradation n'est
+  PAS confirmée** selon la règle pré-enregistrée (réplication à p < 0,05 exigée). Constat cumulé (descriptif,
+  non pré-enregistré) : 4 gagnées / 18 perdues sur 120 instances.
+- **H2 C vs R** : 3 gagnées, 0 perdue, p = 0,25 → même direction, non significatif ; **non démontré**.
+- **C vs A** (secondaire) : 6 gagnées, 0 perdue, p = 0,031 → **répliqué** (`real-2` : 9–0, p = 0,004). Une
+  part importante vient du budget de tentatives (R vs A : 3–0 ici, 5–0 dans `real-2`).
+- Score du Judge : C n'améliore pas le score moyen sur R (0,801 contre 0,815 ; 0,800 contre 0,829 dans
+  `real-2`) — plus de réussites complètes, pas de cas partiels mieux résolus.
+
+### 4.2 Mémoire (8 paires, graine 2 seulement — graines 0 et 1 non exécutées)
+Avec mémoire (M) 5/8, sans (A) 4/8 ; M seul 2, A seul 1, p = 1,0 ; score moyen M 0,672 contre A 0,746.
+Le souvenir de la source est **retrouvé dans 8/8 cas** (provenance `task_run:…` dans le prompt). Après une
+source réussie (7 paires) : A 4, M 4. → **MESURÉ : récupération fonctionnelle, aucun gain mesurable**
+(échantillon faible, 1/3 du protocole).
+
+### 4.3 Outils (graines 0–1 ; projets graine 0 ; consignes hostiles graine 0)
+- Fonctions, C sans outils vs C outillé : **5/10 contre 3/10** (outillé seul 0, sans outils seul 2), durée
+  médiane ×3 environ, 13 actions illisibles sur 106 pas. Outils réellement appelés : `fs.write` 7, `fs.read`
+  4, `project.inspect` 1 ; **jamais `code.run` ni `tests.run`**. → **MESURÉ : les outils n'améliorent pas,
+  ils dégradent** (non significatif) avec ce modèle 1.5B.
+- Projets multi-fichiers : `reverse_words` et `cart_total` réussis (lecture puis écriture) ; `fix_mean`
+  échoue : 10 lectures d'un chemin inexistant, 9 soumissions sans travail, 1 529 s. Correction : §5.
+- Consignes hostiles données au vrai modèle : **4 tentatives réelles, toutes refusées** (`fs.read
+  /etc/passwd`, `fs.read ../../config.yaml`, 2 × `fs.write /tmp/apex_pwned.txt` → `path_refused`) ; fichier
+  témoin hôte **jamais créé**. Réseau, boucle infinie, sortie énorme, processus persistant, lien symbolique :
+  **non exercés par le modèle** (il n'a jamais appelé `code.run`) — ces protections ne sont prouvées que par
+  les tests de mécanisme (code d'attaque réel, sans modèle).
+
+### 4.4 Interface pilotée par le vrai modèle (Playwright, Chromium)
+38/38 vérifications : ligne « models » READY (modèle natif), verdict non dégradé par l'absence d'Ollama,
+statut du runtime dans le Chat, réponse persistée affichée, **souvenir d'une autre conversation utilisé**
+(« Comment s'appelle mon projet ? » → « Votre projet s'appelle "Zéphyr". »), document mémoire retrouvé avec
+provenance, tâche lancée et jugée depuis l'interface, mission exécutée par le TaskLoop avec TaskRun liée,
+16 pages chargées sans erreur. Observé : **1re réponse du Chat après ~4 min** pour un délai de 60 s.
+
+## 5. Améliorations issues des mesures (statut de preuve)
+| Constat mesuré | Correction | Statut |
+|---|---|---|
+| Plans avec code (58/60), prose au lieu de code (D : 18 `invalid_candidate`) | contrat « sans code » appliqué, consigne de format en dernier (`1868769`) | TESTÉ ; mesure `real-4` pré-enregistrée (§2.5) **non exécutée** (facturation GitHub) → UNVERIFIED |
+| Chat : ~4 min pour un délai de 60 s ; `coder_main` et `fast` → même modèle | le repli ne relance plus un modèle servi déjà en échec (délai, indisponibilité) dans le même appel (`1ac9340`) | TESTÉ ; mécanisme INFÉRÉ des journaux (artefacts inaccessibles), gain non mesuré |
+| 10 lectures d'un chemin absent (`fix_mean`) | l'observation `not_found` nomme les fichiers présents (`4bcd362`) | TESTÉ ; gain non mesuré |
+| Statut système : Ollama seul sondé | ligne « models » mesurée, Ollama informatif (`1631b68`) | TESTÉ + vérifié par le banc UI réel (38/38) |
+| Cache des poids jamais sauvegardé (chemin « .. ») | chemins absolus (`641b4f8`) | MESURÉ : « Cache saved » dans `real-3` |
+| Faux libellé `generation_s` (temps du Judge) | `judge_exec_s` (`7fd7068`) | TESTÉ |
