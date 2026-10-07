@@ -114,7 +114,10 @@ def test_write_read_list_and_inspect(ctx) -> None:
     info = call(ctx, "project.inspect").output
     assert info["file_count"] == 3 and info["test_files"] == ["tests/test_calc.py"]
     assert info["python_packages"] == ["pkg"] and info["extensions"] == {"py": 3}
-    assert call(ctx, "fs.read", path="absent.py").error.code is ErrorCode.NOT_FOUND
+    missing = call(ctx, "fs.read", path="absent.py").error
+    assert missing.code is ErrorCode.NOT_FOUND
+    # L'observation nomme ce qui existe (mesuré : un vrai modèle relisait 10 fois un chemin absent).
+    assert "pkg/calc.py" in missing.message and "tests/test_calc.py" in missing.message
 
 
 @pytest.mark.parametrize(

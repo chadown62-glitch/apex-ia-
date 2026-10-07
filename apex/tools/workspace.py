@@ -19,6 +19,8 @@ from pathlib import Path
 from apex.tools.model import ErrorCode, ToolFailure
 
 _SKIPPED_DIRS = frozenset({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"})
+#: Fichiers nommés au plus dans l'observation d'un chemin absent.
+_ABSENT_HINT_FILES = 20
 
 
 @dataclass(frozen=True)
@@ -90,13 +92,13 @@ class Workspace:
         try:
             mode = os.lstat(path).st_mode
         except FileNotFoundError as exc:
-            raise ToolFailure(ErrorCode.NOT_FOUND, f"fichier absent : {rel}") from exc
+            raise ToolFailure(ErrorCode.NOT_FOUND, self._absent(rel)) from exc
         if not stat.S_ISREG(mode):  # tube nommé, périphérique, socket : jamais ouverts (un FIFO bloquerait)
             raise ToolFailure(ErrorCode.PATH_REFUSED, f"pas un fichier régulier : {rel}")
         try:
             fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         except FileNotFoundError as exc:
-            raise ToolFailure(ErrorCode.NOT_FOUND, f"fichier absent : {rel}") from exc
+            raise ToolFailure(ErrorCode.NOT_FOUND, self._absent(rel)) from exc
         except OSError as exc:
             raise ToolFailure(ErrorCode.PATH_REFUSED, f"lecture refusée : {rel} ({exc.strerror})") from exc
         try:
@@ -109,6 +111,15 @@ class Workspace:
                 return handle.read(self.limits.max_file_bytes + 1)
         finally:
             os.close(fd)
+
+    def _absent(self, rel: str) -> str:
+        """Mesuré avec un vrai modèle (validation `real-3`, projet `fix_mean`) : 10 lectures d'un chemin
+        inexistant d'affilée, faute de savoir ce qui existe. L'observation nomme donc les fichiers RÉELLEMENT
+        présents (contenu de l'espace de travail seulement, borné), jamais rien d'extérieur."""
+        present = [name for name, _size in self.files()]
+        shown = ", ".join(present[:_ABSENT_HINT_FILES]) or "aucun"
+        more = f" (+{len(present) - _ABSENT_HINT_FILES})" if len(present) > _ABSENT_HINT_FILES else ""
+        return f"fichier absent : {rel} — fichiers présents : {shown}{more}"
 
     def write_bytes(self, rel: str, content: bytes) -> bool:
         """Écrit (crée ou remplace) un fichier. Retourne True s'il a été créé."""
