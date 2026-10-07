@@ -1,0 +1,4 @@
+seed	project	status	attempts	judge_score	tools_used	errors	duration_s
+0	fix_mean	failed	2	0.75	{'fs.read': 10}	{'nothing_to_submit': 9, 'invalid_action': 5, 'not_found': 10}	1528.9
+0	reverse_words	completed	1	1.00	{'fs.read': 1, 'fs.write': 1}	{'nothing_to_submit': 1}	198.5
+0	cart_total	completed	1	1.00	{'fs.read': 1, 'fs.write': 1}	{'nothing_to_submit': 1}	211.5

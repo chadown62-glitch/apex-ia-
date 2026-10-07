@@ -1,0 +1,9 @@
+seed	source	target	source_success	A_success	M_success	recalled
+2	count_vowels	count_consonants	True	True	True	task_run:d60c6763-ebb9-4fbb-8ed6-56dd3761bb86
+2	rle_encode	rle_decode	True	False	False	task_run:b7baffe1-7352-49bb-9f86-38b4a0754d77
+2	roman_to_int	int_to_roman	True	True	True	task_run:9766c447-b9e1-45b3-868a-ad9e17992d41
+2	second_largest	second_smallest	True	True	True	task_run:85f8458f-8b6d-4f5f-9c76-e671c6331069
+2	is_palindrome	is_palindrome_alnum	False	False	True	task_run:fb664145-5a38-4bdd-8548-9be8535da2b9
+2	balanced	max_depth	True	False	False	task_run:b1408108-ae49-41f2-8f07-bc3923e2452a
+2	word_count	longest_word	True	False	True	task_run:b31d3092-24c9-4000-bcf5-29d36ab1fd8c
+2	chunk	chunk_sums	True	True	False	task_run:67482f2d-c1ec-4ecc-bdbe-d7ef16af4563

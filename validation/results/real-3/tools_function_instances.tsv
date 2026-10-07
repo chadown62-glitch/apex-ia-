@@ -1,0 +1,21 @@
+seed	kind	arm	status	attempts	judge_score	tools_used	duration_s
+0	rle_encode	sans_outils	completed	1	1.00	{}	173.7
+0	rle_encode	outillé	failed	2	0.88	{'fs.write': 1}	179.1
+0	roman_to_int	sans_outils	failed	2	0.25	{}	98.5
+0	roman_to_int	outillé	failed	2	0.88	{'fs.write': 1}	289.5
+0	merge_intervals	sans_outils	completed	1	1.00	{}	47.6
+0	merge_intervals	outillé	completed	1	1.00	{'fs.write': 1}	279.2
+0	parse_duration	sans_outils	failed	2	0.38	{}	98.1
+0	parse_duration	outillé	failed	2	0.00	{'fs.read': 2}	883.2
+0	camel_to_snake	sans_outils	failed	2	0.25	{}	112.7
+0	camel_to_snake	outillé	failed	2	0.00	{'fs.read': 1}	771.6
+1	rle_encode	sans_outils	completed	1	1.00	{}	133.9
+1	rle_encode	outillé	completed	1	1.00	{'fs.write': 1}	269.1
+1	roman_to_int	sans_outils	completed	1	1.00	{}	100.4
+1	roman_to_int	outillé	failed	2	0.00	{'project.inspect': 1, 'fs.read': 1}	958.7
+1	merge_intervals	sans_outils	completed	1	1.00	{}	129.7
+1	merge_intervals	outillé	completed	1	1.00	{'fs.write': 1}	259.8
+1	parse_duration	sans_outils	failed	3	0.38	{}	123.9
+1	parse_duration	outillé	failed	2	0.00	{'fs.write': 1}	335.8
+1	camel_to_snake	sans_outils	failed	2	0.50	{}	95.2
+1	camel_to_snake	outillé	failed	2	0.50	{'fs.write': 1}	477.8
