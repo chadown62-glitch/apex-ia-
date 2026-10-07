@@ -114,8 +114,8 @@ class Workspace:
 
     def _absent(self, rel: str) -> str:
         """Mesuré avec un vrai modèle (validation `real-3`, projet `fix_mean`) : 10 lectures d'un chemin
-        inexistant d'affilée, faute de savoir ce qui existe. L'observation nomme donc les fichiers RÉELLEMENT
-        présents (contenu de l'espace de travail seulement, borné), jamais rien d'extérieur."""
+        inexistant d'affilée, faute de savoir ce qui existe. L'observation nomme donc les fichiers
+        RÉELLEMENT présents (contenu de l'espace de travail seulement, borné), jamais rien d'extérieur."""
         present = [name for name, _size in self.files()]
         shown = ", ".join(present[:_ABSENT_HINT_FILES]) or "aucun"
         more = f" (+{len(present) - _ABSENT_HINT_FILES})" if len(present) > _ABSENT_HINT_FILES else ""
