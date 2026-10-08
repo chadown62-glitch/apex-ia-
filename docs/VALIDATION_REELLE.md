@@ -193,3 +193,24 @@ provenance, tâche lancée et jugée depuis l'interface, mission exécutée par 
 | Statut système : Ollama seul sondé | ligne « models » mesurée, Ollama informatif (`1631b68`) | TESTÉ + vérifié par le banc UI réel (38/38) |
 | Cache des poids jamais sauvegardé (chemin « .. ») | chemins absolus (`641b4f8`) | MESURÉ : « Cache saved » dans `real-3` |
 | Faux libellé `generation_s` (temps du Judge) | `judge_exec_s` (`7fd7068`) | TESTÉ |
+
+## 6. Chantier « cycle cognitif » — audit et hypothèses causales (08/10/2026, AVANT toute modification)
+
+Mesures locales possibles malgré le blocage CI : poids publics **Qwen2.5-1.5B-Instruct** (Apache-2.0) depuis
+Docker Hub `ai/qwen2.5:1.5B-F16` (GGUF F16, sha256 `b6eaec35…` vérifié), convertis en safetensors bf16,
+exécutés par le backend NATIF (fp32 CPU, 4 cœurs, 5,8 tokens/s). Ce n'est PAS la variante « Coder » de la CI :
+toute mesure locale est étiquetée `actual_weights`/`substitute_weights` et comparée seulement à d'autres
+mesures locales. Les expériences longues tournent depuis un worktree git figé (le code mesuré ne change pas
+pendant la mesure).
+
+| Mécanisme | Constat (code + traces réelles) | Hypothèse causale |
+|---|---|---|
+| Outils | Le modèle soumet avant d'avoir écrit, jusqu'à 9 fois d'affilée malgré le refus observé ; il écrit du code juste mais entre `"""` dans le JSON (3 écritures correctes perdues sur `fix_mean`, 13 actions illisibles / 106 pas en `real-3`) ; jamais `code.run`/`tests.run` ; l'espace de travail d'une tâche-fonction ne contient que son propre code ; l'historique réinjecte tout le JSON de chaque tour | **H-T1** le format (code échappé dans du JSON) détruit du travail correct ; **H-T2** l'observation `nothing_to_submit` ne réoriente pas : boucle ; **H-T3** vérifier coûte une génération de code de test et n'apporte aucune information nouvelle (aucun exemple exécutable) : les outils n'ajoutent que du coût ; **H-T4** le prompt grossit à chaque tour (lenteur ×3 à ×8) |
+| Mémoire | Un souvenir = un épisode passé tronqué à **600 caractères centrés sur l'énoncé** : surtout l'énoncé d'une AUTRE tâche, code coupé, aucune leçon ; rien ne dit si le souvenir a été utilisé ; dans les paires mémoire, le modèle sait déjà résoudre la cible sans aide | **H-M1** l'unité mémorisée n'est pas actionnable (pas de leçon, troncature) ; **H-M2** « retrouvé » est mesuré, « utilisé » ne l'est pas ; **H-M3** le banc ne contient pas d'information décisive présente seulement dans l'expérience |
+| PLAN | 58/60 plans contiennent du code, recopié puis commenté en prose ; étape obligatoire si demandée | **H-P1** pour un modèle 1.5B sur des énoncés courts, le plan n'apporte pas d'information et coûte ×4 ; il doit être une décision, pas une étape |
+| Adaptation | La tentative suivante reçoit « cas en échec : 3 sur 8 » **sans son propre code** ; aucune étape de diagnostic ; la stratégie ne change que par ce suffixe | **H-A1** sans son code, le modèle ne peut pas réparer, il ré-échantillonne (d'où C ≈ R) ; **H-A2** des observations concrètes et légitimes (son code, les exemples PUBLICS de l'énoncé exécutés) permettent un diagnostic ; **H-A3** un changement de stratégie explicite (réparer puis, sans progrès, réécrire) vaut mieux qu'un retry |
+| Expérience | `parent_experience_id`/`mutation_description` remplis, `improvement_delta` jamais ; ni observation, ni diagnostic, ni cause, ni stratégie avant/après, ni leçon | **H-E1** une expérience ne peut pas guider une décision future faute de ces champs |
+
+Ordre de travail : adaptation (cœur du cycle, produit les diagnostics), outils, mémoire/leçons, PLAN
+adaptatif, puis banc de preuve d'apprentissage. Chaque correction : tests, mesure locale réelle, audit des
+échecs, correction, nouvelle mesure. Protocoles pré-enregistrés ci-dessous avant chaque mesure.
