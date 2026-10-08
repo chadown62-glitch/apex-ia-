@@ -1,12 +1,96 @@
 # Installer APEX (Windows)
 
-Le Panel APEX (`APEX.exe`) est le point d'entrée Windows d'APEX : il **démarre, arrête et ouvre
-APEX**, et affiche son état réel. APEX lui-même (le « backend ») tourne dans Linux, via WSL. Le
-bouton « Démarrer APEX » exécute le launcher officiel, `scripts/apex-launch.sh`, exactement comme
-dans un terminal — même préflight (Docker, `apex doctor`) et même **Startup Gate**, jamais contourné.
-Rien n'est démarré sans votre clic.
+`APEX.exe` est l'application Windows d'APEX. Depuis la version 0.3.0, **APEX tourne directement sous
+Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal. L'installateur dépose le
+Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
+que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
+APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
-## Prérequis (constatés, jamais installés par APEX Desktop)
+## Récupérer l'installateur
+
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.3.0.exe`
+(≈ 33 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
+empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
+PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.3.0.exe -Algorithm SHA256` (même valeur que le `.sha256`).
+
+## Prérequis
+
+- Windows 10 (1903 ou plus récent) ou Windows 11, 64 bits, compte utilisateur normal (aucun droit
+  administrateur demandé).
+- Une connexion Internet pour la **préparation unique** (≈ 190 Mo) et le **modèle** (≈ 3,1 Go).
+- ≈ 6 Go d'espace disque et, pour exécuter le modèle sur le processeur, 8 Go de mémoire ou plus.
+
+## Installer et utiliser APEX (mode Windows natif)
+
+1. Double-cliquez sur `APEX-Setup-x64-v0.3.0.exe`. Le programme n'est pas signé : si Windows affiche
+   « Windows a protégé votre ordinateur », cliquez sur « Informations complémentaires » puis
+   « Exécuter quand même » (seulement si le fichier vient bien du dépôt APEX). L'installateur vérifie
+   lui-même que le Panel démarre et que l'application est complète, puis propose de lancer APEX.
+2. **Préparer APEX** (une seule fois) : le Panel télécharge Python 3.12 officiel (paquet NuGet de
+   python.org, **empreinte SHA-256 vérifiée** avant tout usage) et les bibliothèques d'APEX (pip,
+   **chaque fichier vérifié par son empreinte**, liste figée), puis vérifie réellement que ce Python
+   importe APEX et ses bibliothèques. Quelques minutes. En cas de coupure, cliquez de nouveau : ce qui
+   est déjà installé est conservé.
+3. **Installer le modèle** (une seule fois, ≈ 3,1 Go) : Qwen2.5-Coder-1.5B-Instruct depuis Hugging Face,
+   révision figée ; la progression affiche la taille réellement téléchargée. Sans modèle, APEX démarre
+   (APEX DEGRADED) mais une tâche s'arrête « bloquée : aucun modèle disponible » — jamais une réponse
+   simulée.
+4. **Démarrer APEX** : le Panel lance APEX (base embarquée, `apex doctor`, **Startup Gate** — jamais
+   contourné), sans fenêtre de console. Quelques secondes plus tard : **APEX READY**, ou **APEX
+   DEGRADED** avec la ligne concernée (ex. modèle non installé).
+5. **Ouvrir APEX** : l'interface web d'APEX s'ouvre dans votre navigateur (lien à usage unique). Page
+   **Tâches** : créez une tâche (ex. « écrire une fonction » avec ses cas de test), lancez-la, suivez ses
+   étapes (planification, génération, exécution isolée, vérification, nouvel essai) et son résultat.
+6. **Arrêter APEX** : arrêt propre (APEX termine et libère ses fichiers). Fermer la fenêtre du Panel
+   pendant qu'APEX tourne **vous demande** s'il faut l'arrêter ou le laisser tourner.
+7. Relancer : double-clic sur **APEX**, **Démarrer APEX** — rien à réparer ; tâches, résultats et
+   mémoire sont conservés (base `%LOCALAPPDATA%\APEX\data\apex.db`).
+
+### Où sont les fichiers (mode natif)
+
+| Dossier | Contenu |
+|---|---|
+| `%LOCALAPPDATA%\Programs\APEX` | le Panel `APEX.exe` et l'application (`app\`) |
+| `%LOCALAPPDATA%\APEX\python` | Python et bibliothèques préparés (supprimés à la désinstallation) |
+| `%LOCALAPPDATA%\APEX\data` | base, espaces de travail, artefacts (**conservés**) |
+| `%LOCALAPPDATA%\APEX\models` | modèle téléchargé (**conservé**) |
+| `%LOCALAPPDATA%\APEX\.apex\runtime` | `launch.log` (démarrage), `prepare.log`, `model-install.log`, enregistrement du backend |
+
+### Exécution de code isolée (sandbox Windows)
+
+Le code produit par le modèle est exécuté dans un **AppContainer** Windows sans aucune capacité (pas de
+réseau, pas d'accès à vos fichiers hors de son dossier de travail) et dans un **Job Object** (un seul
+processus, mémoire et durée bornées). Au démarrage, APEX **vérifie chacune de ces garanties par une
+sonde réelle** ; si l'une n'est pas observée, la ligne **Sandbox** est OFFLINE et **toute exécution de
+code est refusée** (jamais d'exécution non isolée). Docker Desktop, s'il est présent et vérifié, sert de
+recours.
+
+### Dépannage (mode natif)
+
+| Le Panel affiche | Que faire |
+|---|---|
+| « APEX n'est pas encore prêt sur ce PC » | **Préparer APEX** |
+| « APEX a changé depuis la dernière préparation » (après une mise à jour) | **Préparer APEX** (seul ce qui manque est téléchargé) |
+| « Préparation impossible : … pip a échoué » | vérifier la connexion (proxy d'entreprise compris), puis **Préparer APEX** ; détail dans **Journal du démarrage** (`prepare.log`) |
+| « … installez Microsoft Visual C++ Redistributable » | installer https://aka.ms/vs/17/release/vc_redist.x64.exe puis **Préparer APEX** (normalement inutile : les bibliothèques Visual C++ sont livrées avec le runtime) |
+| « démarrage échoué : runtime APEX incomplet » | **Préparer APEX** (réparation), puis **Démarrer APEX** |
+| APEX DEGRADED, ligne **Modèles** OFFLINE | **Installer le modèle**, puis **Arrêter APEX** / **Démarrer APEX** |
+| APEX DEGRADED, ligne **Sandbox** OFFLINE | l'isolation Windows n'a pas pu être vérifiée sur ce PC : APEX refuse d'exécuter du code ; le détail de la ligne dit quelle garantie manque |
+| APEX BLOCKED | le Startup Gate ou `apex doctor` refuse le démarrage : raison affichée, détail dans **Journal du démarrage** |
+| « Un autre programme utilise le port 8000 » | fermer ce programme, puis **Démarrer APEX** |
+| « L'installation d'APEX est incomplète » | relancer l'installateur |
+
+Sans fenêtre (automatisation) : `APEX.exe --prepare`, `APEX.exe --install-model`, `APEX.exe --start`,
+`APEX.exe --status-json`, `APEX.exe --ui-url`, `APEX.exe --stop`.
+
+## Mode WSL (avancé : APEX dans une distribution Linux)
+
+Si `APEX.exe` est installé SANS application à côté de lui (Panel seul, versions ≤ 0.2.x), ou avec
+`APEX_PANEL_MODE=wsl`, le Panel pilote un APEX installé dans WSL (profil serveur : PostgreSQL, Redis,
+Docker). Le bouton « Démarrer APEX » exécute alors le launcher officiel, `scripts/apex-launch.sh`,
+exactement comme dans un terminal — même préflight (Docker, `apex doctor`) et même **Startup Gate**.
+
+### Prérequis du mode WSL (constatés, jamais installés par APEX Desktop)
 
 - Windows 10 (2004 ou plus récent) ou Windows 11, 64 bits, compte utilisateur normal (pas besoin
   d'administrateur).
@@ -38,7 +122,7 @@ Rien n'est démarré sans votre clic.
   `apex doctor` le signale en WARN (« service optionnel : non bloquant »). Pour l'activer :
   `COMPOSE_PROFILES=minio` dans `.env` (voir `docs/MINIO_IMPACT_ANALYSIS.md`).
 
-## Installer
+### Installer (mode WSL)
 
 1. Téléchargez `APEX-Setup-x64-v<version>.exe` (et, si vous le souhaitez, le fichier `.sha256`
    à côté pour vérifier le téléchargement : `certutil -hashfile APEX-Setup-x64-v<version>.exe SHA256`).
@@ -50,7 +134,7 @@ Rien n'est démarré sans votre clic.
 3. Laissez l'installation se terminer. L'installateur vérifie lui-même que le Panel démarre.
 4. Un raccourci **APEX** est créé sur le Bureau (et dans le menu Démarrer).
 
-## Utiliser APEX au quotidien (sans terminal)
+### Utiliser APEX au quotidien en mode WSL
 
 5. Double-cliquez sur **APEX** sur le Bureau.
 6. Cliquez sur **Démarrer APEX**. Le Panel affiche « démarre… » pendant le préflight (Docker,
@@ -76,7 +160,7 @@ décision séparée de la feuille de route.
 Toujours possible depuis un terminal WSL (dans le dossier APEX) : `bash scripts/apex-launch.sh serve`
 (Ctrl+C pour arrêter) — le Panel le voit de la même façon.
 
-## Ce que le Panel affiche
+### Ce que le Panel affiche (mode WSL)
 
 | Ligne | Ce qui est vérifié |
 |---|---|
@@ -94,7 +178,7 @@ affichée), **APEX NOT READY** (avec la raison et quoi faire), **VERSION_MISMATC
 de versions incompatibles). L'interface web affiche le MÊME verdict (calculé par APEX, `GET
 /api/v1/status`).
 
-## Dépannage
+### Dépannage (mode WSL)
 
 | Le Panel affiche | Signification | Que faire |
 |---|---|---|
@@ -143,9 +227,12 @@ Paramètres Windows → Applications → **APEX** → Désinstaller (ou menu Dé
 
 | Supprimé | Conservé |
 |---|---|
-| le programme (`%LOCALAPPDATA%\Programs\APEX`) | vos paramètres (`%APPDATA%\APEX`) |
-| le raccourci Bureau et le menu Démarrer | les journaux (`%LOCALAPPDATA%\APEX\logs`) |
+| le programme et l'application (`%LOCALAPPDATA%\Programs\APEX`) | vos données : base, espaces de travail (`%LOCALAPPDATA%\APEX\data`) |
+| le runtime préparé (`%LOCALAPPDATA%\APEX\python`) | le modèle (`%LOCALAPPDATA%\APEX\models`) |
+| le raccourci Bureau et le menu Démarrer | vos paramètres (`%APPDATA%\APEX`) et les journaux (`%LOCALAPPDATA%\APEX\logs`) |
 | l'entrée « Applications installées » | **tout ce qui est dans WSL** : le dépôt APEX, `.apex/`, le jeton, les volumes Docker, le cerveau |
+
+APEX est arrêté proprement avant la suppression s'il tournait.
 
 Pour tout effacer côté Windows après désinstallation : supprimez à la main `%APPDATA%\APEX` et
 `%LOCALAPPDATA%\APEX`.
@@ -153,4 +240,7 @@ Pour tout effacer côté Windows après désinstallation : supprimez à la main 
 ## Mettre à jour
 
 Lancez simplement le nouvel `APEX-Setup-x64-v<version>.exe` (fermez d'abord le Panel ; sinon
-l'installateur vous le demande). Paramètres, journaux et raccourci sont conservés.
+l'installateur vous le demande). Un APEX en cours d'exécution est arrêté proprement avant
+remplacement ; l'application (`app\`) est remplacée entièrement. Données, modèle, paramètres, journaux
+et raccourci sont conservés. Si la liste des bibliothèques a changé, le Panel affiche « APEX a changé
+depuis la dernière préparation » : **Préparer APEX**.

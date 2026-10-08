@@ -36,12 +36,15 @@ python -m apex.cli.main doctor
 
 ## Lancement (Windows)
 
-Le produit Windows est le **Panel APEX** (`APEX.exe`, installateur `APEX-Setup-x64-v<version>.exe`,
-voir `docs/INSTALLER_APEX.md`) : double-clic, **Démarrer APEX** (le launcher officiel
-`scripts/apex-launch.sh` dans WSL — préflight, `apex doctor`, Startup Gate, jamais contournés), puis
-**Ouvrir APEX** (l'interface web servie par APEX lui-même). Aucun terminal au quotidien.
+Le produit Windows est **APEX.exe** : installateur `releases/windows/APEX-Setup-x64-v<version>.exe`
+(voir `docs/INSTALLER_APEX.md`). Depuis 0.3.0, APEX tourne **directement sous Windows**, sans WSL ni
+Docker ni terminal (profil autonome, `apex.standalone`) : double-clic, **Préparer APEX** (une fois :
+Python officiel et bibliothèques, empreintes vérifiées), **Installer le modèle** (une fois), **Démarrer
+APEX** (préflight, `apex doctor`, Startup Gate, jamais contournés), puis **Ouvrir APEX** (l'interface web
+servie par APEX lui-même). Reconstruire l'installateur : `bash setup/packaging/build_desktop_release.sh`.
 
-Une fois, dans le dépôt (WSL) : `.env`, `.venv` (ci-dessus), puis l'interface web :
+Mode WSL (avancé, profil serveur) : le même Panel pilote `scripts/apex-launch.sh` dans une distribution
+Linux. Une fois, dans le dépôt (WSL) : `.env`, `.venv` (ci-dessus), puis l'interface web :
 
 ```bash
 bash scripts/apex-build-ui.sh
