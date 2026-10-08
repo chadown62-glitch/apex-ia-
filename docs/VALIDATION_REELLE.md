@@ -403,3 +403,23 @@ Hypothèses (McNemar exact, Holm 5 % par mesure) : **H-L3** L > RT (comprendre a
 (l'exploration seule). Lecture fixée d'avance : si RT ≈ L, le mécanisme utile de L est l'exploration et le diagnostic
 n'apporte rien de mesurable avec ce modèle ; si L > RT sur les énoncés à exemples seulement, ce sont les observations
 concrètes qui rendent le diagnostic utile.
+
+### 7.2 Exploration ou compréhension (§6.6, partie 1 — 15 tâches × graines 0–3, commit figé `3832665`)
+| Bras | Réussites | Corrigées | Code modifié aux retries | Correction à la tentative |
+|---|---|---|---|---|
+| R | 24/60 | 0 | 0/72 | — |
+| RT (exploration seule) | 27/60 | 3 | 36/72 | 3e (3/3) |
+| L (diagnostic -> stratégie) | 28/60 | 4 | 52/72 | 3e (4/4) |
+
+**H-L3 L vs RT : 3–2, p = 1,0** ; RT vs R : 3–0, p = 0,25. Contrôle d'identité : R graine 0 rejoué depuis `3832665`
+reproduit §7.1 à l'identique (15/15 instances, mêmes réussites, mêmes codes). **MESURÉ** : l'exploration seule
+(même prompt, température de réécriture à la 3e tentative) obtient presque tout le gain de L ; le diagnostic et la
+stratégie de réparation n'apportent rien de mesurable avec ce modèle. Rien n'est significatif.
+
+## 8. État à l'arrêt du chantier (08/10/2026, arrêt demandé)
+Exécuté et mesuré localement : §6.1 (R, C, L) et §6.6 partie 1 (RT + contrôle d'identité). **Non exécutés**
+(protocoles pré-enregistrés, code et harnais prêts, relançables tels quels par `scripts/run_cognitive_job.py` ou la
+file locale) : §6.2 banc d'outils (T, T0, NT, NT3), §6.3 banc mémoire (A, M, P, M0), §6.4 PLAN (`local-plan2`
+partiel : A graines 0–1 seulement ; `planauto`), §6.5 preuve d'apprentissage, §6.6 partie 2 (énoncés à exemples :
+R graine 0 seulement, non analysé). Ces mécanismes sont **TESTÉS** (tests de mécanisme, modèles doublures) mais
+leur effet sur un vrai modèle est **UNVERIFIED**. Validation CI (variante Coder) : **BLOCKED** (facturation GitHub).
