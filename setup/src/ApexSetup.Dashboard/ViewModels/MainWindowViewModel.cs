@@ -31,8 +31,13 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly Action<Action> _ui;
     private readonly SemaphoreSlim _measuring = new(1, 1);
     private readonly PanelControl? _control;
+    private readonly RuntimePreparer? _preparer;
     private LaunchAttempt? _launch;
     private bool _stopping;
+    private bool _preparing;
+    private bool _installingModel;
+    private bool _closeConfirmed;
+    private bool _isClosePromptVisible;
     private string? _actionMessage;
     private string _overlayTitle = "Diagnostic";
 
@@ -56,9 +61,11 @@ public sealed class MainWindowViewModel : ObservableObject
         Redactor redactor,
         Func<string?, DiagnosticContext> diagnosticContext,
         Action<Action>? uiDispatcher = null,
-        PanelControl? control = null)
+        PanelControl? control = null,
+        RuntimePreparer? preparer = null)
     {
         _control = control;
+        _preparer = preparer;
         _settingsStore = settingsStore;
         _statusService = statusService;
         _log = log;
@@ -87,7 +94,19 @@ public sealed class MainWindowViewModel : ObservableObject
         CopyDiagnosticCommand = new AsyncRelayCommand(_ => CopyDiagnosticAsync());
         OpenSettingsCommand = new RelayCommand(() => IsSettingsVisible = true);
         CloseSettingsCommand = new RelayCommand(() => IsSettingsVisible = false);
-        foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand, StartCommand, StopCommand, OpenUiCommand, ShowLaunchLogCommand })
+        PrepareCommand = new AsyncRelayCommand(_ => PrepareAsync(), () => CanPrepare);
+        InstallModelCommand = new AsyncRelayCommand(_ => InstallModelAsync(), () => CanInstallModel);
+        StopAndQuitCommand = new AsyncRelayCommand(_ => StopAndQuitAsync());
+        QuitLeavingRunningCommand = new RelayCommand(() =>
+        {
+            _closeConfirmed = true;
+            IsClosePromptVisible = false;
+            _log.Log("Panel fermé — APEX continue de tourner (« Arrêter APEX » au prochain lancement du Panel).");
+            CloseWindowRequested?.Invoke(this, EventArgs.Empty);
+        });
+        CancelCloseCommand = new RelayCommand(() => IsClosePromptVisible = false);
+        foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand, StartCommand, StopCommand, OpenUiCommand, ShowLaunchLogCommand,
+                     PrepareCommand, InstallModelCommand, StopAndQuitCommand })
         {
             command.Faulted += (_, ex) => _log.Log($"Erreur inattendue : {ex.Message}");
         }
@@ -177,6 +196,50 @@ public sealed class MainWindowViewModel : ObservableObject
     /// <summary>Le démarrage demandé par ce Panel, s'il y en a un (exposé pour les tests et le diagnostic).</summary>
     public LaunchAttempt? Launch => _launch;
 
+    /// <summary>Mode Windows natif (APEX autonome sur ce PC, sans WSL) : boutons « Préparer APEX » et « Installer le modèle ».</summary>
+    public bool IsNative => _statusService.NativeRuntime is not null;
+
+    /// <summary>Paramètres WSL (distribution, dossier) : sans objet en mode natif.</summary>
+    public bool IsWslSettingsVisible => !IsNative;
+
+    /// <summary>« Préparer APEX » : télécharge et vérifie Python et les bibliothèques d'APEX — jamais pendant qu'APEX tourne.</summary>
+    public bool CanPrepare =>
+        _preparer is not null && IsNative && !_preparing && !_installingModel && !_stopping && _launch is not { Running: true }
+        && _snapshot is { } s && s.Verdict is not (PanelVerdict.Ready or PanelVerdict.Degraded)
+        && s.Cause is not (NotReadyCause.BackendStarting or NotReadyCause.BackendUnresponsive or NotReadyCause.ApiTimeout);
+
+    /// <summary>« Installer le modèle » : runtime prêt et modèle absent ; une seule installation à la fois.</summary>
+    public bool CanInstallModel =>
+        _preparer is not null && IsNative && !_preparing && !_installingModel
+        && _snapshot?.Get(ComponentKey.Runtime) is { Status: ComponentStatus.Ready }
+        && _statusService.NativeRuntime?.Inspect() is { State: RuntimeState.Ready, ModelInstalled: false };
+
+    public bool IsBusyPreparing => _preparing || _installingModel;
+
+    /// <summary>Fermeture demandée alors qu'APEX tourne (mode natif) : l'arrêter, le laisser tourner, ou annuler.</summary>
+    public bool IsClosePromptVisible
+    {
+        get => _isClosePromptVisible;
+        private set => SetProperty(ref _isClosePromptVisible, value);
+    }
+
+    /// <summary>La fenêtre doit se fermer (après le choix de l'utilisateur).</summary>
+    public event EventHandler? CloseWindowRequested;
+
+    /// <summary>
+    /// Appelé quand l'utilisateur ferme la fenêtre : en mode natif, si APEX tourne, on DEMANDE (l'arrêter ou le
+    /// laisser tourner) au lieu de laisser silencieusement un processus en arrière-plan. Vrai = fermeture suspendue.
+    /// </summary>
+    public bool InterceptClose()
+    {
+        if (_closeConfirmed || !IsNative || !CanStop)
+        {
+            return false;
+        }
+        IsClosePromptVisible = true;
+        return true;
+    }
+
     /// <summary>
     /// « Démarrer APEX » : seulement quand APEX ne tourne pas (non démarré, arrêté, WSL arrêté, démarrage
     /// refusé ou échoué — on relance après correction). Jamais pendant un démarrage ou un arrêt.
@@ -209,6 +272,11 @@ public sealed class MainWindowViewModel : ObservableObject
     public AsyncRelayCommand StopCommand { get; }
     public AsyncRelayCommand OpenUiCommand { get; }
     public AsyncRelayCommand ShowLaunchLogCommand { get; }
+    public AsyncRelayCommand PrepareCommand { get; }
+    public AsyncRelayCommand InstallModelCommand { get; }
+    public AsyncRelayCommand StopAndQuitCommand { get; }
+    public RelayCommand QuitLeavingRunningCommand { get; }
+    public RelayCommand CancelCloseCommand { get; }
 
     /// <summary>Chargement initial puis première mesure — appelé par la racine de composition (jamais dans le constructeur).</summary>
     public async Task InitializeAsync()
@@ -316,8 +384,11 @@ public sealed class MainWindowViewModel : ObservableObject
         }
         var (root, source) = _settings.EffectiveProjectRoot();
         var distro = string.IsNullOrWhiteSpace(_settings.WslDistro) ? null : _settings.WslDistro.Trim();
-        _log.Log($"Démarrage d'APEX demandé — dossier « {root} » ({source}) : launch.sh {BackendLauncher.StartCommand} "
-            + "(même préflight et même Startup Gate que dans un terminal ; journal : ~/" + BackendLauncher.LaunchLog + ").");
+        _log.Log(IsNative
+            ? "Démarrage d'APEX demandé — python -m apex.standalone serve (préflight, apex doctor et Startup Gate compris ; journal : "
+                + LaunchLogLocation + ")."
+            : $"Démarrage d'APEX demandé — dossier « {root} » ({source}) : launch.sh {BackendLauncher.StartCommand} "
+                + "(même préflight et même Startup Gate que dans un terminal ; journal : ~/" + BackendLauncher.LaunchLog + ").");
         var (attempt, exited) = _control.Launcher.Start(distro, root, DateTimeOffset.Now);
         _launch = attempt;
         if (attempt.FailureReason is { } reason)
@@ -341,7 +412,7 @@ public sealed class MainWindowViewModel : ObservableObject
             return; // arrêt demandé entre-temps, ou nouveau démarrage : ce résultat ne décrit plus rien
         }
         _launch = attempt with { ExitCode = code };
-        _log.Log($"launch.sh s'est terminé (code {code}).");
+        _log.Log(IsNative ? $"Le processus d'APEX s'est terminé (code {code})." : $"launch.sh s'est terminé (code {code}).");
         RaiseActionsChangedOnUi();
         await RefreshAsync().ConfigureAwait(false);
     }
@@ -361,7 +432,8 @@ public sealed class MainWindowViewModel : ObservableObject
             var access = _statusService.LastAccess;
             var root = access?.ProjectRoot ?? _settings.EffectiveProjectRoot().Path;
             var distro = access?.Distro ?? (string.IsNullOrWhiteSpace(_settings.WslDistro) ? null : _settings.WslDistro.Trim());
-            _log.Log($"Arrêt d'APEX demandé — dossier « {root} » : launch.sh {BackendLauncher.StopCommand}.");
+            _log.Log(IsNative ? "Arrêt d'APEX demandé — python -m apex.standalone stop (arrêt propre par l'API)."
+                : $"Arrêt d'APEX demandé — dossier « {root} » : launch.sh {BackendLauncher.StopCommand}.");
             var result = await _control.Launcher.StopAsync(distro, root).ConfigureAwait(false);
             foreach (var line in (result.Stderr + "\n" + result.Stdout).Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).TakeLast(6))
             {
@@ -410,18 +482,36 @@ public sealed class MainWindowViewModel : ObservableObject
         _ui(() => ActionMessage = message);
     }
 
+    /// <summary>Où est le journal du démarrage — affiché tel quel à l'utilisateur.</summary>
+    private string LaunchLogLocation => _statusService.NativeRuntime is { } native
+        ? Path.Combine(native.Home, ".apex", "runtime", "launch.log")
+        : "~/" + BackendLauncher.LaunchLog;
+
     private async Task ShowLaunchLogAsync()
     {
         var read = await _statusService.ReadLaunchLogAsync(_settings).ConfigureAwait(false);
         var text = read.Kind switch
         {
             FileReadKind.Ok => _redactor.Redact(LaunchLogExcerpt(read.Content ?? "")),
-            FileReadKind.NotFound => "Aucun journal de démarrage : APEX n'a pas encore été démarré depuis le Panel (~/" + BackendLauncher.LaunchLog + ").",
+            FileReadKind.NotFound => "Aucun journal de démarrage : APEX n'a pas encore été démarré depuis le Panel (" + LaunchLogLocation + ").",
             _ => $"Journal illisible : {read.Detail}",
         };
+        if (_statusService.NativeRuntime is { } native)
+        {
+            // Mode natif : la préparation et l'installation du modèle ont aussi leur journal — tout au même endroit.
+            foreach (var (title, relative) in new[] { ("Préparation d'APEX", ".apex/runtime/prepare.log"), ("Installation du modèle", ".apex/runtime/model-install.log") })
+            {
+                var extra = await LocalBackendHost.ReadAsync(Path.Combine(native.Home, relative), CancellationToken.None).ConfigureAwait(false);
+                if (extra.Kind == FileReadKind.Ok)
+                {
+                    var tail = string.Join('\n', (extra.Content ?? "").Split('\n').TakeLast(60));
+                    text += $"\n\n===== {title} ({relative}) — 60 dernières lignes =====\n" + _redactor.Redact(tail);
+                }
+            }
+        }
         _ui(() =>
         {
-            OverlayTitle = "Journal du démarrage (~/" + BackendLauncher.LaunchLog + ")";
+            OverlayTitle = "Journal du démarrage (" + LaunchLogLocation + ")";
             DiagnosticText = text;
             CopyMessage = null;
             IsDiagnosticVisible = true;
@@ -470,9 +560,127 @@ public sealed class MainWindowViewModel : ObservableObject
         StartCommand.NotifyCanExecuteChanged();
         StopCommand.NotifyCanExecuteChanged();
         OpenUiCommand.NotifyCanExecuteChanged();
+        PrepareCommand.NotifyCanExecuteChanged();
+        InstallModelCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanStop));
         OnPropertyChanged(nameof(CanOpen));
+        OnPropertyChanged(nameof(CanPrepare));
+        OnPropertyChanged(nameof(CanInstallModel));
+        OnPropertyChanged(nameof(IsBusyPreparing));
+        OnPropertyChanged(nameof(IsNative));
+        OnPropertyChanged(nameof(IsWslSettingsVisible));
+    }
+
+    // -- Mode Windows natif : préparation du runtime et du modèle (toujours sur un geste de l'utilisateur) ----------
+
+    private async Task PrepareAsync()
+    {
+        if (_preparer is null || !CanPrepare)
+        {
+            return;
+        }
+        _preparing = true;
+        RaiseActionsChangedOnUi();
+        _log.Log("Préparation d'APEX demandée (Python officiel et bibliothèques d'APEX, empreintes vérifiées).");
+        try
+        {
+            var progress = new SynchronousProgress(message =>
+            {
+                _log.Log("  " + message);
+                _ui(() => ActionMessage = message);
+            });
+            var result = await _preparer.PrepareAsync(progress).ConfigureAwait(false);
+            _log.Log(result.Message);
+            _ui(() => ActionMessage = result.Message);
+        }
+        finally
+        {
+            _preparing = false;
+            RaiseActionsChangedOnUi();
+        }
+        await RefreshAsync().ConfigureAwait(false);
+    }
+
+    private async Task InstallModelAsync()
+    {
+        if (_preparer is null || !CanInstallModel || _statusService.NativeRuntime is not { } native)
+        {
+            return;
+        }
+        var spec = native.TryReadSpec(out _);
+        _installingModel = true;
+        RaiseActionsChangedOnUi();
+        _log.Log($"Installation du modèle demandée : {spec?.ModelRepo} (révision {spec?.ModelRevision}, environ {spec?.ModelEstimateMb / 1000.0:0.#} Go).");
+        using var watching = new CancellationTokenSource();
+        var watcher = WatchModelDownloadAsync(native, spec, watching.Token);
+        try
+        {
+            var result = await _preparer.InstallModelAsync().ConfigureAwait(false);
+            var installed = spec is not null && native.InspectModel(spec).Installed;
+            var message = !result.Started ? $"Installation du modèle impossible : {result.FailureReason}"
+                : result.TimedOut ? "Installation du modèle interrompue (délai dépassé) : relancez-la, le téléchargement reprend où il s'était arrêté."
+                : result.ExitCode == 0 && installed ? "Modèle installé. Si APEX tourne, cliquez sur « Arrêter APEX » puis « Démarrer APEX » pour l'utiliser."
+                : $"Installation du modèle échouée (code {result.ExitCode}) : vérifiez la connexion Internet puis relancez-la (le téléchargement reprend). Détail dans « Journal du démarrage ».";
+            _log.Log(message);
+            _ui(() => ActionMessage = message);
+        }
+        finally
+        {
+            await watching.CancelAsync().ConfigureAwait(false);
+            await watcher.ConfigureAwait(false);
+            _installingModel = false;
+            RaiseActionsChangedOnUi();
+        }
+        await RefreshAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Progression RÉELLE du téléchargement : la taille sur disque du dossier du modèle, toutes les 3 s.</summary>
+    private async Task WatchModelDownloadAsync(NativeRuntime native, RuntimeSpec? spec, CancellationToken cancellationToken)
+    {
+        if (spec is null)
+        {
+            return;
+        }
+        var folder = Path.Combine(native.ModelsDirectory, spec.ModelName);
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
+                long bytes = 0;
+                try
+                {
+                    if (Directory.Exists(folder))
+                    {
+                        bytes = new DirectoryInfo(folder).EnumerateFiles("*", SearchOption.AllDirectories).Sum(f => f.Length);
+                    }
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    continue;
+                }
+                var text = $"Téléchargement du modèle : {bytes / 1e9:0.00} Go sur environ {spec.ModelEstimateMb / 1000.0:0.#} Go…";
+                _ui(() => ActionMessage = text);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task StopAndQuitAsync()
+    {
+        IsClosePromptVisible = false;
+        await StopAsync().ConfigureAwait(false);
+        _closeConfirmed = true;
+        _ui(() => CloseWindowRequested?.Invoke(this, EventArgs.Empty));
+    }
+
+    /// <summary>Progression rapportée immédiatement (pas de contexte capturé : le Panel la renvoie lui-même vers l'interface).</summary>
+    private sealed class SynchronousProgress(Action<string> report) : IProgress<string>
+    {
+        public void Report(string value) => report(value);
     }
 
     public string BuildDiagnostic() =>

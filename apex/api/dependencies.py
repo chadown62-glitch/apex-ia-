@@ -49,11 +49,11 @@ class DatabaseUnavailable(Exception):
 
 def get_session_factory() -> Any:
     from apex.config.loader import load_config
-    from apex.db.engine import build_engine, build_session_factory, database_url_from_config
+    from apex.db.engine import build_engine, build_session_factory, resolve_database_url
 
     try:
         config = load_config()
-        url = database_url_from_config(config)
+        url = resolve_database_url(config)
     except ApexError as exc:
         raise DatabaseUnavailable(str(exc)) from exc
     engine = build_engine(url)

@@ -239,11 +239,15 @@ class TestCliServeReachesUvicornRun(unittest.TestCase):
     def test_serve_reaches_uvicorn_run_without_raising(self) -> None:
         with patch("apex.gate.runner.run_gate", side_effect=lambda **k: _fake_report(authorized=True)), \
              patch("apex.api.app.create_app") as fake_create_app, \
-             patch("uvicorn.run") as fake_uvicorn_run:
+             patch("uvicorn.Server.run") as fake_server_run:
             code, _ = _run(["serve"])
         self.assertEqual(code, 0)
         fake_create_app.assert_called_once()
-        fake_uvicorn_run.assert_called_once()
+        # `apex serve` pilote son serveur uvicorn (arrêt propre à la demande : apex.api.lifecycle).
+        fake_server_run.assert_called_once()
+        from apex.api import lifecycle
+
+        self.assertFalse(lifecycle.request_shutdown())  # rappel retiré à la fin du service
 
 
 if __name__ == "__main__":

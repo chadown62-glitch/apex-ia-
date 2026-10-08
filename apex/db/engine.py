@@ -93,13 +93,46 @@ def database_url_from_config(config: ApexConfig, *, environ: dict[str, str] | No
     )
 
 
+#: URL explicite de la base (profil autonome `apex.standalone` : SQLite embarquée ; ou toute URL fournie
+#: par l'opérateur). Prioritaire sur `config.services.postgres`, partout — un seul point de résolution.
+DATABASE_URL_ENV = "APEX_DATABASE_URL"
+
+
+def resolve_database_url(config: ApexConfig, *, environ: dict[str, str] | None = None) -> str:
+    env = environ if environ is not None else dict(os.environ)
+    explicit = (env.get(DATABASE_URL_ENV) or "").strip()
+    return explicit or database_url_from_config(config, environ=env)
+
+
+def is_sqlite_url(url: str) -> bool:
+    return url.startswith("sqlite")
+
+
 def build_engine(url: str, *, echo: bool = False) -> Engine:
     """Crée un engine SQLAlchemy pour l'URL donnée.
 
     Ne se connecte pas immédiatement — SQLAlchemy est paresseux par défaut ;
     la première connexion réelle a lieu au premier usage de la session.
+
+    SQLite (profil autonome) : connexions partagées entre les fils de l'API et de la boucle
+    (`check_same_thread=False`), attente d'un verrou au lieu d'un échec immédiat (30 s), journal WAL
+    (lecteurs non bloqués par un écrivain) et clés étrangères appliquées.
     """
-    return create_engine(url, echo=echo, future=True)
+    if not is_sqlite_url(url):
+        return create_engine(url, echo=echo, future=True)
+    from sqlalchemy import event
+
+    engine = create_engine(url, echo=echo, future=True,
+                           connect_args={"check_same_thread": False, "timeout": 30})
+
+    @event.listens_for(engine, "connect")
+    def _pragmas(dbapi_connection, _record):  # type: ignore[no-untyped-def]
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.close()
+
+    return engine
 
 
 def build_session_factory(engine: Engine) -> sessionmaker[Session]:

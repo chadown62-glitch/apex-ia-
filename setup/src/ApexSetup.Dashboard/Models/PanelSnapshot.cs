@@ -44,6 +44,8 @@ public enum NotReadyCause
     StartupRefused,
     /// <summary>Le démarrage a échoué avant APEX (.env, Python, Docker, erreur interne du Gate, dossier introuvable…).</summary>
     StartFailed,
+    /// <summary>Mode Windows natif : le runtime d'APEX (Python et bibliothèques) n'est pas encore préparé sur ce poste.</summary>
+    RuntimeNotPrepared,
 }
 
 /// <summary>Versions constatées (jamais supposées) : celle du Panel est la sienne ; celles du backend viennent de sa réponse.</summary>
@@ -69,7 +71,8 @@ public sealed record PanelSnapshot(
     BackendInfo Backend,
     bool WslApplicable,
     string? WslDistro,
-    TimeSpan Duration)
+    TimeSpan Duration,
+    string Mode = "wsl")
 {
     public ComponentState? Get(ComponentKey key) => Components.FirstOrDefault(c => c.Key == key);
 }

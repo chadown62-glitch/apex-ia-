@@ -121,6 +121,9 @@ public sealed class RealProcessRunner : IProcessRunner, IDetachedProcessStarter
             RedirectStandardError = redirect,
             CreateNoWindow = true,
         };
+        // Python d'APEX (mode natif) en mode UTF-8, comme sous Linux : fichiers, journaux et sorties lues par le
+        // Panel en UTF-8 quelle que soit la page de codes de Windows. Sans effet sur les autres programmes.
+        startInfo.Environment["PYTHONUTF8"] = "1";
         if (redirect)
         {
             // Jamais la page de code de la console (indéfinie pour une application graphique Windows) :

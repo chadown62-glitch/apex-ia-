@@ -301,14 +301,19 @@ def _cmd_serve(args: argparse.Namespace) -> int:
     from apex.obs.component_checks import warm_up
 
     warm_up()
+    from apex.api import lifecycle
+
+    server = uvicorn.Server(uvicorn.Config(
+        cleanup_on_shutdown(create_app()), host=args.host, port=args.port,
+        log_level=(args.log_level or "info").lower(),
+    ))
+    # Arrêt propre demandé par le Panel (`POST /api/v1/system/shutdown`, jeton requis) : même chemin que
+    # Ctrl+C — uvicorn termine les requêtes en cours puis le lifespan d'arrêt (voir apex.api.lifecycle).
+    lifecycle.register_shutdown(lambda: setattr(server, "should_exit", True))
     try:
-        uvicorn.run(
-            cleanup_on_shutdown(create_app()),
-            host=args.host,
-            port=args.port,
-            log_level=(args.log_level or "info").lower(),
-        )
+        server.run()
     finally:
+        lifecycle.register_shutdown(None)
         remove_discovery()
     return 0
 

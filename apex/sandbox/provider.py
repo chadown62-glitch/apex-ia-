@@ -48,6 +48,36 @@ class SandboxSelection:
     reason: str
 
 
+def _select_on_windows(container_image: str | None) -> SandboxSelection:
+    """Windows (APEX autonome) : 1. AppContainer + Job Object si la sonde CONSTATE chaque garantie ; 2. sinon
+    conteneur (Docker Desktop) si ses garanties sont vérifiées sur un vrai conteneur ; 3. sinon AppContainer
+    quand même (il porte la raison détaillée) — dont `execute()` refusera toute exécution."""
+    from apex.sandbox.container import ContainerSandbox, detect_container_capabilities
+    from apex.sandbox.windows_appcontainer import WindowsAppContainerSandbox
+
+    native = WindowsAppContainerSandbox()
+    report = native.detect()
+    if report.is_available:
+        return SandboxSelection(provider=native, provider_name="WindowsAppContainerSandbox", report=report,
+                                reason=f"isolation native Windows constatée par sonde ({report.detail})")
+    image = container_image
+    if image is None:
+        from apex.config.loader import load_config
+
+        image = load_config().sandbox.container_image
+    container_report = detect_container_capabilities(image=image)
+    if container_report.is_available:
+        return SandboxSelection(
+            provider=ContainerSandbox(image=image, capability_report=container_report),
+            provider_name="ContainerSandbox", report=container_report,
+            reason=f"AppContainer indisponible ({report.detail}) ; repli sur Docker — garanties vérifiées "
+                   f"sur un vrai conteneur ({container_report.detail})",
+        )
+    return SandboxSelection(provider=native, provider_name="WindowsAppContainerSandbox", report=report,
+                            reason=f"aucune isolation disponible : AppContainer ({report.detail}) ; Docker "
+                                   f"({container_report.detail}) — toute exécution de code est refusée")
+
+
 def select_sandbox_provider(
     *, container_image: str | None = None, namespace_report: SandboxCapabilityReport | None = None,
 ) -> SandboxSelection:
@@ -74,6 +104,11 @@ def select_sandbox_provider(
     from apex.sandbox.container import ContainerSandbox, detect_container_capabilities
     from apex.sandbox.detect import detect_capabilities
     from apex.sandbox.linux_namespace import LinuxNamespaceSandbox
+
+    import sys
+
+    if sys.platform == "win32" and namespace_report is None:
+        return _select_on_windows(container_image)
 
     ns_report = namespace_report if namespace_report is not None else detect_capabilities()
     if ns_report.level is IsolationLevel.NAMESPACED:

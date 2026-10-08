@@ -9,13 +9,15 @@ namespace ApexSetup.Dashboard;
 /// </summary>
 public sealed class PanelComposition
 {
-    private PanelComposition(FileLogSink log, Redactor redactor, JsonSettingsStore settings, PanelStatusService status, PanelControl control)
+    private PanelComposition(FileLogSink log, Redactor redactor, JsonSettingsStore settings, PanelStatusService status, PanelControl control,
+        RuntimePreparer? preparer)
     {
         Log = log;
         Redactor = redactor;
         Settings = settings;
         Status = status;
         Control = control;
+        Preparer = preparer;
     }
 
     public FileLogSink Log { get; }
@@ -26,19 +28,27 @@ public sealed class PanelComposition
     /// <summary>Démarrer / arrêter / ouvrir APEX — toujours sur un geste de l'utilisateur.</summary>
     public PanelControl Control { get; }
 
+    /// <summary>Mode Windows natif : « Préparer APEX » et « Installer le modèle » ; <c>null</c> dans les modes WSL et Linux.</summary>
+    public RuntimePreparer? Preparer { get; }
+
     public static PanelComposition Create()
     {
         var redactor = new Redactor();
         var log = new FileLogSink(PanelInfo.LogDirectory, redactor);
         var runner = new RealProcessRunner();
-        IBackendHost host = OperatingSystem.IsWindows()
-            ? new WslBackendHost(runner, new WindowsWslRegistry())
+        // APEX autonome installé à côté du Panel (app\apex) : mode Windows natif, sans WSL ni Docker. Sinon,
+        // comme avant : backend dans WSL (Windows) ou sur cette machine (Linux).
+        var native = NativeRuntime.Detect(PanelInfo.InstallDirectory);
+        IBackendHost host = native is not null ? new NativeBackendHost(native)
+            : OperatingSystem.IsWindows() ? new WslBackendHost(runner, new WindowsWslRegistry())
             : new LocalBackendHost();
         var client = new StatusClient(new HttpClient());
         var status = new PanelStatusService(host, client);
         status.SecretRead += redactor.Register;
-        var control = new PanelControl(new BackendLauncher(runner, runner, wsl: OperatingSystem.IsWindows()), client, new SystemBrowserLauncher());
-        return new PanelComposition(log, redactor, new JsonSettingsStore(PanelInfo.SettingsFile), status, control);
+        var launcher = new BackendLauncher(runner, runner, wsl: native is null && OperatingSystem.IsWindows(), native: native);
+        var control = new PanelControl(launcher, client, new SystemBrowserLauncher());
+        var preparer = native is null ? null : new RuntimePreparer(native, new HttpClient { Timeout = TimeSpan.FromMinutes(30) }, runner);
+        return new PanelComposition(log, redactor, new JsonSettingsStore(PanelInfo.SettingsFile), status, control, preparer);
     }
 
     public DiagnosticContext DiagnosticContext(string? settingsProblem) => new(

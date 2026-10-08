@@ -227,13 +227,14 @@ def test_serve_publishes_discovery_while_serving_and_removes_it_after(
     monkeypatch.setattr("apex.gate.runner.run_gate", lambda **_k: report)
     seen: dict[str, object] = {}
 
-    def fake_run(app: object, **kwargs: object) -> None:
+    def fake_run(server: uvicorn.Server, *args: object, **kwargs: object) -> None:
+        # `apex serve` exécute un `uvicorn.Server` (arrêt propre par l'API, apex.api.lifecycle).
         seen["record"] = json.loads(discovery.discovery_path().read_text(encoding="utf-8"))
-        seen["kwargs"] = kwargs
+        seen["port"] = server.config.port
         if crash:
             raise RuntimeError("le serveur s'arrête brutalement")
 
-    monkeypatch.setattr(uvicorn, "run", fake_run)
+    monkeypatch.setattr(uvicorn.Server, "run", fake_run)
     if crash:
         with pytest.raises(RuntimeError):
             main(["serve", "--port", "8765"])
@@ -245,6 +246,7 @@ def test_serve_publishes_discovery_while_serving_and_removes_it_after(
         and record["port"] == 8765
         and record["project_root"] == str(tmp_path.resolve())
     )
+    assert seen["port"] == 8765
     assert not discovery.discovery_path().exists()
 
 

@@ -1,0 +1,18 @@
+# Dépendances du runtime Windows d'APEX (profil autonome, python.exe 3.12 win_amd64).
+# Source de requirements-windows.lock (empreintes figées) — régénérer avec lock_runtime.sh.
+pyyaml>=6.0
+sqlalchemy>=2.0
+alembic>=1.13
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic>=2.9
+httpx>=0.27
+torch>=2.4
+transformers>=4.45,<5
+safetensors>=0.4
+huggingface_hub>=0.25
+# Bibliothèques Visual C++ récentes, déployées À CÔTÉ de python.exe (paquet PyPI msvc-runtime : DLL signées
+# Microsoft, même chaîne de signature que la vcruntime140.dll du Python officiel). torch 2.14 exige
+# VCRUNTIME140_THREADS.dll, absente d'un Windows sans « Visual C++ Redistributable » 2022 récent — constaté
+# sous Wine le 08/10/2026 (import torch : WinError 126). Sans elle, la préparation échouerait sur ces PC.
+msvc-runtime>=14.44

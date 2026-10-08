@@ -68,6 +68,9 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "scheduler",
         "secrets",
         "specialties",
+        # Profil AUTONOME (application Windows APEX.exe : SQLite, sans WSL ni Docker) — lanceur
+        # `python -m apex.standalone`, n'importe que des paquets Runtime.
+        "standalone",
         "taskloop",
         "tasks",
         "tools",
@@ -76,9 +79,13 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
 )
 
 #: Fichiers Python de premier niveau de `apex/` (hors sous-paquets) requis
-#: par le Runtime — tous, il n'y en a que trois et ils sont le noyau
-#: (`apex/__init__.py`, `apex/errors.py`, `apex/version.py`).
-RUNTIME_FILES: frozenset[str] = frozenset({"__init__.py", "errors.py", "version.py"})
+#: par le Runtime — tous : le noyau (`apex/__init__.py`, `apex/errors.py`,
+#: `apex/version.py`) et `apex/discovery.py` (enregistrement de découverte
+#: écrit par `apex serve`, lu par le Panel — importé paresseusement par
+#: `apex.cli.main` : son absence cassait `apex serve` dans l'artefact sans
+#: qu'aucun import de module ne le révèle ; `verify.py` vérifie désormais la
+#: complétude des imports).
+RUNTIME_FILES: frozenset[str] = frozenset({"__init__.py", "discovery.py", "errors.py", "version.py"})
 
 #: Sous-paquets de `apex/` qui restent exclusivement dans APEX DEV — jamais
 #: présents dans l'artefact Runtime. Confirmé par grep exhaustif : aucun

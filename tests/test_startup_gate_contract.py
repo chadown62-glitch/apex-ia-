@@ -277,6 +277,27 @@ def test_8_plain_apex_gate_still_answers_phase_2(monkeypatch: pytest.MonkeyPatch
     assert _run_gate_cli(monkeypatch, tmp_path, _report(_baseline())) == 1
 
 
+def _fake_uvicorn(started: list) -> object:
+    """Module uvicorn de substitution : `apex serve` exécute `uvicorn.Server(uvicorn.Config(...)).run()`
+    (arrêt propre par l'API) ; un démarrage = un appel à `run`, enregistré dans `started`."""
+    module = type(sys)("uvicorn")
+
+    class Config:
+        def __init__(self, app: object, **kwargs: object) -> None:
+            self.app, self.kwargs = app, kwargs
+
+    class Server:
+        def __init__(self, config: Config) -> None:
+            self.config, self.should_exit = config, False
+
+        def run(self) -> None:
+            started.append(True)
+
+    module.Config, module.Server = Config, Server
+    module.run = lambda *a, **k: started.append(True)
+    return module
+
+
 def test_8_apex_serve_refuses_a_measured_fail_and_never_starts_the_server(monkeypatch: pytest.MonkeyPatch,
                                                                            tmp_path: Path) -> None:
     import apex.gate.runner as runner
@@ -286,8 +307,7 @@ def test_8_apex_serve_refuses_a_measured_fail_and_never_starts_the_server(monkey
     monkeypatch.setattr(runner, "run_gate", lambda **_: _report(rows))
     monkeypatch.chdir(tmp_path); monkeypatch.setenv("HOME", str(tmp_path))
     started = []
-    monkeypatch.setitem(sys.modules, "uvicorn", type(sys)("uvicorn"))
-    sys.modules["uvicorn"].run = lambda *a, **k: started.append(True)
+    monkeypatch.setitem(sys.modules, "uvicorn", _fake_uvicorn(started))
     err = io.StringIO()
     with redirect_stdout(io.StringIO()), redirect_stderr(err):
         code = main(["serve", "--port", "0"])
@@ -305,8 +325,7 @@ def test_8_apex_serve_starts_when_only_tolerated_checks_are_unverified(monkeypat
     monkeypatch.setattr(component_checks, "warm_up", lambda: None)
     monkeypatch.chdir(tmp_path); monkeypatch.setenv("HOME", str(tmp_path))
     started = []
-    monkeypatch.setitem(sys.modules, "uvicorn", type(sys)("uvicorn"))
-    sys.modules["uvicorn"].run = lambda *a, **k: started.append(True)
+    monkeypatch.setitem(sys.modules, "uvicorn", _fake_uvicorn(started))
     err = io.StringIO()
     with redirect_stdout(io.StringIO()), redirect_stderr(err):
         code = main(["serve", "--port", "0"])

@@ -219,6 +219,38 @@ class TestAntiLeakVerification(_BuiltArtifactTestCase):
             self.assertTrue(any("apex.metalearner" in v for v in report.violations))
 
 
+    def test_checker_detects_a_runtime_module_missing_from_the_artifact(self) -> None:
+        """Complétude : `apex/discovery.py` (importé paresseusement par `apex serve`) manquait à l'artefact
+        sans qu'aucun import de module ne le révèle. Le contrôle doit le voir."""
+        with tempfile.TemporaryDirectory() as poisoned_tmp:
+            poisoned = Path(poisoned_tmp) / "poisoned"
+            shutil.copytree(self.artifact_dir, poisoned)
+            (poisoned / "apex" / "discovery.py").unlink()
+            report = verify_runtime_artifact(poisoned)
+            self.assertFalse(report.ok)
+            self.assertTrue(any("apex.discovery" in v and "absent" in v for v in report.violations), report.render())
+
+
+class TestStandaloneFromTheArtifact(_BuiltArtifactTestCase):
+    """L'application Windows (APEX.exe) embarque CET artefact : son lanceur autonome doit y être complet."""
+
+    def test_the_standalone_profile_ships_with_its_configuration(self) -> None:
+        self.assertTrue((self.artifact_dir / "apex" / "standalone" / "launcher.py").is_file())
+        self.assertTrue((self.artifact_dir / "apex" / "discovery.py").is_file())
+        self.assertTrue((self.artifact_dir / "config.standalone.yaml").is_file())
+
+    def test_the_standalone_launcher_runs_from_the_artifact_alone(self) -> None:
+        result = subprocess.run([sys.executable, "-m", "apex.standalone", "--help"], cwd=self.artifact_dir,
+                                capture_output=True, text=True, timeout=30)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("serve", result.stdout)
+        probe = subprocess.run(
+            [sys.executable, "-c", "import apex.standalone.launcher, apex.discovery, apex; print(apex.__file__)"],
+            cwd=self.artifact_dir, capture_output=True, text=True, timeout=30)
+        self.assertEqual(probe.returncode, 0, probe.stderr)
+        self.assertTrue(Path(probe.stdout.strip()).is_relative_to(self.artifact_dir.resolve()), probe.stdout)
+
+
 class TestRuntimeCliFromCleanEnvironment(_BuiltArtifactTestCase):
     """Exécute réellement `apex doctor --json` / `apex gate --json` en
     sous-processus, exécuté depuis `artifact_dir` — le dépôt DEV n'est

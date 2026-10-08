@@ -97,6 +97,7 @@ from apex.api.routes import (
     registry,
     scheduler,
     status,
+    system,
     task_runs,
 )
 from apex.api import ui
@@ -233,6 +234,7 @@ def create_app() -> FastAPI:
         agents.router, missions.router, scheduler.router, operator.router,
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, status.router, task_runs.router, memory.router, ui.api_router,
+        system.router,
         *research_routers,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])

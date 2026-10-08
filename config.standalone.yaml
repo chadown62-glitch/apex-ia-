@@ -1,0 +1,418 @@
+# ============================================================================
+# APEX AUTONOME — configuration du profil « bureau » (apex.standalone)
+# ----------------------------------------------------------------------------
+# Utilisée par l'application Windows APEX.exe (et tout poste sans WSL ni Docker) :
+# `python -m apex.standalone serve` pose APEX_CONFIG vers ce fichier. Identique à
+# config.yaml (rôles, modèles, limites de sandbox, politique) SAUF :
+#   - chemins sous APEX_HOME (données, modèles) — pas de contrainte ext4/WSL2 ;
+#   - aucun service d'infrastructure : la base est SQLite embarquée
+#     (APEX_DATABASE_URL), ni PostgreSQL, ni Redis, ni MinIO ;
+#   - Ollama reste facultatif (s'il tourne sur le poste, il est utilisé).
+# Aucun secret ici.
+# ============================================================================
+
+version: 1
+phase: 1
+
+# ----------------------------------------------------------------------------
+# Chemins — TOUS dans le système de fichiers ext4 de WSL2.
+# Un chemin sous /mnt/c/ est un échec bloquant du doctor.
+# ----------------------------------------------------------------------------
+paths:
+  data_root:  ${APEX_DATA_ROOT}
+  workspaces: ${APEX_DATA_ROOT}/workspaces
+  artifacts:  ${APEX_DATA_ROOT}/artifacts
+  logs:       ${APEX_DATA_ROOT}/logs
+
+# ----------------------------------------------------------------------------
+# ComputePool — abstraction de premier niveau dès la phase 1 (principe 6).
+# Ajouter un GPU, une machine du réseau ou un worker cloud = ajouter une entrée.
+# Le Core ne connaît que des pools ; il n'a aucune notion de « la machine ».
+# ----------------------------------------------------------------------------
+compute:
+  pools:
+    local-gpu:
+      location: local
+      trust_level: trusted        # seul un pool de confiance reçoit secrets et split HELDOUT
+      capabilities: [inference, sandbox, cpu_eval]
+      gpus:
+        - model: ${APEX_GPU_MODEL:-NVIDIA GeForce RTX 4090}
+          vram_gb: ${APEX_GPU_VRAM_GB:-24}
+      cpu_cores: ${APEX_CPU_CORES:-12}
+      ram_gb: ${APEX_RAM_GB:-48}
+      cost_per_hour: 0.0
+      # status: active (défaut) — omis ici intentionnellement. Un pool décrit
+      # une machine RÉELLEMENT disponible ; le poste utilisé pour développer
+      # APEX peut être plus modeste que ces valeurs sans que ça change quoi
+      # que ce soit à l'architecture (variables d'environnement ci-dessus).
+      #
+      # La future machine de calcul dédiée d'APEX (à construire/équiper) se
+      # déclare avec status: target — elle ne compte JAMAIS pour le fallback
+      # local obligatoire (principe 6) ni pour les comparaisons déclaré/mesuré
+      # du Gate (gate_09_vram) : le hardware de développement actuel ne doit
+      # jamais devenir un plafond architectural, et une cible ne doit jamais
+      # se faire passer pour une disponibilité actuelle. Exemple :
+      #
+      # target-apex-machine:
+      #   location: local
+      #   trust_level: trusted
+      #   status: target
+      #   capabilities: [inference, sandbox, cpu_eval]
+      #   gpus:
+      #     - model: TBD
+      #       vram_gb: 0    # à mesurer une fois la machine construite
+      #   cpu_cores: 0      # TBD
+      #   ram_gb: 0         # TBD
+      endpoints:
+        ollama: http://127.0.0.1:11434
+
+    # Exemple désactivé, laissé pour documenter la trajectoire de scale-out.
+    # Décommenter suffit : aucun code du Core ne change.
+    #
+    # cloud-burst-a:
+    #   location: cloud
+    #   trust_level: untrusted     # -> pas de secrets, pas de HELDOUT, mémoire en PROBABLE
+    #   capabilities: [inference]
+    #   gpus: [{model: A100-40G, vram_gb: 40}]
+    #   cost_per_hour: 1.60
+    #   endpoints: {vllm: "https://${BURST_HOST}/v1"}
+
+# ----------------------------------------------------------------------------
+# Modèles — ModelRef (identité logique) et ModelEndpoint (lieu d'exécution)
+# sont strictement séparés (principe 7).
+#
+# PRINCIPE 1 : `candidates[0]` est le CANDIDAT DE RÉFÉRENCE, pas un vainqueur.
+# `selection: benchmark_driven` signale que le choix devra être démontré par
+# les benchmarks à partir de la phase 17, et non hérité de ce fichier.
+# ----------------------------------------------------------------------------
+models:
+  roles:
+    coder_main:
+      selection: benchmark_driven
+      resident: false
+      notes: >
+        Candidat de référence RÉEL sur une machine à 8 Go de VRAM (RTX 4060 Ti) :
+        qwen2.5-coder:7b-instruct, déjà installé et empiriquement vérifié
+        générer réellement (voir la note du rôle « fast » ci-dessous, même
+        modèle servi). Les candidats qwen3-coder:30b-a3b-instruct/qwen3.6:27b/
+        devstral-2:22b restent dans le catalogue comme référence pour une
+        machine à 24 Go (`compute.pools.local-gpu`, valeurs par défaut avant
+        override d'environnement) — `apex.doctor.checks.services.
+        _reference_is_hardware_compatible` les marque WARN (non bloquant),
+        jamais FAIL, sur une machine dont la VRAM déclarée est réellement
+        mesurée à 8 Go (voir APEX_GPU_VRAM_GB dans .env). Le statut de
+        référence ne préjuge en rien de la supériorité d'un candidat : il
+        devra la démontrer par benchmark, une fois plusieurs candidats
+        installés sur le même matériel.
+      candidates:
+        - {family: qwen2.5-coder, version: 7b-instruct,     quantization: q4_k_m, capability_class: coder}
+        - {family: qwen3-coder,   version: 30b-a3b-instruct, quantization: q4_k_m, capability_class: coder}
+        - {family: qwen3.6,       version: 27b,              quantization: q4_k_m, capability_class: coder}
+        - {family: devstral-2,    version: 22b,              quantization: q4_k_m, capability_class: coder}
+        # Backend NATIF (06/10/2026, `runtime: transformers`) : exécuté dans le processus APEX, sans serveur
+        # de modèles ; poids à placer avec `apex models fetch` (action explicite). Seul candidat utilisable
+        # sans Ollama.
+        - {family: qwen2.5-coder, version: 1.5b-instruct,   quantization: bf16,   capability_class: coder}
+
+    reasoner:
+      selection: benchmark_driven
+      resident: false
+      notes: >
+        Aucun modèle installé ne correspond aujourd'hui proprement à ce rôle
+        sur une machine à 8 Go de VRAM : qwen3.6:27b (seul candidat déclaré)
+        n'est ni installé ni compatible avec 8 Go (VRAM déclarée 17 Go).
+        Décision délibérée : NE PAS réaffecter qwen2.5-coder:7b-instruct
+        (spécialisé code, capability_class « coder ») ni gemma4:12b
+        (capability_class « judge », VRAM déclarée 8 Go = 0 marge sur une
+        carte à 8 Go, jamais empiriquement vérifié en génération réelle pour
+        DU RAISONNEMENT — voir `docs/AGENT_HANDOFF.md`, chapitre N+21) à ce
+        rôle sans preuve : ce serait inventer une capacité de reasoning
+        (§ mission « Hardware-accurate local runtime configuration »).
+        `ollama.models` signale donc honnêtement ce rôle en WARN (candidat de
+        référence incompatible avec la VRAM mesurée), jamais un PASS fabriqué
+        — voir `apex.doctor.checks.services.check_ollama_models`.
+      candidates:
+        - {family: qwen3.6, version: 27b, quantization: q4_k_m, capability_class: generalist}
+
+    judge:
+      selection: benchmark_driven
+      resident: false
+      notes: >
+        PRINCIPE 2 : famille obligatoirement différente du coder. Deux instances
+        d'une même famille partagent leurs angles morts ; leur accord ne mesure
+        rien. Cette contrainte est vérifiée par ApexConfig.validate().
+      candidates:
+        - {family: gemma4,   version: 12b, quantization: q4_k_m, capability_class: judge}
+        - {family: gpt-oss,  version: 20b, quantization: q4_k_m, capability_class: judge}
+
+    fast:
+      selection: static_prior
+      resident: true
+      notes: >
+        Routage, classification, extraction, parsing d'erreurs. Résident.
+        qwen2.5-coder:7b-instruct (pas qwen3-coder:8b — tag inexistant dans le
+        registre Ollama réel, corrigé après vérification empirique sur une
+        RTX 4060 Ti 8 Go : téléchargé et testé, génère réellement).
+      candidates:
+        - {family: qwen2.5-coder, version: 7b-instruct, quantization: q4_k_m, capability_class: fast}
+        - {family: qwen2.5-coder, version: 1.5b-instruct, quantization: bf16, capability_class: fast}
+
+    embed:
+      selection: static_prior
+      resident: true
+      notes: Résident en permanence — sinon chaque recherche mémoire déclenche un swap.
+      candidates:
+        - {family: bge-m3, version: latest, quantization: fp16, capability_class: embed}
+
+  endpoints:
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "qwen3-coder:30b-a3b-instruct-q4_K_M", max_context: 65536, vram_gb: 18.0}
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "qwen3.6:27b-q4_K_M", max_context: 32768, vram_gb: 17.0}
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "devstral-2:22b-q4_K_M", max_context: 32768, vram_gb: 14.0}
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "gemma4:12b-q4_K_M", max_context: 16384, vram_gb: 8.0}
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "gpt-oss:20b-q4_K_M", max_context: 32768, vram_gb: 13.0}
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "qwen2.5-coder:7b-instruct", max_context: 32768, vram_gb: 5.0}
+    - {pool_id: local-gpu, runtime: ollama, url: "http://127.0.0.1:11434",
+       served_model: "bge-m3:latest", max_context: 8192, vram_gb: 0.6}
+    # Natif, en processus (apex.models.native) : `url` = répertoire des modèles, `served_model` = sous-répertoire
+    # aux fichiers Hugging Face (config.json, tokenizer, *.safetensors). GPU CUDA si réellement présent, sinon CPU.
+    - {pool_id: local-gpu, runtime: transformers, url: "file://${APEX_MODELS_DIR}",
+       served_model: "qwen2.5-coder-1.5b-instruct", max_context: 32768, vram_gb: 3.5}
+
+# ----------------------------------------------------------------------------
+# Modèles externes — PRINCIPE 3.
+# Ressource optionnelle, jamais une dépendance de la boucle autonome.
+# Toute valeur hors de la liste blanche du schéma est une erreur bloquante.
+# ----------------------------------------------------------------------------
+external:
+  enabled: ${APEX_EXTERNAL_ENABLED:-false}
+  allowed_contexts:
+    - interactive           # mode A, à la demande ou en escalade
+    - hypothesis_generation # conception de mutations et de tâches
+    - research              # recherche et comparaison de sources
+    - judge_calibration     # calibration ponctuelle du Judge local
+  daily_budget_eur: ${APEX_EXTERNAL_DAILY_EUR:-2.0}
+  monthly_budget_eur: ${APEX_EXTERNAL_MONTHLY_EUR:-30.0}
+  circuit_breaker_failures: 3
+  circuit_breaker_cooldown_s: 900
+
+# ----------------------------------------------------------------------------
+# Budget de calcul — PRINCIPE 9.
+# Le scheduler raisonne en minutes-GPU disponibles et en valeur attendue,
+# jamais en nombre fixe de tâches par nuit.
+# ----------------------------------------------------------------------------
+budget:
+  nightly_gpu_minutes: 600
+  max_experiment_gpu_minutes: 240
+  min_expected_value_to_start: 0.05   # gain attendu minimal pour engager du GPU
+  reserve_fraction: 0.15              # marge conservée pour le mode interactif
+
+# ----------------------------------------------------------------------------
+# Sandbox — valeurs par défaut. PRINCIPE 4 : jamais d'accès réseau direct.
+# ----------------------------------------------------------------------------
+sandbox:
+  provider: docker
+  network: none
+  cpu_limit: 2.0
+  memory_mb: 4096
+  pids_limit: 256
+  timeout_s: 900
+  read_only_rootfs: true
+  required_isolation_for_red_team: gvisor_or_dedicated_host
+  # Image OCI utilisée par ContainerSandbox (apex/sandbox/container.py) quand
+  # les namespaces Linux directs ne sont pas disponibles sur l'hôte. Fournit
+  # python3 (requis par apex.missions.workloads) ; version pinée, jamais
+  # "latest". Voir apex.config.schema.SandboxDefaults.container_image.
+  container_image: python:3.12-slim
+
+# ----------------------------------------------------------------------------
+# Langages — PRINCIPE 11 : C++ en vague 2, métriques séparées.
+# ----------------------------------------------------------------------------
+languages:
+  python:
+    wave: 1
+    image: python:3.12-slim
+    oracle_strength: strong
+    separate_metrics: false
+    commands: {install: "uv sync", lint: "ruff check .", types: "mypy .",
+               test: "pytest -q", coverage: "coverage run -m pytest",
+               mutation: "mutmut run", bench: "pytest --benchmark-only"}
+  rust:
+    wave: 1
+    image: rust:1-slim
+    oracle_strength: very_strong
+    separate_metrics: false
+    commands: {build: "cargo build", lint: "cargo clippy -- -D warnings",
+               test: "cargo test", coverage: "cargo llvm-cov",
+               mutation: "cargo mutants", bench: "cargo bench"}
+  typescript:
+    wave: 1
+    image: node:22-slim
+    oracle_strength: medium
+    separate_metrics: false
+    commands: {install: "pnpm install", lint: "eslint .", types: "tsc --noEmit",
+               test: "vitest run", coverage: "vitest run --coverage",
+               mutation: "stryker run", bench: "tinybench"}
+  cpp:
+    wave: 2
+    image: silkeh/clang:18
+    oracle_strength: medium
+    separate_metrics: true      # temps de compilation et variance de mutation
+    commands: {build: "cmake --build build", lint: "clang-tidy",
+               test: "ctest --output-on-failure", coverage: "llvm-cov report",
+               mutation: "mull-runner", bench: "./bench"}
+
+# ----------------------------------------------------------------------------
+# Politique du Hardware Gate.
+# Consommee par GATE-21 : ces seuils ne sont pas decoratifs.
+# ----------------------------------------------------------------------------
+gate:
+  compose_memory:
+    # Ratio = somme des LIMITES memoire Compose / RAM visible de l'hote.
+    # Les reservations sont exclues : elles ne plafonnent rien.
+    warn_ratio: 0.75          # au-dela : DEGRADED, plus de marge pour l'hote
+    fail_ratio: 1.00          # au-dela : FAIL, sur-allocation certaine
+    expect_memory_limits: true  # un service sans limite est un plafond inconnu
+  hardware:
+    # Seuils RECOMMANDÉS pour ce déploiement — pas une limite universelle
+    # d'APEX (voir apex.config.schema.HardwareThresholds). Un poste de
+    # développement en dessous de ces valeurs déclenche DEGRADED/WARN sur les
+    # checks concernés (GATE-11/12/13, doctor fs.space/gpu.present), jamais
+    # une désactivation de fonctionnalité : abaisser ces seuils ici est le
+    # bon geste pour un poste de dev modeste, plutôt que de modifier le code.
+    # Valeurs identiques aux défauts précédemment codés en dur — rien ne
+    # change tant que cette section n'est pas éditée.
+    min_free_disk_gb: 150
+    min_ram_gb: 24
+    min_vram_gb: 20
+    min_cpu_threads: 8
+    # Réserve proportionnelle retenue avant de juger un modèle de référence
+    # compatible avec la VRAM totale d'un pool (contexte CUDA/runtime/OS —
+    # jamais entièrement disponible pour les poids du modèle). Voir
+    # apex.doctor.checks.services._reference_is_hardware_compatible.
+    vram_headroom_fraction: 0.10
+
+# ----------------------------------------------------------------------------
+# Scheduler (étape 8) — max_concurrent_missions est un choix de déploiement,
+# jamais dérivé du matériel de développement actuel (même discipline que
+# gate.hardware ci-dessus). Une seule instance de SchedulerService applique
+# cette borne localement ; voir apex.config.schema.SchedulerPolicy pour la
+# limite honnête sur plusieurs instances simultanées.
+# ----------------------------------------------------------------------------
+scheduler:
+  max_concurrent_missions: 2
+
+# Politique de récupération de mission (N+26) — apex.recovery.policy.decide.
+# max_attempts borne TOUTES les catégories, quelle que soit la décision ;
+# resource_exhausted_max_retries est plus strict (retenter avec les mêmes
+# limites de ressources n'a de chance raisonnable qu'une fois).
+recovery:
+  max_attempts: 3
+  resource_exhausted_max_retries: 1
+
+# ----------------------------------------------------------------------------
+# Autonomous Learning Trigger (passe « Autonomous Learning Trigger + Scheduler/
+# CLI Execution Path ») — déclenchement automatique d'un cycle
+# apex.metalearner.cycle.run_experiment_cycle par apex.metalearner.
+# autonomous_scheduler.AutonomousLearningScheduler.
+#
+# `enabled: false` par défaut — EXIGENCE DE SÉCURITÉ EXPLICITE : installer ou
+# mettre à jour APEX ne doit jamais démarrer un apprentissage autonome de
+# façon inattendue. Un opérateur humain doit l'activer explicitement, ici ou
+# via APEX_AUTONOMOUS_LEARNING_ENABLED=1.
+#
+# `max_concurrent_cycles` documente honnêtement la limite réelle du code (UN
+# seul cycle actif à la fois par processus, voir apex.config.schema.
+# AutonomousLearningPolicy) — toute autre valeur est rejetée à la validation
+# plutôt que silencieusement ignorée.
+# ----------------------------------------------------------------------------
+autonomous_learning:
+  enabled: ${APEX_AUTONOMOUS_LEARNING_ENABLED:-false}
+  interval_s: ${APEX_AUTONOMOUS_LEARNING_INTERVAL_S:-3600}
+  max_concurrent_cycles: 1
+  specialty: ${APEX_AUTONOMOUS_LEARNING_SPECIALTY:-research}
+  current_level: 1
+  method: practice
+  split: train
+
+# ----------------------------------------------------------------------------
+# Population / Evolution (passe « Real Clone Population + Evolution Loop »)
+# — plafonds de la boucle Population -> Selection -> Clone/Genome ->
+# Experiment -> Fitness -> Selection -> Mutation -> nouvelle génération
+# (apex.evolution.service.PopulationEvolutionService). Valeurs prudentes par
+# défaut (§15/§16 de la mission) — aucune concurrence, aucune explosion de
+# population par défaut.
+# ----------------------------------------------------------------------------
+population:
+  max_population_size: 8
+  generation_size: 3
+  elite_size: 2
+  enable_crossover: true
+  # Plafond administrateur sur le nombre de générations qu'une session
+  # d'apprentissage multi-génération peut demander (passe « Autonomous
+  # Multi-Generation Learning Orchestrator ») — un appelant fournit
+  # toujours un nombre explicite, jamais une boucle non bornée.
+  max_session_generations: 20
+
+# ----------------------------------------------------------------------------
+# Gauntlet / Judge System (passe « Strict Judge System + Gauntlet Learning
+# Loop ») — seuils de l'agrégation stricte multi-juges
+# (apex.metalearner.gauntlet). `protocol_version` n'apparaît PAS ici : c'est
+# une constante de code (apex.metalearner.judge_model.
+# GAUNTLET_PROTOCOL_VERSION), jamais un réglage admin. Valeurs prudentes par
+# défaut — un score élevé à faible confiance ne doit jamais suffire (§10 de
+# la mission).
+# ----------------------------------------------------------------------------
+gauntlet:
+  min_confidence_threshold: 0.6
+  efficiency_reject_threshold: 0.9
+  major_regression_factor: 2.0
+  enable_expensive_judges: true
+
+# ----------------------------------------------------------------------------
+# Curriculum Budget (passe « Universal Task + Curriculum Engine », N+11) —
+# plafonds explicites du CurriculumEngine (apex.metalearner.curriculum_plan)
+# — jamais dépassés, un excédent est tronqué déterministiquement (priorité
+# la plus faible éliminée en premier). Valeurs prudentes par défaut, même
+# discipline que population/gauntlet ci-dessus.
+# ----------------------------------------------------------------------------
+curriculum_budget:
+  max_tasks_per_generation: 20
+  max_adversarial_per_generation: 8
+  max_heldout_per_generation: 4
+  max_bug_farm_per_generation: 5
+  max_generation_cost_s: 3600.0
+
+# ----------------------------------------------------------------------------
+# Model Router (passe « Adaptive Model Router V1 ») — poids du score de
+# apex.routing.router.select_model. capability_match_weight/
+# local_preference_weight reproduisent exactement le score déjà en
+# production avant cette passe (base 1.0 + préférence locale 0.5) ;
+# reliability_weight/latency_weight ne s'activent que pour un modèle ayant
+# un historique réel d'AgentExecution (voir apex.config.schema.
+# RouterScoringPolicy pour la justification complète de chaque poids —
+# jamais une valeur choisie pour « avoir l'air intelligent »).
+# ----------------------------------------------------------------------------
+routing:
+  capability_match_weight: 1.0
+  local_preference_weight: 0.5
+  reliability_weight: 0.3
+  latency_weight: 0.2
+  capacity_risk_weight: 0.4
+  # Règle de succession de Laplace : 1 succès isolé ne surclasse plus un
+  # dossier de 9 succès sur 10 (voir RouterScoringPolicy).
+  reliability_prior_strength: 2.0
+  # Un modèle en échec passe sous un modèle jamais essayé (voir RouterScoringPolicy).
+  reliability_relative_to_prior: true
+
+# ----------------------------------------------------------------------------
+# Services d'infrastructure locaux
+# ----------------------------------------------------------------------------
+services:
+  # Profil autonome : base SQLite embarquée (APEX_DATABASE_URL) ; ni PostgreSQL, ni Redis, ni MinIO.
+  ollama:   {host: 127.0.0.1, port: 11434, required: false}

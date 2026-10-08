@@ -98,10 +98,54 @@ def schema_state(engine: Any) -> SchemaState:
 
 
 def upgrade_to_head() -> None:
-    """`alembic upgrade head` — exactement la commande documentée, appliquée en processus."""
+    """`alembic upgrade head` — exactement la commande documentée, appliquée en processus. Base SQLite
+    (profil autonome) : `sync_sqlite_schema` (les migrations portent des rôles et droits PostgreSQL)."""
     from alembic import command
 
+    engine = engine_from_environment()
+    if engine.dialect.name == "sqlite":
+        sync_sqlite_schema(engine)
+        return
     command.upgrade(_alembic_config(), "head")
+
+
+def sync_sqlite_schema(engine: Any) -> list[str]:
+    """Schéma d'une base SQLite (profil autonome `apex.standalone`) aligné sur CE code, SANS les migrations
+    Alembic — qui créent des rôles et des droits PostgreSQL (`GRANT`/`REVOKE`) sans équivalent SQLite.
+
+    Vers l'avant uniquement, jamais destructeur : tables manquantes créées depuis les modèles, colonnes
+    manquantes ajoutées (`ALTER TABLE ADD COLUMN` ; une colonne non nulle sans défaut serait refusée, jamais
+    inventée), puis la révision `alembic_version` est posée à la tête de CE code — `schema_state` lit donc
+    l'état exactement comme pour PostgreSQL (une base d'une version antérieure apparaît « en retard » et est
+    mise à niveau au démarrage). Renvoie les colonnes ajoutées."""
+    from sqlalchemy import inspect, text
+
+    from apex.db.models import Base
+
+    if engine.dialect.name != "sqlite":
+        raise ValueError("sync_sqlite_schema : base SQLite seulement")
+    Base.metadata.create_all(engine)
+    inspector = inspect(engine)
+    added: list[str] = []
+    with engine.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                if not column.nullable and column.server_default is None:
+                    raise RuntimeError(f"colonne non nulle sans défaut {table.name}.{column.name} : "
+                                       "mise à niveau SQLite impossible sans migration explicite")
+                ddl = (f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" '
+                       f"{column.type.compile(dialect=engine.dialect)}")
+                connection.execute(text(ddl))
+                added.append(f"{table.name}.{column.name}")
+        connection.execute(text("CREATE TABLE IF NOT EXISTS alembic_version "
+                                "(version_num VARCHAR(32) NOT NULL PRIMARY KEY)"))
+        connection.execute(text("DELETE FROM alembic_version"))
+        connection.execute(text("INSERT INTO alembic_version (version_num) VALUES (:head)"),
+                           {"head": head_revision()})
+    return added
 
 
 def engine_from_environment() -> Any:
@@ -109,9 +153,6 @@ def engine_from_environment() -> Any:
     import os
 
     from apex.config.loader import load_config
-    from apex.db.engine import build_engine, database_url_from_config
+    from apex.db.engine import build_engine, resolve_database_url
 
-    url = os.environ.get("APEX_DATABASE_URL") or database_url_from_config(
-        load_config(os.environ.get("APEX_CONFIG"))
-    )
-    return build_engine(url)
+    return build_engine(resolve_database_url(load_config(os.environ.get("APEX_CONFIG"))))

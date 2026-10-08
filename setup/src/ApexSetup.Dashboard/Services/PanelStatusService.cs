@@ -33,7 +33,15 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         host.ReadHomeFileAsync(LastDistro ?? (string.IsNullOrWhiteSpace(settings.WslDistro) ? null : settings.WslDistro.Trim()),
             BackendLauncher.LaunchLog, cancellationToken);
 
-    public HostKind HostKind => host is LocalBackendHost ? HostKind.Local : HostKind.Wsl;
+    public HostKind HostKind => host switch
+    {
+        NativeBackendHost => HostKind.Native,
+        LocalBackendHost => HostKind.Local,
+        _ => HostKind.Wsl,
+    };
+
+    /// <summary>Mode Windows natif : le runtime APEX de ce poste ; <c>null</c> dans les modes WSL et Linux.</summary>
+    public NativeRuntime? NativeRuntime => (host as NativeBackendHost)?.Runtime;
 
     private readonly Func<DateTimeOffset> _clock = clock ?? (() => DateTimeOffset.Now);
 
@@ -109,13 +117,7 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         {
             port = record.Port;
             address = BackendDiscovery.ReachableHost(record.Host);
-            var cmdline = await host.ReadFileAsync(distroForReads, $"/proc/{record.Pid}/cmdline", cancellationToken).ConfigureAwait(false);
-            alive = cmdline.Kind switch
-            {
-                FileReadKind.Ok => (cmdline.Content ?? string.Empty).Contains("apex", StringComparison.OrdinalIgnoreCase),
-                FileReadKind.NotFound => false,
-                _ => null,
-            };
+            alive = await host.BackendProcessAliveAsync(distroForReads, record.Pid, cancellationToken).ConfigureAwait(false);
             token = TokenRead.FromFile(
                 await host.ReadFileAsync(distroForReads, BackendDiscovery.TokenPath(record), cancellationToken).ConfigureAwait(false));
             if (token.Value is { } secret)

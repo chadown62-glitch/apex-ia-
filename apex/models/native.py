@@ -46,6 +46,12 @@ def weights_dir(endpoint: ModelEndpoint) -> Path | None:
     return base / name
 
 
+def _standalone() -> bool:
+    from apex.standalone import is_standalone
+
+    return is_standalone()
+
+
 def _libraries() -> str | None:
     """`None` si torch et transformers sont importables, sinon la raison."""
     try:
@@ -109,7 +115,8 @@ class NativeTransformersProvider(ModelProvider):
         if missing_lib is not None:
             return ModelCapabilityReport(
                 status=CapabilityStatus.UNAVAILABLE_ON_DEV, backend=BACKEND,
-                detail=f"bibliothèques d'inférence absentes ({missing_lib}) — installer l'extra « native »",
+                detail=f"bibliothèques d'inférence absentes ({missing_lib}) — " + (
+                    "« Préparer APEX » dans le Panel les installe" if _standalone() else "installer l'extra « native »"),
                 facts={"libraries": False},
             )
         path = weights_dir(self._endpoint)
@@ -123,10 +130,12 @@ class NativeTransformersProvider(ModelProvider):
         has_tokenizer = any((path / f).is_file() for f in _TOKENIZER_FILES)
         has_weights = any(path.glob("*.safetensors")) or any(path.glob("*.bin"))
         if absent or not has_tokenizer or not has_weights:
+            remedy = ("« Installer le modèle » dans le Panel APEX (action explicite, réseau)" if _standalone()
+                      else "`apex models fetch` (action explicite, réseau)")
             return ModelCapabilityReport(
                 status=CapabilityStatus.UNAVAILABLE_ON_DEV, backend=BACKEND,
                 detail=(f"poids absents ou incomplets dans {path} (config : {not absent}, tokenizer : "
-                        f"{has_tokenizer}, poids : {has_weights}) — `apex models fetch` (action explicite, réseau)"),
+                        f"{has_tokenizer}, poids : {has_weights}) — {remedy}"),
                 facts={"path": str(path), "present": False},
             )
         import torch

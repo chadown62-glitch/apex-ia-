@@ -366,3 +366,26 @@ propres FAIL, par exemple `host.cgroups`).
 **Point ouvert (non modifié)** : `phase_2_authorized` ignore `blocks_phases` — un FAIL qui ne bloque que la
 phase 21 (GATE-14, Red Team) refuse aussi la phase 2. C'est une question de feuille de route, pas de
 démarrage ; à trancher par le propriétaire.
+
+## 11. Profil AUTONOME (application Windows `APEX.exe`, `APEX_PROFILE=standalone`)
+
+APEX autonome tourne sur le poste, sans WSL2, sans Docker, sans PostgreSQL ni Redis : base SQLite embarquée,
+modèle natif en processus, données sous `APEX_HOME` (`apex/standalone/`). Le profil est posé EXPLICITEMENT par
+son lanceur (`python -m apex.standalone serve`), jamais deviné ; sans lui, rien ne change (profil serveur).
+
+| Contrôle | Profil serveur (inchangé) | Profil autonome |
+|---|---|---|
+| GATE-02 | Linux/WSL2 exigé (FAIL sous Windows) | hôte réel mesuré : Windows ou Linux = PASS ; autre = FAIL |
+| GATE-06 | Docker exigé (précondition) | mesuré ; absent ou injoignable = DEGRADED (base embarquée : non requis) ; rôle C |
+| GATE-14 | cgroups v2 absent = FAIL | absent = DEGRADED (infrastructure de la phase 21, sans objet pour démarrer) ; rôle C |
+| GATE-16 | git et PyYAML durs | PyYAML seul dur (aucune mise à jour de dépôt par APEX.exe) |
+| GATE-19 | isolation insuffisante = FAIL (précondition) | backend réellement sélectionnable sondé (Windows : AppContainer + Job Object, puis Docker) ; sans isolation constatée = DEGRADED « exécution de code DÉSACTIVÉE » ; rôle C |
+| GATE-21 | fichier Compose analysé | UNKNOWN `not_applicable` (aucun service conteneurisé) ; rôle C |
+
+Aucun contrôle n'est déclaré réussi sans mesure. Les règles du démarrage (§10) sont inchangées : un FAIL mesuré
+bloque toujours, une mesure SIMULATED bloque toujours. GATE-19 suit la même logique que GATE-17 : sa garantie
+est revérifiée **à chaque exécution**, en refus par défaut (`SandboxProvider.execute` lève
+`IsolationUnavailable` sans isolation constatée par sonde). Sans isolation, APEX autonome démarre (conversation,
+mémoire, interface), mais **aucun code n'est exécuté** — ce que GATE-19 et la ligne « Sandbox » de l'état disent.
+Le Doctor applique la même logique (`apex/doctor/checks/standalone.py`) : contrôles d'infrastructure serveur en
+SKIP avec leur raison, base embarquée vérifiée (`database.local`).

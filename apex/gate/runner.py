@@ -68,6 +68,7 @@ def run_gate(
         probe_is_real=probe_is_real,
         exceptions=load_exceptions(exceptions_path),
         machine_label=os.environ.get("APEX_MACHINE_LABEL", ""),
+        profile=ctx.profile,
     )
 
 

@@ -87,7 +87,17 @@ def run_checks(
     started = time.perf_counter()
     results: list[CheckResult] = []
 
-    for name, func in checks if checks is not None else ALL_CHECKS:
+    if checks is None:
+        checks = ALL_CHECKS
+    from apex.standalone import is_standalone
+
+    if is_standalone():
+        # Profil autonome (APEX.exe) : contrôles d'infrastructure serveur « sans objet », base embarquée
+        # vérifiée à la place — voir apex.doctor.checks.standalone.
+        from apex.doctor.checks.standalone import profile_checks
+
+        checks = profile_checks(tuple(checks))
+    for name, func in checks:
         check_start = time.perf_counter()
         try:
             outcome = func(ctx)

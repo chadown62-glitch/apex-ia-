@@ -4,6 +4,8 @@ namespace ApexSetup.Dashboard.Models;
 public enum ComponentKey
 {
     Wsl,
+    /// <summary>Mode Windows natif : Python et bibliothèques d'APEX préparés sur ce poste (remplace la ligne WSL).</summary>
+    Runtime,
     Backend,
     Api,
     Database,
@@ -32,6 +34,7 @@ public static class ComponentKeys
     public static string Label(ComponentKey key) => key switch
     {
         ComponentKey.Wsl => "WSL",
+        ComponentKey.Runtime => "Runtime",
         ComponentKey.Backend => "Backend",
         ComponentKey.Api => "API",
         ComponentKey.Database => "Database",

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Build de la distribution Windows du Panel APEX : APEX-Setup-x64-v<version>.exe + SHA256 + manifeste
-# + journal de build. Réutilise publish_dashboard.sh (publication + contrôles) et ApexSetup.iss.
+# Build de la distribution Windows d'APEX : APEX-Setup-x64-v<version>.exe + SHA256 + manifeste + journal de
+# build. Réutilise publish_dashboard.sh (Panel : publication + contrôles), runtime_build (application APEX :
+# artefact Runtime, sans l'extension Recherche, vérifié) et ApexSetup.iss.
 #
 # Usage : setup/packaging/build_desktop_release.sh [dossier de sortie]   (défaut : setup/dist/desktop)
 # Compilateur : $ISCC s'il est défini (ex. "C:/Program Files (x86)/Inno Setup 6/ISCC.exe" sous
@@ -26,7 +27,7 @@ started=$(date +%s)
 
 log "APEX Desktop $VERSION (protocole Panel $PROTOCOL)"
 COMMIT=$(git -C "$REPO_ROOT" rev-parse HEAD)
-DIRTY=$([[ -n "$(git -C "$REPO_ROOT" status --porcelain -- setup apex scripts)" ]] && echo true || echo false)
+DIRTY=$([[ -n "$(git -C "$REPO_ROOT" status --porcelain -- setup apex scripts runtime_build migrations frontend config.standalone.yaml alembic.ini)" ]] && echo true || echo false)
 log "commit $COMMIT (modifications non commitées dans setup/apex/scripts : $DIRTY)"
 
 # 1. Publication + contrôles (PE, aucun .pdb, aucun chemin de développement)
@@ -37,6 +38,26 @@ PUBLISH_DIR="$OUT/publish/apex-dashboard-${VERSION}-win-x64"
 SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(git -C "$REPO_ROOT" log -1 --format=%ct)}"
 find "$PUBLISH_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 log "dates des fichiers publiés ramenées à SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"
+
+# 1b. Application APEX (mode Windows natif du Panel) : l'artefact APEX Runtime de CE commit (git archive ; arbre
+#     de travail seulement s'il a des modifications non commitées — le manifeste le dit), vérifié : aucune fuite
+#     de l'extension Recherche, aucun module importé absent. Plus l'interface web reconstruite (frontend/dist
+#     n'est pas versionné) et la description figée du runtime (Python par empreinte, bibliothèques par empreintes).
+PY="$REPO_ROOT/.venv/bin/python"; [[ -x "$PY" ]] || PY=python3
+APP_DIR="$OUT/app"
+if [[ "$DIRTY" == "true" ]]; then RT_SOURCE=(--source worktree); else RT_SOURCE=(--source commit --commit "$COMMIT"); fi
+(cd "$REPO_ROOT" && "$PY" -m runtime_build.build "${RT_SOURCE[@]}" --out "$APP_DIR")
+log "interface web : npm ci + npm run build (frontend/)"
+(cd "$REPO_ROOT/frontend" && npm ci --no-audit --no-fund --loglevel=error && npm run build --silent) >/dev/null
+rm -rf "$APP_DIR/frontend_dist"
+cp -r "$REPO_ROOT/frontend/dist" "$APP_DIR/frontend_dist"
+[[ -f "$APP_DIR/frontend_dist/index.html" ]] || { log "ERREUR : interface web non construite"; exit 1; }
+mkdir -p "$APP_DIR/runtime"
+cp "$SCRIPT_DIR/runtime/python-runtime.json" "$SCRIPT_DIR/runtime/requirements-windows.lock" "$APP_DIR/runtime/"
+(cd "$REPO_ROOT" && "$PY" -m runtime_build.verify "$APP_DIR") || { log "ERREUR : artefact Runtime refusé par runtime_build.verify"; exit 1; }
+find "$APP_DIR" -name __pycache__ -prune -exec rm -rf {} +
+find "$APP_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
+log "application APEX : $(du -sh "$APP_DIR" | cut -f1) ($(find "$APP_DIR" -type f | wc -l) fichiers), artefact $(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print('release ' + m['source_commit'][:12] if m.get('release') else 'VALIDATION (arbre de travail)')" "$APP_DIR/RUNTIME_BUILD_MANIFEST.json")"
 
 # 2. Compilateur
 if [[ -n "${ISCC:-}" ]]; then
@@ -60,7 +81,7 @@ fi
 log "compilateur : $COMPILER"
 
 # 3. Installateur
-"${ISCC_CMD[@]}" /Qp "/DApexVersion=$VERSION" "/DPublishDir=$(to_win "$PUBLISH_DIR")" \
+"${ISCC_CMD[@]}" /Qp "/DApexVersion=$VERSION" "/DPublishDir=$(to_win "$PUBLISH_DIR")" "/DAppDir=$(to_win "$APP_DIR")" \
   "/DIconFile=$(to_win "$SETUP_ROOT/src/ApexSetup.Dashboard/Assets/apex.ico")" \
   "/O$(to_win "$OUT")" "$(to_win "$SCRIPT_DIR/ApexSetup.iss")"
 INSTALLER="$OUT/APEX-Setup-x64-v${VERSION}.exe"
@@ -71,9 +92,9 @@ log "installateur : $(basename "$INSTALLER") — $kind"
 
 # 4. Empreintes + manifeste
 (cd "$OUT" && sha256sum "$(basename "$INSTALLER")" > "$(basename "$INSTALLER").sha256")
-python3 - "$OUT" "$INSTALLER" "$PUBLISH_DIR" "$VERSION" "$PROTOCOL" "$COMMIT" "$DIRTY" "$COMPILER" <<'PY'
+python3 - "$OUT" "$INSTALLER" "$PUBLISH_DIR" "$VERSION" "$PROTOCOL" "$COMMIT" "$DIRTY" "$COMPILER" "$APP_DIR" <<'PY'
 import hashlib, json, os, platform, subprocess, sys, datetime
-out, installer, publish, version, protocol, commit, dirty, compiler = sys.argv[1:9]
+out, installer, publish, version, protocol, commit, dirty, compiler, app = sys.argv[1:10]
 def sha(p):
     h = hashlib.sha256()
     with open(p, "rb") as f:
@@ -83,7 +104,7 @@ def sha(p):
 files = sorted(os.path.relpath(os.path.join(d, n), publish) for d, _, ns in os.walk(publish) for n in ns)
 dotnet = subprocess.run(["dotnet", "--version"], capture_output=True, text=True).stdout.strip()
 manifest = {
-    "product": "APEX Desktop (Panel APEX.exe)",
+    "product": "APEX (APEX.exe : Panel + application APEX autonome)",
     "version": version,
     "panel_protocol": int(protocol),
     "architecture": "win-x64",
@@ -93,6 +114,13 @@ manifest = {
         "assembly": {"file": "APEX.dll", "sha256": sha(os.path.join(publish, "APEX.dll"))},
         "files": len(files),
         "bytes": sum(os.path.getsize(os.path.join(publish, f)) for f in files),
+    },
+    "application": {
+        "runtime_artifact": {k: json.load(open(os.path.join(app, "RUNTIME_BUILD_MANIFEST.json"))).get(k)
+                             for k in ("release", "source", "source_commit", "head_commit", "content_hash_sha256")},
+        "python_runtime": json.load(open(os.path.join(app, "runtime", "python-runtime.json")))["python"],
+        "requirements_lock_sha256": sha(os.path.join(app, "runtime", "requirements-windows.lock")),
+        "files": sum(len(ns) for _, _, ns in os.walk(app)),
     },
     "install": {"scope": "utilisateur courant, sans administrateur", "directory": "%LOCALAPPDATA%\\Programs\\APEX",
                 "shortcuts": ["Bureau\\APEX.lnk", "Menu Démarrer\\APEX.lnk"]},

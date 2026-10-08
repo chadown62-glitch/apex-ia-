@@ -144,7 +144,22 @@ STARTUP_ROLES: dict[str, StartupRole] = {
 RUNTIME_ENFORCED: frozenset[str] = frozenset({"GATE-17"})
 
 
-def startup_role(check_id: str) -> StartupRole:
+#: Profil AUTONOME (`apex.standalone`, application `APEX.exe`) : Docker, Compose et cgroups sont
+#: l'infrastructure du profil serveur (base, cache et isolation conteneurisés) — mesurés et affichés, jamais
+#: exigés pour démarrer. GATE-19 (isolation) y est une capacité revérifiée à CHAQUE exécution, en refus par
+#: défaut (`SandboxProvider.execute` lève `IsolationUnavailable` sans isolation prouvée), exactement comme
+#: GATE-17 : sans elle APEX démarre, mais aucun code n'est exécuté. Voir docs/PHASE_1_GATE.md §11.
+STANDALONE_ROLE_OVERRIDES: dict[str, StartupRole] = {
+    "GATE-06": StartupRole.OPTIONAL_CAPABILITY,
+    "GATE-14": StartupRole.OPTIONAL_CAPABILITY,
+    "GATE-19": StartupRole.OPTIONAL_CAPABILITY,
+    "GATE-21": StartupRole.OPTIONAL_CAPABILITY,
+}
+
+
+def startup_role(check_id: str, profile: str = "server") -> StartupRole:
+    if profile == "standalone" and check_id in STANDALONE_ROLE_OVERRIDES:
+        return STANDALONE_ROLE_OVERRIDES[check_id]
     return STARTUP_ROLES.get(check_id, StartupRole.PRECONDITION)
 
 
@@ -155,6 +170,8 @@ class EnvironmentReport:
     exceptions: tuple[GateException, ...] = ()
     generated_at: float = field(default_factory=time.time)
     machine_label: str = ""
+    #: « server » (défaut, WSL2/Linux + Docker) ou « standalone » (APEX autonome) — décide des rôles de démarrage.
+    profile: str = "server"
 
     # -- agrégation --------------------------------------------------------
 
@@ -241,7 +258,8 @@ class EnvironmentReport:
         return tuple(
             c for c in self._not_conclusive()
             if c.check_id not in self.excused
-            and (c.status is not GateStatus.UNKNOWN or startup_role(c.check_id) is StartupRole.PRECONDITION)
+            and (c.status is not GateStatus.UNKNOWN
+                 or startup_role(c.check_id, self.profile) is StartupRole.PRECONDITION)
         )
 
     @property
@@ -326,7 +344,7 @@ class EnvironmentReport:
                 ],
                 "unverified": [
                     {"check_id": c.check_id, "reason": c.unknown_reason or None,
-                     "role": startup_role(c.check_id).value}
+                     "role": startup_role(c.check_id, self.profile).value}
                     for c in self.startup_unverified
                 ],
             },

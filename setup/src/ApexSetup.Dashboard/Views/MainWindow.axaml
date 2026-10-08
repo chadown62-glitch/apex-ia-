@@ -25,6 +25,13 @@
             </Border>
 
             <!-- Actions : toujours sur un geste de l'utilisateur ; démarrage = launch.sh (Startup Gate compris). -->
+            <!-- Mode Windows natif : préparation unique du runtime puis du modèle (téléchargements vérifiés, sur un clic). -->
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8" IsVisible="{Binding IsNative}">
+                <Button Name="PrepareButton" Content="Préparer APEX" Command="{Binding PrepareCommand}" FontWeight="SemiBold" />
+                <Button Name="InstallModelButton" Content="Installer le modèle" Command="{Binding InstallModelCommand}" />
+                <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding IsBusyPreparing}" VerticalAlignment="Center" />
+            </StackPanel>
+
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
                 <Button Name="StartButton" Content="Démarrer APEX" Command="{Binding StartCommand}" FontWeight="SemiBold" />
                 <Button Name="StopButton" Content="Arrêter APEX" Command="{Binding StopCommand}" />
@@ -36,7 +43,7 @@
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,12">
                 <Button Content="Rafraîchir" Command="{Binding RefreshCommand}" />
                 <Button Content="Diagnostic" Command="{Binding ShowDiagnosticCommand}" />
-                <Button Content="Paramètres" Command="{Binding OpenSettingsCommand}" />
+                <Button Content="Paramètres" Command="{Binding OpenSettingsCommand}" IsVisible="{Binding IsWslSettingsVisible}" />
                 <TextBlock VerticalAlignment="Center" Opacity="0.7">
                     <Run Text="Dernière vérification : " /><Run Text="{Binding LastChecked}" />
                     <Run Text=" · mise à jour automatique toutes les 5 s" />
@@ -89,6 +96,21 @@
                     <TextBox Name="DiagnosticBox" Text="{Binding DiagnosticText}" IsReadOnly="True" TextWrapping="Wrap"
                              FontFamily="Consolas,Monospace" FontSize="12" AcceptsReturn="True" />
                 </DockPanel>
+            </Border>
+        </Border>
+
+        <!-- Fermeture alors qu'APEX tourne (mode natif) : jamais un processus laissé en arrière-plan sans le dire. -->
+        <Border IsVisible="{Binding IsClosePromptVisible}" Background="#DD1E1E1E">
+            <Border Width="520" Background="#FF2A2A2A" CornerRadius="6" Padding="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="APEX tourne encore" FontSize="18" FontWeight="Bold" />
+                    <TextBlock TextWrapping="Wrap" Text="Fermer cette fenêtre n'arrête pas APEX : son interface reste ouverte dans le navigateur et les tâches en cours continuent. Voulez-vous l'arrêter proprement ?" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Name="StopAndQuitButton" Content="Arrêter APEX et quitter" Command="{Binding StopAndQuitCommand}" FontWeight="SemiBold" />
+                        <Button Content="Laisser APEX tourner" Command="{Binding QuitLeavingRunningCommand}" />
+                        <Button Content="Annuler" Command="{Binding CancelCloseCommand}" />
+                    </StackPanel>
+                </StackPanel>
             </Border>
         </Border>
 

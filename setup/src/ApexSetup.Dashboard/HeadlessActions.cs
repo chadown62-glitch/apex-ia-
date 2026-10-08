@@ -27,7 +27,9 @@ public static class HeadlessActions
         }
         var (root, source) = settings.EffectiveProjectRoot();
         var distro = string.IsNullOrWhiteSpace(settings.WslDistro) ? null : settings.WslDistro.Trim();
-        composition.Log.Log($"[--start] démarrage d'APEX — dossier « {root} » ({source}) : launch.sh {BackendLauncher.StartCommand}.");
+        composition.Log.Log(composition.Control.Launcher.Native is not null
+            ? "[--start] démarrage d'APEX — python -m apex.standalone serve."
+            : $"[--start] démarrage d'APEX — dossier « {root} » ({source}) : launch.sh {BackendLauncher.StartCommand}.");
         var (attempt, exited) = composition.Control.Launcher.Start(distro, root, DateTimeOffset.Now);
         var limit = TimeSpan.FromSeconds(int.TryParse(Environment.GetEnvironmentVariable("APEX_PANEL_START_TIMEOUT_S"), out var s) && s > 0 ? s : 900);
         var started = DateTimeOffset.Now;
@@ -36,7 +38,7 @@ public static class HeadlessActions
             if (attempt.Running && exited.IsCompleted)
             {
                 attempt = attempt with { ExitCode = exited.Result };
-                composition.Log.Log($"[--start] launch.sh s'est terminé (code {attempt.ExitCode}).");
+                composition.Log.Log($"[--start] le démarrage s'est terminé (code {attempt.ExitCode}).");
             }
             snapshot = await composition.Status.MeasureAsync(settings, launch: attempt).ConfigureAwait(false);
             var elapsed = DateTimeOffset.Now - started;
@@ -63,11 +65,13 @@ public static class HeadlessActions
         var access = composition.Status.LastAccess;
         var root = access?.ProjectRoot ?? settings.EffectiveProjectRoot().Path;
         var distro = access?.Distro ?? (string.IsNullOrWhiteSpace(settings.WslDistro) ? null : settings.WslDistro.Trim());
-        composition.Log.Log($"[--stop] arrêt d'APEX — dossier « {root} » : launch.sh {BackendLauncher.StopCommand}.");
+        var native = composition.Control.Launcher.Native is not null;
+        composition.Log.Log(native ? "[--stop] arrêt d'APEX — python -m apex.standalone stop."
+            : $"[--stop] arrêt d'APEX — dossier « {root} » : launch.sh {BackendLauncher.StopCommand}.");
         var result = await composition.Control.Launcher.StopAsync(distro, root).ConfigureAwait(false);
-        Console.Error.WriteLine(composition.Redactor.Redact((result.Stderr + result.Stdout).Trim()));
+        WriteError(composition.Redactor.Redact((result.Stderr + result.Stdout).Trim()));
         var snapshot = await composition.Status.MeasureAsync(settings).ConfigureAwait(false);
-        composition.Log.Log($"[--stop] launch.sh stop : code {result.ExitCode?.ToString() ?? "—"} ; ensuite : {snapshot.Headline} ({snapshot.Cause}).");
+        composition.Log.Log($"[--stop] {(native ? "arrêt" : "launch.sh stop")} : code {result.ExitCode?.ToString() ?? "—"} ; ensuite : {snapshot.Headline} ({snapshot.Cause}).");
         Emit(composition, snapshot);
         return !result.Started ? 98 : result.TimedOut ? 97 : result.ExitCode ?? 98;
     }
@@ -95,6 +99,62 @@ public static class HeadlessActions
         }
         Console.WriteLine(launch.Url);
         return 0;
+    }
+
+    /// <summary>« Préparer APEX » sans fenêtre (mode natif) : 0 prêt, 2 échec, 3 sans objet (mode WSL/Linux).</summary>
+    public static async Task<int> PrepareAsync()
+    {
+        var composition = PanelComposition.Create();
+        if (composition.Preparer is null)
+        {
+            Console.Error.WriteLine("--prepare : sans objet (APEX n'est pas installé en mode Windows natif à côté de ce Panel).");
+            return 3;
+        }
+        composition.Log.Log("[--prepare] préparation d'APEX.");
+        var result = await composition.Preparer.PrepareAsync(new ConsoleProgress(composition)).ConfigureAwait(false);
+        composition.Log.Log("[--prepare] " + result.Message);
+        Program.Emit(result.Message, Console.IsOutputRedirected, Console.OpenStandardOutput, Console.Out);
+        return result.Ok ? 0 : 2;
+    }
+
+    /// <summary>« Installer le modèle » sans fenêtre (mode natif) : code de <c>python -m apex.standalone model install</c>.</summary>
+    public static async Task<int> InstallModelAsync()
+    {
+        var composition = PanelComposition.Create();
+        if (composition.Preparer is null)
+        {
+            Console.Error.WriteLine("--install-model : sans objet (APEX n'est pas installé en mode Windows natif à côté de ce Panel).");
+            return 3;
+        }
+        composition.Log.Log("[--install-model] installation du modèle d'APEX.");
+        var result = await composition.Preparer.InstallModelAsync().ConfigureAwait(false);
+        var code = !result.Started ? 98 : result.TimedOut ? 97 : result.ExitCode ?? 98;
+        composition.Log.Log($"[--install-model] terminé (code {code}).");
+        Program.Emit(code == 0 ? "Modèle installé." : $"Installation du modèle échouée (code {code}) : voir model-install.log.",
+            Console.IsOutputRedirected, Console.OpenStandardOutput, Console.Out);
+        return code;
+    }
+
+    private sealed class ConsoleProgress(PanelComposition composition) : IProgress<string>
+    {
+        public void Report(string value)
+        {
+            composition.Log.Log("[--prepare]   " + value);
+            WriteError(value);
+        }
+    }
+
+    /// <summary>Erreur standard redirigée : UTF-8 (comme <see cref="Program.Emit"/>), jamais la page de codes de la console.</summary>
+    private static void WriteError(string text)
+    {
+        if (!Console.IsErrorRedirected)
+        {
+            Console.Error.WriteLine(text);
+            return;
+        }
+        var bytes = new System.Text.UTF8Encoding(false).GetBytes(text + Environment.NewLine);
+        using var stream = Console.OpenStandardError();
+        stream.Write(bytes);
     }
 
     private static int Emit(PanelComposition composition, PanelSnapshot snapshot)

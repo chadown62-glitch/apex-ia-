@@ -31,7 +31,7 @@ _STARTED_AT = datetime.now(UTC)
 
 def overall(components: list[dict[str, Any]]) -> dict[str, Any]:
     not_ready = [c["component"] for c in components if c.get("state") != component_checks.READY
-                 and c["component"] not in component_checks.INFORMATIONAL]
+                 and c["component"] not in component_checks.informational()]
     return {"verdict": "degraded" if not_ready else "ready", "not_ready": not_ready}
 
 
@@ -75,6 +75,11 @@ def get_status() -> DataEnvelope[dict[str, Any]]:
         "service": "apex",
         "versions": {"apex": __version__, "api": API_VERSION, "panel_protocol": PANEL_PROTOCOL},
         "backend": {"pid": os.getpid(), "started_at": _STARTED_AT.isoformat()},
+        # Profil d'exécution (« server » : WSL/Docker ; « standalone » : APEX.exe autonome) et, pour le
+        # Panel, les composants hors verdict (informatifs) ou sans objet dans ce profil (non rapportés).
+        "profile": component_checks.profile(),
+        "informational": sorted(component_checks.informational()),
+        "not_applicable": sorted(component_checks.not_applicable()),
         "components": components,
         "overall": overall(components),
         "gate": gate_summary(),

@@ -41,10 +41,22 @@ public static class StatusEngine
     public static PanelSnapshot Decide(StatusInputs m, string panelVersion)
     {
         var rows = new List<ComponentState>();
+        // Mode Windows natif (APEX autonome, sans WSL) : mêmes règles, mais ni WSL, ni launch.sh, ni Docker à
+        // citer — le geste est toujours un bouton du Panel. Redis n'y existe pas (aucune ligne).
+        var runtime = m.Host.Runtime;
+        var native = runtime is not null;
+        string N(string serverText, string nativeText) => native ? nativeText : serverText;
         var where = m.Host.Applicable ? "dans WSL" : "dans un terminal";
+        var launchCommand = native ? StartButton : LaunchCommand;
+        var hidden = native ? new HashSet<ComponentKey> { ComponentKey.Redis } : [];
+        var mode = native ? "native" : m.Host.Applicable ? "wsl" : "local";
         if (m.Host.Applicable)
         {
             rows.Add(new ComponentState(ComponentKey.Wsl, m.Host.Status, m.Host.Detail));
+        }
+        if (runtime is not null)
+        {
+            rows.Add(new ComponentState(ComponentKey.Runtime, m.Host.Status, $"{m.Host.Detail} · modèle : {runtime.ModelDetail}"));
         }
         var record = m.Discovery.Record;
         var versions = new VersionInfo(panelVersion, SupportedProtocol, record?.ApexVersion, null, record?.PanelProtocol);
@@ -52,11 +64,11 @@ public static class StatusEngine
 
         PanelSnapshot Snapshot(PanelVerdict verdict, NotReadyCause cause, string guidance, VersionInfo? v = null) =>
             new(m.Now, rows, verdict, cause, Headline(verdict), guidance, v ?? versions, backendInfo,
-                m.Host.Applicable, m.Host.Distro, m.Duration);
+                m.Host.Applicable, m.Host.Distro, m.Duration, mode);
 
         void Services(ComponentStatus status, string detail)
         {
-            foreach (var (key, _) in ComponentKeys.BackendServices)
+            foreach (var (key, _) in ComponentKeys.BackendServices.Where(s => !hidden.Contains(s.Key)))
             {
                 rows.Add(new ComponentState(key, status, detail));
             }
@@ -108,27 +120,38 @@ public static class StatusEngine
                 return payload.PanelProtocol > SupportedProtocol
                     ? Snapshot(PanelVerdict.VersionMismatch, NotReadyCause.PanelTooOld,
                         $"Ce Panel (protocole {SupportedProtocol}) est plus ancien que le backend APEX {payload.ApexVersion} (protocole {payload.PanelProtocol}). Installez la dernière version d'APEX.exe.")
-                    : Snapshot(PanelVerdict.VersionMismatch, NotReadyCause.BackendTooOld,
-                        $"Le backend APEX {payload.ApexVersion} (protocole {payload.PanelProtocol}) est plus ancien que ce Panel (protocole {SupportedProtocol}). Mettez à jour le dépôt APEX {where} puis relancez {LaunchCommand}.");
+                    : Snapshot(PanelVerdict.VersionMismatch, NotReadyCause.BackendTooOld, N(
+                        $"Le backend APEX {payload.ApexVersion} (protocole {payload.PanelProtocol}) est plus ancien que ce Panel (protocole {SupportedProtocol}). Mettez à jour le dépôt APEX {where} puis relancez {LaunchCommand}.",
+                        $"Le backend APEX {payload.ApexVersion} en cours d'exécution est plus ancien que ce Panel : cliquez sur « Arrêter APEX » puis sur {StartButton}."));
             }
 
             var age = record is null ? "" : $" · démarré {Ago(m.Now - record.StartedAt)}";
             rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Ready,
                 $"APEX {payload.ApexVersion} · pid {backendInfo.Pid?.ToString() ?? "?"} · port {m.Port}{age}"));
             rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Ready, $"requête authentifiée réussie (API {payload.ApiVersion})"));
+            var notApplicable = payload.NotApplicable ?? [];
+            var informational = payload.Informational ?? [];
             foreach (var (key, name) in ComponentKeys.BackendServices)
             {
                 var measured = payload.Components.FirstOrDefault(c => c.Name == name);
+                if (notApplicable.Contains(name) || (measured is null && hidden.Contains(key)))
+                {
+                    continue; // sans objet dans ce profil (le backend le dit) : aucune ligne, jamais « inconnu »
+                }
                 rows.Add(measured is null
                     ? new ComponentState(key, ComponentStatus.Unknown, "non rapporté par le backend")
                     : new ComponentState(key, MapState(measured.State), measured.Detail));
             }
-            var notReady = rows.Where(r => r.Status != ComponentStatus.Ready && !ComponentKeys.IsInformational(r.Key)).ToList();
+            var notReady = rows.Where(r => r.Status != ComponentStatus.Ready && !ComponentKeys.IsInformational(r.Key)
+                && !informational.Contains(BackendName(r.Key))).ToList();
+            var modelHint = runtime is { ModelInstalled: false }
+                ? " Cliquez sur « Installer le modèle » pour télécharger le modèle d'APEX (une seule fois) : sans lui, APEX ne peut pas traiter de tâche."
+                : "";
             return notReady.Count == 0
-                ? Snapshot(PanelVerdict.Ready, NotReadyCause.None, "Tous les composants d'APEX répondent.")
+                ? Snapshot(PanelVerdict.Ready, NotReadyCause.None, "Tous les composants d'APEX répondent." + N("", " Cliquez sur « Ouvrir APEX »."))
                 : Snapshot(PanelVerdict.Degraded, NotReadyCause.PartialServices,
                     "L'API APEX répond, mais certains services ne sont pas prêts : "
-                    + string.Join(" ; ", notReady.Select(r => $"{r.Label} ({Label(r.Status)} — {r.Detail})")) + ".");
+                    + string.Join(" ; ", notReady.Select(r => $"{r.Label} ({Label(r.Status)} — {r.Detail})")) + "." + modelHint);
         }
 
         // 3. Pas de réponse valide : pourquoi ?
@@ -138,8 +161,9 @@ public static class StatusEngine
                 rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Ready, "un backend APEX répond"));
                 rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Error, m.Fetch.Detail));
                 Services(ComponentStatus.Unknown, "non interprété : backend antérieur au Panel");
-                return Snapshot(PanelVerdict.VersionMismatch, NotReadyCause.BackendTooOld,
-                    $"Le backend APEX en cours d'exécution est antérieur à ce Panel. Mettez à jour le dépôt APEX {where}, arrêtez le backend puis relancez {LaunchCommand}.");
+                return Snapshot(PanelVerdict.VersionMismatch, NotReadyCause.BackendTooOld, N(
+                    $"Le backend APEX en cours d'exécution est antérieur à ce Panel. Mettez à jour le dépôt APEX {where}, arrêtez le backend puis relancez {LaunchCommand}.",
+                    $"Un backend APEX antérieur à ce Panel occupe le port {m.Port} : arrêtez-le (« Arrêter APEX »), puis cliquez sur {StartButton}."));
 
             case FetchOutcome.Unauthorized:
                 rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Ready, "un backend répond sur le port " + m.Port));
@@ -147,14 +171,16 @@ public static class StatusEngine
                 {
                     rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Error, "jeton refusé (401)"));
                     Services(ComponentStatus.Unknown, "non mesuré : accès refusé");
-                    return Snapshot(PanelVerdict.NotReady, NotReadyCause.TokenRejected,
-                        "Le backend refuse le jeton d'accès lu sur l'hôte : il a été démarré depuis un autre dossier ou une autre distribution que celle enregistrée. Arrêtez les autres backends APEX puis relancez " + LaunchCommand + ".");
+                    return Snapshot(PanelVerdict.NotReady, NotReadyCause.TokenRejected, N(
+                        "Le backend refuse le jeton d'accès lu sur l'hôte : il a été démarré depuis un autre dossier ou une autre distribution que celle enregistrée. Arrêtez les autres backends APEX puis relancez " + LaunchCommand + ".",
+                        "Le backend refuse le jeton d'accès lu sur ce poste : un autre APEX occupe ce port. Cliquez sur « Arrêter APEX » puis sur " + StartButton + "."));
                 }
                 rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Error,
                     m.Discovery.Kind == DiscoveryKind.Found ? m.Token.Detail : "API protégée, et aucun backend APEX enregistré : jeton introuvable"));
                 Services(ComponentStatus.Unknown, "non mesuré : jeton indisponible");
-                return Snapshot(PanelVerdict.NotReady, NotReadyCause.TokenMissing,
-                    "Le Panel ne trouve pas le jeton d'accès de l'API (" + m.Token.Detail + "). Relancez le backend avec le launch.sh dédié (" + LaunchCommand + ") : il enregistre l'emplacement du jeton pour le Panel.");
+                return Snapshot(PanelVerdict.NotReady, NotReadyCause.TokenMissing, N(
+                    "Le Panel ne trouve pas le jeton d'accès de l'API (" + m.Token.Detail + "). Relancez le backend avec le launch.sh dédié (" + LaunchCommand + ") : il enregistre l'emplacement du jeton pour le Panel.",
+                    "Le Panel ne trouve pas le jeton d'accès de l'API (" + m.Token.Detail + "). Cliquez sur « Arrêter APEX » puis sur " + StartButton + "."));
 
             case FetchOutcome.NotApex:
                 rows.Add(new ComponentState(ComponentKey.Backend,
@@ -162,8 +188,9 @@ public static class StatusEngine
                     m.Discovery.Kind == DiscoveryKind.Found ? "enregistré, mais son port est occupé par un autre programme" : "aucun backend APEX enregistré"));
                 rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Error, m.Fetch.Detail));
                 Services(ComponentStatus.Unknown, "non mesuré : API APEX indisponible");
-                return Snapshot(PanelVerdict.NotReady, NotReadyCause.PortConflict,
-                    $"Un autre programme utilise le port {m.Port}. Fermez-le, ou démarrez APEX sur un autre port ({LaunchCommand} --port <port>) : le Panel le trouvera automatiquement.");
+                return Snapshot(PanelVerdict.NotReady, NotReadyCause.PortConflict, N(
+                    $"Un autre programme utilise le port {m.Port}. Fermez-le, ou démarrez APEX sur un autre port ({LaunchCommand} --port <port>) : le Panel le trouvera automatiquement.",
+                    $"Un autre programme utilise le port {m.Port}, celui d'APEX. Fermez-le, puis cliquez sur {StartButton}."));
 
             case FetchOutcome.Timeout:
                 rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Degraded, "accepte la connexion mais ne répond pas à temps"));
@@ -177,8 +204,9 @@ public static class StatusEngine
                 rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Degraded, "répond, mais en erreur"));
                 rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Error, m.Fetch.Detail));
                 Services(ComponentStatus.Unknown, "non mesuré : API en erreur");
-                return Snapshot(PanelVerdict.NotReady, NotReadyCause.ApiError,
-                    $"L'API APEX répond en erreur ({m.Fetch.Detail}). Consultez la sortie de launch.sh {where}.");
+                return Snapshot(PanelVerdict.NotReady, NotReadyCause.ApiError, N(
+                    $"L'API APEX répond en erreur ({m.Fetch.Detail}). Consultez la sortie de launch.sh {where}.",
+                    $"L'API APEX répond en erreur ({m.Fetch.Detail}). Détail dans « Journal du démarrage »."));
         }
 
         // 4. Connexion refusée depuis Windows alors que le processus vit ET écoute DANS WSL (constaté dans
@@ -199,12 +227,26 @@ public static class StatusEngine
         }
 
         // 5. Rien n'écoute (connexion refusée) ou pas de tentative.
+        //    Mode natif : sans runtime préparé, rien ne peut démarrer — c'est la seule chose à faire.
+        if (runtime is { State: not RuntimeState.Ready } && m.Launch is not { Running: true })
+        {
+            rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Offline, "non démarré : runtime APEX non prêt"));
+            rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Offline, $"rien n'écoute sur 127.0.0.1:{m.Port}"));
+            Services(ComponentStatus.Unknown, "non mesuré : APEX non démarré");
+            return Snapshot(PanelVerdict.NotReady, NotReadyCause.RuntimeNotPrepared, runtime.State switch
+            {
+                RuntimeState.Broken => $"L'installation d'APEX est incomplète ({runtime.Detail}). Réinstallez APEX avec son installateur.",
+                RuntimeState.Outdated => $"APEX a changé depuis la dernière préparation ({runtime.Detail}). Cliquez sur « Préparer APEX » : seul ce qui manque est téléchargé, puis {StartButton}.",
+                _ => $"APEX n'est pas encore prêt sur ce PC ({runtime.Detail}). Cliquez sur « Préparer APEX » : le Panel télécharge Python et les bibliothèques d'APEX "
+                    + "(une seule fois, empreintes vérifiées), puis « Démarrer APEX » devient disponible.",
+            });
+        }
         if (m.Discovery.Kind == DiscoveryKind.Found && record is { IsRefused: true, Refusal: { } refusal })
         {
-            return Refused(m, rows, refusal, Snapshot, Services);
+            return Refused(m, rows, refusal, Snapshot, Services, native);
         }
         if (m.Discovery.Kind != DiscoveryKind.Found && m.Discovery.Kind != DiscoveryKind.Invalid && m.Launch is { } launch
-            && LaunchFailure(launch) is { } failure)
+            && LaunchFailure(launch, native) is { } failure)
         {
             rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Offline, failure.Row));
             rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Offline, $"rien n'écoute sur 127.0.0.1:{m.Port}"));
@@ -213,13 +255,15 @@ public static class StatusEngine
         }
         if (m.Discovery.Kind == DiscoveryKind.Missing && m.Launch is { Running: true } running && m.Now - running.StartedAt < StartupGrace)
         {
-            rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Starting, $"démarrage demandé {Ago(m.Now - running.StartedAt)} : launch.sh démarre"));
+            rows.Add(new ComponentState(ComponentKey.Backend, ComponentStatus.Starting,
+                $"démarrage demandé {Ago(m.Now - running.StartedAt)} : " + N("launch.sh démarre", "APEX démarre")));
             rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Offline, $"rien n'écoute encore sur 127.0.0.1:{m.Port}"));
             Services(ComponentStatus.Unknown, "non mesuré : démarrage en cours");
-            return Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendStarting,
-                "Démarrage d'APEX demandé : launch.sh prépare APEX (Docker, doctor, Startup Gate). Le Panel se met à jour automatiquement.");
+            return Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendStarting, N(
+                "Démarrage d'APEX demandé : launch.sh prépare APEX (Docker, doctor, Startup Gate). Le Panel se met à jour automatiquement.",
+                "Démarrage d'APEX demandé : APEX prépare son démarrage (base embarquée, apex doctor, Startup Gate). Le Panel se met à jour automatiquement."));
         }
-        rows.Add(BackendWhenSilent(m));
+        rows.Add(BackendWhenSilent(m, native));
         rows.Add(new ComponentState(ComponentKey.Api, ComponentStatus.Offline,
             m.Fetch.Outcome == FetchOutcome.Refused ? $"rien n'écoute sur 127.0.0.1:{m.Port}" : m.Fetch.Detail));
         Services(ComponentStatus.Unknown, "non mesuré : backend indisponible");
@@ -227,7 +271,7 @@ public static class StatusEngine
         if (m.Discovery.Kind == DiscoveryKind.Invalid)
         {
             return Snapshot(PanelVerdict.NotReady, NotReadyCause.DiscoveryInvalid,
-                "L'enregistrement du backend est illisible (" + m.Discovery.Detail + "). Relancez " + LaunchCommand + " : il le réécrit.");
+                "L'enregistrement du backend est illisible (" + m.Discovery.Detail + "). Relancez " + launchCommand + " : il le réécrit.");
         }
         return backend.Status switch
         {
@@ -235,10 +279,13 @@ public static class StatusEngine
                 "Le backend APEX démarre (" + backend.Detail + ")… Le Panel se met à jour automatiquement."),
             ComponentStatus.Error => Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendUnresponsive,
                 $"Le processus du backend existe mais son API ne répond pas. Cliquez sur « Arrêter APEX » puis {StartButton}."),
-            _ when m.Discovery.Kind == DiscoveryKind.Found => Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendStopped,
-                $"Le backend APEX s'est arrêté (arrêt brutal ou fermeture de sa fenêtre). Cliquez sur {StartButton} pour le relancer."),
-            _ => Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendNotStarted,
-                $"Le backend APEX n'est pas démarré. Cliquez sur {StartButton} (ou {where}, dans le dossier APEX : {LaunchCommand})."),
+            _ when m.Discovery.Kind == DiscoveryKind.Found => Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendStopped, N(
+                $"Le backend APEX s'est arrêté (arrêt brutal ou fermeture de sa fenêtre). Cliquez sur {StartButton} pour le relancer.",
+                $"APEX s'est arrêté (arrêt brutal, redémarrage du PC). Cliquez sur {StartButton} pour le relancer.")),
+            _ => Snapshot(PanelVerdict.NotReady, NotReadyCause.BackendNotStarted, N(
+                $"Le backend APEX n'est pas démarré. Cliquez sur {StartButton} (ou {where}, dans le dossier APEX : {LaunchCommand}).",
+                $"APEX n'est pas démarré. Cliquez sur {StartButton}." + (runtime is { ModelInstalled: false }
+                    ? " Pour traiter des tâches, installez aussi le modèle d'APEX (« Installer le modèle », une seule fois)." : ""))),
         };
     }
 
@@ -249,7 +296,8 @@ public static class StatusEngine
     /// </summary>
     private static PanelSnapshot Refused(
         StatusInputs m, List<ComponentState> rows, StartRefusal refusal,
-        Func<PanelVerdict, NotReadyCause, string, VersionInfo?, PanelSnapshot> snapshot, Action<ComponentStatus, string> services)
+        Func<PanelVerdict, NotReadyCause, string, VersionInfo?, PanelSnapshot> snapshot, Action<ComponentStatus, string> services,
+        bool native = false)
     {
         var at = m.Discovery.Record is { } r ? $" ({Ago(m.Now - r.StartedAt)})" : "";
         var (row, guidance) = refusal.ExitCode switch
@@ -264,6 +312,9 @@ public static class StatusEngine
                 "apex doctor a signalé un échec : APEX ne démarre pas" + at + ". Le rapport est dans « Journal du démarrage » ; corrigez puis cliquez sur " + StartButton + "."),
             2 => ("démarrage impossible : Docker / docker compose",
                 "L'infrastructure d'APEX (Docker, docker compose) n'a pas démarré" + at + ". Vérifiez que Docker fonctionne dans WSL (détail dans « Journal du démarrage »), puis cliquez sur " + StartButton + "."),
+            10 when native => ("démarrage impossible : schéma de la base embarquée",
+                "Le schéma de la base embarquée d'APEX (SQLite, dans %LOCALAPPDATA%\\APEX\\data) n'a pas pu être mis à jour" + at
+                + ". Détail dans « Journal du démarrage » ; vérifiez l'espace disque, puis cliquez sur " + StartButton + "."),
             10 => ("démarrage impossible : schéma de la base",
                 "Le schéma de la base d'APEX n'a pas pu être mis à jour" + at + " (migrations, apex db upgrade). Vérifiez dans .env les mots de passe "
                 + "APEX_DB_*_PASSWORD et l'accès à PostgreSQL (détail dans « Journal du démarrage »), puis cliquez sur " + StartButton + "."),
@@ -286,11 +337,19 @@ public static class StatusEngine
     /// Un démarrage demandé par CE Panel qui s'est terminé sans laisser d'enregistrement (échec avant que
     /// Python soit trouvé, déjà en cours, script introuvable) : le code de sortie de launch.sh dit pourquoi.
     /// </summary>
-    internal static (string Row, string Guidance)? LaunchFailure(LaunchAttempt launch)
+    internal static (string Row, string Guidance)? LaunchFailure(LaunchAttempt launch, bool native = false)
     {
         if (launch.FailureReason is { } reason)
         {
-            return ("démarrage impossible", $"Le Panel n'a pas pu lancer le démarrage d'APEX ({reason}). Vérifiez que WSL est installé.");
+            return ("démarrage impossible", native
+                ? $"Le Panel n'a pas pu lancer APEX ({reason}). Cliquez sur « Préparer APEX » pour réparer son runtime, puis sur {StartButton}."
+                : $"Le Panel n'a pas pu lancer le démarrage d'APEX ({reason}). Vérifiez que WSL est installé.");
+        }
+        if (native && launch.ExitCode is 1 or 2)
+        {
+            return ("démarrage échoué : runtime APEX incomplet",
+                $"Le Python d'APEX s'est arrêté en erreur avant de démarrer (code {launch.ExitCode}) : runtime incomplet ou endommagé. "
+                + $"Cliquez sur « Préparer APEX » pour le réparer, puis sur {StartButton}. Détail dans « Journal du démarrage ».");
         }
         return launch.ExitCode switch
         {
@@ -309,28 +368,30 @@ public static class StatusEngine
         };
     }
 
-    private static ComponentState BackendWhenSilent(StatusInputs m)
+    private static ComponentState BackendWhenSilent(StatusInputs m, bool native = false)
     {
         var record = m.Discovery.Record;
         if (m.Discovery.Kind != DiscoveryKind.Found || record is null)
         {
             return new ComponentState(ComponentKey.Backend,
                 m.Discovery.Kind == DiscoveryKind.Invalid ? ComponentStatus.Error : ComponentStatus.Offline,
-                m.Discovery.Kind == DiscoveryKind.Invalid ? m.Discovery.Detail : "launch.sh n'a pas été exécuté (aucun backend enregistré)");
+                m.Discovery.Kind == DiscoveryKind.Invalid ? m.Discovery.Detail
+                : native ? "non démarré (aucun backend enregistré)" : "launch.sh n'a pas été exécuté (aucun backend enregistré)");
         }
         var age = m.Now - record.StartedAt;
         if (m.BackendProcessAlive == false)
         {
             return new ComponentState(ComponentKey.Backend, ComponentStatus.Offline, record.IsStarting
-                ? $"launch.sh (pid {record.Pid}) s'est arrêté avant de démarrer l'API"
+                ? (native ? $"le démarrage (pid {record.Pid}) s'est arrêté avant l'API" : $"launch.sh (pid {record.Pid}) s'est arrêté avant de démarrer l'API")
                 : $"arrêté : le processus {record.Pid} n'existe plus (enregistrement périmé, démarré {Ago(age)})");
         }
         if (record.IsStarting)
         {
             // Préflight en cours (Docker, doctor, gate) : aucune limite de durée tant que le processus vit —
             // un premier lancement peut télécharger des images pendant plusieurs minutes.
-            return new ComponentState(ComponentKey.Backend, ComponentStatus.Starting,
-                $"launch.sh prépare le démarrage (Docker, doctor, gate) depuis {Ago(age)}");
+            return new ComponentState(ComponentKey.Backend, ComponentStatus.Starting, native
+                ? $"préparation du démarrage (base embarquée, doctor, Startup Gate) depuis {Ago(age)}"
+                : $"launch.sh prépare le démarrage (Docker, doctor, gate) depuis {Ago(age)}");
         }
         if (age < StartupGrace)
         {
@@ -340,6 +401,9 @@ public static class StatusEngine
             ? new ComponentState(ComponentKey.Backend, ComponentStatus.Error, $"processus {record.Pid} présent mais muet depuis {Ago(age)}")
             : new ComponentState(ComponentKey.Backend, ComponentStatus.Offline, $"enregistré (pid {record.Pid}) mais ne répond plus");
     }
+
+    private static string BackendName(ComponentKey key) =>
+        ComponentKeys.BackendServices.FirstOrDefault(s => s.Key == key).BackendName ?? key.ToString().ToLowerInvariant();
 
     public static ComponentStatus MapState(string state) => state switch
     {

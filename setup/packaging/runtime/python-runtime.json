@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "python": {
+    "version": "3.12.10",
+    "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
+    "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+    "bytes": 14515433,
+    "source": "paquet NuGet officiel « python » (python.org, CPython 3.12.10 x64) ; SHA-512 identique à celui du catalogue NuGet (vérifié le 08/10/2026)"
+  },
+  "requirements": "requirements-windows.lock",
+  "download_estimate_mb": 190,
+  "model": {
+    "name": "qwen2.5-coder-1.5b-instruct",
+    "repo": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+    "revision": "2e1fd397ee46e1388853d2af2c993145b0f1098a",
+    "download_estimate_mb": 3100
+  }
+}

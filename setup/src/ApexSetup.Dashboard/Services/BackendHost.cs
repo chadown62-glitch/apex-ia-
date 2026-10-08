@@ -7,11 +7,18 @@ namespace ApexSetup.Dashboard.Services;
 /// <param name="Status">État de WSL (sans objet si non applicable).</param>
 /// <param name="Running">Vrai si l'on peut lire des fichiers de l'hôte SANS le démarrer.</param>
 /// <param name="RunningDistros">Toutes les distributions WSL en cours d'exécution (où chercher le backend sans rien démarrer).</param>
+/// <param name="Runtime">Mode « Windows natif » (APEX autonome, sans WSL) : l'état du runtime APEX de ce poste ; <c>null</c> sinon.</param>
 public sealed record HostProbe(
     bool Applicable, ComponentStatus Status, bool Running, string Detail, string? Distro, NotReadyCause Cause,
-    IReadOnlyList<string>? RunningDistros = null)
+    IReadOnlyList<string>? RunningDistros = null, RuntimeInspection? Runtime = null)
 {
     public static HostProbe LocalHost() => new(false, ComponentStatus.Ready, true, "hôte Linux natif (sans WSL)", null, NotReadyCause.None);
+
+    /// <summary>APEX autonome sur ce poste : pas de WSL, l'hôte « tourne » toujours ; seul le runtime peut manquer.</summary>
+    public static HostProbe Native(RuntimeInspection runtime) => new(false,
+        runtime.State == RuntimeState.Ready ? ComponentStatus.Ready : runtime.State == RuntimeState.Broken ? ComponentStatus.Error : ComponentStatus.Offline,
+        true, runtime.Detail, null,
+        runtime.State == RuntimeState.Ready ? NotReadyCause.None : NotReadyCause.RuntimeNotPrepared, null, runtime);
 }
 
 public enum FileReadKind
@@ -43,6 +50,21 @@ public interface IBackendHost
 
     /// <summary>Lit un fichier par chemin absolu de l'hôte (validé par l'appelant : <see cref="HostPaths.IsSafeAbsolute"/>).</summary>
     Task<FileRead> ReadFileAsync(string? distro, string absolutePath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Le processus <paramref name="pid"/> est-il (encore) le backend APEX ? <c>null</c> = impossible à dire.
+    /// Hôtes Linux (WSL, natif) : sa ligne de commande, lue dans <c>/proc</c>.
+    /// </summary>
+    async Task<bool?> BackendProcessAliveAsync(string? distro, int pid, CancellationToken cancellationToken = default)
+    {
+        var cmdline = await ReadFileAsync(distro, $"/proc/{pid}/cmdline", cancellationToken).ConfigureAwait(false);
+        return cmdline.Kind switch
+        {
+            FileReadKind.Ok => (cmdline.Content ?? string.Empty).Contains("apex", StringComparison.OrdinalIgnoreCase),
+            FileReadKind.NotFound => false,
+            _ => null,
+        };
+    }
 }
 
 /// <summary>Validation des chemins reçus de l'enregistrement de découverte avant de les transmettre à <c>cat</c>.</summary>
@@ -53,12 +75,27 @@ public static class HostPaths
     /// contrôle ni segment « .. ». Le chemin n'est jamais interprété par un shell (argv direct), cette
     /// validation est une défense en profondeur contre un enregistrement de découverte altéré.
     /// </summary>
-    public static bool IsSafeAbsolute(string? path) =>
+    public static bool IsSafeAbsolute(string? path) => IsSafePosixAbsolute(path) || IsSafeWindowsAbsolute(path);
+
+    /// <summary>Chemin Linux (WSL, hôte Linux) : commence par « / ».</summary>
+    public static bool IsSafePosixAbsolute(string? path) =>
         !string.IsNullOrEmpty(path)
         && path.StartsWith('/')
         && path.Length < 4096
         && !path.Any(char.IsControl)
         && !path.Split('/').Contains("..");
+
+    /// <summary>
+    /// Chemin Windows complet sur un lecteur (<c>C:\Users\…</c>, mode natif) : ni chemin réseau, ni flux
+    /// alternatif (« : » après le lecteur), ni caractère interdit, ni segment « .. ».
+    /// </summary>
+    public static bool IsSafeWindowsAbsolute(string? path) =>
+        !string.IsNullOrEmpty(path)
+        && path.Length is >= 3 and < 4096
+        && char.IsAsciiLetter(path[0]) && path[1] == ':' && path[2] is '\\' or '/'
+        && !path.Any(char.IsControl)
+        && path.IndexOfAny([':', '*', '?', '"', '<', '>', '|'], 2) < 0
+        && !path.Split('\\', '/').Contains("..");
 
     /// <summary>Relatif, sans « .. », sans caractère de contrôle, ne commençant ni par « / » ni par « - ».</summary>
     public static bool IsSafeRelative(string? path) =>
@@ -169,7 +206,7 @@ public sealed class WslBackendHost(IProcessRunner processRunner, IWslRegistry? r
 
     public Task<FileRead> ReadFileAsync(string? distro, string absolutePath, CancellationToken cancellationToken = default)
     {
-        if (!HostPaths.IsSafeAbsolute(absolutePath))
+        if (!HostPaths.IsSafePosixAbsolute(absolutePath))
         {
             return Task.FromResult(FileRead.Failed("chemin absolu refusé"));
         }
@@ -234,11 +271,11 @@ public sealed class LocalBackendHost(string? homeDirectory = null) : IBackendHos
             : Task.FromResult(FileRead.Failed("chemin relatif refusé"));
 
     public Task<FileRead> ReadFileAsync(string? distro, string absolutePath, CancellationToken cancellationToken = default) =>
-        HostPaths.IsSafeAbsolute(absolutePath)
+        HostPaths.IsSafePosixAbsolute(absolutePath)
             ? ReadAsync(absolutePath, cancellationToken)
             : Task.FromResult(FileRead.Failed("chemin absolu refusé"));
 
-    private static async Task<FileRead> ReadAsync(string path, CancellationToken cancellationToken)
+    internal static async Task<FileRead> ReadAsync(string path, CancellationToken cancellationToken)
     {
         try
         {
@@ -252,5 +289,74 @@ public sealed class LocalBackendHost(string? homeDirectory = null) : IBackendHos
         {
             return FileRead.Failed($"lecture refusée : {ex.Message}");
         }
+    }
+}
+
+/// <summary>
+/// APEX AUTONOME sur ce poste (mode « Windows natif ») : le backend est le Python d'APEX lancé par le Panel, ses
+/// fichiers sont sous <c>APEX_HOME</c> (<c>%LOCALAPPDATA%\APEX</c>) aux mêmes chemins relatifs que dans WSL
+/// (<c>.apex\runtime\backend.json</c>, <c>.apex\api-token</c>). Lectures directes, rien n'est démarré.
+/// </summary>
+public sealed class NativeBackendHost(NativeRuntime runtime) : IBackendHost
+{
+    public NativeRuntime Runtime => runtime;
+
+    public Task<HostProbe> ProbeAsync(string? preferredDistro, CancellationToken cancellationToken = default) =>
+        Task.FromResult(HostProbe.Native(runtime.Inspect()));
+
+    public Task<FileRead> ReadHomeFileAsync(string? distro, string relativePath, CancellationToken cancellationToken = default) =>
+        HostPaths.IsSafeRelative(relativePath)
+            ? LocalBackendHost.ReadAsync(Path.Combine(runtime.Home, relativePath), cancellationToken)
+            : Task.FromResult(FileRead.Failed("chemin relatif refusé"));
+
+    public Task<FileRead> ReadFileAsync(string? distro, string absolutePath, CancellationToken cancellationToken = default) =>
+        (OperatingSystem.IsWindows() ? HostPaths.IsSafeWindowsAbsolute(absolutePath) : HostPaths.IsSafePosixAbsolute(absolutePath))
+            ? LocalBackendHost.ReadAsync(absolutePath, cancellationToken)
+            : Task.FromResult(FileRead.Failed("chemin absolu refusé"));
+
+    /// <summary>Vivant ET porté par le Python d'APEX (un pid réutilisé par un autre programme n'est pas APEX).</summary>
+    public Task<bool?> BackendProcessAliveAsync(string? distro, int pid, CancellationToken cancellationToken = default)
+    {
+        var spec = runtime.TryReadSpec(out _);
+        return Task.FromResult(IsProcessRunning(pid, runtime.PythonExecutable(spec)));
+    }
+
+    internal static bool? IsProcessRunning(int pid, string expectedExecutable)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(pid);
+            if (process.HasExited)
+            {
+                return false;
+            }
+            var image = process.MainModule?.FileName;
+            return image is null ? null : SameFile(image, expectedExecutable);
+        }
+        catch (ArgumentException)
+        {
+            return false; // aucun processus de ce pid
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or NotSupportedException)
+        {
+            return null; // existe peut-être, mais illisible : on ne conclut pas
+        }
+    }
+
+    internal static bool SameFile(string a, string b)
+    {
+        static string Resolve(string path)
+        {
+            try
+            {
+                var full = Path.GetFullPath(path);
+                return File.ResolveLinkTarget(full, returnFinalTarget: true)?.FullName ?? full;
+            }
+            catch (IOException)
+            {
+                return path;
+            }
+        }
+        return string.Equals(Resolve(a), Resolve(b), OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal);
     }
 }

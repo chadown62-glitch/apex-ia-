@@ -48,6 +48,15 @@ public static class Program
         {
             return HeadlessActions.UiUrlAsync().GetAwaiter().GetResult();
         }
+        // Mode Windows natif : « Préparer APEX » / « Installer le modèle » sans fenêtre (mêmes services).
+        if (args.Contains("--prepare"))
+        {
+            return HeadlessActions.PrepareAsync().GetAwaiter().GetResult();
+        }
+        if (args.Contains("--install-model"))
+        {
+            return HeadlessActions.InstallModelAsync().GetAwaiter().GetResult();
+        }
 
         // Un second double-clic ramène le Panel existant au premier plan au lieu d'en ouvrir un autre.
         Guard = SingleInstanceGuard.TryAcquire();

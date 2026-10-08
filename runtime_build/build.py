@@ -118,6 +118,8 @@ def _assemble_common(src_root: Path, out_dir: Path) -> None:
     )
     shutil.copy2(src_root / "alembic.ini", out_dir / "alembic.ini")
     shutil.copy2(src_root / "config.yaml", out_dir / "config.yaml")
+    # Configuration du profil autonome (APEX.exe) : même schéma que config.yaml, sans infrastructure serveur.
+    shutil.copy2(src_root / "config.standalone.yaml", out_dir / "config.standalone.yaml")
 
     frontend_dist = src_root / "frontend" / "dist"
     if frontend_dist.is_dir():

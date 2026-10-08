@@ -257,13 +257,46 @@ CHECKS: dict[str, Callable[[], ComponentStatus]] = {
 #: APEX qui répond avec le backend natif — et un APEX sans aucun modèle reste dégradé via « models ».
 INFORMATIONAL = frozenset({"ollama"})
 
+#: Profil AUTONOME (`apex.standalone`, APEX.exe) : pas de Redis (aucun service d'infrastructure, base embarquée)
+#: — le composant n'est pas rapporté du tout plutôt qu'« offline » ; le cerveau neuronal relève de la
+#: Recherche, absent de cette distribution : rapporté, hors verdict.
+STANDALONE_EXCLUDED = frozenset({"redis"})
+STANDALONE_INFORMATIONAL = frozenset({"ollama", "brain"})
+
+
+def profile_checks() -> dict[str, Callable[[], ComponentStatus]]:
+    from apex.standalone import is_standalone
+
+    if is_standalone():
+        return {name: fn for name, fn in CHECKS.items() if name not in STANDALONE_EXCLUDED}
+    return CHECKS
+
+
+def informational() -> frozenset[str]:
+    from apex.standalone import is_standalone
+
+    return STANDALONE_INFORMATIONAL if is_standalone() else INFORMATIONAL
+
+
+def not_applicable() -> frozenset[str]:
+    """Composants que CE profil n'utilise pas (jamais mesurés, jamais rapportés) — le Panel n'affiche pas leur ligne."""
+    from apex.standalone import is_standalone
+
+    return STANDALONE_EXCLUDED if is_standalone() else frozenset()
+
+
+def profile() -> str:
+    from apex.standalone import STANDALONE, is_standalone
+
+    return STANDALONE if is_standalone() else "server"
+
 
 def collect(
     checks: dict[str, Callable[[], ComponentStatus]] | None = None, budget_s: float = TOTAL_BUDGET_S
 ) -> list[ComponentStatus]:
     """Exécute les checks en parallèle ; un check qui dépasse le budget est rapporté `unknown`
     (jamais bloquant pour la réponse, jamais un état positif par défaut)."""
-    checks = CHECKS if checks is None else checks
+    checks = profile_checks() if checks is None else checks
     out: list[ComponentStatus] = []
     pool = ThreadPoolExecutor(max_workers=len(checks), thread_name_prefix="apex-status")
     try:

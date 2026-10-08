@@ -4,6 +4,8 @@ public enum HostKind
 {
     Wsl,
     Local,
+    /// <summary>APEX autonome sur ce poste Windows (sans WSL) : <c>python -m apex.standalone</c>.</summary>
+    Native,
 }
 
 /// <summary>Un démarrage demandé par CE Panel (bouton ou <c>--start</c>) : ce qui en est connu, jamais supposé.</summary>
@@ -40,7 +42,13 @@ public interface IDetachedProcessStarter
 /// un fichier altéré dans WSL ne peut pas choisir ce que le Panel exécute (voir S04). Rien n'est
 /// jamais lancé sans un geste de l'utilisateur.
 /// </summary>
-public sealed class BackendLauncher(IDetachedProcessStarter starter, IProcessRunner runner, bool wsl, string? localHome = null)
+/// <para>
+/// Mode Windows NATIF (<paramref name="native"/>) : le launcher officiel est <c>python -m apex.standalone</c> (même
+/// préflight, même Startup Gate, mêmes codes de sortie que launch.sh), exécuté par le Python préparé d'APEX —
+/// exécutable et arguments FIXES, rien ne vient d'un enregistrement de découverte ni des Paramètres.
+/// </para>
+public sealed class BackendLauncher(IDetachedProcessStarter starter, IProcessRunner runner, bool wsl, string? localHome = null,
+    NativeRuntime? native = null)
 {
     public const string Script = "scripts/apex-launch.sh";
     public const string StartCommand = "panel-serve";
@@ -59,14 +67,23 @@ public sealed class BackendLauncher(IDetachedProcessStarter starter, IProcessRun
             root = root[2..];
         }
         root = root.TrimEnd('/');
-        return root.Length > 0 && (HostPaths.IsSafeAbsolute(root) || HostPaths.IsSafeRelative(root))
+        return root.Length > 0 && (HostPaths.IsSafePosixAbsolute(root) || HostPaths.IsSafeRelative(root))
             ? $"{root}/{Script}"
             : null;
     }
 
+    public NativeRuntime? Native => native;
+
     /// <summary>Exécutable et arguments, exactement — exposés pour les tests et la liste autorisée de la validation Windows.</summary>
     public (string Executable, List<string> Arguments)? Command(string? distro, string projectRoot, string command)
     {
+        if (native is not null)
+        {
+            var python = native.PythonExecutable(native.TryReadSpec(out _));
+            return command == StartCommand
+                ? (python, ["-m", "apex.standalone", "serve", "--log"])
+                : (python, ["-m", "apex.standalone", "stop"]);
+        }
         var script = ScriptPath(projectRoot);
         if (script is null)
         {

@@ -38,6 +38,11 @@ class IsolationLevel(str, Enum):
     #: abaissé (setuid, pas un remap uid cosmétique) + racine read-only + réseau
     #: coupé. C'est le niveau du seul backend implémenté à ce jour.
     NAMESPACED = "namespaced"
+    #: Windows (APEX autonome) : AppContainer sans capacité (réseau coupé, fichiers de l'utilisateur
+    #: inaccessibles, écriture limitée au dossier de travail) + Job Object (mémoire, un seul processus, tué à la
+    #: fermeture) — constaté par sonde (`apex.sandbox.windows_appcontainer`). Comparable à NAMESPACED, jamais
+    #: un conteneur durci (ni filtrage d'appels système, ni noyau séparé).
+    APPCONTAINER = "appcontainer"
     #: Conteneur OCI (Docker/runc) avec image dédiée — RÉSERVÉ, aucun backend
     #: ne l'implémente : le démon Docker n'est pas joignable sur cette machine
     #: (voir apex/sandbox/detect.py). Ne jamais instancier ce niveau tant
@@ -51,7 +56,8 @@ class IsolationLevel(str, Enum):
     def is_real_isolation(self) -> bool:
         """Distingue "aucune garantie" de "au moins une garantie noyau réelle"."""
         return self in (
-            IsolationLevel.NAMESPACED, IsolationLevel.CONTAINERIZED, IsolationLevel.HARDENED,
+            IsolationLevel.NAMESPACED, IsolationLevel.APPCONTAINER, IsolationLevel.CONTAINERIZED,
+            IsolationLevel.HARDENED,
         )
 
 

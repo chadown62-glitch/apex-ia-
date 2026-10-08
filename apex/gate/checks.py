@@ -20,7 +20,7 @@ Trois notes de conception :
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -71,6 +71,16 @@ class GateContext:
     #: vraie fonction : GATE-19 mesure alors CETTE machine, jamais une
     #: simulation, sauf override explicite par un test.
     detect_sandbox_capabilities: Callable[[], SandboxCapabilityReport] = detect_capabilities
+    #: « server » (WSL2/Linux + Docker) ou « standalone » (APEX autonome, `apex.standalone`) — posé par
+    #: `APEX_PROFILE`, jamais deviné. En profil autonome, l'infrastructure serveur est mesurée sans être
+    #: exigée (voir `apex.gate.report.STANDALONE_ROLE_OVERRIDES`).
+    profile: str = field(default_factory=lambda: _current_profile())
+
+
+def _current_profile() -> str:
+    from apex.standalone import is_standalone
+
+    return "standalone" if is_standalone() else "server"
 
 
 def _ok(check_id: str, title: str, message: str, **kw: Any) -> GateCheckResult:
@@ -167,6 +177,15 @@ def gate_01_windows_host(ctx: GateContext) -> GateCheckResult:
 def gate_02_wsl2(ctx: GateContext) -> GateCheckResult:
     title = "WSL2 actif"
     info = ctx.probe.platform_info()
+    if ctx.profile == "standalone":
+        # APEX autonome (APEX.exe) : aucune dépendance à WSL2 — l'hôte réel est mesuré, Windows ou Linux.
+        title = "Hôte d'APEX autonome"
+        system = info.get("system")
+        if system not in ("Windows", "Linux"):
+            return _fail("GATE-02", title, f"système « {system} » non pris en charge (Windows ou Linux)",
+                         blocks_phases=(1,))
+        return _ok("GATE-02", title, f"{system} {info.get('release', '')} natif — profil autonome, sans WSL2",
+                   facts={"system": system, "release": info.get("release"), "profile": "standalone"})
     if info.get("system") != "Linux":
         return _fail("GATE-02", title, f"système « {info.get('system')} » — APEX s'exécute sous Linux",
                      remediation="Lancer APEX depuis la distribution WSL2.", blocks_phases=(1,))
@@ -230,6 +249,19 @@ def gate_05_python(ctx: GateContext) -> GateCheckResult:
 
 
 def gate_06_docker(ctx: GateContext) -> GateCheckResult:
+    if ctx.profile == "standalone":
+        # Mesuré, jamais exigé : la base est embarquée ; seule la sandbox conteneur (facultative) en dépend.
+        measured = _gate_06_measure(ctx)
+        if measured.status is GateStatus.FAIL:
+            return _degraded("GATE-06", measured.title,
+                             f"{measured.message} — non requis par le profil autonome (base embarquée) ; la "
+                             "sandbox conteneur est indisponible, l'isolation native de l'hôte est utilisée (GATE-19)",
+                             facts={**measured.facts, "profile": "standalone"})
+        return measured
+    return _gate_06_measure(ctx)
+
+
+def _gate_06_measure(ctx: GateContext) -> GateCheckResult:
     title = "Docker Engine et Compose"
     if ctx.probe.which("docker") is None:
         return _fail("GATE-06", title, "docker introuvable",
@@ -630,6 +662,12 @@ def gate_14_virtualization(ctx: GateContext) -> GateCheckResult:
     nested = "vmx" in flags or "svm" in flags
     facts = {"cgroups_v2": cgroups_v2, "kvm_available": kvm, "nested_virtualization": nested}
 
+    if not cgroups_v2 and ctx.profile == "standalone":
+        # Infrastructure de la VM d'isolation renforcée (phase 21) : sans objet pour démarrer APEX autonome.
+        return _degraded("GATE-14", title,
+                         "cgroups v2 absent (mécanisme Linux de l'isolation renforcée, phase 21) — sans objet pour "
+                         "le démarrage d'APEX autonome ; voir GATE-19 pour l'isolation réellement disponible",
+                         facts={**facts, "profile": "standalone"}, blocks_phases=(21,))
     if not cgroups_v2:
         return _fail(
             "GATE-14", title,
@@ -695,7 +733,9 @@ def gate_16_tools(ctx: GateContext) -> GateCheckResult:
         "ollama": ctx.probe.which("ollama") is not None,
     }
     missing = [name for name, present in tools.items() if not present]
-    hard_missing = [name for name in missing if name in {"git", "pyyaml"}]
+    # Profil autonome : git n'est pas utilisé (aucune mise à jour du dépôt par APEX.exe) — seul PyYAML est dur.
+    hard = {"pyyaml"} if ctx.profile == "standalone" else {"git", "pyyaml"}
+    hard_missing = [name for name in missing if name in hard]
     facts = {"tools": tools, "inference": inference}
 
     if hard_missing:
@@ -807,6 +847,8 @@ def gate_19_isolation_state(ctx: GateContext) -> GateCheckResult:
     `red_team_allowed` reste False, exactement comme pour `docker_hardened`.
     """
     title = "État de l'isolation sandbox"
+    if ctx.profile == "standalone":
+        return _gate_19_standalone(ctx, title)
 
     docker_present = ctx.probe.which("docker") is not None
     has_runsc = False
@@ -885,6 +927,36 @@ def gate_19_isolation_state(ctx: GateContext) -> GateCheckResult:
     return _ok("GATE-19", title, "isolation gVisor disponible", facts=facts)
 
 
+def _gate_19_standalone(ctx: GateContext, title: str) -> GateCheckResult:
+    """Profil autonome : l'isolation est celle du backend RÉELLEMENT sélectionnable sur cet hôte
+    (`apex.sandbox.provider.select_sandbox_provider` : Windows -> AppContainer + Job Object, puis conteneur ;
+    Linux -> namespaces, puis conteneur), sondée empiriquement. Jamais un FAIL qui empêcherait APEX de
+    démarrer : sans isolation prouvée, l'exécution de code est REFUSÉE à chaque tentative (refus par défaut,
+    `IsolationUnavailable`) — c'est ce que dit ce contrôle, en DEGRADED, jamais en PASS."""
+    from apex.sandbox.provider import select_sandbox_provider
+
+    try:
+        selection = select_sandbox_provider()
+        report = selection.report
+        provider = selection.provider_name
+    except Exception as exc:  # une sonde qui échoue n'est jamais une isolation
+        return _degraded("GATE-19", title, f"sonde d'isolation en erreur ({exc.__class__.__name__}) — exécution de "
+                         "code DÉSACTIVÉE", facts={"code_execution_allowed": False, "profile": "standalone"})
+    facts = {"provider": provider, "isolation_level": report.level.value,
+             "code_execution_allowed": report.is_available, "red_team_allowed": False,
+             "profile": "standalone", "detail": report.detail[:500]}
+    if not report.is_available:
+        return _degraded("GATE-19", title,
+                         f"aucune isolation vérifiée sur cet hôte — exécution de code DÉSACTIVÉE ({report.detail[:200]})",
+                         remediation="APEX démarre ; les tâches qui exécutent du code sont refusées tant qu'une "
+                                     "isolation n'est pas prouvée (Windows : AppContainer ; ou Docker).",
+                         facts=facts, blocks_phases=(3,))
+    return _degraded("GATE-19", title,
+                     f"plafond d'isolation : {provider} ({report.level.value}) — suffisant pour du code généré "
+                     "ordinaire, PAS un niveau conteneur durci ; Red Team désactivé",
+                     facts=facts, blocks_phases=(21,))
+
+
 def gate_20_runsc_gonogo(ctx: GateContext) -> GateCheckResult:
     """Test empirique de runsc : présent ne signifie pas fonctionnel."""
     title = "runsc (gVisor) — go/no-go"
@@ -961,6 +1033,9 @@ def gate_21_compose_memory(ctx: GateContext) -> GateCheckResult:
     jamais supposee.
     """
     title = "Compose : limites memoire contre RAM visible"
+    if ctx.profile == "standalone":
+        return _unknown("GATE-21", title, "profil autonome : aucun service conteneurisé (base embarquée)",
+                        reason="not_applicable", facts={"profile": "standalone"})
     policy = ctx.config.gate.compose_memory if ctx.config else None
     compose_path = Path(ctx.project_root) / "docker-compose.yml"
     analysis = analyse_compose_file(compose_path)

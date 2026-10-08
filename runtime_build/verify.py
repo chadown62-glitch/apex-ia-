@@ -10,7 +10,11 @@ fichiers ne suffit pas à elle seule — voir la consigne d'origine) :
    contenir `from apex.<research>` / `import apex.<research>`, même dans
    une branche jamais exécutée par un simple test d'import (attrape un
    import mort mais présent, que la vérification 3 seule manquerait).
-3. DYNAMIQUE — import réel de chaque module Runtime dans un sous-processus
+3. COMPLÉTUDE — chaque `apex.<nom>` importé par un fichier de l'artefact (même
+   paresseusement, dans une fonction) existe dans l'artefact : un module de
+   premier niveau oublié dans `RUNTIME_FILES` (constaté : `apex/discovery.py`,
+   importé par `apex serve`) casse le Runtime au premier usage, pas à l'import.
+4. DYNAMIQUE — import réel de chaque module Runtime dans un sous-processus
    n'ayant QUE l'artefact sur `sys.path` (jamais le dépôt DEV complet, en
    exécutant depuis `artifact_dir` comme répertoire courant) : si un
    import réussissait via une fuite transitive non détectée par 1/2,
@@ -71,6 +75,21 @@ def _check_forbidden_imports(apex_dir: Path) -> list[str]:
     return violations
 
 
+_FROM_APEX_RE = re.compile(r"^\s*from\s+apex\s+import\s+([a-z_][a-z0-9_]*)", re.MULTILINE)
+
+
+def _check_missing_runtime_modules(apex_dir: Path) -> list[str]:
+    violations: list[str] = []
+    for py_file in sorted(apex_dir.rglob("*.py")):
+        text = py_file.read_text(encoding="utf-8", errors="replace")
+        targets = {m.group(1) for m in _IMPORT_RE.finditer(text)} | {m.group(1) for m in _FROM_APEX_RE.finditer(text)}
+        for target in sorted(targets - RESEARCH_PACKAGES):
+            if not (apex_dir / f"{target}.py").is_file() and not (apex_dir / target / "__init__.py").is_file():
+                rel = py_file.relative_to(apex_dir.parent)
+                violations.append(f"module absent de l'artefact, importé par {rel} : apex.{target}")
+    return violations
+
+
 def _check_dynamic_isolated_import(artifact_dir: Path) -> list[str]:
     """Importe chaque module Runtime dans un sous-processus exécuté depuis
     `artifact_dir` (jamais le dépôt DEV) et vérifie qu'aucun module
@@ -121,6 +140,7 @@ def verify_runtime_artifact(artifact_dir: Path) -> VerificationReport:
     violations: list[str] = []
     violations += _check_forbidden_directories(apex_dir)
     violations += _check_forbidden_imports(apex_dir)
+    violations += _check_missing_runtime_modules(apex_dir)
     violations += _check_dynamic_isolated_import(artifact_dir)
     return VerificationReport(violations=violations)
 

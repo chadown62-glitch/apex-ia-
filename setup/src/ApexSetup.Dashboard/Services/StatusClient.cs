@@ -24,8 +24,12 @@ public enum FetchOutcome
 public sealed record BackendComponent(string Name, string State, string Detail);
 
 /// <summary>Contenu utile de <c>GET /api/v1/status</c>.</summary>
+/// <param name="Profile">« server » (WSL, Docker) ou « standalone » (APEX autonome) ; <c>null</c> : backend antérieur.</param>
+/// <param name="Informational">Composants hors verdict selon le backend (ex. Ollama, cerveau en mode autonome).</param>
+/// <param name="NotApplicable">Composants sans objet dans ce profil : jamais mesurés, aucune ligne affichée.</param>
 public sealed record StatusPayload(
-    string ApexVersion, string ApiVersion, int PanelProtocol, int? Pid, IReadOnlyList<BackendComponent> Components);
+    string ApexVersion, string ApiVersion, int PanelProtocol, int? Pid, IReadOnlyList<BackendComponent> Components,
+    string? Profile = null, IReadOnlyList<string>? Informational = null, IReadOnlyList<string>? NotApplicable = null);
 
 /// <summary>Résultat de « Ouvrir APEX » : l'adresse à usage unique, ou pourquoi elle n'existe pas.</summary>
 public sealed record UiLaunch(bool Ok, string? Url, bool UiAvailable, string Detail)
@@ -185,6 +189,24 @@ public sealed class StatusClient(HttpClient httpClient)
         }
     }
 
+    /// <summary>Liste de noms de composants (champ facultatif, ajouté sans changer le protocole) ; un élément mal formé est ignoré.</summary>
+    private static List<string> Names(JsonElement data, string property)
+    {
+        var names = new List<string>();
+        if (data.TryGetProperty(property, out var list) && list.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var item in list.EnumerateArray())
+            {
+                if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 and <= 40 } name
+                    && name.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-'))
+                {
+                    names.Add(name);
+                }
+            }
+        }
+        return names;
+    }
+
     /// <summary>Analyse stricte : toute réponse qui n'a pas exactement la forme attendue est « pas APEX », jamais lue partiellement.</summary>
     internal static StatusFetch Parse(string body, int httpStatus)
     {
@@ -223,7 +245,9 @@ public sealed class StatusClient(HttpClient httpClient)
             var payload = new StatusPayload(
                 versions.TryGetProperty("apex", out var apex) ? apex.GetString() ?? "?" : "?",
                 versions.TryGetProperty("api", out var api) ? api.GetString() ?? "?" : "?",
-                panelProtocol, pid, components);
+                panelProtocol, pid, components,
+                data.TryGetProperty("profile", out var profile) && profile.ValueKind == JsonValueKind.String ? profile.GetString() : null,
+                Names(data, "informational"), Names(data, "not_applicable"));
             return new StatusFetch(FetchOutcome.Ok, payload, httpStatus, $"HTTP {httpStatus}");
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException)
