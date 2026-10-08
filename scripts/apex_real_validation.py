@@ -100,9 +100,15 @@ def environment_facts(candidates: tuple[Any, ...]) -> dict[str, Any]:
     report = get_default_provider(candidates[0].endpoint).detect()
     selection = select_sandbox_provider()
     weights = weights_dir(candidates[0].endpoint)
+    source = source_of(weights) if weights else None
+    # Les POIDS réellement chargés font foi, pas le nom du rôle : une mesure locale avec d'autres poids
+    # (ex. Qwen2.5-1.5B-Instruct depuis Docker Hub quand Hugging Face est inaccessible) est étiquetée comme
+    # telle et jamais confondue avec la variante « Coder » mesurée en CI.
+    actual = (source or {}).get("repo") or "inconnu"
     return {
         "model": candidates[0].ref.id, "endpoint": candidates[0].endpoint.served_model,
-        "weights_source": source_of(weights) if weights else None,
+        "weights_source": source, "actual_weights": actual,
+        "substitute_weights": "Qwen2.5-Coder-1.5B-Instruct" not in actual,
         "backend": report.backend, "model_detail": report.detail, "device": report.facts.get("device"),
         "torch": torch.__version__, "cpu_count": os.cpu_count(), "python": platform.python_version(),
         "sandbox": selection.provider_name, "sandbox_reason": selection.reason[:300],
