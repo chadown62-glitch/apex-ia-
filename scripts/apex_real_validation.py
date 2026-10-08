@@ -701,6 +701,8 @@ def analyse_learning(records: list[dict[str, Any]], training: list[dict[str, Any
                                          for r, src in zip(rs, source, strict=True)),
                 "related_used": sum(any(i.get("used") and i.get("source") == src for i in u)
                                     for u, src in zip(uses, source, strict=True)),
+                "related_used_strict": sum(any(i.get("source") == src and _strict(i.get("evidence")) for i in u)
+                                           for u, src in zip(uses, source, strict=True)),
             })
         table[arm] = row
     # DÉCISION CHANGÉE : le code produit diffère-t-il de celui de BASE (même graine, même tâche) ?
@@ -1008,6 +1010,25 @@ def _pair(records: list[dict[str, Any]], first: str, second: str, metric: str) -
             "second_only": b, "first_only": c, "p": mcnemar_exact(b, c)}
 
 
+def plan_metrics(record: dict[str, Any]) -> dict[str, Any]:
+    """Plan (§6.4) : longueur, code résiduel, RÉPÉTITION de l'énoncé (part de ses termes déjà dans l'énoncé) et
+    lien PLAN -> ACTIONS (part de ses termes retrouvés dans le code produit). Comptes lexicaux, sans jugement."""
+    from apex.memory.retrieval import tokenize
+    from apex.tasks.solution_tasks import build_reference_task_spec
+
+    plan = record.get("plan") or ""
+    terms = set(tokenize(plan))
+    try:
+        statement = set(tokenize(build_reference_task_spec(record["kind"]).description))
+    except Exception:
+        statement = set()
+    code = " ".join((a.get("code") or "") for a in record.get("attempts") or [])
+    code_terms = set(tokenize(code))
+    return {"chars": len(plan), "has_code": bool(re.search(r"```|\bdef |\breturn\b", plan)),
+            "statement_overlap": len(terms & statement) / len(terms) if terms else 0.0,
+            "terms_in_code": len(terms & code_terms) / len(terms) if terms else 0.0}
+
+
 def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
     arms = sorted({r["arm"] for r in records})
     table = {}
@@ -1026,6 +1047,15 @@ def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
             "plan_code_removed": sum(r.get("plan_code_removed", False) for r in rs),
             "errors": _count([a["category"] for r in rs for a in r["attempts"] if a["verdict"] != "pass"]),
         }
+        plans = [plan_metrics(r) for r in rs if r.get("plan")]
+        if plans:
+            table[arm]["plan"] = {
+                "n": len(plans), "mean_chars": round(sum(p["chars"] for p in plans) / len(plans)),
+                "with_code": sum(p["has_code"] for p in plans),
+                "mean_statement_overlap": round(sum(p["statement_overlap"] for p in plans) / len(plans), 3),
+                "mean_plan_terms_in_code": round(sum(p["terms_in_code"] for p in plans) / len(plans), 3),
+                "success_when_plan": sum(r["success"] for r in rs if r.get("plan")),
+            }
         outcomes = [o for r in rs for o in r.get("repair_outcomes") or []]
         if outcomes:
             table[arm]["retries_code_changed"] = f"{sum(bool(o['code_changed']) for o in outcomes)}/{len(outcomes)}"
@@ -1165,6 +1195,10 @@ def analyse_toolbench(records: list[dict[str, Any]]) -> dict[str, Any]:
             "secondary": secondary}
 
 
+def _strict(evidence: list[str] | None) -> bool:
+    return any(not re.fullmatch(r"nombre -?\d+", e) for e in evidence or [])
+
+
 def memory_use(record: dict[str, Any], statement: str | None = None) -> dict[str, Any]:
     """Souvenirs utilisés par la (dernière) tentative : `memory.used` de la boucle, sinon recalculé sur ce que
     l'ancien rendu montrait (`memory_shown_old`) avec la même règle (`apex.memory.lessons.use_evidence`)."""
@@ -1185,6 +1219,9 @@ def memory_use(record: dict[str, Any], statement: str | None = None) -> dict[str
                                   None),
             "used_any": any(r.get("used") for r in rows),
             "used_relevant": any(r.get("used") and r.get("source") == relevant for r in rows),
+            # Contrôle de robustesse (analyse seulement) : sans les preuves faites d'un seul ENTIER (60, 100…),
+            # qui peuvent coïncider sans que le souvenir ait servi.
+            "used_relevant_strict": any(r.get("source") == relevant and _strict(r.get("evidence")) for r in rows),
             "evidence": [e for r in rows if r.get("source") == relevant for e in r.get("evidence") or []]}
 
 
@@ -1206,6 +1243,7 @@ def analyse_memorybench(records: list[dict[str, Any]], statements: dict[str, str
                 "relevant_retrieved": sum(u["relevant_retrieved"] for u in uses),
                 "relevant_rank_1": sum(u["relevant_rank"] == 1 for u in uses),
                 "used_any": sum(u["used_any"] for u in uses), "used_relevant": sum(used),
+                "used_relevant_strict": sum(u["used_relevant_strict"] for u in uses),
                 "success_if_used": f"{sum(r['success'] for r, u in zip(rs, used, strict=True) if u)}/{sum(used)}",
                 "success_if_not_used": f"{sum(r['success'] for r, u in zip(rs, used, strict=True) if not u)}/{n - sum(used)}",
             })

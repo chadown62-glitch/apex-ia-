@@ -126,3 +126,12 @@ def test_the_adaptive_plan_is_scored_against_both_fixed_arms_and_hindsight() -> 
     assert result["decisions"] == {"bypass": 2} and result["decision_matches_hindsight"] == "1/2"
     assert result["eval"]["AUTO"]["mean_duration_s"] < result["eval"]["B"]["mean_duration_s"]
     assert result["AUTO vs B"]["first_only"] == 1 and result["history"] == {"A": "1/1", "B": "0/1"}
+
+
+def test_plan_metrics_measure_length_code_repetition_and_link_to_the_code() -> None:
+    record = {"kind": "rle_encode", "plan": "1. Parcourir la chaîne et compter les répétitions consécutives.",
+              "attempts": [{"code": "def rle_encode(s):\n    # compter les répétitions\n    return s"}]}
+    m = harness.plan_metrics(record)
+    assert m["chars"] == len(record["plan"]) and m["has_code"] is False
+    assert 0 < m["statement_overlap"] <= 1 and 0 < m["terms_in_code"] < 1
+    assert harness.plan_metrics({**record, "plan": "```python\ndef f(): pass\n```"})["has_code"] is True

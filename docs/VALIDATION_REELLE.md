@@ -350,3 +350,9 @@ seulement se souvenir). Secondaire : NAIVE vs BASE. Mesures : réussite par fami
 la tâche apparentée retrouvé et UTILISÉ (`memory.used`), DÉCISION CHANGÉE (code différent de celui de BASE à graine
 égale), entraînement (réussites, corrections, leçons écrites). Critère de preuve : H-L-a ET H-L-b significatifs, puis
 répliqués (même sens, p < 0,05) sur graines {10, 11, 12, 13}. Sinon : limitation documentée avec les mesures.
+
+Ajouts d'ANALYSE (écrits avant toute lecture des résultats ; aucun protocole modifié) : métriques de plan
+(`plan_metrics` : longueur, code résiduel, part des termes du plan déjà dans l'énoncé = répétition, part retrouvée dans
+le code = lien plan -> actions) ; variante STRICTE de « mémoire utilisée » qui ignore les preuves faites d'un seul
+entier (60, 100…), susceptibles de coïncider (ex. parse_duration et parse_hhmm comptent tous deux en 60) — la règle
+pré-enregistrée reste la mesure principale, la stricte un contrôle de robustesse.
