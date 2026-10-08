@@ -85,6 +85,10 @@ STRATEGIES = ("rule", "failure_facts")
 #: `diagnose_repair` : observation (son code, faits, exemples publics) -> diagnostic par le modèle -> changement
 #: de stratégie explicite (`apex.taskloop.repair`).
 RETRY_ADAPTATIONS = ("failure_facts", "none", "diagnose_repair")
+#: Décision de l'étape PLAN (08/10/2026, docs/VALIDATION_REELLE.md §6.4) : `request` = `plan_first` tel que demandé ;
+#: `auto` = APEX décide d'après les exécutions PASSÉES de tâches similaires (avec ou sans plan) — plan seulement
+#: si la preuve dit qu'il aide, sinon contourné (mesuré en `real-2`/`real-3` : il n'aidait pas et coûtait ×4).
+PLAN_POLICIES = ("request", "auto")
 
 
 @dataclass(frozen=True)
@@ -126,6 +130,8 @@ class TaskRequest:
     #: Étape PLAN réelle : le modèle rédige d'abord une analyse et un plan (sans code), réinjectés dans
     #: la génération. `False` : l'étape PLAN se limite à composer le prompt (énoncé, contexte, contraintes).
     plan_first: bool = False
+    #: Voir `PLAN_POLICIES`. `auto` remplace `plan_first` par une décision fondée sur l'expérience.
+    plan_policy: str = "request"
     #: Mode OUTILLÉ : permissions EXPLICITEMENT accordées aux outils (`apex.tools.model.Permission`, ex.
     #: `workspace.read`, `workspace.write`, `sandbox.execute`). Vide (défaut) : une tentative = un appel au
     #: modèle. Non vide : une tentative = un épisode « action -> outil -> observation » dans l'espace de travail
@@ -158,6 +164,8 @@ class TaskRequest:
             raise ValueError(
                 f"adaptation « {self.retry_adaptation} » inconnue (attendu : {', '.join(RETRY_ADAPTATIONS)})"
             )
+        if self.plan_policy not in PLAN_POLICIES:
+            raise ValueError(f"politique de plan « {self.plan_policy} » inconnue (attendu : {', '.join(PLAN_POLICIES)})")
         if self.strategy not in STRATEGIES:
             raise ValueError(f"stratégie « {self.strategy} » inconnue (attendu : {', '.join(STRATEGIES)})")
         if self.strategy == "failure_facts" and not self.condition_on_run:

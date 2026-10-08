@@ -10,11 +10,12 @@ from __future__ import annotations
 from typing import Any
 
 #: Clés acceptées et leur validation. Tout le reste est refusé (jamais ignoré silencieusement).
-ALLOWED_KEYS = ("max_attempts", "plan_first", "retry_adaptation", "tool_permissions", "max_tool_steps", "use_memory")
+ALLOWED_KEYS = ("max_attempts", "plan_first", "plan_policy", "retry_adaptation", "tool_permissions", "max_tool_steps",
+                "use_memory")
 
 
 def normalize_task_options(options: dict[str, Any] | None, *, task: Any) -> dict[str, Any]:
-    from apex.taskloop.request import RETRY_ADAPTATIONS
+    from apex.taskloop.request import PLAN_POLICIES, RETRY_ADAPTATIONS
     from apex.tasks.model import TaskKind
     from apex.tools.model import Permission
 
@@ -32,6 +33,10 @@ def normalize_task_options(options: dict[str, Any] | None, *, task: Any) -> dict
         if not isinstance(value, bool):
             raise ValueError(f"{key} doit être un booléen")
         out[key] = value
+    policy = options.get("plan_policy", "request")
+    if policy not in PLAN_POLICIES:
+        raise ValueError(f"plan_policy « {policy} » inconnue (attendu : {', '.join(PLAN_POLICIES)})")
+    out["plan_policy"] = policy
     adaptation = options.get("retry_adaptation", "failure_facts")
     if adaptation not in RETRY_ADAPTATIONS:
         raise ValueError(f"retry_adaptation « {adaptation} » inconnue (attendu : {', '.join(RETRY_ADAPTATIONS)})")

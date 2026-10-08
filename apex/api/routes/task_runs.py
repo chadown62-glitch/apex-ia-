@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -77,6 +77,8 @@ class TaskRunIn(BaseModel):
     retry_adaptation: str = Field(default="failure_facts", max_length=32)
     #: Étape PLAN réelle (analyse et plan rédigés par le modèle avant la génération).
     plan_first: bool = False
+    #: `request` (défaut) : `plan_first` tel quel ; `auto` : APEX décide d'après l'expérience (§6.4).
+    plan_policy: Literal["request", "auto"] = "request"
     #: Mode outillé : permissions EXPLICITEMENT accordées (`workspace.read`, `workspace.write`,
     #: `sandbox.execute`) ; vide : une tentative = un appel au modèle.
     tool_permissions: list[str] = Field(default_factory=list, max_length=3)
@@ -295,6 +297,7 @@ def start_task_run(task_id: str, body: TaskRunIn) -> DataEnvelope[dict[str, Any]
             base_temperature=body.base_temperature,
             retry_adaptation=body.retry_adaptation,
             plan_first=body.plan_first,
+            plan_policy=body.plan_policy,
             tool_permissions=tuple(body.tool_permissions),
             max_tool_steps=body.max_tool_steps,
             use_memory=body.use_memory,

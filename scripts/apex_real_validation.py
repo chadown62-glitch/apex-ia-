@@ -14,6 +14,7 @@ Sous-commandes (une par phase) :
   tools        tâches exigeant les outils + tentatives hostiles réelles du modèle (protocole §2.4)
   toolbench    banc d'outils : 10 tâches, 5 types, bras NT/NT3/T (+ T0 = agent figé) (§6.2)
   memorybench  banc mémoire : expérience (6 sources) puis cibles A/M/P (+ M0 = rendu d'avant) (§6.3)
+  planauto     PLAN adaptatif : historique A/B sur 10 tâches, puis AUTO vs A vs B sur les 5 autres (§6.4)
   analyse      tableaux et tests exacts (McNemar, Holm) sur des fichiers de résultats
 
 Le modèle : endpoint natif de la configuration (`APEX_MODELS_DIR`) ; le script refuse de tourner si un
@@ -172,7 +173,7 @@ def create_task(factory: Any, spec: Any) -> Any:
 def run_task(factory: Any, candidates: tuple[Any, ...], task: Any, *, seed: int, workspace: Path,
              max_attempts: int = 1, plan_first: bool = False, retry_adaptation: str = "none",
              tool_permissions: tuple[str, ...] = (), max_tool_steps: int = 8, use_memory: bool = False,
-             no_progress_patience: int | None = None) -> Any:
+             no_progress_patience: int | None = None, plan_policy: str = "request") -> Any:
     from apex.agents.runtime import AgentRuntime
     from apex.config.loader import load_config
     from apex.taskloop.loop import run_task_loop
@@ -189,7 +190,8 @@ def run_task(factory: Any, candidates: tuple[Any, ...], task: Any, *, seed: int,
         limits=TaskLimits(max_attempts=max_attempts, max_retries=max(0, max_attempts - 1), max_candidates=1,
                           max_wall_clock_s=WALL_CLOCK_S),
         plan_first=plan_first, retry_adaptation=retry_adaptation, tool_permissions=tool_permissions,
-        max_tool_steps=max_tool_steps, use_memory=use_memory)
+        max_tool_steps=max_tool_steps, use_memory=use_memory,
+        **({"plan_policy": plan_policy} if plan_policy != "request" else {}))  # arbres figés : sans ce champ
 
 
 _WRONG = re.compile(r"^(\d+)/(\d+) cas incorrects")
@@ -613,6 +615,75 @@ TOOLBENCH_ARMS: dict[str, dict[str, Any]] = {
 }
 _READ_TOOLS = ("fs.read", "fs.list", "project.inspect")
 _CHECK_TOOLS = ("solution.check", "tests.run", "code.run")
+
+
+def phase_planauto(out: Path, seeds: list[int]) -> int:
+    """PLAN adaptatif (§6.4). Par graine, une base : HISTORIQUE = bras A puis B (une tentative) sur les 10 premières
+    tâches de référence ; ÉVALUATION sur les 5 autres : AUTO (`plan_policy="auto"`, décision d'après cet
+    historique) dans cette base, A et B dans des bases neuves. Mêmes graines de génération que la phase
+    `adaptation` : AUTO contourné = même prompt que A, AUTO avec plan = même prompt que B."""
+    from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
+
+    candidates = native_candidates()
+    root = Path(tempfile.mkdtemp(prefix="apex-planauto-"))
+    train, held_out = REFERENCE_TASK_KINDS[:10], REFERENCE_TASK_KINDS[10:]
+    records = []
+    for seed in seeds:
+        history = session_factory(root / f"history-s{seed}.db")
+        for kind in train:
+            for arm in ("A", "B"):
+                run = run_task(history, candidates, create_task(history, build_reference_task_spec(kind)),
+                               seed=seed_for("adapt", kind, seed), workspace=root / "ws", **ARMS[arm])
+                record = {"phase_role": "history", "arm": arm, "seed": seed, "kind": kind, **collect(history, run)}
+                progress(record, f"plan-auto historique {arm} graine {seed} {kind}")
+                records.append(record)
+        for kind in held_out:
+            for arm in ("AUTO", "A", "B"):
+                factory = history if arm == "AUTO" else session_factory(root / f"{arm}-s{seed}-{kind}.db")
+                options = {**ARMS["A"], "plan_policy": "auto"} if arm == "AUTO" else ARMS[arm]
+                run = run_task(factory, candidates, create_task(factory, build_reference_task_spec(kind)),
+                               seed=seed_for("adapt", kind, seed), workspace=root / "ws", **options)
+                record = {"phase_role": "eval", "arm": arm, "seed": seed, "kind": kind, **collect(factory, run)}
+                record["plan_decision"] = next((e for e in _trace_events(factory, run) if e.get("kind") == "task.plan.decided"),
+                                               None)
+                progress(record, f"plan-auto évaluation {arm} graine {seed} {kind}")
+                records.append(record)
+    write(out, {"phase": "planauto", "environment": environment_facts(candidates), "seeds": seeds,
+                "train": list(train), "held_out": list(held_out), "records": records})
+    return 0
+
+
+def _trace_events(factory: Any, run: Any) -> list[dict[str, Any]]:
+    from apex.api.routes.task_runs import _trace
+
+    return _trace(run, factory)
+
+
+def analyse_planauto(records: list[dict[str, Any]]) -> dict[str, Any]:
+    evals = [r for r in records if r.get("phase_role") == "eval"]
+    table = {}
+    for arm in ("A", "B", "AUTO"):
+        rs = [r for r in evals if r["arm"] == arm]
+        if not rs:
+            continue
+        table[arm] = {"n": len(rs), "success": sum(r["success"] for r in rs),
+                      "mean_judge_score": round(sum(r["final_score"] for r in rs) / len(rs), 3),
+                      "mean_duration_s": round(sum(r["duration_s"] or 0 for r in rs) / len(rs), 1),
+                      "plans": sum(bool(r.get("plan")) for r in rs)}
+    decisions = [r["plan_decision"] for r in evals if r["arm"] == "AUTO" and r.get("plan_decision")]
+    history = [r for r in records if r.get("phase_role") == "history"]
+    # Décision « juste » a posteriori : planifier seulement là où B a réussi et A a échoué (mêmes graines).
+    by = {}
+    for r in evals:
+        by.setdefault((r["seed"], r["kind"]), {})[r["arm"]] = r
+    right = sum(1 for v in by.values() if {"A", "B", "AUTO"} <= set(v)
+                and bool(v["AUTO"].get("plan")) == (v["B"]["success"] and not v["A"]["success"]))
+    return {"eval": table, "decisions": _count([d["decision"] for d in decisions]),
+            "reasons": _count([d["reason"].split(" :")[0] for d in decisions]),
+            "history": {arm: f"{sum(r['success'] for r in history if r['arm'] == arm)}/"
+                             f"{sum(1 for r in history if r['arm'] == arm)}" for arm in ("A", "B")},
+            "decision_matches_hindsight": f"{right}/{len(by)}",
+            "AUTO vs B": _pair(evals, "B", "AUTO", "success"), "AUTO vs A": _pair(evals, "A", "AUTO", "success")}
 
 
 def tool_metrics(attempts: list[dict[str, Any]], needs: tuple[str, ...] = ()) -> dict[str, Any]:
@@ -1059,6 +1130,8 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
         report["memorybench"]["sources"] = [{"seed": s["seed"], "success": sum(v["success"] for v in s["runs"].values()),
                                              "n": len(s["runs"])} for d in merged["memorybench"][:1] for s in d["sources"]]
         report["memorybench"]["environment"] = merged["memorybench"][0]["environment"]
+    if "planauto" in merged:
+        report["planauto"] = analyse_planauto([r for d in merged["planauto"] for r in d["records"]])
     if "toolbench" in merged:
         report["toolbench"] = analyse_toolbench([r for d in merged["toolbench"] for r in d["records"]])
         report["toolbench"]["environment"] = merged["toolbench"][0]["environment"]
@@ -1079,7 +1152,7 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("phase", choices=("smoke", "adaptation", "memory", "tools", "toolbench", "memorybench",
-                                          "analyse"))
+                                          "planauto", "analyse"))
     parser.add_argument("--seeds", default="0", help="graines séparées par des virgules")
     parser.add_argument("--arms", default="A,B,R,C,D")
     parser.add_argument("--kinds", default=None, help="tâches de référence (défaut : les 15)")
@@ -1105,6 +1178,8 @@ def main() -> int:
                                 args.kinds.split(",") if args.kinds else None, args.no_progress_patience)
     if args.phase == "memory":
         return phase_memory(out, seeds)
+    if args.phase == "planauto":
+        return phase_planauto(out, seeds)
     if args.phase == "memorybench":
         assert args.train_dir, "--train-dir requis (bases d'expérience partagées entre bras)"
         return phase_memorybench(out, seeds, [a for a in args.arms.split(",") if a], Path(args.train_dir),

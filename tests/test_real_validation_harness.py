@@ -111,3 +111,18 @@ def test_the_repair_arm_is_compared_to_retry_and_facts_with_its_traces() -> None
     assert result["primary"]["H-L2 diagnostic + stratégie au-delà des faits (L vs C)"]["second_only"] == 1
     assert result["arms"]["L"]["retries_code_changed"] == "3/4" and result["arms"]["L"]["diagnosis_missing"] == 1
     assert set(result["holm_significant"]) == set(result["primary"])  # Holm sur toutes les hypothèses principales
+
+
+def test_the_adaptive_plan_is_scored_against_both_fixed_arms_and_hindsight() -> None:
+    def rec(arm, kind, success, plan=None, decision=None, role="eval"):
+        return {"phase_role": role, "arm": arm, "seed": 0, "kind": kind, "success": success,
+                "final_score": float(success), "duration_s": 10.0 if arm != "B" else 40.0, "plan": plan,
+                "plan_decision": {"decision": decision, "reason": "preuve insuffisante : contourné"} if decision else None}
+
+    records = [rec("A", "k1", True), rec("B", "k1", False, plan="p"), rec("AUTO", "k1", True, decision="bypass"),
+               rec("A", "k2", False), rec("B", "k2", True, plan="p"), rec("AUTO", "k2", False, decision="bypass"),
+               rec("A", "h", True, role="history"), rec("B", "h", False, plan="p", role="history")]
+    result = harness.analyse_planauto(records)
+    assert result["decisions"] == {"bypass": 2} and result["decision_matches_hindsight"] == "1/2"
+    assert result["eval"]["AUTO"]["mean_duration_s"] < result["eval"]["B"]["mean_duration_s"]
+    assert result["AUTO vs B"]["first_only"] == 1 and result["history"] == {"A": "1/1", "B": "0/1"}

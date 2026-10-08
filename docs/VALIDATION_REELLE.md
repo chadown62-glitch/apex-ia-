@@ -304,3 +304,19 @@ P vs A. Mesures : souvenir de la source retrouvé (et au 1er rang), souvenir UTI
 utilisé / non utilisé, par paire, durée, réussite des sources. Limite assumée : ce banc mesure la capacité à
 RETROUVER et UTILISER une information présente seulement dans l'expérience — pas un apprentissage (§6.5). Règle :
 effet affirmé seulement après réplication sur graines {10, 11, 12, 13}.
+
+### 6.4 PLAN : vérification de la correction, puis plan adaptatif — PRÉ-ENREGISTRÉ (avant toute mesure locale)
+1. **Correction du plan** (`1868769`, protocole §2.5, jamais exécuté en CI) : rejoué LOCALEMENT, inchangé — bras A, C,
+   B, D, 15 tâches × graines {0, 1, 2, 3} (`local-plan2`). Mesures : réussite B vs A et D vs C, plans contenant du code
+   (`plan_code_removed`), plans en échec, `invalid_candidate`, longueur du plan, durée. Comparaison descriptive avec
+   `real-2` (autres poids : jamais confondus).
+2. **Plan adaptatif** (`plan_policy="auto"`, `apex.taskloop.loop._plan_decision`) : APEX ne rédige un plan que si
+   les exécutions PASSÉES de tâches similaires (mémoire système) réussissent davantage avec un plan RÉELLEMENT injecté
+   (lu dans leurs expériences), avec au moins 3 exécutions de chaque côté ; sinon il le contourne (à preuve égale il
+   coûte un appel de plus ; sans preuve, règle par défaut issue de `real-2`/`real-3`). Décision et preuves journalisées
+   (`task.plan.decided`). Mesure (`planauto`, graines {0, 1, 2, 3}) : historique = A puis B sur les 10 premières tâches
+   de référence ; évaluation sur les 5 autres : AUTO (décidé d'après cet historique) contre A et B (bases neuves),
+   mêmes graines de génération. Critère : PLAN « utile ou contournable » est atteint si AUTO n'est pas inférieur à
+   B en réussite (McNemar, p ≥ 0,05 dans le sens défavorable) ET coûte moins que B en durée moyenne — ou si AUTO
+   choisit le plan là où il aide. Rapporté : décisions, raisons, accord avec la décision rétrospectivement juste
+   (planifier seulement où B réussit et A échoue), réussite et durée par bras.

@@ -509,6 +509,7 @@ def run_mission_task(
             limits=TaskLimits(max_attempts=attempts, max_retries=attempts - 1, max_candidates=2,
                               max_wall_clock_s=900.0),
             plan_first=bool(options.get("plan_first", False)),
+            plan_policy=str(options.get("plan_policy", "request")),
             retry_adaptation=str(options.get("retry_adaptation", "failure_facts")),
             tool_permissions=tuple(options.get("tool_permissions", ())),
             max_tool_steps=int(options.get("max_tool_steps", 8)),

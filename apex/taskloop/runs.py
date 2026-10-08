@@ -84,6 +84,7 @@ class TaskRun:
     #: a demandé une analyse au modèle (`TaskRequest.plan_first`). `None` : TaskRun antérieure à ces champs.
     retry_adaptation: str | None = None
     plan_first: bool | None = None
+    plan_policy: str | None = None
     #: Mode outillé : permissions explicitement accordées et tours maximaux par tentative (None : sans outils).
     tool_permissions: tuple[str, ...] | None = None
     max_tool_steps: int | None = None
@@ -117,6 +118,7 @@ class TaskRun:
             "base_temperature": self.base_temperature,
             "retry_adaptation": self.retry_adaptation,
             "plan_first": self.plan_first,
+            "plan_policy": self.plan_policy,
             "tool_permissions": list(self.tool_permissions) if self.tool_permissions is not None else None,
             "max_tool_steps": self.max_tool_steps,
             "use_memory": self.use_memory,
@@ -158,6 +160,7 @@ class TaskRunRepository:
                     base_temperature=run.base_temperature,
                     retry_adaptation=run.retry_adaptation,
                     plan_first=run.plan_first,
+                    plan_policy=run.plan_policy,
                     tool_permissions=list(run.tool_permissions) if run.tool_permissions is not None else None,
                     max_tool_steps=run.max_tool_steps,
                     use_memory=run.use_memory,
@@ -293,6 +296,7 @@ def _from_row(row: Any) -> TaskRun:
         base_temperature=row.base_temperature,
         retry_adaptation=row.retry_adaptation,
         plan_first=row.plan_first,
+        plan_policy=getattr(row, "plan_policy", None),
         tool_permissions=tuple(row.tool_permissions) if row.tool_permissions is not None else None,
         max_tool_steps=row.max_tool_steps,
         use_memory=row.use_memory,
@@ -358,6 +362,7 @@ class TaskRunService:
         base_temperature: float | None = None,
         retry_adaptation: str = "failure_facts",
         plan_first: bool = False,
+        plan_policy: str = "request",
         tool_permissions: tuple[str, ...] = (),
         max_tool_steps: int = 8,
         use_memory: bool = False,
@@ -414,6 +419,7 @@ class TaskRunService:
             base_temperature=base_temperature,
             retry_adaptation=retry_adaptation,
             plan_first=plan_first,
+            plan_policy=plan_policy,
             tool_permissions=tuple(tool_permissions),
             max_tool_steps=max_tool_steps,
             use_memory=use_memory,
@@ -441,6 +447,7 @@ class TaskRunService:
             base_temperature=base_temperature,
             retry_adaptation=retry_adaptation,
             plan_first=plan_first,
+            plan_policy=plan_policy,
             tool_permissions=tuple(tool_permissions) if tool_permissions else None,
             max_tool_steps=max_tool_steps if tool_permissions else None,
             use_memory=use_memory,
@@ -570,9 +577,10 @@ class TaskRunService:
             ),
             condition_on_run=run.condition_on_run, strategy=run.strategy or "rule",
             base_temperature=run.base_temperature, retry_adaptation=run.retry_adaptation or "failure_facts",
-            plan_first=bool(run.plan_first), tool_permissions=tuple(run.tool_permissions or ()),
+            plan_first=bool(run.plan_first), plan_policy=run.plan_policy or "request",
+            tool_permissions=tuple(run.tool_permissions or ()),
             max_tool_steps=run.max_tool_steps or 8, use_memory=bool(run.use_memory),
-            resume=True, resume_plan=self._prior_plan(run) if run.plan_first else None,
+            resume=True, resume_plan=self._prior_plan(run) if (run.plan_first or run.plan_policy == "auto") else None,
         )
         self._reserve(run.task_id)
         if not self.repo.claim_resume(run_id):

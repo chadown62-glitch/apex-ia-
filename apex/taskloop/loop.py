@@ -536,6 +536,70 @@ def _experience_routing(
     return ranked
 
 
+_PLAN_MIN_EVIDENCE = 3
+
+
+def _plan_decision(
+    request: TaskRequest, *, task: Any, trace_id: str, session_factory: Any,
+    emit: Callable[[str, dict[str, Any]], None],
+) -> bool:
+    """PLAN ADAPTATIF (`plan_policy="auto"`, §6.4) : EXPÉRIENCE -> DÉCISION. Les exécutions PASSÉES de tâches
+    similaires (mémoire système, BM25 sur l'énoncé) sont séparées selon qu'elles ont demandé un plan ou non ; le
+    plan n'est rédigé que si, avec au moins `_PLAN_MIN_EVIDENCE` exécutions de chaque côté, le taux de réussite
+    AVEC plan dépasse strictement celui SANS plan. Sinon il est CONTOURNÉ : à preuve égale, l'étape coûte un appel
+    au modèle de plus (mesuré : ×4 en durée) ; sans preuve, la règle par défaut suit la mesure `real-2`/`real-3`
+    (le plan n'aidait pas). Décision et preuves journalisées (`task.plan.decided`)."""
+    from apex.experience.store import ExperienceRepository
+    from apex.memory.model import MemoryCategory
+    from apex.memory.service import MemoryService
+    from apex.taskloop.runs import TaskRunRepository
+    from apex.tasks.solution_tasks import retrieval_statement
+
+    sides = {True: {"runs": 0, "completed": 0}, False: {"runs": 0, "completed": 0}}
+    evidence = []
+    try:
+        items = MemoryService(session_factory).retrieve(
+            retrieval_statement(task.description), requested_by=request.authorization,
+            categories=(MemoryCategory.EXECUTION,), limit=20, exclude_source_prefixes=(f"task_run:{trace_id}",),
+        )
+        runs = TaskRunRepository(session_factory)
+        for item in items:
+            if not item.record.source.startswith("task_run:"):
+                continue
+            past = runs.get(item.record.source.split(":", 1)[1])
+            if past is None or not past.status.terminal:
+                continue
+            # Plan RÉELLEMENT injecté (pas seulement demandé) : lu dans les expériences de cette exécution.
+            attempts = [e for e in ExperienceRepository(session_factory).list_by_task(past.task_id, limit=200)
+                        if e.experiment_ref == past.id]
+            if not attempts:
+                continue
+            planned = any("plan" in (e.generation_config or {}) for e in attempts)
+            side = sides[planned]
+            side["runs"] += 1
+            side["completed"] += past.status.value == "completed"
+            evidence.append({"task_run_id": past.id, "plan": planned, "status": past.status.value})
+    except Exception as exc:  # une mémoire indisponible n'arrête jamais la tâche : décision par défaut, dite
+        emit("memory.unavailable", {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
+    with_plan, without = sides[True], sides[False]
+    enough = with_plan["runs"] >= _PLAN_MIN_EVIDENCE and without["runs"] >= _PLAN_MIN_EVIDENCE
+    rate = {k: (v["completed"] / v["runs"] if v["runs"] else None) for k, v in (("plan", with_plan), ("no_plan", without))}
+    use = bool(enough and rate["plan"] > rate["no_plan"])
+    if use:
+        reason = "les exécutions similaires réussissent davantage avec un plan"
+    elif enough:
+        reason = "le plan ne fait pas mieux sur les exécutions similaires et coûte un appel de plus : contourné"
+    else:
+        reason = (f"preuve insuffisante (moins de {_PLAN_MIN_EVIDENCE} exécutions similaires de chaque côté) : "
+                  "contourné par défaut (mesuré : le plan n'aidait pas et coûtait ×4)")
+    emit("task.plan.decided", {
+        "policy": "auto", "decision": "plan" if use else "bypass", "reason": reason,
+        "with_plan": with_plan, "without_plan": without, "rates": rate, "evidence": evidence[:20],
+        "rule": f"plan si ≥ {_PLAN_MIN_EVIDENCE} exécutions de chaque côté et taux(plan) > taux(sans plan)",
+    })
+    return use
+
+
 @dataclass(frozen=True)
 class _ToolSetup:
     workspace: Any
@@ -804,7 +868,8 @@ def _run(
     # -- PLAN -----------------------------------------------------------
     # Ce que l'étape PLAN fait RÉELLEMENT est dit dans l'événement : `prompt_composition` (énoncé, contexte,
     # contraintes) ou, avec `plan_first`, une analyse rédigée par le modèle (plus bas, après la sélection).
-    planning_mode = "model_plan" if request.plan_first else "prompt_composition"
+    planning_mode = ("adaptive" if request.plan_policy == "auto" else
+                     "model_plan" if request.plan_first else "prompt_composition")
     emit("task.planning.started", {"mode": planning_mode})
     prompt = task.description
     if request.context.strip():
@@ -895,7 +960,12 @@ def _run(
     )
 
     # -- PLAN par le modèle (optionnel) : analyse sans code, réinjectée dans la génération -------------
-    if request.plan_first:
+    plan_enabled = request.plan_first
+    if request.plan_policy == "auto":
+        plan_enabled = (bool(request.resume_plan) if request.resume else
+                        _plan_decision(request, task=task, trace_id=trace_id, session_factory=session_factory,
+                                       emit=emit))
+    if plan_enabled:
         if request.resume and request.resume_plan:
             # Reprise : le plan rédigé AVANT l'interruption est réutilisé tel quel (aucun nouvel appel).
             plan = request.resume_plan

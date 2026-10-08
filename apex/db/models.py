@@ -1512,6 +1512,8 @@ class TaskRunRow(Base):
     base_temperature: Mapped[float | None] = mapped_column(Float, nullable=True)
     retry_adaptation: Mapped[str | None] = mapped_column(String(32), nullable=True)
     plan_first: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: Politique de l'étape PLAN (migration f9b1d3e5a7c9) : `request` | `auto` ; NULL : TaskRun antérieure.
+    plan_policy: Mapped[str | None] = mapped_column(String(16), nullable=True)
     tool_permissions: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     max_tool_steps: Mapped[int | None] = mapped_column(Integer, nullable=True)
     use_memory: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
