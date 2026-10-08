@@ -1,0 +1,1590 @@
+{
+ "phase": "adaptation",
+ "environment": {
+  "model": "qwen2.5-coder:1.5b-instruct:bf16",
+  "endpoint": "qwen2.5-coder-1.5b-instruct",
+  "weights_source": {
+   "repo": "docker.io/ai/qwen2.5:1.5B-F16 (Qwen2.5-1.5B-Instruct, GGUF F16, Apache-2.0)",
+   "revision": "sha256:b6eaec3509f1d0373d1f4802654c4a7bfcde0768645d2d45e8885f6922b428ee",
+   "commit": "sha256:b6eaec3509f1d0373d1f4802654c4a7bfcde0768645d2d45e8885f6922b428ee",
+   "note": "converti localement GGUF F16 -> safetensors bf16 (transformers), Hugging Face inaccessible"
+  },
+  "actual_weights": "docker.io/ai/qwen2.5:1.5B-F16 (Qwen2.5-1.5B-Instruct, GGUF F16, Apache-2.0)",
+  "substitute_weights": true,
+  "backend": "native_transformers",
+  "model_detail": "poids présents (3.10 Go) dans /home/user/apex-models-local/run/qwen2.5-coder-1.5b-instruct",
+  "device": "cpu",
+  "torch": "2.14.0+cu130",
+  "cpu_count": 4,
+  "python": "3.12.3",
+  "sandbox": "LinuxNamespaceSandbox",
+  "sandbox_reason": "namespaces Linux + cgroups v1 + privilège réellement abaissé + réseau coupé, tous vérifiés empiriquement sur cet hôte (NAMESPACED — namespaces Linux + cgroups v1 + abaissement de privilège réel + réseau coupé, tous vérifiés empiriquement. PAS container-grade : aucun jail de filesystem (pivot_root) n",
+  "commit": "1d529e2eb49e58428028208bddbb2f4e5f5ffad8"
+ },
+ "arms": [
+  "L"
+ ],
+ "no_progress_patience": 99,
+ "seeds": [
+  0
+ ],
+ "records": [
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "is_palindrome",
+   "run_id": "c574d265-30de-4f56-880c-2318a8314b40",
+   "status": "failed",
+   "stop_reason": "recovery_escalated",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 11.440323868999258,
+     "tokens_completion": 36,
+     "tokens_prompt": 152,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": true,
+      "load_s": 3.841,
+      "generation_s": 6.516,
+      "tokens_per_s": 5.53
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.75,
+     "detail": "3/12 cas incorrects (indices [8, 9, 10])",
+     "judge_exec_s": 0.081,
+     "code": "```python\ndef is_palindrome(s):\n    s = ''.join(e for e in s if e.isalnum()).lower()\n    return s == s[::-1]\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 8.191229036998266,
+     "tokens_completion": 39,
+     "tokens_prompt": 373,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 8.188,
+      "tokens_per_s": 4.76
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.75,
+     "detail": "3/12 cas incorrects (indices [8, 9, 10])",
+     "judge_exec_s": 0.076,
+     "code": "```python\nimport re\n\ndef is_palindrome(s):\n    s = ''.join(e for e in s if e.isalnum()).lower()\n    return s == s[::-1]\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 9.309454810001625,
+     "tokens_completion": 39,
+     "tokens_prompt": 300,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 9.307,
+      "tokens_per_s": 4.19
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.75,
+     "detail": "3/12 cas incorrects (indices [8, 9, 10])",
+     "judge_exec_s": 0.083,
+     "code": "```python\ndef is_palindrome(s):\n    cleaned_string = ''.join(char.lower() for char in s if char.isalnum())\n    return cleaned_string == cleaned_string[::-1]\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.75,
+   "final_score": 0.75,
+   "duration_s": 45.8,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé qui stipule d'ignorer les espaces et la ponctuation. Le code ne supprime pas les espaces et les caractères spéciaux lors de la comparaison.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 3,
+      "total_cases": 12,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 112
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé qui stipule d'ignorer la casse, les espaces et la ponctuation.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 3,
+      "total_cases": 12,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 123
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": true,
+     "delta": 0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": -0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "3/12 cas incorrects (indices [8, 9, 10])"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "rle_encode",
+   "run_id": "efed6ad7-e3f8-4a7f-9492-f30a5f9d23be",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 16.762066657000105,
+     "tokens_completion": 98,
+     "tokens_prompt": 169,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 16.759,
+      "tokens_per_s": 5.85
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.073,
+     "code": "```python\ndef rle_encode(s):\n    if not s:\n        return \"\"\n    \n    encoded = \"\"\n    count = 1\n    prev_char = s[0]\n    \n    for char in s[1:]:\n        if char == prev_char:\n            count += 1\n        else:\n            encoded += prev_char + str(count)\n            prev_char = char\n            count = 1\n    encoded += prev_char + str(count)\n    \n    return encoded\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 1,
+   "first_pass": true,
+   "corrected": false,
+   "first_score": 1.0,
+   "final_score": 1.0,
+   "duration_s": 17.1,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [],
+   "repair_outcomes": [],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "count_vowels",
+   "run_id": "ec1edbd0-b8d1-432e-af56-fefd01817c16",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 7.452926263002155,
+     "tokens_completion": 40,
+     "tokens_prompt": 146,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 7.451,
+      "tokens_per_s": 5.37
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.085,
+     "code": "```python\ndef count_vowels(s):\n    vowels = 'aeiou'\n    count = sum(1 for char in s.lower() if char in vowels)\n    return count\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 1,
+   "first_pass": true,
+   "corrected": false,
+   "first_score": 1.0,
+   "final_score": 1.0,
+   "duration_s": 7.8,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [],
+   "repair_outcomes": [],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "word_count",
+   "run_id": "66c38fdb-d7c9-4e67-9dbc-0dea8698b689",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 3.639425528999709,
+     "tokens_completion": 16,
+     "tokens_prompt": 158,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 3.637,
+      "tokens_per_s": 4.4
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.082,
+     "code": "```python\ndef word_count(s):\n    return len(s.split())\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 1,
+   "first_pass": true,
+   "corrected": false,
+   "first_score": 1.0,
+   "final_score": 1.0,
+   "duration_s": 4.0,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [],
+   "repair_outcomes": [],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "second_largest",
+   "run_id": "612bf766-5745-446f-84a5-4bfb0a6f7220",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 8.016922397000599,
+     "tokens_completion": 47,
+     "tokens_prompt": 111,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 8.014,
+      "tokens_per_s": 5.86
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.074,
+     "code": "```python\ndef second_largest(nums):\n    unique_nums = list(set(nums))\n    if len(unique_nums) < 2:\n        return None\n    unique_nums.sort(reverse=True)\n    return unique_nums[1]\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 1,
+   "first_pass": true,
+   "corrected": false,
+   "first_score": 1.0,
+   "final_score": 1.0,
+   "duration_s": 8.3,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [],
+   "repair_outcomes": [],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "roman_to_int",
+   "run_id": "cbd60004-1dbb-487b-9ec7-0af58005d584",
+   "status": "failed",
+   "stop_reason": "recovery_block",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 21.61235887499788,
+     "tokens_completion": 123,
+     "tokens_prompt": 156,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 21.61,
+      "tokens_per_s": 5.69
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.75,
+     "detail": "2/8 cas incorrects (indices [5, 6]), dont 1 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.086,
+     "code": "```python\ndef roman_to_int(s):\n    roman_values = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}\n    total = 0\n    prev_value = 0\n    for char in reversed(s):\n        value = roman_values[char]\n        if value < prev_value:\n            total -= value\n        else:\n            total += value\n        prev_value = value\n    return total\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 24.09248335599841,
+     "tokens_completion": 127,
+     "tokens_prompt": 474,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 24.09,
+      "tokens_per_s": 5.27
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.875,
+     "detail": "1/8 cas incorrects (indices [5]), dont 1 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.086,
+     "code": "```python\ndef roman_to_int(s):\n    roman_values = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}\n    total = 0\n    prev_value = 0\n    for char in reversed(s):\n        value = roman_values[char]\n        if value < prev_value:\n            total -= value\n        else:\n            total += value\n        prev_value = value\n    return total if s else None\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 23.258566840999265,
+     "tokens_completion": 127,
+     "tokens_prompt": 433,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 23.256,
+      "tokens_per_s": 5.46
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.875,
+     "detail": "1/8 cas incorrects (indices [5]), dont 1 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.097,
+     "code": "```python\ndef roman_to_int(s):\n    roman_values = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100, 'D': 500, 'M': 1000}\n    total = 0\n    prev_value = 0\n    for char in reversed(s):\n        value = roman_values[char]\n        if value < prev_value:\n            total -= value\n        else:\n            total += value\n        prev_value = value\n    return total if s else None\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.75,
+   "final_score": 0.875,
+   "duration_s": 85.8,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas le point de l'énoncé qui stipule que la chaîne doit être écrite en chiffres romains MAJUSCULES. Le code considère les lettres minuscules comme des lettres romaines.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 2,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 359
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La chaîne de test est vide.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 1,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 374
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": true,
+     "delta": 0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "repair",
+     "code_changed": false,
+     "delta": -0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "1/8 cas incorrects (indices [5]), dont 1 exception(s) levée(s) par le candidat"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "merge_intervals",
+   "run_id": "a9881bef-e95d-4207-a131-0c9140f76f9a",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 28.03686763800215,
+     "tokens_completion": 164,
+     "tokens_prompt": 170,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 28.034,
+      "tokens_per_s": 5.85
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.089,
+     "code": "```python\ndef merge_intervals(intervals):\n    if not intervals:\n        return []\n    \n    intervals.sort(key=lambda x: x[0])  # Tri les intervalles par début\n    merged = [intervals[0]]  # Initialiser la liste fusionnée avec le premier intervalle\n    \n    for current in intervals[1:]:\n        last = merged[-1]\n        if current[0] <= last[1]:  # Si l'intervalle courant touche ou entoure l'intervalle précédent\n            merged[-1] = [last[0], max(last[1], current[1])]  # Fusionner les intervalles\n        else:\n            merged.append(current)  # Ajouter l'intervalle courant comme intervalle unique\n    \n    return merged\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 1,
+   "first_pass": true,
+   "corrected": false,
+   "first_score": 1.0,
+   "final_score": 1.0,
+   "duration_s": 28.3,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [],
+   "repair_outcomes": [],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "luhn_valid",
+   "run_id": "92e30cc5-3694-450b-95d1-d81cd5596b1f",
+   "status": "failed",
+   "stop_reason": "recovery_block",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 17.657987349000905,
+     "tokens_completion": 112,
+     "tokens_prompt": 145,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 17.656,
+      "tokens_per_s": 6.34
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.75,
+     "detail": "2/8 cas incorrects (indices [3, 5])",
+     "judge_exec_s": 0.05,
+     "code": "```python\ndef luhn_valid(s):\n    s = s.replace(\" \", \"\")\n    if len(s) < 2 or not s.isdigit():\n        return False\n    total = 0\n    for i in range(len(s) - 1, -1, -1):\n        digit = int(s[i])\n        if i % 2 == 0:\n            digit *= 2\n            if digit > 9:\n                digit -= 9\n        total += digit\n    return total % 10 == 0\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 21.041908444996807,
+     "tokens_completion": 112,
+     "tokens_prompt": 452,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 21.039,
+      "tokens_per_s": 5.32
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.75,
+     "detail": "2/8 cas incorrects (indices [3, 5])",
+     "judge_exec_s": 0.082,
+     "code": "```python\ndef luhn_valid(s):\n    s = s.replace(\" \", \"\")\n    if len(s) < 2 or not s.isdigit():\n        return False\n    total = 0\n    for i in range(len(s) - 1, -1, -1):\n        digit = int(s[i])\n        if i % 2 == 0:\n            digit *= 2\n            if digit > 9:\n                digit -= 9\n        total += digit\n    return total % 10 == 0\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 28.699908092999976,
+     "tokens_completion": 162,
+     "tokens_prompt": 332,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 28.697,
+      "tokens_per_s": 5.65
+     },
+     "verdict": "fail",
+     "category": "invalid_candidate",
+     "score": 0.0,
+     "detail": "8/8 cas incorrects (indices [0, 1, 2, 3, 4, 5, 6, 7]), dont 8 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.08,
+     "code": "```python\ndef luhn_valid(s):\n    \"\"\"Teste si le numéro est valide selon Luhn.\"\"\"\n    # Rechercher tous les chiffres dans la chaîne passée en argument\n    digits = [int(digit) for digit in re.findall(r'\\d', s)]\n    \n    # Calculer le double des derniers chiffres\n    doubled = [2 * digit for digit in digits[-2::-2]]\n    \n    # Additionner tous les chiffres d'une manière qui ignore les doubles\n    total = sum(digit + (2 * digit) // 10 for digit in digits[-3::-2] + doubled)\n    \n    # Un numéro de moins de deux chiffres est invalide\n    return total % 10 == 0\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.75,
+   "final_score": 0.0,
+   "duration_s": 92.2,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "Le code ne respecte pas l'énoncé qui stipule que le numéro de moins de deux chiffres est invalide. Le code considère comme valide un numéro de moins de deux chiffres, ce qui ne correspond pas à la définition donnée dans l'énoncé.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 2,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 347
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "Le code ne respecte pas l'énoncé qui stipule que le numéro de moins de deux chiffres est invalide. Le code considère comme valide un numéro de moins de deux chiffres, ce qui ne correspond pas à la définition donnée dans l'énoncé.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 2,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 347
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": false,
+     "delta": -0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": 0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "8/8 cas incorrects (indices [0, 1, 2, 3, 4, 5, 6, 7]), dont 8 exception(s) levée(s) par le candidat"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "balanced",
+   "run_id": "077bf754-1407-4f76-aabc-88a8a9466b00",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 10.089641929000209,
+     "tokens_completion": 60,
+     "tokens_prompt": 135,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 10.086,
+      "tokens_per_s": 5.95
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.375,
+     "detail": "5/8 cas incorrects (indices [0, 1, 4, 6, 7]), dont 5 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.078,
+     "code": "```python\ndef balanced(s):\n    stack = []\n    for char in s:\n        if char in '([{':\n            stack.append(char)\n        elif char in ')]}':\n            if not stack or not match(stack.pop(), char):\n                return False\n    return not stack\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 11.551987445000123,
+     "tokens_completion": 60,
+     "tokens_prompt": 380,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 11.548,
+      "tokens_per_s": 5.2
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.375,
+     "detail": "5/8 cas incorrects (indices [0, 1, 4, 6, 7]), dont 5 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.081,
+     "code": "```python\ndef balanced(s):\n    stack = []\n    for char in s:\n        if char in '([{':\n            stack.append(char)\n        elif char in ')]}':\n            if not stack or not match(stack.pop(), char):\n                return False\n    return not stack\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 15.169826829001977,
+     "tokens_completion": 82,
+     "tokens_prompt": 294,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 15.167,
+      "tokens_per_s": 5.41
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.085,
+     "code": "```python\ndef balanced(s):\n    stack = []\n    mapping = {')': '(', ']': '[', '}': '{'}\n    \n    for char in s:\n        if char in mapping.values():\n            stack.append(char)\n        elif char in mapping.keys():\n            if not stack or stack.pop() != mapping[char]:\n                return False\n        else:\n            continue\n\n    return not stack\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": true,
+   "first_score": 0.375,
+   "final_score": 1.0,
+   "duration_s": 55.0,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé qui stipule que les parenthèses, crochets et accolades doivent être correctement appariés et imbriqués, pas seulement appariés.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 5,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 257
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé qui stipule que les parenthèses, crochets et accolades doivent être correctement appariés et imbriqués, pas seulement appariés.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 5,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 257
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": false,
+     "delta": -0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": 1.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "camel_to_snake",
+   "run_id": "25dbaf8b-0489-434f-9ccf-e23620c48861",
+   "status": "failed",
+   "stop_reason": "recovery_escalated",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 6.42775252499996,
+     "tokens_completion": 36,
+     "tokens_prompt": 151,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 6.426,
+      "tokens_per_s": 5.6
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.25,
+     "detail": "6/8 cas incorrects (indices [0, 1, 3, 4, 6, 7])",
+     "judge_exec_s": 0.092,
+     "code": "```python\ndef camel_to_snake(s):\n    return '_'.join([w[0].lower() + w[1:] for w in s.split('_')])\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 10.834444841999357,
+     "tokens_completion": 49,
+     "tokens_prompt": 385,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 10.831,
+      "tokens_per_s": 4.52
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.25,
+     "detail": "6/8 cas incorrects (indices [0, 1, 3, 4, 6, 7])",
+     "judge_exec_s": 0.095,
+     "code": "```python\ndef camel_to_snake(s):\n    if s.islower():\n        return s\n    else:\n        return '_'.join([w[0].lower() + w[1:] for w in s.split('_')])\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 12.263469964000251,
+     "tokens_completion": 61,
+     "tokens_prompt": 315,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 12.261,
+      "tokens_per_s": 4.98
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.25,
+     "detail": "6/8 cas incorrects (indices [0, 1, 3, 4, 6, 7])",
+     "judge_exec_s": 0.081,
+     "code": "```python\ndef camel_to_snake(s):\n    return '_'.join(word.lower() if word.isupper() else word for word in s.split('_')).lstrip('_')\n\n# Test\nprint(camel_to_snake('getHTTPResponseCode'))  # 'get_http_response_code'\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.25,
+   "final_score": 0.25,
+   "duration_s": 49.5,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas le point de l'énoncé qui stipule que les identifiants déjà en snake_case doivent être retournés inchangés. Le code ne vérifie pas si `s` est déjà en snake_case avant de l'appliquer à la fonction `join`.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 6,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 102
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas le point de l'énoncé qui stipule que les chiffres restent collés au mot qui le précède.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 6,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 153
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": true,
+     "delta": -0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": 0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "6/8 cas incorrects (indices [0, 1, 3, 4, 6, 7])"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "median",
+   "run_id": "13a8b155-908d-4c28-8706-a07a6393dbfd",
+   "status": "failed",
+   "stop_reason": "recovery_block",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 10.758060297001066,
+     "tokens_completion": 63,
+     "tokens_prompt": 127,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 10.756,
+      "tokens_per_s": 5.86
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.875,
+     "detail": "1/8 cas incorrects (indices [2]), dont 1 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.101,
+     "code": "```python\ndef median(nums):\n    nums.sort()\n    n = len(nums)\n    if n % 2 == 1:\n        return nums[n // 2]\n    else:\n        return (nums[n // 2 - 1] + nums[n // 2]) / 2\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 11.649845191997883,
+     "tokens_completion": 63,
+     "tokens_prompt": 359,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 11.647,
+      "tokens_per_s": 5.41
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.875,
+     "detail": "1/8 cas incorrects (indices [2]), dont 1 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.079,
+     "code": "```python\ndef median(nums):\n    nums.sort()\n    n = len(nums)\n    if n % 2 == 1:\n        return nums[n // 2]\n    else:\n        return (nums[n // 2 - 1] + nums[n // 2]) / 2\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 13.92695724299847,
+     "tokens_completion": 73,
+     "tokens_prompt": 254,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 13.925,
+      "tokens_per_s": 5.24
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.875,
+     "detail": "1/8 cas incorrects (indices [2]), dont 1 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.08,
+     "code": "```python\ndef median(nums):\n    import heapq\n    sorted_nums = sorted(nums)\n    length = len(sorted_nums)\n    mid = length // 2\n    if length % 2 == 0:\n        return (sorted_nums[mid - 1] + sorted_nums[mid]) / 2\n    else:\n        return sorted_nums[mid]\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.875,
+   "final_score": 0.875,
+   "duration_s": 49.4,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé où elle est demandée de trier la liste avant de calculer la médiane.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 1,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 175
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé où elle est demandée de trier la liste avant de calculer la médiane.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 1,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 175
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": false,
+     "delta": 0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": -0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "1/8 cas incorrects (indices [2]), dont 1 exception(s) levée(s) par le candidat"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "chunk",
+   "run_id": "361df8bb-0393-4af8-b53f-05a9cedafa15",
+   "status": "completed",
+   "stop_reason": "success",
+   "success": true,
+   "attempts": [
+    {
+     "model_elapsed_s": 6.8495438050013036,
+     "tokens_completion": 41,
+     "tokens_prompt": 139,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 6.847,
+      "tokens_per_s": 5.99
+     },
+     "verdict": "pass",
+     "category": "success",
+     "score": 1.0,
+     "detail": "8/8 résultats conformes aux valeurs attendues (comparées hors sandbox)",
+     "judge_exec_s": 0.079,
+     "code": "```python\ndef chunk(lst, n):\n    if n <= 0:\n        return []\n    return [lst[i:i+n] for i in range(0, len(lst), n)]\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 1,
+   "first_pass": true,
+   "corrected": false,
+   "first_score": 1.0,
+   "final_score": 1.0,
+   "duration_s": 7.1,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [],
+   "repair_outcomes": [],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": ""
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "parse_duration",
+   "run_id": "ada0d8d5-b7c7-4381-bb68-b7ae167514ad",
+   "status": "failed",
+   "stop_reason": "recovery_escalated",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 21.491341255001316,
+     "tokens_completion": 126,
+     "tokens_prompt": 178,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 21.489,
+      "tokens_per_s": 5.86
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.125,
+     "detail": "7/8 cas incorrects (indices [0, 1, 2, 3, 4, 6, 7]), dont 6 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.092,
+     "code": "```python\ndef parse_duration(s):\n    if not s:\n        return None\n    parts = s.split(':')\n    if len(parts) == 1:\n        return int(parts[0])\n    elif len(parts) == 2:\n        return int(parts[0]) * 3600 + int(parts[1]) * 60\n    elif len(parts) == 3:\n        return int(parts[0]) * 3600 * 24 + int(parts[1]) * 3600 + int(parts[2])\n    else:\n        return None\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 23.561729255998216,
+     "tokens_completion": 126,
+     "tokens_prompt": 467,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 23.558,
+      "tokens_per_s": 5.35
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.125,
+     "detail": "7/8 cas incorrects (indices [0, 1, 2, 3, 4, 6, 7]), dont 6 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.092,
+     "code": "```python\ndef parse_duration(s):\n    if not s:\n        return None\n    parts = s.split(':')\n    if len(parts) == 1:\n        return int(parts[0])\n    elif len(parts) == 2:\n        return int(parts[0]) * 3600 + int(parts[1]) * 60\n    elif len(parts) == 3:\n        return int(parts[0]) * 3600 * 24 + int(parts[1]) * 3600 + int(parts[2])\n    else:\n        return None\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 18.891052933002356,
+     "tokens_completion": 101,
+     "tokens_prompt": 293,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 18.888,
+      "tokens_per_s": 5.35
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.375,
+     "detail": "5/8 cas incorrects (indices [0, 1, 2, 3, 4])",
+     "judge_exec_s": 0.08,
+     "code": "```python\ndef parse_duration(s):\n    if not s or len(s.split(\".\")) == 2 or \" \" not in s:\n        return None\n    parts = s.split(\".\")\n    if len(parts) < 3:\n        parts.append('0')\n    h, m, s = int(parts[0]), int(parts[1]), int(parts[2])\n    sec = h * 3600 + m * 60 + s\n    return sec\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.125,
+   "final_score": 0.375,
+   "duration_s": 77.8,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La chaîne de caractères est incorrectement formatée ou contient des caractères non attendus.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 7,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 367
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La chaîne de caractères est incorrectement formatée ou contient des caractères non attendus.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 7,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 367
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": false,
+     "delta": 0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": 0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "5/8 cas incorrects (indices [0, 1, 2, 3, 4])"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "title_case",
+   "run_id": "63076095-75d9-45df-a3e4-55f1229e23a1",
+   "status": "failed",
+   "stop_reason": "recovery_block",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 7.464632863000588,
+     "tokens_completion": 39,
+     "tokens_prompt": 162,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 7.462,
+      "tokens_per_s": 5.23
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.5,
+     "detail": "4/8 cas incorrects (indices [1, 2, 5, 6])",
+     "judge_exec_s": 0.095,
+     "code": "```python\ndef title_case(s):\n    words = s.split()\n    title_case_words = [word.capitalize() for word in words]\n    return ' '.join(title_case_words)\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 12.245674703997793,
+     "tokens_completion": 63,
+     "tokens_prompt": 382,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 12.243,
+      "tokens_per_s": 5.15
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.5,
+     "detail": "4/8 cas incorrects (indices [1, 2, 5, 6])",
+     "judge_exec_s": 0.073,
+     "code": "```python\ndef title_case(s):\n    words = s.split()\n    title_case_words = []\n    for word in words:\n        if word.lower() == word:\n            title_case_words.append(word.capitalize())\n        else:\n            title_case_words.append(word)\n    return ' '.join(title_case_words)\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 37.090177256999596,
+     "tokens_completion": 217,
+     "tokens_prompt": 318,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 37.088,
+      "tokens_per_s": 5.85
+     },
+     "verdict": "fail",
+     "category": "invalid_candidate",
+     "score": 0.0,
+     "detail": "8/8 cas incorrects (indices [0, 1, 2, 3, 4, 5, 6, 7]), dont 8 exception(s) levée(s) par le candidat",
+     "judge_exec_s": 0.08,
+     "code": "```python\ndef title_case(s):\n    # Séparer la chaîne en mots\n    words = s.split()\n\n    # Initialisation du résultat avec la première lettre majuscule\n    title_case_words = []\n\n    # Premier mot, pas d'initialisation si vide\n    if words:\n        title_case_words.append(next(words).capitalize())\n\n    # Parcourir tous les autres mots\n    for word in words[1:]:\n        # Convertir en majuscule la première lettre si pas déjà une\n        title_case_word = word.capitalize()\n        # Ajouter la première lettre minuscule et les lettres restantes\n        title_case_word = title_case_word[0].lower() + title_case_word[1:]\n        title_case_words.append(title_case_word)\n\n    # Ajouter le dernier mot avec sa première lettre minuscule\n    title_case_words.append(words[-1].lower())\n\n    # Remettre les mots dans la chaîne final avec des espaces entre eux\n    return ' '.join(title_case_words)\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.5,
+   "final_score": 0.0,
+   "duration_s": 75.9,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas le point de l'énoncé où elle doit convertir les mots de la liste `words` en majuscule, sauf les mots qui commencent par une majuscule.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 4,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 153
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas le point de l'énoncé où elle doit convertir les mots entiers en minuscules, sauf si ils sont le premier mot de la chaîne.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 4,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 285
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": true,
+     "delta": 0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": -0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "8/8 cas incorrects (indices [0, 1, 2, 3, 4, 5, 6, 7]), dont 8 exception(s) levée(s) par le candidat"
+  },
+  {
+   "arm": "L",
+   "seed": 0,
+   "kind": "dedupe_keep_last",
+   "run_id": "d5752fb8-3f1b-4167-8523-c6c0d7eb2748",
+   "status": "failed",
+   "stop_reason": "recovery_escalated",
+   "success": false,
+   "attempts": [
+    {
+     "model_elapsed_s": 10.070643423998263,
+     "tokens_completion": 54,
+     "tokens_prompt": 135,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 10.068,
+      "tokens_per_s": 5.36
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.5,
+     "detail": "4/8 cas incorrects (indices [0, 4, 5, 7])",
+     "judge_exec_s": 0.079,
+     "code": "```python\ndef dedupe_keep_last(items):\n    seen = set()\n    deduped = []\n    for item in items:\n        if item not in seen:\n            seen.add(item)\n            deduped.append(item)\n    return deduped\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 11.495392259002983,
+     "tokens_completion": 59,
+     "tokens_prompt": 366,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 11.491,
+      "tokens_per_s": 5.13
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.5,
+     "detail": "4/8 cas incorrects (indices [0, 4, 5, 7])",
+     "judge_exec_s": 0.045,
+     "code": "```python\ndef dedupe_keep_last(items):\n    seen = {}\n    deduped = []\n    for item in items:\n        if item not in seen:\n            seen[item] = len(deduped)\n            deduped.append(item)\n    return deduped\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    },
+    {
+     "model_elapsed_s": 11.922432855997613,
+     "tokens_completion": 60,
+     "tokens_prompt": 286,
+     "backend_facts": {
+      "backend": "native_transformers",
+      "device": "cpu",
+      "dtype": "float32",
+      "loaded_now": false,
+      "load_s": null,
+      "generation_s": 11.92,
+      "tokens_per_s": 5.03
+     },
+     "verdict": "fail",
+     "category": "incorrect_solution",
+     "score": 0.375,
+     "detail": "5/8 cas incorrects (indices [0, 2, 4, 5, 7])",
+     "judge_exec_s": 0.078,
+     "code": "```python\ndef dedupe_keep_last(items):\n    seen = {}\n    result = []\n    for item in items:\n        if item not in seen or seen[item] % 2 == 1:\n            seen[item] = 1\n            result.append(item)\n    return result\n```",
+     "tool_steps": null,
+     "episode_stop": null
+    }
+   ],
+   "n_attempts": 3,
+   "first_pass": false,
+   "corrected": false,
+   "first_score": 0.5,
+   "final_score": 0.375,
+   "duration_s": 52.4,
+   "plan": null,
+   "plan_failed": false,
+   "plan_code_removed": false,
+   "adapted": 0,
+   "repair": [
+    {
+     "after_attempt": 1,
+     "before": "initial",
+     "after": "repair",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé où chaque valeur n'apparaît qu'une fois, à la position de sa DERNIÈRE occurrence dans la liste d'origine.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 4,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 207
+     }
+    },
+    {
+     "after_attempt": 2,
+     "before": "repair",
+     "after": "rewrite",
+     "changed": true,
+     "diagnosis": "La fonction ne respecte pas l'énoncé où chaque valeur n'apparaît qu'une fois, à la position de sa DERNIÈRE occurrence dans la liste d'origine.",
+     "diagnosis_error": null,
+     "observation": {
+      "failed_cases": 4,
+      "total_cases": 8,
+      "public_examples": 0,
+      "public_examples_failed": null,
+      "code_chars": 215
+     }
+    }
+   ],
+   "repair_outcomes": [
+    {
+     "attempt": 2,
+     "mode": "repair",
+     "code_changed": true,
+     "delta": 0.0
+    },
+    {
+     "attempt": 3,
+     "mode": "rewrite",
+     "code_changed": true,
+     "delta": -0.0
+    }
+   ],
+   "memory": null,
+   "agent_steps": 0,
+   "tools_used": {},
+   "tool_errors": {},
+   "invalid_actions": 0,
+   "failure": "5/8 cas incorrects (indices [0, 2, 4, 5, 7])"
+  }
+ ]
+}

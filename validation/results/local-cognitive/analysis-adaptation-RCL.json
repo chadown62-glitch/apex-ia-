@@ -1,0 +1,114 @@
+{
+ "adaptation": {
+  "arms": {
+   "C": {
+    "n": 60,
+    "success": 24,
+    "success_rate": 0.4,
+    "first_attempt_pass": 24,
+    "mean_final_score": 0.7,
+    "mean_first_score": 0.725,
+    "mean_attempts": 2.2,
+    "corrected": 0,
+    "mean_duration_s": 254.1,
+    "plan_failed": 0,
+    "plan_code_removed": 0,
+    "errors": {
+     "incorrect_solution": 108
+    }
+   },
+   "L": {
+    "n": 60,
+    "success": 28,
+    "success_rate": 0.467,
+    "first_attempt_pass": 24,
+    "mean_final_score": 0.692,
+    "mean_first_score": 0.725,
+    "mean_attempts": 2.2,
+    "corrected": 4,
+    "mean_duration_s": 44.4,
+    "plan_failed": 0,
+    "plan_code_removed": 0,
+    "errors": {
+     "incorrect_solution": 99,
+     "invalid_candidate": 5
+    },
+    "retries_code_changed": "52/72",
+    "strategy_modes": {
+     "repair": 40,
+     "rewrite": 32
+    },
+    "diagnosis_missing": 0
+   },
+   "R": {
+    "n": 60,
+    "success": 24,
+    "success_rate": 0.4,
+    "first_attempt_pass": 24,
+    "mean_final_score": 0.725,
+    "mean_first_score": 0.725,
+    "mean_attempts": 2.2,
+    "corrected": 0,
+    "mean_duration_s": 33.4,
+    "plan_failed": 0,
+    "plan_code_removed": 0,
+    "errors": {
+     "incorrect_solution": 108
+    }
+   }
+  },
+  "primary": {
+   "H2 adaptation au-delà du simple retry (C vs R)": {
+    "n": 60,
+    "first": 24,
+    "second": 24,
+    "second_only": 0,
+    "first_only": 0,
+    "p": 1.0
+   },
+   "H-L1 diagnostic + stratégie au-delà du retry (L vs R)": {
+    "n": 60,
+    "first": 24,
+    "second": 28,
+    "second_only": 4,
+    "first_only": 0,
+    "p": 0.125
+   },
+   "H-L2 diagnostic + stratégie au-delà des faits (L vs C)": {
+    "n": 60,
+    "first": 24,
+    "second": 28,
+    "second_only": 4,
+    "first_only": 0,
+    "p": 0.125
+   }
+  },
+  "holm_significant": {
+   "H-L1 diagnostic + stratégie au-delà du retry (L vs R)": false,
+   "H-L2 diagnostic + stratégie au-delà des faits (L vs C)": false,
+   "H2 adaptation au-delà du simple retry (C vs R)": false
+  },
+  "secondary": {},
+  "environment": {
+   "model": "qwen2.5-coder:1.5b-instruct:bf16",
+   "endpoint": "qwen2.5-coder-1.5b-instruct",
+   "weights_source": {
+    "repo": "docker.io/ai/qwen2.5:1.5B-F16 (Qwen2.5-1.5B-Instruct, GGUF F16, Apache-2.0)",
+    "revision": "sha256:b6eaec3509f1d0373d1f4802654c4a7bfcde0768645d2d45e8885f6922b428ee",
+    "commit": "sha256:b6eaec3509f1d0373d1f4802654c4a7bfcde0768645d2d45e8885f6922b428ee",
+    "note": "converti localement GGUF F16 -> safetensors bf16 (transformers), Hugging Face inaccessible"
+   },
+   "actual_weights": "docker.io/ai/qwen2.5:1.5B-F16 (Qwen2.5-1.5B-Instruct, GGUF F16, Apache-2.0)",
+   "substitute_weights": true,
+   "backend": "native_transformers",
+   "model_detail": "poids présents (3.10 Go) dans /home/user/apex-models-local/run/qwen2.5-coder-1.5b-instruct",
+   "device": "cpu",
+   "torch": "2.14.0+cu130",
+   "cpu_count": 4,
+   "python": "3.12.3",
+   "sandbox": "LinuxNamespaceSandbox",
+   "sandbox_reason": "namespaces Linux + cgroups v1 + privilège réellement abaissé + réseau coupé, tous vérifiés empiriquement sur cet hôte (NAMESPACED — namespaces Linux + cgroups v1 + abaissement de privilège réel + réseau coupé, tous vérifiés empiriquement. PAS container-grade : aucun jail de filesystem (pivot_root) n",
+   "commit": "1d529e2eb49e58428028208bddbb2f4e5f5ffad8"
+  }
+ }
+}
