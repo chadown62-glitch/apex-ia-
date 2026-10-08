@@ -13,6 +13,7 @@ valeurs attendues n'y sont JAMAIS. Les permissions sont celles accordées par la
 from __future__ import annotations
 
 import json
+import re
 import time
 import uuid
 from collections.abc import Callable
@@ -33,12 +34,11 @@ _INSTRUCTIONS = (
     "réponds par UN SEUL objet JSON, sans aucun autre texte :\n"
     '- pour utiliser un outil : {"tool": "<nom>", "arguments": {...}}\n'
     '- quand ta solution est prête dans le fichier solution.py : {"action": "submit"}\n'
-    "Écris la fonction demandée dans solution.py, sans code exécuté au chargement du module. Tu peux écrire "
-    "tes propres tests (par exemple tests/test_solution.py, avec unittest) et les lancer avec tests.run. Les "
-    "tests qui jugeront ta solution sont cachés : tu ne les verras jamais.\n"
+    "Écris la fonction demandée dans solution.py, sans code exécuté au chargement du module.{verify} "
+    "Les tests qui jugeront ta solution sont cachés : tu ne les verras jamais.\n"
     "Exemple de premier tour : "
     '{"tool": "fs.write", "arguments": {"path": "solution.py", "content": "def f(x):\\n    return x\\n"}}\n'
-    "Ne soumets qu'une fois solution.py écrit.\n\nOutils disponibles :\n"
+    "Ne soumets qu'une fois solution.py écrit.\n\nOutils disponibles (rôle, puis exemple d'appel) :\n"
 )
 _PROJECT_INSTRUCTIONS = (
     "Tu fais évoluer le projet Python de ton espace de travail pour réaliser la tâche ci-dessous, avec des "
@@ -48,7 +48,7 @@ _PROJECT_INSTRUCTIONS = (
     "Commence par inspecter le projet (project.inspect, fs.read). Tu peux lancer ses tests et en écrire "
     "d'autres. Les vérifications qui jugeront le projet sont cachées : tu ne les verras jamais.\n"
     'Exemple de premier tour : {"tool": "project.inspect", "arguments": {}}\n'
-    "Ne soumets qu'après avoir modifié le projet.\n\nOutils disponibles :\n"
+    "Ne soumets qu'après avoir modifié le projet.\n\nOutils disponibles (rôle, puis exemple d'appel) :\n"
 )
 _MAX_PROJECT_TEXT_CHARS = 50_000
 
@@ -86,15 +86,31 @@ class Episode:
     stop_reason: str = ""
 
 
+_TRIPLE_QUOTED = re.compile(r'("""|\'\'\')(.*?)\1', re.DOTALL)
+
+
+def _json_from_triple_quotes(text: str) -> str:
+    """Mesuré avec un vrai modèle 1.5B (`real-2`, projet `fix_mean`) : il écrit la valeur de « content » comme une
+    chaîne Python entre TROIS guillemets au lieu d'une chaîne JSON échappée — trois écritures CORRECTES perdues
+    comme « JSON illisible ». Le contenu entre triples guillemets est réécrit en chaîne JSON équivalente (aucune
+    autre réparation : une réponse qui reste illisible est refusée comme avant)."""
+    return _TRIPLE_QUOTED.sub(lambda m: json.dumps(m.group(2).strip("\n")), text)
+
+
 def parse_action(text: str) -> tuple[dict[str, Any] | None, str | None]:
-    """Premier objet JSON de la réponse (blocs ``` tolérés) ; (action, None) ou (None, raison du refus)."""
+    """Premier objet JSON de la réponse (blocs ``` et chaînes à triples guillemets tolérés) ; (action, None) ou
+    (None, raison du refus)."""
     start = text.find("{")
     if start < 0:
         return None, "aucun objet JSON dans la réponse"
     try:
         value, _ = json.JSONDecoder().raw_decode(text[start:])
     except json.JSONDecodeError as exc:
-        return None, f"JSON illisible : {exc.msg}"
+        repaired = _json_from_triple_quotes(text[start:])
+        try:
+            value, _ = json.JSONDecoder().raw_decode(repaired)
+        except json.JSONDecodeError:
+            return None, f"JSON illisible : {exc.msg}"
     if not isinstance(value, dict):
         return None, "la réponse doit être un objet JSON"
     if value.get("action") == "submit" and set(value) <= {"action"}:
@@ -110,21 +126,81 @@ def _clip(value: Any, limit: int) -> str:
     return text if len(text) <= limit else text[:limit] + f"… [{len(text) - limit} caractères omis]"
 
 
+#: À quoi sert chaque outil (lire = comprendre, lister/inspecter = découvrir, écrire = modifier, exécuter =
+#: vérifier, tester = valider) et un exemple d'arguments : un modèle 1.5B ne déduisait pas l'usage des seuls schémas
+#: JSON (1 800 caractères), et n'exécutait jamais rien.
+_TOOL_GUIDE = {
+    "fs.read": ("COMPRENDRE : lire un fichier", {"path": "chemin/fichier.py"}),
+    "fs.list": ("DÉCOUVRIR : lister un répertoire", {"path": "."}),
+    "project.inspect": ("DÉCOUVRIR : structure du projet (fichiers, tests, paquets)", {}),
+    "fs.write": ("MODIFIER : écrire un fichier complet", {"path": "solution.py", "content": "def f(x):\n    return x\n"}),
+    "solution.check": ("VÉRIFIER : exécuter solution.py sur les exemples publics de l'énoncé", {}),
+    "code.run": ("VÉRIFIER : exécuter un fichier Python", {"path": "script.py"}),
+    "tests.run": ("VALIDER : lancer les tests du projet", {"start_dir": "tests"}),
+}
+_FULL_STEPS = 3  # derniers tours rendus en entier ; les plus anciens en une ligne
+
+
+def render_tools(tools: list[dict[str, Any]]) -> str:
+    lines = []
+    for tool in tools:
+        purpose, example = _TOOL_GUIDE.get(tool["name"], (tool.get("description", ""), {}))
+        lines.append(f'- {tool["name"]} — {purpose}. Exemple : '
+                     f'{json.dumps({"tool": tool["name"], "arguments": example}, ensure_ascii=False)}')
+    return "\n".join(lines)
+
+
+def _one_line(step: Step) -> str:
+    action = step.action or {}
+    what = action.get("tool") or ("submit" if action.get("action") == "submit" else "illisible")
+    target = (action.get("arguments") or {}).get("path", "")
+    error = (step.observation.get("error") or {}).get("code")
+    return f"[tour {step.number}] {what} {target} -> {'erreur ' + error if error else 'ok'}"
+
+
 def compose_prompt(task_prompt: str, tools: list[dict[str, Any]], steps: list[Step], *, project: bool = False) -> str:
     history: list[str] = []
     budget = _MAX_HISTORY_CHARS
-    for step in reversed(steps):  # les plus récents d'abord, dans le budget
-        entry = (f"[tour {step.number}] action : {_clip(step.action, 1000) if step.action else 'illisible'}\n"
-                 f"observation : {_clip(step.observation, _MAX_OBSERVATION_CHARS)}")
+    for index, step in enumerate(reversed(steps)):  # les plus récents d'abord, dans le budget
+        if index >= _FULL_STEPS:
+            entry = _one_line(step)
+        else:
+            entry = (f"[tour {step.number}] action : {_clip(step.action, 1000) if step.action else 'illisible'}\n"
+                     f"observation : {_clip(step.observation, _MAX_OBSERVATION_CHARS)}")
         if len(entry) > budget:
             break
         history.append(entry)
         budget -= len(entry)
-    tools_text = "\n".join(json.dumps(t, ensure_ascii=False) for t in tools)
+    tools_text = render_tools(tools)
     past = "\n\n".join(reversed(history)) if history else "(aucun tour pour l'instant)"
-    instructions = _PROJECT_INSTRUCTIONS if project else _INSTRUCTIONS
+    can_check = any(t["name"] == "solution.check" for t in tools)
+    instructions = _PROJECT_INSTRUCTIONS if project else _INSTRUCTIONS.replace("{verify}", (
+        " Puis VÉRIFIE-la (solution.check exécute solution.py sur les exemples publics de l'énoncé), corrige si "
+        "besoin, et soumets." if can_check else ""))
     return (f"{instructions}{tools_text}\n\nTâche :\n{task_prompt}\n\nHistorique (du plus ancien au plus "
             f"récent) :\n{past}\n\nTon action suivante (un seul objet JSON) :")
+
+
+_MAX_REPEATS = 4
+
+
+def _repetitions(previous: list[Step], step: Step) -> int:
+    """Combien de fois de suite (celle-ci comprise) la MÊME action a échoué avec la MÊME erreur. Mesuré : 10
+    lectures d'un chemin absent, 9 soumissions refusées d'affilée — du temps de calcul sans information."""
+    def key(s: Step) -> tuple[str, str | None] | None:
+        if s.observation.get("ok"):
+            return None
+        return (json.dumps(s.action, sort_keys=True), (s.observation.get("error") or {}).get("code"))
+
+    current = key(step)
+    if current is None:
+        return 0
+    count = 1
+    for earlier in reversed(previous):
+        if key(earlier) != current:
+            break
+        count += 1
+    return count
 
 
 def _has_worked(episode: "Episode", *, project: bool, context: ToolContext) -> bool:
@@ -148,6 +224,7 @@ def run_tool_episode(
     n'existe pas : le Judge le jugera comme tel). Les erreurs du fournisseur de modèle remontent telles quelles
     (même traitement qu'une génération ordinaire)."""
     tools = [spec.describe() for spec in engine.registry.available_to(context.granted)]
+    checkable = any(t["name"] == "solution.check" for t in tools)
     episode = Episode()
     started = time.perf_counter()
     model_used = ""
@@ -183,10 +260,15 @@ def run_tool_episode(
         elif action.get("action") == "submit" and not _has_worked(episode, project=project, context=context):
             # Soumettre sans avoir rien produit ne peut rien prouver : refus OBSERVÉ (le modèle le lit au
             # tour suivant), jamais une donnée cachée — seulement l'état de son propre espace de travail.
+            # Mesuré (`real-2`) : jusqu'à 9 soumissions d'affilée sur ce seul refus ; il dit donc QUOI faire.
             step = Step(number, action, {"ok": False, "error": {
                 "code": "nothing_to_submit",
-                "message": ("solution.py n'existe pas encore : écris-la d'abord avec fs.write" if not project
-                            else "aucune modification du projet : utilise d'abord les outils (fs.write…)")}})
+                "message": ("solution.py n'existe pas encore. Ta prochaine action doit être une écriture : "
+                            '{"tool": "fs.write", "arguments": {"path": "solution.py", "content": "<ton code>"}}'
+                            if not project else
+                            "aucune modification du projet. Lis le fichier à corriger (fs.read) puis réécris-le "
+                            '(fs.write) : {"tool": "fs.write", "arguments": {"path": "<fichier>", '
+                            '"content": "<contenu complet corrigé>"}}')}})
         elif action.get("action") == "submit":
             step = Step(number, action, {"ok": True, "submitted": True})
             episode.steps.append(step)
@@ -201,8 +283,19 @@ def run_tool_episode(
             ), context)
             step = Step(number, action, {"ok": result.ok, "output": result.output,
                                          "error": result.error.to_dict() if result.error else None})
+            if (result.ok and action["tool"] == "fs.write" and not project and checkable
+                    and str(action["arguments"].get("path", "")).lstrip("./") == SOLUTION_FILE):
+                step.observation["next"] = ("solution.py écrit. Vérifie-le avant de soumettre : "
+                                            '{"tool": "solution.check", "arguments": {}}')
+        repeated = _repetitions(episode.steps, step)
+        if repeated >= 2:
+            step.observation["warning"] = (f"action identique à la précédente, refusée {repeated} fois de suite avec "
+                                           "le même résultat : change d'action")
         episode.steps.append(step)
         emit("agent.step", step.summary())
+        if repeated >= _MAX_REPEATS:
+            episode.stop_reason = "repetition"
+            break
     else:
         episode.stop_reason = "max_steps"
 

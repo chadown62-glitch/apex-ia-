@@ -23,8 +23,9 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 REPAIR_VERSION = "l-repair-1"
 _MAX_CODE_CHARS = 4_000

@@ -233,6 +233,34 @@ DEFAULT_LIMITS = {
 }
 
 
+def _check_solution(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[str, Any]:
+    """Vérification BON MARCHÉ de solution.py (08/10/2026) : s'importe-t-il, et que donnent les exemples PUBLICS
+    de l'énoncé (`apex.tasks.public_examples`) ? Aucun argument à écrire, aucun test à rédiger : mesuré, un modèle
+    1.5B n'appelait jamais `code.run`/`tests.run`, trop coûteux à préparer. Jamais un cas caché : l'énoncé
+    (fourni par l'appelant dans `ctx.extra["statement"]`) est la seule source des exemples."""
+    import uuid
+
+    from apex.tasks.public_examples import examples_script, extract_examples, read_results
+
+    if not ctx.workspace.resolve("solution.py").is_file():
+        raise ToolFailure(ErrorCode.NOT_FOUND, "solution.py n'existe pas encore : écris-la d'abord avec fs.write")
+    code = ctx.workspace.read_bytes("solution.py").decode("utf-8", errors="replace")
+    examples = extract_examples(str(ctx.extra.get("statement") or ""))
+    nonce = uuid.uuid4().hex[:12]
+    result = _sandbox(ctx, ("python3", "-I", "-c", examples_script(code, examples, nonce)), spec.limits.timeout_s)
+    view = _execution_view(result, spec.limits.max_output_chars)
+    _fail_on_limits(result, view)
+    results = read_results(result.stdout, examples, nonce)
+    if results is None:
+        return {"imported": False, "error": (view["stderr"] or view["stdout"])[-600:],
+                "message": "solution.py ne s'exécute pas : corrige l'erreur ci-dessus"}
+    failed = [r for r in results if not r["ok"]]
+    return {"imported": True, "examples": results, "examples_failed": len(failed),
+            "message": ("aucun exemple public dans l'énoncé : solution.py s'importe sans erreur" if not results
+                        else "tous les exemples publics passent" if not failed
+                        else f"{len(failed)} exemple(s) public(s) en échec : corrige solution.py")}
+
+
 def default_registry() -> ToolRegistry:
     registry = ToolRegistry()
     registry.register(ToolSpec(
@@ -284,4 +312,13 @@ def default_registry() -> ToolRegistry:
         permissions=frozenset({Permission.EXECUTE_SANDBOX}),
         limits=DEFAULT_LIMITS["tests.run"],
     ), _run_tests)
+    registry.register(ToolSpec(
+        name="solution.check",
+        description=("Vérifier solution.py dans la sandbox : import, puis exemples publics de l'énoncé "
+                     "(attendu / obtenu). Sans argument."),
+        input_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object", "additionalProperties": True},
+        permissions=frozenset({Permission.EXECUTE_SANDBOX}),
+        limits=DEFAULT_LIMITS["code.run"],
+    ), _check_solution)
     return registry

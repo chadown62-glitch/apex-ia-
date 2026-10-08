@@ -564,6 +564,7 @@ def _run_episode(
 
     context = ToolContext(
         workspace=tools.workspace, granted=tools.granted, emit=emit,
+        extra={"statement": task.description},  # source UNIQUE des exemples publics de `solution.check`
         run_in_sandbox=sandbox_runner(
             agent_runtime=agent_runtime, sandbox=sandbox, pool=pool, base_limits=limits,
             requested_by=request.authorization, clone_subject=clone_subject,

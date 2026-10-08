@@ -106,7 +106,8 @@ def test_tools_not_granted_are_neither_offered_nor_executable(factory, tmp_path)
         act("fs.write", path="solution.py", content=RIGHT), act("tests.run"), act()],
         permissions=("workspace.read", "workspace.write"))
     first = _Actor.prompts[0]
-    assert '"name": "fs.write"' in first and '"name": "tests.run"' not in first and "code.run" not in first
+    assert "- fs.write —" in first and "tests.run" not in first and "code.run" not in first
+    assert "solution.check" not in first  # ni offert, ni conseillé sans la permission d'exécution
     assert "permission_denied" in _Actor.prompts[2]
     assert run.status.value == "completed"  # le Judge reste l'autorité, avec ou sans outils d'exécution
 
