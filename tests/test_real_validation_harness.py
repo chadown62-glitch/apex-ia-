@@ -57,7 +57,8 @@ def test_projects_and_hostile_tasks_build() -> None:
         spec = build_user_project_task_spec(description=project["description"], seed_files=project["seed"], cases=[
             {"module": m, "function": f, "args": a, "expected": e} for m, f, a, e in project["cases"]])
         assert spec.workspace_seed == project["seed"]
-    assert set(harness.ARMS) == {"A", "B", "R", "C", "D", "L"}
+    assert set(harness.ARMS) == {"A", "B", "R", "C", "D", "L", "RT"}
+    assert harness.ARMS["RT"]["retry_adaptation"] == "explore" and harness.ARMS["RT"]["max_attempts"] == 3
     assert harness.ARMS["L"]["retry_adaptation"] == "diagnose_repair" and harness.ARMS["L"]["max_attempts"] == 3
 
 
@@ -135,3 +136,27 @@ def test_plan_metrics_measure_length_code_repetition_and_link_to_the_code() -> N
     assert m["chars"] == len(record["plan"]) and m["has_code"] is False
     assert 0 < m["statement_overlap"] <= 1 and 0 < m["terms_in_code"] < 1
     assert harness.plan_metrics({**record, "plan": "```python\ndef f(): pass\n```"})["has_code"] is True
+
+
+def test_the_exploration_control_and_code_change_are_analysed_for_every_arm() -> None:
+    records = []
+    for i, (rt, l_arm) in enumerate([(True, True), (False, True), (True, False)]):
+        for arm, success in (("RT", rt), ("L", l_arm), ("R", False)):
+            codes = ["a", "a", "b" if arm != "R" else "a"]
+            records.append({"arm": arm, "seed": 0, "kind": f"k{i}", "success": success, "first_pass": False,
+                            "corrected": success, "final_score": float(success), "first_score": 0.0,
+                            "n_attempts": 3, "duration_s": 1.0, "plan_failed": False,
+                            "attempts": [{"code": c, "verdict": "fail", "category": "incorrect_solution"} for c in codes[:2]]
+                            + [{"code": codes[2], "verdict": "pass" if success else "fail",
+                                "category": "success" if success else "incorrect_solution"}]})
+    result = harness.analyse_adaptation(records)
+    assert result["primary"]["H-L3 diagnostic au-delà de l'exploration (L vs RT)"]["second_only"] == 1
+    assert result["arms"]["R"]["retry_code_changed"] == "0/6" and result["arms"]["RT"]["retry_code_changed"] == "3/6"
+    assert result["arms"]["RT"]["corrected_at_attempt"] == {"3": 2} and "RT vs R" in result["secondary"]
+
+
+def test_the_examples_bench_keeps_only_statements_solvable_without_tools() -> None:
+    names = [name for name, _ in harness.adaptation_tasks("examples", None)]
+    assert len(names) == 8 and "shipping_cost" not in names and "to_meters" not in names
+    assert all(spec.workspace_seed is None for _, spec in harness.adaptation_tasks("examples", None))
+    assert len(harness.adaptation_tasks("reference", None)) == 15

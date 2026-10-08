@@ -112,3 +112,19 @@ def test_the_limits_of_a_run_are_unchanged(factory) -> None:  # noqa: F811
     _, run = _run(factory, [WRONG, DIAGNOSIS, WRONG, DIAGNOSIS, WRONG, DIAGNOSIS],
                   retry_adaptation="diagnose_repair", limits=TaskLimits(max_attempts=2, max_retries=1, max_candidates=1))
     assert len(run.attempts) == 2 and run.status.value == "failed"
+
+
+def test_the_exploration_control_changes_only_the_temperature_on_the_repair_schedule(factory) -> None:  # noqa: F811
+    """Témoin `explore` (§6.6) : même prompt, aucun diagnostic ; température de la 2e tentative inchangée, celle de
+    la 3e = celle d'une réécriture de `diagnose_repair` (base + 0,3)."""
+    # Deux échecs de catégories différentes : le garde-fou « no_progress » (patience 2) laisse jouer la 3e tentative.
+    task, run = _run(factory, [WRONG, LEAKY, _CORRECT_IS_PALINDROME], retry_adaptation="explore", base_temperature=0.4)
+    assert len(_Scripted.requests) == len(run.attempts)  # aucun appel de diagnostic
+    prompts = {r.prompt for r in _Scripted.requests}
+    assert prompts == {task.description}  # le prompt ne change jamais
+    temps = [r.temperature for r in _Scripted.requests]
+    assert len(temps) == 3 and temps[:2] == [0.4, 0.4] and abs(temps[2] - 0.7) < 1e-9
+    assert run.status.value == "completed"
+    explored = [e for e in _kinds(factory, run.id) if e["kind"] == "strategy.explored"]
+    assert explored and all(e["prompt_changed"] is False for e in explored)
+    assert not _changed(factory, run)  # jamais un `strategy.changed` (pas de diagnostic)

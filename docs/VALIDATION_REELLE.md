@@ -356,3 +356,50 @@ Ajouts d'ANALYSE (écrits avant toute lecture des résultats ; aucun protocole m
 le code = lien plan -> actions) ; variante STRICTE de « mémoire utilisée » qui ignore les preuves faites d'un seul
 entier (60, 100…), susceptibles de coïncider (ex. parse_duration et parse_hhmm comptent tous deux en 60) — la règle
 pré-enregistrée reste la mesure principale, la stricte un contrôle de robustesse.
+
+## 7. Résultats MESURÉS locaux — chantier « cycle cognitif » (poids substituts Qwen2.5-1.5B-Instruct, §6)
+Toutes les mesures de cette section : backend natif, CPU 4 cœurs, `actual_weights` = « docker.io/ai/qwen2.5:1.5B-F16
+(Qwen2.5-1.5B-Instruct) », `substitute_weights: true`. Jamais comparées aux chiffres CI (`real-2`/`real-3`, variante
+Coder) autrement qu'à titre descriptif. Fichiers bruts : `validation/results/local-cognitive/`.
+
+**Incident de mesure (consigné, sans effet sur les réussites).** Une exécution de la suite de tests en parallèle
+(10:42–14:51 UTC, même à priorité minimale puis en ordonnancement « idle ») a ralenti l'inférence d'un facteur 7 à 20
+(contention des fils de calcul de torch) : les DURÉES du bras C (graines 0–3) sont inutilisables. Les RÉUSSITES ne sont
+pas affectées : aucune tentative n'a atteint un délai (génération la plus longue 368 s pour une limite de 600 s ;
+toutes les tentatives en échec sont `incorrect_solution`). Depuis, aucune autre charge ne tourne pendant une mesure
+(pause entre jobs).
+
+### 7.1 Adaptation R / C / L (§6.1, 15 tâches × graines 0–3, budget égal, commit figé `1d529e2`)
+| Bras | Réussites | Corrigées (échec puis réussite) | Code modifié d'une tentative à l'autre | Durée moyenne |
+|---|---|---|---|---|
+| R (retry identique) | 24/60 | 0 | **0/72** | 33,4 s |
+| C (faits d'échec) | 24/60 | 0 | 20/72 | (contaminée) |
+| L (diagnostic -> stratégie) | **28/60** | **4** | **52/72** | 44,4 s |
+
+McNemar exact : **H-L1 L vs R 4–0, p = 0,125 ; H-L2 L vs C 4–0, p = 0,125 ; H2 C vs R 0–0, p = 1** — aucun
+significatif après Holm. **MESURÉ** : la stratégie change réellement avec L (le code change dans 72 % des retries
+contre 0 % pour R, qui rejoue exactement le même code), et L corrige 4 instances que ni R ni C ne corrigent, sans
+aucune perte. **Non prouvé** : L > R (p = 0,125).
+
+Audit des 4 corrections (traces `strategy.changed`/`strategy.outcome`) : TOUTES à la 3e tentative, en mode `rewrite`
+(nouvelle solution, code précédent non montré, température 1,0) ; la tentative `repair` guidée par le diagnostic n'a
+jamais amélioré le score (balanced 0,375 -> 0,375 ; median 0,875 -> 0,875). Justesse des 72 diagnostics, jugée contre
+la cause réelle lue dans le code (**JUGÉ**) : 20/72 désignent une clause réellement violée (dedupe_keep_last 8/8,
+roman_to_int 8/8 en partie, title_case 4/8 en partie) ; 52/72 sont faux, inversés ou vagues (is_palindrome : énoncé
+inversé ; balanced : cause réelle = appel à une fonction `match` non définie, jamais citée ; median : cause réelle =
+liste vide non gérée, diagnostic « trier la liste »). Même un diagnostic juste n'a produit aucune correction
+(dedupe_keep_last : 0/4). **INFÉRÉ** : le gain observé de L vient de l'EXPLORATION (réécriture à température plus
+haute), pas de la compréhension de l'erreur — hypothèse testée en §6.6 avant toute affirmation.
+
+### 6.6 Exploration ou compréhension ? — PRÉ-ENREGISTRÉ (après §7.1, avant toute mesure de RT)
+Témoin **RT** (`retry_adaptation="explore"`) : même prompt à chaque tentative, aucune observation, aucun diagnostic ;
+seule la température suit le calendrier de L à 3 tentatives (2e : inchangée ; 3e : celle d'une réécriture, 1,0 ici).
+Mesures (commit figé du témoin, mêmes graines `seed_for("adapt", tâche, graine)`) :
+1. 15 tâches de référence × graines 0–3 : RT, comparé aux R, C, L de §7.1 ; contrôle d'identité du chemin de code :
+   R graine 0 rejoué depuis le nouveau commit doit reproduire exactement §7.1 (mêmes réussites, mêmes codes).
+2. Énoncés À EXEMPLES PUBLICS (8 tâches du banc §6.2 résolubles sans outil — l'observation de L y inclut l'exécution
+   des exemples, H-A2) × graines 0–3 : R, RT, L.
+Hypothèses (McNemar exact, Holm 5 % par mesure) : **H-L3** L > RT (comprendre au-delà d'explorer) ; secondaire RT vs R
+(l'exploration seule). Lecture fixée d'avance : si RT ≈ L, le mécanisme utile de L est l'exploration et le diagnostic
+n'apporte rien de mesurable avec ce modèle ; si L > RT sur les énoncés à exemples seulement, ce sont les observations
+concrètes qui rendent le diagnostic utile.

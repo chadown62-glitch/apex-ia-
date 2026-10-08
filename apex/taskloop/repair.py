@@ -141,6 +141,16 @@ def next_strategy(before: RepairStrategy, *, obs: Observation, previous_failed: 
                           extra={"progress": progress})
 
 
+def exploration_temperature(next_attempt: int, base_temperature: float | None, *, current: float | None) -> float | None:
+    """Calendrier de température du TÉMOIN `explore`, calqué sur `diagnose_repair` à 3 tentatives : la 2e garde la
+    température courante (comme `repair`), la 3e et les suivantes prennent celle d'une réécriture (`rewrite` :
+    base, ou 0,7 par défaut, + 0,3, plafonnée)."""
+    if next_attempt < 3:
+        return current
+    base = base_temperature if base_temperature is not None else _DEFAULT_TEMPERATURE
+    return min(_MAX_TEMPERATURE, base + _REWRITE_TEMPERATURE_BUMP)
+
+
 def strategy_suffix(strategy: RepairStrategy, obs: Observation) -> str:
     """Ce que la tentative suivante reçoit EN PLUS de l'énoncé (jamais une donnée cachée)."""
     if strategy.mode == "repair":

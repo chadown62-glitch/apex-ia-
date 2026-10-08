@@ -54,6 +54,8 @@ ARMS: dict[str, dict[str, Any]] = {
     # L : trois tentatives ; après un échec : son code + faits + exemples publics -> diagnostic par le modèle ->
     # changement de stratégie explicite (réparer, puis réécrire sans progrès) — `apex.taskloop.repair`.
     "L": {"max_attempts": 3, "plan_first": False, "retry_adaptation": "diagnose_repair"},
+    # RT : TÉMOIN d'exploration (§6.6) — même prompt, aucun diagnostic, température calquée sur celle de L.
+    "RT": {"max_attempts": 3, "plan_first": False, "retry_adaptation": "explore"},
 }
 #: Garde-fou « no_progress » de la boucle (2 = valeur du produit). Une expérience qui compare des stratégies
 #: d'adaptation à BUDGET ÉGAL le désactive pour tous les bras (`--no-progress-patience 99`).
@@ -498,24 +500,36 @@ def phase_smoke(out: Path, seeds: list[int]) -> int:
     return 0
 
 
-def phase_adaptation(out: Path, seeds: list[int], arms: list[str], kinds: list[str] | None,
-                     no_progress_patience: int | None = None) -> int:
+def adaptation_tasks(bench: str, kinds: list[str] | None) -> list[tuple[str, Any]]:
+    """`reference` : les 15 tâches de référence (énoncés SANS exemple public) ; `examples` (§6.6) : les énoncés du
+    banc d'outils résolubles sans outil, qui montrent des exemples PUBLICS exécutables (observation de L)."""
+    if bench == "examples":
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from apex_bench_tasks import TOOL_BENCH, bench_spec
+
+        return [(t.name, bench_spec(t, with_seed=False)) for t in TOOL_BENCH
+                if t.category not in ("lecture", "multi") and (not kinds or t.name in kinds)]
     from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
 
+    return [(k, build_reference_task_spec(k)) for k in (kinds or REFERENCE_TASK_KINDS)]
+
+
+def phase_adaptation(out: Path, seeds: list[int], arms: list[str], kinds: list[str] | None,
+                     no_progress_patience: int | None = None, bench: str = "reference") -> int:
     candidates = native_candidates()
     root = Path(tempfile.mkdtemp(prefix="apex-adapt-"))
     records = []
     for arm in arms:
         factory = session_factory(root / f"apex-{arm}.db")  # une base par bras : aucune fuite entre bras
         for seed in seeds:
-            for kind in (kinds or REFERENCE_TASK_KINDS):
-                task = create_task(factory, build_reference_task_spec(kind))
+            for kind, spec in adaptation_tasks(bench, kinds):
+                task = create_task(factory, spec)
                 run = run_task(factory, candidates, task, seed=seed_for("adapt", kind, seed),
                                workspace=root / "ws", no_progress_patience=no_progress_patience, **ARMS[arm])
                 record = {"arm": arm, "seed": seed, "kind": kind, **collect(factory, run)}
                 progress(record, f"bras {arm} graine {seed} {kind}")
                 records.append(record)
-    write(out, {"phase": "adaptation", "environment": environment_facts(candidates), "arms": arms,
+    write(out, {"phase": "adaptation", "bench": bench, "environment": environment_facts(candidates), "arms": arms,
                 "no_progress_patience": no_progress_patience or NO_PROGRESS_PATIENCE,
                 "seeds": seeds, "records": records})
     return 0
@@ -1010,6 +1024,10 @@ def _pair(records: list[dict[str, Any]], first: str, second: str, metric: str) -
             "second_only": b, "first_only": c, "p": mcnemar_exact(b, c)}
 
 
+def _code_fp(code: str | None) -> str:
+    return hashlib.sha256(" ".join((code or "").split()).encode()).hexdigest()
+
+
 def plan_metrics(record: dict[str, Any]) -> dict[str, Any]:
     """Plan (§6.4) : longueur, code résiduel, RÉPÉTITION de l'énoncé (part de ses termes déjà dans l'énoncé) et
     lien PLAN -> ACTIONS (part de ses termes retrouvés dans le code produit). Comptes lexicaux, sans jugement."""
@@ -1047,6 +1065,14 @@ def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
             "plan_code_removed": sum(r.get("plan_code_removed", False) for r in rs),
             "errors": _count([a["category"] for r in rs for a in r["attempts"] if a["verdict"] != "pass"]),
         }
+        # Le CODE change-t-il d'une tentative à la suivante ? (mesuré pour tous les bras : R à l'identique le
+        # reproduit-il, C/L/RT le font-ils évoluer ?) — empreinte du code, espaces normalisés.
+        pairs = [(x.get("code"), y.get("code")) for r in rs for x, y in zip(r["attempts"], r["attempts"][1:])]
+        if pairs:
+            table[arm]["retry_code_changed"] = f"{sum(_code_fp(x) != _code_fp(y) for x, y in pairs)}/{len(pairs)}"
+            table[arm]["corrected_at_attempt"] = _count([next(i for i, a in enumerate(r["attempts"], 1)
+                                                              if a["verdict"] == "pass")
+                                                         for r in rs if r["corrected"]])
         plans = [plan_metrics(r) for r in rs if r.get("plan")]
         if plans:
             table[arm]["plan"] = {
@@ -1073,8 +1099,10 @@ def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
         primary["H-L1 diagnostic + stratégie au-delà du retry (L vs R)"] = _pair(records, "R", "L", "success")
     if {"C", "L"} <= set(arms):
         primary["H-L2 diagnostic + stratégie au-delà des faits (L vs C)"] = _pair(records, "C", "L", "success")
+    if {"RT", "L"} <= set(arms):  # §6.6 : comprendre son erreur, au-delà d'explorer
+        primary["H-L3 diagnostic au-delà de l'exploration (L vs RT)"] = _pair(records, "RT", "L", "success")
     secondary = {}
-    for first, second in (("A", "R"), ("A", "C"), ("A", "D")):
+    for first, second in (("A", "R"), ("A", "C"), ("A", "D"), ("R", "RT")):
         if {first, second} <= set(arms):
             secondary[f"{second} vs {first}"] = _pair(records, first, second, "success")
     decisions = holm({k: v["p"] for k, v in primary.items()})
@@ -1312,6 +1340,8 @@ def main() -> int:
     parser.add_argument("--seeds", default="0", help="graines séparées par des virgules")
     parser.add_argument("--arms", default="A,B,R,C,D")
     parser.add_argument("--kinds", default=None, help="tâches de référence (défaut : les 15)")
+    parser.add_argument("--bench", default="reference", choices=("reference", "examples"),
+                        help="adaptation : tâches de référence ou énoncés à exemples publics (§6.6)")
     parser.add_argument("--sections", default=",".join(TOOL_SECTIONS), help="outils : function,project,hostile")
     parser.add_argument("--no-progress-patience", type=int, default=None,
                         help="adaptation : garde-fou no_progress (99 = budget égal entre bras)")
@@ -1331,7 +1361,7 @@ def main() -> int:
         return phase_smoke(out, seeds)
     if args.phase == "adaptation":
         return phase_adaptation(out, seeds, [a for a in args.arms.split(",") if a],
-                                args.kinds.split(",") if args.kinds else None, args.no_progress_patience)
+                                args.kinds.split(",") if args.kinds else None, args.no_progress_patience, args.bench)
     if args.phase == "memory":
         return phase_memory(out, seeds)
     if args.phase == "learning":

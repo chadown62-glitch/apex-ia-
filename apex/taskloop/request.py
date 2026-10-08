@@ -84,7 +84,10 @@ STRATEGIES = ("rule", "failure_facts")
 #: `none` : relance à l'identique ; `failure_facts` : faits d'échec autorisés seuls (protocole v2) ;
 #: `diagnose_repair` : observation (son code, faits, exemples publics) -> diagnostic par le modèle -> changement
 #: de stratégie explicite (`apex.taskloop.repair`).
-RETRY_ADAPTATIONS = ("failure_facts", "none", "diagnose_repair")
+#: `explore` : TÉMOIN d'exploration (08/10/2026, docs/VALIDATION_REELLE.md §6.6) — même prompt à chaque tentative,
+#: aucune observation, aucun diagnostic ; seule la température suit le calendrier de `diagnose_repair` (tentative 2 :
+#: inchangée ; à partir de la 3e : celle de sa réécriture). Sépare « explorer » de « comprendre son erreur ».
+RETRY_ADAPTATIONS = ("failure_facts", "none", "diagnose_repair", "explore")
 #: Décision de l'étape PLAN (08/10/2026, docs/VALIDATION_REELLE.md §6.4) : `request` = `plan_first` tel que demandé ;
 #: `auto` = APEX décide d'après les exécutions PASSÉES de tâches similaires (avec ou sans plan) — plan seulement
 #: si la preuve dit qu'il aide, sinon contourné (mesuré en `real-2`/`real-3` : il n'aidait pas et coûtait ×4).

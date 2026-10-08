@@ -1354,6 +1354,14 @@ def _run(
                                                     plan_closing=plan_closing)
                 generation_temperature = resolve_generation_temperature(strategy.genome_content)
                 emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
+        elif request.retry_adaptation == "explore":
+            from apex.taskloop.repair import exploration_temperature
+
+            before = generation_temperature
+            generation_temperature = exploration_temperature(attempt_number + 1, request.base_temperature,
+                                                             current=generation_temperature)
+            emit("strategy.explored", {"after_attempt": attempt_number, "temperature_before": before,
+                                       "temperature_after": generation_temperature, "prompt_changed": False})
         elif repair is not None:
             strategy, suffix = repair.adapt(
                 strategy=strategy, experience=experience, eval_run=eval_run, code=generation.text,
