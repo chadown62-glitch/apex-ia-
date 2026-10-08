@@ -214,3 +214,20 @@ pendant la mesure).
 Ordre de travail : adaptation (cœur du cycle, produit les diagnostics), outils, mémoire/leçons, PLAN
 adaptatif, puis banc de preuve d'apprentissage. Chaque correction : tests, mesure locale réelle, audit des
 échecs, correction, nouvelle mesure. Protocoles pré-enregistrés ci-dessous avant chaque mesure.
+
+### 6.1 Adaptation L — PRÉ-ENREGISTRÉ (avant toute mesure de L)
+Mécanisme (`retry_adaptation="diagnose_repair"`, `apex/taskloop/repair.py`, version `l-repair-1`) : après un échec
+jugé, OBSERVATION (son propre code, faits d'échec autorisés, exemples PUBLICS de l'énoncé exécutés en sandbox —
+jamais un cas caché), DIAGNOSTIC (appel court au modèle : « cause la plus probable », ≤ 120 tokens),
+STRATÉGIE : `initial` -> `repair` (corriger son code avec son diagnostic) ; `repair` sans baisse des cas en échec ->
+`rewrite` (nouvelle solution, code précédent non montré, causes rappelées, température +0,3) ; `rewrite` ->
+`repair`. Traces : `strategy.changed` (échec, observation, diagnostic, stratégie avant/après) et
+`strategy.outcome` (le CODE a-t-il changé, gain de score) ; `Experience.generation_config` et
+`improvement_delta` les conservent.
+
+Mesure LOCALE (poids Qwen2.5-1.5B-Instruct, §6) : 15 tâches de référence × graines {0, 1, 2, 3}, bras R
+(retry identique), C (faits d'échec), L, tous à 3 tentatives et **budget égal** (garde-fou `no_progress` désactivé
+pour les trois : `--no-progress-patience 99`), nombres aléatoires communs. Hypothèses (McNemar exact, Holm 5 %) :
+**H-L1** L vs R ; **H-L2** L vs C ; **H2** C vs R. Descriptif : corrections (échec puis réussite), score du Judge,
+part des retries où le code a réellement changé, modes de stratégie, diagnostics manquants, durée. Règle : un effet
+n'est affirmé qu'après réplication sur graines {10, 11, 12, 13} (même direction, p < 0,05).

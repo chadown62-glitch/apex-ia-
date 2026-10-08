@@ -47,7 +47,13 @@ ARMS: dict[str, dict[str, Any]] = {
     "C": {"max_attempts": 3, "plan_first": False, "retry_adaptation": "failure_facts"},
     # D : PLAN + trois tentatives avec adaptation.
     "D": {"max_attempts": 3, "plan_first": True, "retry_adaptation": "failure_facts"},
+    # L : trois tentatives ; après un échec : son code + faits + exemples publics -> diagnostic par le modèle ->
+    # changement de stratégie explicite (réparer, puis réécrire sans progrès) — `apex.taskloop.repair`.
+    "L": {"max_attempts": 3, "plan_first": False, "retry_adaptation": "diagnose_repair"},
 }
+#: Garde-fou « no_progress » de la boucle (2 = valeur du produit). Une expérience qui compare des stratégies
+#: d'adaptation à BUDGET ÉGAL le désactive pour tous les bras (`--no-progress-patience 99`).
+NO_PROGRESS_PATIENCE = 2
 GENERATION_TIMEOUT_S = 600.0
 WALL_CLOCK_S = 2400.0
 
@@ -163,7 +169,8 @@ def create_task(factory: Any, spec: Any) -> Any:
 
 def run_task(factory: Any, candidates: tuple[Any, ...], task: Any, *, seed: int, workspace: Path,
              max_attempts: int = 1, plan_first: bool = False, retry_adaptation: str = "none",
-             tool_permissions: tuple[str, ...] = (), max_tool_steps: int = 8, use_memory: bool = False) -> Any:
+             tool_permissions: tuple[str, ...] = (), max_tool_steps: int = 8, use_memory: bool = False,
+             no_progress_patience: int | None = None) -> Any:
     from apex.agents.runtime import AgentRuntime
     from apex.config.loader import load_config
     from apex.taskloop.loop import run_task_loop
@@ -172,7 +179,8 @@ def run_task(factory: Any, candidates: tuple[Any, ...], task: Any, *, seed: int,
     from apex.taskloop.runs import TaskRunService, execution_pool
 
     loop = functools.partial(run_task_loop, candidates=candidates, registry=TaskLoopRegistry(),
-                             provider_factory=seeded_factory(seed), workspace_root=str(workspace))
+                             provider_factory=seeded_factory(seed), workspace_root=str(workspace),
+                             no_progress_patience=no_progress_patience or NO_PROGRESS_PATIENCE)
     service = TaskRunService(factory, AgentRuntime(factory), execution_pool(load_config()), run_loop=loop)
     return service.start(
         task_id=task.id, objective="résoudre la tâche", wait=True, generation_timeout_s=GENERATION_TIMEOUT_S,
@@ -239,6 +247,15 @@ def collect(factory: Any, run: Any, *, keep_code: bool = True) -> dict[str, Any]
         "plan_failed": any(e.get("kind") == "task.plan.failed" for e in events),
         "plan_code_removed": any(e.get("kind") == "task.plan.generated" and e.get("code_removed") for e in events),
         "adapted": sum(1 for e in events if e.get("kind") == "strategy.adapted"),
+        # Cycle « diagnostic -> stratégie » (bras L) : ce qui a changé, et si le CODE a réellement changé.
+        "repair": [{"after_attempt": e.get("after_attempt"), "before": (e.get("strategy_before") or {}).get("mode"),
+                    "after": (e.get("strategy_after") or {}).get("mode"), "changed": e.get("changed"),
+                    "diagnosis": (e.get("diagnosis") or "")[:300], "diagnosis_error": e.get("diagnosis_error"),
+                    "observation": e.get("observation")}
+                   for e in events if e.get("kind") == "strategy.changed"],
+        "repair_outcomes": [{"attempt": e.get("attempt_number"), "mode": e.get("mode"),
+                             "code_changed": e.get("code_changed"), "delta": e.get("improvement_delta")}
+                            for e in events if e.get("kind") == "strategy.outcome"],
         "memory": next((e.get("items") for e in events if e.get("kind") == "memory.retrieved"), None),
         "agent_steps": len(steps), "tools_used": tools_used, "tool_errors": tool_errors,
         "invalid_actions": tool_errors.get("invalid_action", 0), "failure": (run.failure or "")[:300],
@@ -473,7 +490,8 @@ def phase_smoke(out: Path, seeds: list[int]) -> int:
     return 0
 
 
-def phase_adaptation(out: Path, seeds: list[int], arms: list[str], kinds: list[str] | None) -> int:
+def phase_adaptation(out: Path, seeds: list[int], arms: list[str], kinds: list[str] | None,
+                     no_progress_patience: int | None = None) -> int:
     from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
 
     candidates = native_candidates()
@@ -485,11 +503,12 @@ def phase_adaptation(out: Path, seeds: list[int], arms: list[str], kinds: list[s
             for kind in (kinds or REFERENCE_TASK_KINDS):
                 task = create_task(factory, build_reference_task_spec(kind))
                 run = run_task(factory, candidates, task, seed=seed_for("adapt", kind, seed),
-                               workspace=root / "ws", **ARMS[arm])
+                               workspace=root / "ws", no_progress_patience=no_progress_patience, **ARMS[arm])
                 record = {"arm": arm, "seed": seed, "kind": kind, **collect(factory, run)}
                 progress(record, f"bras {arm} graine {seed} {kind}")
                 records.append(record)
     write(out, {"phase": "adaptation", "environment": environment_facts(candidates), "arms": arms,
+                "no_progress_patience": no_progress_patience or NO_PROGRESS_PATIENCE,
                 "seeds": seeds, "records": records})
     return 0
 
@@ -629,6 +648,11 @@ def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
             "plan_code_removed": sum(r.get("plan_code_removed", False) for r in rs),
             "errors": _count([a["category"] for r in rs for a in r["attempts"] if a["verdict"] != "pass"]),
         }
+        outcomes = [o for r in rs for o in r.get("repair_outcomes") or []]
+        if outcomes:
+            table[arm]["retries_code_changed"] = f"{sum(bool(o['code_changed']) for o in outcomes)}/{len(outcomes)}"
+            table[arm]["strategy_modes"] = _count([c["after"] for r in rs for c in r.get("repair") or []])
+            table[arm]["diagnosis_missing"] = sum(1 for r in rs for c in r.get("repair") or [] if not c["diagnosis"])
     primary = {}
     if {"A", "B"} <= set(arms):
         primary["H1 plan (B vs A)"] = _pair(records, "A", "B", "success")
@@ -636,6 +660,11 @@ def analyse_adaptation(records: list[dict[str, Any]]) -> dict[str, Any]:
         primary["H2 adaptation au-delà du simple retry (C vs R)"] = _pair(records, "R", "C", "success")
     if {"C", "D"} <= set(arms):
         primary["H3 plan avec adaptation (D vs C)"] = _pair(records, "C", "D", "success")
+    # Chantier « cycle cognitif » (§6.1) : diagnostic + changement de stratégie (L).
+    if {"R", "L"} <= set(arms):
+        primary["H-L1 diagnostic + stratégie au-delà du retry (L vs R)"] = _pair(records, "R", "L", "success")
+    if {"C", "L"} <= set(arms):
+        primary["H-L2 diagnostic + stratégie au-delà des faits (L vs C)"] = _pair(records, "C", "L", "success")
     secondary = {}
     for first, second in (("A", "R"), ("A", "C"), ("A", "D")):
         if {first, second} <= set(arms):
@@ -739,6 +768,8 @@ def main() -> int:
     parser.add_argument("--arms", default="A,B,R,C,D")
     parser.add_argument("--kinds", default=None, help="tâches de référence (défaut : les 15)")
     parser.add_argument("--sections", default=",".join(TOOL_SECTIONS), help="outils : function,project,hostile")
+    parser.add_argument("--no-progress-patience", type=int, default=None,
+                        help="adaptation : garde-fou no_progress (99 = budget égal entre bras)")
     parser.add_argument("--out", default=None)
     parser.add_argument("inputs", nargs="*", help="analyse : fichiers de résultats")
     args = parser.parse_args()
@@ -751,7 +782,7 @@ def main() -> int:
         return phase_smoke(out, seeds)
     if args.phase == "adaptation":
         return phase_adaptation(out, seeds, [a for a in args.arms.split(",") if a],
-                                args.kinds.split(",") if args.kinds else None)
+                                args.kinds.split(",") if args.kinds else None, args.no_progress_patience)
     if args.phase == "memory":
         return phase_memory(out, seeds)
     sections = tuple(x for x in args.sections.split(",") if x)

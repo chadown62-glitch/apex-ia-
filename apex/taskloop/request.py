@@ -81,7 +81,10 @@ STRATEGIES = ("rule", "failure_facts")
 #: `failure_facts` = la tentative suivante reçoit les faits d'échec autorisés de la précédente
 #: (`apex.metalearner.failure_facts`, liste fermée) ; `none` = même prompt, même température
 #: (comportement d'avant le 05/10/2026).
-RETRY_ADAPTATIONS = ("failure_facts", "none")
+#: `none` : relance à l'identique ; `failure_facts` : faits d'échec autorisés seuls (protocole v2) ;
+#: `diagnose_repair` : observation (son code, faits, exemples publics) -> diagnostic par le modèle -> changement
+#: de stratégie explicite (`apex.taskloop.repair`).
+RETRY_ADAPTATIONS = ("failure_facts", "none", "diagnose_repair")
 
 
 @dataclass(frozen=True)

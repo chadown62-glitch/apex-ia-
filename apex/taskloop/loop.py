@@ -256,6 +256,93 @@ def _adapted_strategy(current: _Strategy, experience: Any, eval_run: EvalRun, at
     )
 
 
+class _RepairLoop:
+    """État du cycle `diagnose_repair` d'une TaskRun (`apex.taskloop.repair`) : stratégie en cours, cas en échec
+    de la tentative précédente, empreinte du code soumis. `adapt` réalise OBSERVATION -> DIAGNOSTIC -> STRATÉGIE
+    après un échec ; `outcome` mesure, à la tentative suivante, si le code a réellement changé et si le score a
+    progressé. Tout est journalisé (`strategy.changed`, `strategy.outcome`)."""
+
+    def __init__(self, *, task: Any, request: TaskRequest, run_script: Callable[[str], Any],
+                 base_temperature: float | None) -> None:
+        from apex.taskloop.repair import RepairStrategy
+
+        self.task = task
+        self.request = request
+        self.run_script = run_script
+        self.base_temperature = base_temperature
+        self.strategy = RepairStrategy(mode="initial", temperature=base_temperature)
+        self.previous_failed: int | None = None
+        self.previous_fingerprint: str | None = None
+        self.previous_fitness: float | None = None
+
+    def outcome(self, *, attempt_number: int, code: str, fitness: float, emit: Callable[..., None]) -> float | None:
+        """À appeler après le jugement de CHAQUE tentative ; renvoie l'amélioration de score depuis la précédente."""
+        from apex.taskloop.repair import fingerprint
+
+        current = fingerprint(code or "")
+        delta = None if self.previous_fitness is None else round(fitness - self.previous_fitness, 4)
+        if self.strategy.mode != "initial":
+            emit("strategy.outcome", {
+                "attempt_number": attempt_number, "mode": self.strategy.mode,
+                "code_changed": current != self.previous_fingerprint, "improvement_delta": delta,
+            })
+        self.previous_fingerprint = current
+        self.previous_fitness = fitness
+        return delta
+
+    def adapt(self, *, strategy: "_Strategy", experience: Any, eval_run: Any, code: str, attempt_number: int,
+              provider: ModelProvider, endpoint: Any, temperature: float | None, timeout_s: float,
+              emit: Callable[..., None]) -> tuple["_Strategy", str]:
+        from apex.taskloop.repair import (
+            REPAIR_VERSION,
+            clean_diagnosis,
+            diagnosis_prompt,
+            next_strategy,
+            observe,
+            strategy_suffix,
+        )
+        from apex.tasks.solution_tasks import retrieval_statement
+
+        obs = observe(code=code or "", eval_run=eval_run, failure_category=experience.failure_category,
+                      description=self.task.description, run_script=self.run_script)
+        diagnosis, diagnosis_error = "", None
+        try:
+            answer = provider.generate(GenerationRequest(
+                endpoint=endpoint, prompt=diagnosis_prompt(retrieval_statement(self.task.description), obs),
+                temperature=temperature, timeout_s=timeout_s, max_tokens=120,
+            ))
+            diagnosis = clean_diagnosis(answer.text)
+        except (ModelProviderError, TimeoutExceeded) as exc:
+            diagnosis_error = str(exc)[:300]
+        before = self.strategy
+        after = next_strategy(before, obs=obs, previous_failed=self.previous_failed, diagnosis=diagnosis,
+                              base_temperature=self.base_temperature)
+        emit("strategy.changed", {
+            "after_attempt": attempt_number, "version": REPAIR_VERSION,
+            "failure": {"category": experience.failure_category.value, "failed_cases": obs.failed_cases,
+                        "total_cases": obs.total_cases},
+            "observation": obs.summary(), "diagnosis": diagnosis, "diagnosis_error": diagnosis_error,
+            "strategy_before": before.to_dict(), "strategy_after": after.to_dict(),
+            "changed": before.to_dict() != after.to_dict(), "mode_changed": before.mode != after.mode,
+        })
+        self.strategy = after
+        self.previous_failed = obs.failed_cases
+        genome = dict(strategy.genome_content or {})
+        generation = dict(genome.get("generation") or {})
+        generation.pop("prompt_suffix", None)
+        if after.temperature is not None:
+            generation["temperature"] = after.temperature
+        genome.update(generation=generation, prompt_version=REPAIR_VERSION, adaptation="in_run_repair",
+                      repair=after.to_dict(), diagnosis=diagnosis, observation=obs.summary(),
+                      source_eval_run_id=eval_run.id if eval_run is not None else None)
+        new = _Strategy(
+            conditioned=True, genome_content=genome, source=experience, read_count=1,
+            description=(f"tentative {attempt_number + 1} : {before.mode} -> {after.mode} "
+                         f"({REPAIR_VERSION}) ; cause probable : {diagnosis[:160] or 'non produite'}"),
+        )
+        return new, strategy_suffix(after, obs)
+
+
 _PLAN_MAX_CHARS = 2000
 _PLAN_HEADER = "Analyse et plan rédigés à l'étape précédente (à suivre s'ils sont justes) :"
 _PLAN_INSTRUCTION = (
@@ -816,6 +903,21 @@ def _run(
     # -- OUTILS (mode outillé, permissions explicitement accordées par la requête) ----------------
     tools = _tool_setup(request, task=task, trace_id=trace_id, workspace_root=workspace_root, emit=emit)
 
+    # -- ADAPTATION « diagnostic -> stratégie » (`retry_adaptation="diagnose_repair"`) ---------------------
+    repair: _RepairLoop | None = None
+    if request.retry_adaptation == "diagnose_repair":
+        from apex.tools.sandbox_runner import sandbox_runner
+
+        examples_runner = sandbox_runner(
+            agent_runtime=agent_runtime, sandbox=sandbox, pool=pool, base_limits=limits,
+            requested_by=request.authorization, clone_subject=clone_subject,
+            label=f"taskloop:{trace_id}:public-examples", cancel_token=cancel_token,
+        )
+        repair = _RepairLoop(
+            task=task, request=request, base_temperature=generation_temperature,
+            run_script=lambda script: examples_runner(("python3", "-I", "-c", script), (), 15.0),
+        )
+
     history = AttemptHistory()
     providers_tried: list[str] = []
     eval_run_ids: list[str] = []
@@ -1072,6 +1174,8 @@ def _run(
         )
         eval_run_ids.append(eval_run.id)
         fitness = compute_fitness(eval_run, limits=limits)
+        improvement = (repair.outcome(attempt_number=attempt_number, code=generation.text, fitness=fitness.value,
+                                      emit=emit) if repair is not None else None)
         experience = build_experience(
             eval_run, fitness, strategy_id=f"candidate:{current_candidate.ref.id}",
             generation_number=strategy.generation_number, generation_config=strategy.genome_content or {},
@@ -1079,6 +1183,7 @@ def _run(
             parent_experience_id=strategy.source.id if strategy.source else None,
             parent_generation=strategy.source.generation_number if strategy.source else None,
             mutation_description=strategy.description if strategy.conditioned else None,
+            improvement_delta=improvement,
         )
         experience_repo.create(experience)
 
@@ -1118,6 +1223,7 @@ def _run(
             eligible_candidates=eligible_candidates, candidate_index=candidate_index,
             request=request, retries_used=retries_used, stage=stage,
             no_progress_patience=no_progress_patience, emit=emit,
+            attempt_strategy=repair.strategy.mode if repair is not None else None,
         )
         stage = outcome.stage
         emit("task.attempt.completed", {"attempt_number": attempt_number, "outcome": "failure"})
@@ -1146,6 +1252,15 @@ def _run(
                                                     plan_closing=plan_closing)
                 generation_temperature = resolve_generation_temperature(strategy.genome_content)
                 emit("strategy.adapted", {"after_attempt": attempt_number, **strategy.event()})
+        elif repair is not None:
+            strategy, suffix = repair.adapt(
+                strategy=strategy, experience=experience, eval_run=eval_run, code=generation.text,
+                attempt_number=attempt_number, provider=provider, endpoint=current_candidate.endpoint,
+                temperature=generation_temperature, timeout_s=generation_timeout_s, emit=emit,
+            )
+            generation_prompt = (f"{_compose_prompt(prompt, strategy.genome_content, plan_closing=plan_closing)}"
+                                 f"\n\n{suffix}")
+            generation_temperature = resolve_generation_temperature(strategy.genome_content)
 
 
 def _judged_attempts(
@@ -1196,6 +1311,7 @@ def _handle_failure(
     duration_s: float, attempt_number: int, effective_policy: Any, history: AttemptHistory,
     eligible_candidates: tuple[ModelCandidate, ...], candidate_index: int, request: TaskRequest,
     retries_used: int, stage: TaskLoopStage, no_progress_patience: int, emit: Any,
+    attempt_strategy: str | None = None,
 ) -> _AttemptOutcome:
     """Applique EXCLUSIVEMENT la décision d'`apex.recovery.decide` — ne
     décide JAMAIS elle-même d'une action de récupération. `no_progress`/
@@ -1218,7 +1334,9 @@ def _handle_failure(
     )
     history.add(AttemptRecord(
         attempt_number=attempt_number, provider_name=provider_name, sandbox_level=sandbox_level,
-        category=category, reason=decision.reason, strategy=decision.strategy_change,
+        # La stratégie RÉELLEMENT jouée par la tentative quand la boucle en change (`diagnose_repair`) : « même
+        # échec, même stratégie » (`detect_no_progress`) ne doit pas arrêter une boucle qui vient d'en changer.
+        category=category, reason=decision.reason, strategy=attempt_strategy or decision.strategy_change,
         judge_result=None, started_at=_utcnow(), duration_s=duration_s, reassigned=False,
         decision=decision.action,
     ))

@@ -57,7 +57,8 @@ def test_projects_and_hostile_tasks_build() -> None:
         spec = build_user_project_task_spec(description=project["description"], seed_files=project["seed"], cases=[
             {"module": m, "function": f, "args": a, "expected": e} for m, f, a, e in project["cases"]])
         assert spec.workspace_seed == project["seed"]
-    assert set(harness.ARMS) == {"A", "B", "R", "C", "D"}
+    assert set(harness.ARMS) == {"A", "B", "R", "C", "D", "L"}
+    assert harness.ARMS["L"]["retry_adaptation"] == "diagnose_repair" and harness.ARMS["L"]["max_attempts"] == 3
 
 
 def test_paired_analysis_counts_discordant_instances() -> None:
@@ -92,3 +93,21 @@ def test_tool_results_split_across_jobs_are_analysed_as_one(tmp_path) -> None:
     tools = json.loads(out.read_text(encoding="utf-8"))["tools"]
     assert tools["tools_vs_no_tools"]["outillé_only"] == 1 and tools["function"]["outillé"]["tools_used"] == {"fs.write": 2}
     assert len(tools["hostile"]) == 1 and tools["host_sentinel_created"] is True  # un seul témoin créé suffit
+
+
+def test_the_repair_arm_is_compared_to_retry_and_facts_with_its_traces() -> None:
+    records = []
+    for i, (r, c, l_arm) in enumerate([(False, False, True), (False, True, True), (True, True, True), (False, False, False)]):
+        for arm, success in (("R", r), ("C", c), ("L", l_arm)):
+            rec = {"arm": arm, "seed": 0, "kind": f"k{i}", "success": success, "first_pass": False,
+                   "corrected": success, "final_score": float(success), "first_score": 0.0, "n_attempts": 2,
+                   "duration_s": 1.0, "plan_failed": False, "attempts": []}
+            if arm == "L":
+                rec["repair"] = [{"after": "repair", "diagnosis": "cause" if i else ""}]
+                rec["repair_outcomes"] = [{"code_changed": i != 3}]
+            records.append(rec)
+    result = harness.analyse_adaptation(records)
+    assert result["primary"]["H-L1 diagnostic + stratégie au-delà du retry (L vs R)"]["second_only"] == 2
+    assert result["primary"]["H-L2 diagnostic + stratégie au-delà des faits (L vs C)"]["second_only"] == 1
+    assert result["arms"]["L"]["retries_code_changed"] == "3/4" and result["arms"]["L"]["diagnosis_missing"] == 1
+    assert set(result["holm_significant"]) == set(result["primary"])  # Holm sur toutes les hypothèses principales
