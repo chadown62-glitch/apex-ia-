@@ -421,9 +421,15 @@ _MEMORY_HEADER = (
 def _recall(
     request: TaskRequest, *, task: Any, trace_id: str, prompt: str, session_factory: Any,
     emit: Callable[[str, dict[str, Any]], None],
-) -> tuple[str, list[str]]:
+) -> tuple[str, list[Any]]:
     """RETRIEVAL -> contexte : les souvenirs système les plus pertinents pour l'énoncé (jamais toute la
-    mémoire), provenance comprise. Une mémoire indisponible n'arrête jamais la tâche (`memory.unavailable`)."""
+    mémoire), provenance comprise. Une mémoire indisponible n'arrête jamais la tâche (`memory.unavailable`).
+    Un souvenir d'EXÉCUTION est rendu par `apex.memory.lessons.execution_view` (résultat, leçon, code, début de
+    l'énoncé) au lieu d'une fenêtre de 600 caractères centrée sur l'énoncé (§6.3, H-M1). Renvoie les éléments
+    MONTRÉS (texte compris) pour mesurer ensuite s'ils ont été utilisés (`memory.used`)."""
+    from dataclasses import replace as _replace_item
+
+    from apex.memory.lessons import execution_view
     from apex.memory.model import MemoryCategory
     from apex.memory.retrieval import render_context
     from apex.memory.service import MemoryService
@@ -439,12 +445,30 @@ def _recall(
     except Exception as exc:
         emit("memory.unavailable", {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
         return prompt, []
+    items = [_replace_item(i, snippet=execution_view(i.record.content)) if i.record.source.startswith("task_run:")
+             else i for i in items]
     emit("memory.retrieved", {"items": [
         {"id": i.record.id, "category": i.record.category.value if i.record.category else None,
-         "source": i.record.source, "score": round(i.score, 4)} for i in items]})
+         "source": i.record.source, "score": round(i.score, 4), "shown_chars": len(i.snippet),
+         "view": "execution" if i.record.source.startswith("task_run:") else "snippet"} for i in items]})
     if not items:
         return prompt, []
-    return f"{prompt}\n\n{render_context(items, header=_MEMORY_HEADER)}", [i.record.id for i in items]
+    return f"{prompt}\n\n{render_context(items, header=_MEMORY_HEADER)}", items
+
+
+def _memory_use(items: list[Any], *, statement: str, code: str, attempt_number: int,
+                emit: Callable[[str, dict[str, Any]], None]) -> list[str]:
+    """MÉMOIRE UTILISÉE ? Pour chaque souvenir montré : ses éléments distinctifs (absents de l'énoncé) retrouvés
+    dans le code produit (`apex.memory.lessons.use_evidence`). Mesure, jamais décision."""
+    from apex.memory.lessons import use_evidence
+
+    rows = []
+    for item in items:
+        evidence = use_evidence(item.snippet, statement, code)
+        rows.append({"id": item.record.id, "source": item.record.source, "used": bool(evidence),
+                     "evidence": evidence})
+    emit("memory.used", {"attempt_number": attempt_number, "items": rows})
+    return [r["id"] for r in rows if r["used"]]
 
 
 #: Échecs JUGÉS imputables au code produit (jamais une panne de fournisseur ou d'infrastructure).
@@ -790,10 +814,11 @@ def _run(
     emit("task.planning.completed", {"mode": planning_mode})
 
     # -- MÉMOIRE (souvenirs pertinents, sur demande) ------------------------------------------------
-    memory_ids: list[str] = []
+    memory_items: list[Any] = []
     if request.use_memory:
-        prompt, memory_ids = _recall(request, task=task, trace_id=trace_id, prompt=prompt,
-                                     session_factory=session_factory, emit=emit)
+        prompt, memory_items = _recall(request, task=task, trace_id=trace_id, prompt=prompt,
+                                       session_factory=session_factory, emit=emit)
+    memory_ids = [i.record.id for i in memory_items]
     stage = _advance_stage(stage, TaskLoopStage.PLAN)
 
     # -- STRATÉGIE (expérience d'un RUN précédent, si demandé) ---------------
@@ -1177,9 +1202,15 @@ def _run(
         fitness = compute_fitness(eval_run, limits=limits)
         improvement = (repair.outcome(attempt_number=attempt_number, code=generation.text, fitness=fitness.value,
                                       emit=emit) if repair is not None else None)
+        generation_config = dict(strategy.genome_content or {})
+        if memory_items:
+            # Provenance de la DÉCISION : quels souvenirs ont réellement servi à CETTE tentative.
+            generation_config["memory_used"] = _memory_use(
+                memory_items, statement=task.description, code=generation.text, attempt_number=attempt_number,
+                emit=emit)
         experience = build_experience(
             eval_run, fitness, strategy_id=f"candidate:{current_candidate.ref.id}",
-            generation_number=strategy.generation_number, generation_config=strategy.genome_content or {},
+            generation_number=strategy.generation_number, generation_config=generation_config,
             created_by=request.authorization.value,
             parent_experience_id=strategy.source.id if strategy.source else None,
             parent_generation=strategy.source.generation_number if strategy.source else None,

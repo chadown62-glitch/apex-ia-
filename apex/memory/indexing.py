@@ -60,8 +60,11 @@ def index_document(memory: Any, *, title: str, content: str, document_id: str, c
     return records
 
 
-def index_task_run(memory: Any, *, run: Any, task: Any, eval_runs: list[Any]) -> MemoryRecord | None:
-    """Souvenir d'une TaskRun TERMINÉE (réussie ou non) — rien pour une exécution sans tentative jugée."""
+def index_task_run(memory: Any, *, run: Any, task: Any, eval_runs: list[Any],
+                   experiences: list[Any] | None = None) -> MemoryRecord | None:
+    """Souvenir d'une TaskRun TERMINÉE (réussie ou non) — rien pour une exécution sans tentative jugée. Avec ses
+    `experiences`, la LEÇON de la TaskRun (`apex.experience.lesson.run_lesson` : cause identifiée par le modèle
+    et stratégie qui a marché) est écrite après le résultat — un diagnostic du modèle, jamais une donnée cachée."""
     from apex.experience.failure_facts import extract_failure_facts, render_failure_facts
     from apex.experience.failure_taxonomy import classify_failure
 
@@ -78,6 +81,12 @@ def index_task_run(memory: Any, *, run: Any, task: Any, eval_runs: list[Any]) ->
         f"Énoncé : {retrieval_statement(task.description)[:1_500]}",
         f"Résultat : {run.status.value} après {len(eval_runs)} tentative(s) jugée(s), dernier verdict {verdict}",
     ]
+    if experiences:
+        from apex.experience.lesson import run_lesson
+
+        lesson = run_lesson(experiences)
+        if lesson:
+            lines.append(f"Leçon : {' '.join(lesson.split())}")
     if verdict == "pass":
         lines.append("Solution validée par le Judge (code produit) :\n" + code[:_MAX_CODE_CHARS])
         kind, status, confidence = MemoryKind.PROCEDURAL, VerificationStatus.VERIFIED, 0.9

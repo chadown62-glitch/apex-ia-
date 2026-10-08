@@ -511,7 +511,13 @@ class TaskRunService:
                 return
             eval_repo = EvalRunRepository(self.session_factory)
             eval_runs = [r for r in (eval_repo.get(i) for i in finished.eval_run_ids) if r is not None]
-            index_task_run(MemoryService(self.session_factory), run=finished, task=task, eval_runs=eval_runs)
+            from apex.experience.store import ExperienceRepository
+
+            # Leçon de la TaskRun (diagnostic -> stratégie qui a marché) : lue dans SES expériences.
+            experiences = [e for e in ExperienceRepository(self.session_factory).list_by_task(task.id, limit=500)
+                           if e.experiment_ref == run_id]
+            index_task_run(MemoryService(self.session_factory), run=finished, task=task, eval_runs=eval_runs,
+                           experiences=experiences)
         except Exception as exc:
             from apex.db.engine import session_scope
             from apex.db.repositories import EventRepository

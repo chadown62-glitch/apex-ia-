@@ -271,3 +271,36 @@ doublons), répétitions (tour identique au précédent), erreurs par code, épi
 en échec suivies d'une réécriture, lecture du fichier nécessaire (`lecture`/`multi`), raisons d'arrêt. Règle : un
 effet n'est affirmé qu'après réplication sur graines {10, 11, 12, 13} ; les échecs de T sont ensuite diagnostiqués
 sur les traces, corrigés, et remesurés sous un nouveau protocole pré-enregistré (jamais en modifiant celui-ci).
+
+### 6.3 Mémoire actionnable et expérience exploitable — PRÉ-ENREGISTRÉ (avant toute mesure du banc mémoire)
+Changements (réponses à H-M1, H-M2, H-E1) :
+- un souvenir d'EXÉCUTION est rendu par `apex.memory.lessons.execution_view` — tâche, résultat, LEÇON, code (1 500
+  caractères au plus), puis début de l'énoncé (500) — au lieu d'une fenêtre de 600 caractères centrée sur
+  l'énoncé (qui ne montrait ni le code ni la leçon : testé) ;
+- LEÇON d'une TaskRun (`apex.experience.lesson.run_lesson`) écrite dans son souvenir : « 1re tentative en échec
+  (catégorie) ; cause identifiée : <diagnostic du modèle> ; corrigée par la stratégie « repair » (score a -> b) »,
+  ou les causes non résolues ; seulement si un diagnostic existe ;
+- MÉMOIRE UTILISÉE mesurée à chaque tentative (`memory.used`) : éléments distinctifs du souvenir montré (nombres
+  non triviaux, chaînes, noms définis), absents de l'énoncé courant, retrouvés dans le code produit ; la liste des
+  souvenirs utilisés est gardée dans l'Expérience (`generation_config.memory_used`) — provenance de la décision ;
+- une Expérience répond aux 12 questions (`apex.experience.lesson.experience_card` : tâche, contexte, stratégie,
+  modèle, outils, erreur, observation, cause probable, modification, résultat, score, stratégie suivante) à partir
+  des colonnes existantes, sans élargir le schéma ; ce qui n'existe pas est listé dans `missing`, jamais inventé.
+
+Banc (`MEMORY_BENCH`, 6 paires) : une tâche SOURCE donne explicitement une convention « maison » (tarifs Zéphyr,
+alphabet Kappa, codes promo Lumen, unités Orion, barème Delta, dates Nova) ; une tâche CIBLE différente (autre
+fonction, autres entrées) s'y réfère par son nom sans la redonner. Testé : la convention figure dans l'énoncé
+source et jamais dans l'énoncé cible ; aucune entrée cachée de la cible n'apparaît dans la source ; exemples
+publics conformes à la référence. Phase d'EXPÉRIENCE par graine : APEX résout les 6 sources (bras L, 2 tentatives) ;
+la mémoire est ce qu'APEX a lui-même produit (énoncé public, code, verdict, leçon) — le banc n'écrit jamais dans
+la mémoire. Puis chaque cible, UNE tentative, sur une copie neuve de cette base : **A** sans mémoire ; **M** avec
+mémoire ; **P** placebo = mémoire privée du seul souvenir de SA source (les 5 autres restent : même présence de
+mémoire, sans le contenu pertinent) ; **M0** = M exécuté depuis l'arbre figé d'avant ces changements (rendu en
+fenêtre de 600 caractères), sur la MÊME base d'expérience. Graines de génération identiques entre bras.
+Graines {0, 1, 2, 3} → 24 cibles appariées par bras. Mesure LOCALE (poids substituts, §6).
+
+Hypothèses principales (McNemar exact, Holm 5 %) : **H-M1** M > A ; **H-M2** M > P. Secondaires : M vs M0, M0 vs A,
+P vs A. Mesures : souvenir de la source retrouvé (et au 1er rang), souvenir UTILISÉ (preuves), réussite selon
+utilisé / non utilisé, par paire, durée, réussite des sources. Limite assumée : ce banc mesure la capacité à
+RETROUVER et UTILISER une information présente seulement dans l'expérience — pas un apprentissage (§6.5). Règle :
+effet affirmé seulement après réplication sur graines {10, 11, 12, 13}.

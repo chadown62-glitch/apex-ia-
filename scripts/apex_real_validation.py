@@ -13,6 +13,7 @@ Sous-commandes (une par phase) :
   memory       RUN 1 (tâche source) puis tâche similaire sans / avec mémoire (protocole §2.3)
   tools        tâches exigeant les outils + tentatives hostiles réelles du modèle (protocole §2.4)
   toolbench    banc d'outils : 10 tâches, 5 types, bras NT/NT3/T (+ T0 = agent figé) (§6.2)
+  memorybench  banc mémoire : expérience (6 sources) puis cibles A/M/P (+ M0 = rendu d'avant) (§6.3)
   analyse      tableaux et tests exacts (McNemar, Holm) sur des fichiers de résultats
 
 Le modèle : endpoint natif de la configuration (`APEX_MODELS_DIR`) ; le script refuse de tourner si un
@@ -258,6 +259,9 @@ def collect(factory: Any, run: Any, *, keep_code: bool = True) -> dict[str, Any]
                              "code_changed": e.get("code_changed"), "delta": e.get("improvement_delta")}
                             for e in events if e.get("kind") == "strategy.outcome"],
         "memory": next((e.get("items") for e in events if e.get("kind") == "memory.retrieved"), None),
+        # Mémoire UTILISÉE, par tentative (§6.3) : éléments distinctifs du souvenir retrouvés dans le code.
+        "memory_used": [{"attempt": e.get("attempt_number"), "items": e.get("items")}
+                        for e in events if e.get("kind") == "memory.used"],
         "agent_steps": len(steps), "tools_used": tools_used, "tool_errors": tool_errors,
         "invalid_actions": tool_errors.get("invalid_action", 0), "failure": (run.failure or "")[:300],
     }
@@ -699,6 +703,92 @@ def phase_toolbench(out: Path, seeds: list[int], arms: list[str], arm_label: str
     return 0
 
 
+#: Banc mémoire (§6.3) : phase d'EXPÉRIENCE (6 tâches sources, bras L à 2 tentatives) puis, sur une COPIE de cette
+#: base par tâche cible : A sans mémoire ; M avec mémoire ; P placebo = mémoire SANS le souvenir de la source de
+#: cette cible (les 5 autres restent) ; M0 = M exécuté depuis l'arbre figé d'avant la mémoire actionnable
+#: (`--arm-label M0 --train-dir` : même base d'expérience).
+MEMBENCH_SOURCE = {"max_attempts": 2, "retry_adaptation": "diagnose_repair"}
+
+
+def _copy_db(src: Path, dst: Path) -> None:
+    import sqlite3
+
+    dst.unlink(missing_ok=True)
+    with sqlite3.connect(src) as a, sqlite3.connect(dst) as b:
+        a.backup(b)  # copie cohérente, quel que soit le mode de journal
+
+
+def _forget(db: Path, source: str) -> int:
+    """Placebo : retire de la COPIE le souvenir d'une exécution (aucune autre donnée n'est touchée)."""
+    import sqlite3
+
+    with sqlite3.connect(db) as conn:
+        return conn.execute("DELETE FROM memory_records WHERE source = ?", (source,)).rowcount
+
+
+def _shown_old(factory: Any, items: list[dict[str, Any]] | None, statement: str) -> list[dict[str, Any]]:
+    """Ce que l'ANCIEN rendu montrait (fenêtre de 600 caractères, `apex.memory.retrieval.snippet`) — pour mesurer
+    après coup l'utilisation dans un bras exécuté par un arbre sans `memory.used`."""
+    from apex.memory.retrieval import snippet
+    from apex.memory.service import MemoryService
+    from apex.tasks.solution_tasks import retrieval_statement
+
+    repo = MemoryService(factory)._repo
+    records = {r.id: r for r in repo.list_system_records(categories=["execution"], limit=500)}
+    return [{"source": i["source"], "text": snippet(records[i["id"]].content, retrieval_statement(statement), 600)}
+            for i in items or [] if i["id"] in records]
+
+
+def phase_memorybench(out: Path, seeds: list[int], arms: list[str], train_dir: Path,
+                      arm_label: str | None = None) -> int:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from apex_bench_tasks import MEMORY_BENCH, memory_spec
+
+    candidates = native_candidates()
+    root = Path(tempfile.mkdtemp(prefix="apex-membench-"))
+    train_dir.mkdir(parents=True, exist_ok=True)
+    records, sources = [], []
+    for seed in seeds:
+        train = train_dir / f"train-s{seed}.db"
+        manifest = train_dir / f"train-s{seed}.json"
+        if not train.exists():
+            # PHASE D'EXPÉRIENCE : APEX résout les 6 tâches sources ; c'est SA mémoire (énoncé, code, leçon).
+            factory = session_factory(root / f"train-s{seed}.db")
+            runs = {}
+            for pair in MEMORY_BENCH:
+                task = create_task(factory, memory_spec(pair.source))
+                run = run_task(factory, candidates, task, seed=seed_for("membench-src", pair.name, seed),
+                               workspace=root / "ws", no_progress_patience=99, **MEMBENCH_SOURCE)
+                record = collect(factory, run)
+                progress(record, f"banc-mémoire source {pair.name} graine {seed}")
+                runs[pair.name] = {"run_id": run.id, "success": record["success"],
+                                   "final_score": record["final_score"], "repair": record["repair"]}
+            _copy_db(root / f"train-s{seed}.db", train)
+            manifest.write_text(json.dumps(runs, ensure_ascii=False, indent=1), encoding="utf-8")
+        runs = json.loads(manifest.read_text(encoding="utf-8"))
+        sources.append({"seed": seed, "runs": runs})
+        for arm in arms:
+            for pair in MEMORY_BENCH:
+                db = root / f"{arm}-s{seed}-{pair.name}.db"
+                _copy_db(train, db)  # une copie NEUVE par cible : aucune fuite entre bras ni entre cibles
+                forgotten = _forget(db, f"task_run:{runs[pair.name]['run_id']}") if arm == "P" else None
+                factory = session_factory(db)
+                task = create_task(factory, memory_spec(pair.target))
+                run = run_task(factory, candidates, task, seed=seed_for("membench-tgt", pair.name, seed),
+                               workspace=root / "ws", no_progress_patience=99, max_attempts=1,
+                               use_memory=arm != "A")
+                record = {"arm": arm_label or arm, "seed": seed, "kind": pair.name, **collect(factory, run),
+                          "source_run_id": runs[pair.name]["run_id"], "source_success": runs[pair.name]["success"],
+                          "forgotten": forgotten}
+                if arm != "A" and not record["memory_used"]:  # arbre sans `memory.used` : ce qu'il montrait
+                    record["memory_shown_old"] = _shown_old(factory, record["memory"], task.description)
+                progress(record, f"banc-mémoire {record['arm']} graine {seed} {pair.name}")
+                records.append(record)
+    write(out, {"phase": "memorybench", "environment": environment_facts(candidates), "arms": arms,
+                "arm_label": arm_label, "seeds": seeds, "sources": sources, "records": records})
+    return 0
+
+
 # -- analyse ---------------------------------------------------------------------------------------------------
 
 
@@ -890,6 +980,64 @@ def analyse_toolbench(records: list[dict[str, Any]]) -> dict[str, Any]:
             "secondary": secondary}
 
 
+def memory_use(record: dict[str, Any], statement: str | None = None) -> dict[str, Any]:
+    """Souvenirs utilisés par la (dernière) tentative : `memory.used` de la boucle, sinon recalculé sur ce que
+    l'ancien rendu montrait (`memory_shown_old`) avec la même règle (`apex.memory.lessons.use_evidence`)."""
+    relevant = f"task_run:{record.get('source_run_id')}"
+    rows = (record.get("memory_used") or [{}])[-1].get("items") if record.get("memory_used") else None
+    if rows is None and record.get("memory_shown_old") is not None:
+        from apex.memory.lessons import use_evidence
+
+        code = (record["attempts"][-1].get("code") or "") if record.get("attempts") else ""
+        rows = [{"source": s["source"], "evidence": use_evidence(s["text"], statement or "", code)}
+                for s in record["memory_shown_old"]]
+        for row in rows:
+            row["used"] = bool(row["evidence"])
+    rows = rows or []
+    return {"retrieved": [i["source"] for i in record.get("memory") or []],
+            "relevant_retrieved": any(i["source"] == relevant for i in record.get("memory") or []),
+            "relevant_rank": next((k for k, i in enumerate(record.get("memory") or [], 1) if i["source"] == relevant),
+                                  None),
+            "used_any": any(r.get("used") for r in rows),
+            "used_relevant": any(r.get("used") and r.get("source") == relevant for r in rows),
+            "evidence": [e for r in rows if r.get("source") == relevant for e in r.get("evidence") or []]}
+
+
+def analyse_memorybench(records: list[dict[str, Any]], statements: dict[str, str] | None = None) -> dict[str, Any]:
+    arms = sorted({r["arm"] for r in records})
+    table = {}
+    for arm in arms:
+        rs = [r for r in records if r["arm"] == arm]
+        n = len(rs)
+        uses = [memory_use(r, (statements or {}).get(r["kind"])) for r in rs]
+        row = {"n": n, "success": sum(r["success"] for r in rs),
+               "mean_judge_score": round(sum(r["final_score"] for r in rs) / n, 3),
+               "mean_duration_s": round(sum(r["duration_s"] or 0 for r in rs) / n, 1),
+               "by_pair": {k: f"{sum(r['success'] for r in rs if r['kind'] == k)}/{sum(1 for r in rs if r['kind'] == k)}"
+                           for k in sorted({r["kind"] for r in rs})}}
+        if arm != "A":
+            used = [u["used_relevant"] for u in uses]
+            row.update({
+                "relevant_retrieved": sum(u["relevant_retrieved"] for u in uses),
+                "relevant_rank_1": sum(u["relevant_rank"] == 1 for u in uses),
+                "used_any": sum(u["used_any"] for u in uses), "used_relevant": sum(used),
+                "success_if_used": f"{sum(r['success'] for r, u in zip(rs, used, strict=True) if u)}/{sum(used)}",
+                "success_if_not_used": f"{sum(r['success'] for r, u in zip(rs, used, strict=True) if not u)}/{n - sum(used)}",
+            })
+        table[arm] = row
+    primary = {}
+    if {"A", "M"} <= set(arms):
+        primary["H-M1 mémoire (M vs A)"] = _pair(records, "A", "M", "success")
+    if {"P", "M"} <= set(arms):
+        primary["H-M2 contenu pertinent, pas seulement « de la mémoire » (M vs P)"] = _pair(records, "P", "M", "success")
+    secondary = {}
+    for first, second in (("M0", "M"), ("A", "M0"), ("A", "P")):
+        if {first, second} <= set(arms):
+            secondary[f"{second} vs {first}"] = _pair(records, first, second, "success")
+    return {"arms": table, "primary": primary, "holm_significant": holm({k: v["p"] for k, v in primary.items()}),
+            "secondary": secondary}
+
+
 def phase_analyse(paths: list[Path], out: Path | None) -> int:
     merged: dict[str, Any] = {}
     for path in paths:
@@ -902,6 +1050,15 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
         report["adaptation"]["environment"] = merged["adaptation"][0]["environment"]
     if "memory" in merged:
         report["memory"] = analyse_memory([r for d in merged["memory"] for r in d["records"]])
+    if "memorybench" in merged:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from apex_bench_tasks import MEMORY_BENCH
+
+        records = [r for d in merged["memorybench"] for r in d["records"]]
+        report["memorybench"] = analyse_memorybench(records, {p.name: p.target.statement for p in MEMORY_BENCH})
+        report["memorybench"]["sources"] = [{"seed": s["seed"], "success": sum(v["success"] for v in s["runs"].values()),
+                                             "n": len(s["runs"])} for d in merged["memorybench"][:1] for s in d["sources"]]
+        report["memorybench"]["environment"] = merged["memorybench"][0]["environment"]
     if "toolbench" in merged:
         report["toolbench"] = analyse_toolbench([r for d in merged["toolbench"] for r in d["records"]])
         report["toolbench"]["environment"] = merged["toolbench"][0]["environment"]
@@ -921,7 +1078,8 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("phase", choices=("smoke", "adaptation", "memory", "tools", "toolbench", "analyse"))
+    parser.add_argument("phase", choices=("smoke", "adaptation", "memory", "tools", "toolbench", "memorybench",
+                                          "analyse"))
     parser.add_argument("--seeds", default="0", help="graines séparées par des virgules")
     parser.add_argument("--arms", default="A,B,R,C,D")
     parser.add_argument("--kinds", default=None, help="tâches de référence (défaut : les 15)")
@@ -930,6 +1088,8 @@ def main() -> int:
                         help="adaptation : garde-fou no_progress (99 = budget égal entre bras)")
     parser.add_argument("--arm-label", default=None,
                         help="toolbench : étiquette du bras dans les résultats (ex. T0 = agent d'un arbre figé)")
+    parser.add_argument("--train-dir", default=None,
+                        help="memorybench : bases d'expérience par graine (réutilisées si présentes)")
     parser.add_argument("--out", default=None)
     parser.add_argument("inputs", nargs="*", help="analyse : fichiers de résultats")
     args = parser.parse_args()
@@ -945,6 +1105,10 @@ def main() -> int:
                                 args.kinds.split(",") if args.kinds else None, args.no_progress_patience)
     if args.phase == "memory":
         return phase_memory(out, seeds)
+    if args.phase == "memorybench":
+        assert args.train_dir, "--train-dir requis (bases d'expérience partagées entre bras)"
+        return phase_memorybench(out, seeds, [a for a in args.arms.split(",") if a], Path(args.train_dir),
+                                 args.arm_label)
     if args.phase == "toolbench":
         return phase_toolbench(out, seeds, [a for a in args.arms.split(",") if a], args.arm_label)
     sections = tuple(x for x in args.sections.split(",") if x)

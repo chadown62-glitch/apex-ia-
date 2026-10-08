@@ -131,3 +131,75 @@ def test_toolbench_analysis_pairs_the_new_agent_with_the_old_one_and_with_no_too
     assert result["arms"]["T"]["by_category"] == {"execution": "2/3", "lecture": "1/1"}
     assert "useful" not in result["arms"]["NT"] and result["arms"]["T"]["useful"] == 4
     assert set(result["holm_significant"]) == set(result["primary"])
+
+
+# -- banc mémoire (§6.3) ------------------------------------------------------------------------------------------
+
+CONVENTIONS = {  # ce qui n'existe QUE dans la source : énoncé source oui, énoncé cible jamais
+    "zephyr": ("4.90", "1.20", "2.35", "7.50", "4.10"),
+    "kappa": ("23456789ABCDEFGHJKLMNPQRSTUVWXYZ",),
+    "lumen": ("10 %", "25 %", "retire 5"),
+    "orion": ("0.8 m", "5.0292", "4828.032", "1.949"),
+    "delta": ("à partir de 17", "13.5"),
+    "nova": ("JAN FEV MAR", "AOU"),
+}
+
+
+@pytest.mark.parametrize("pair", bench.MEMORY_BENCH, ids=lambda p: p.name)
+def test_the_needed_convention_exists_only_in_the_source_experience(pair) -> None:
+    for token in CONVENTIONS[pair.name]:
+        assert token in pair.source.statement and token not in pair.target.statement, token
+    assert pair.source.name in pair.target.statement  # la cible y renvoie par son nom, comme un utilisateur
+    for task in (pair.source, pair.target):
+        examples = extract_examples(task.statement, task.function)
+        assert examples and all(task.reference(*e.args) == e.expected for e in examples)
+        public = {json.dumps(list(e.args)) for e in examples}
+        assert not public & {json.dumps(list(a)) for a in task.hidden}
+    # Aucune entrée cachée de la cible n'apparaît dans l'expérience source (énoncé) : pas de réponse à recopier.
+    for args in pair.target.hidden:
+        assert json.dumps(list(args), ensure_ascii=False) not in pair.source.statement
+
+
+def test_the_placebo_copy_forgets_exactly_one_experience(tmp_path) -> None:
+    from apex.memory.model import MemoryCategory
+    from apex.memory.service import MemoryService
+    from apex.policy.model import Subject
+
+    db = tmp_path / "train.db"
+    memory = MemoryService(harness.session_factory(db))
+    for source in ("task_run:a", "task_run:b"):
+        memory.write_system(category=MemoryCategory.EXECUTION, content=f"souvenir {source}", source=source,
+                            created_by=Subject.CORE)
+    copy = tmp_path / "P.db"
+    harness._copy_db(db, copy)
+    assert harness._forget(copy, "task_run:a") == 1
+    left = MemoryService(harness.session_factory(copy))._repo.list_system_records(categories=["execution"], limit=10)
+    assert [r.source for r in left] == ["task_run:b"]
+    kept = MemoryService(harness.session_factory(db))._repo.list_system_records(categories=["execution"], limit=10)
+    assert len(kept) == 2  # la base d'expérience elle-même n'est jamais modifiée
+
+
+def test_memorybench_analysis_separates_retrieved_used_and_impact() -> None:
+    def rec(arm, kind, success, used=None, shown=None, code=""):
+        r = {"arm": arm, "seed": 0, "kind": kind, "success": success, "final_score": float(success),
+             "duration_s": 1.0, "source_run_id": f"src-{kind}", "attempts": [{"code": code}],
+             "memory": None if arm == "A" else [{"source": f"task_run:src-{kind}"}, {"source": "task_run:other"}],
+             "memory_used": [] if used is None else [{"attempt": 1, "items": [
+                 {"source": f"task_run:src-{kind}", "used": used, "evidence": ["nombre 2.35"] if used else []}]}]}
+        if shown is not None:
+            r["memory_shown_old"] = shown
+        return r
+
+    records = [rec("A", "k1", False), rec("A", "k2", False), rec("A", "k3", True),
+               rec("M", "k1", True, used=True), rec("M", "k2", True, used=True), rec("M", "k3", True, used=False),
+               rec("P", "k1", False, used=False), rec("P", "k2", False, used=False), rec("P", "k3", True, used=False),
+               rec("M0", "k1", False, shown=[{"source": "task_run:src-k1", "text": "Énoncé : tarifs…"}], code="x = 5"),
+               rec("M0", "k2", True, shown=[{"source": "task_run:src-k2", "text": "TARIF = 2.35"}], code="t = 2.35"),
+               rec("M0", "k3", True, shown=[], code="")]
+    result = harness.analyse_memorybench(records, {"k1": "", "k2": "", "k3": ""})
+    assert result["primary"]["H-M1 mémoire (M vs A)"]["second_only"] == 2
+    assert result["primary"]["H-M2 contenu pertinent, pas seulement « de la mémoire » (M vs P)"]["second_only"] == 2
+    m = result["arms"]["M"]
+    assert m["relevant_retrieved"] == 3 and m["used_relevant"] == 2 and m["success_if_used"] == "2/2"
+    assert result["arms"]["M0"]["used_relevant"] == 1  # recalculé sur l'ancien rendu, même règle
+    assert "used_relevant" not in result["arms"]["A"]
