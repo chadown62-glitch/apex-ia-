@@ -83,6 +83,26 @@ def test_without_examples_the_check_still_reports_import_errors(factory, tmp_pat
     assert run.status.value == "completed"
 
 
+def test_a_short_backticked_name_does_not_shift_the_example_pairing() -> None:
+    """Mesuré (08/10/2026) : avec une borne de longueur DANS le motif, « `n` » n'était pas apparié et l'exemple
+    suivant était absorbé — `roman(4) == 'IV'` perdu."""
+    from apex.tasks.public_examples import extract_examples
+
+    text = ("Écris `roman` qui prend un entier `n`. Exemples : `roman(4) == 'IV'`, `roman(9) == 'IX'`, `x`, "
+            "`roman(0) == None`.")
+    assert [e.source for e in extract_examples(text)] == ["roman(4) == 'IV'", "roman(9) == 'IX'", "roman(0) == None"]
+
+
+def test_the_answer_format_of_the_statement_is_translated_in_tool_mode(factory, tmp_path) -> None:  # noqa: F811
+    _, run = _run(factory, tmp_path, [act("fs.write", path="solution.py", content=WRONG), act("solution.check"), act()],
+                  statement=STATEMENT + " Réponds UNIQUEMENT avec le code Python de la fonction.")
+    assert "Réponds UNIQUEMENT avec le code Python" in _Actor.prompts[0]  # l'énoncé n'est jamais amputé
+    assert "signifie : écris ce code dans solution.py avec fs.write" in _Actor.prompts[0]
+    assert "signifie" not in compose_prompt("t", [], [], project=True)  # projet : aucune consigne de format
+    (check,) = [s for s in _steps(factory, run) if s["tool"] == "solution.check"]
+    assert check["check"] == {"imported": True, "examples": 2, "examples_failed": 1}  # issue tracée (comptes)
+
+
 def test_old_steps_are_summarised_in_one_line() -> None:
     from apex.taskloop.agent import Step
 

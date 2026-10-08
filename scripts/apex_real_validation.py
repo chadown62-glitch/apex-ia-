@@ -12,6 +12,7 @@ Sous-commandes (une par phase) :
   adaptation   bras A/B/R/C/D sur les 15 tâches de référence, mêmes graines (protocole §2.2)
   memory       RUN 1 (tâche source) puis tâche similaire sans / avec mémoire (protocole §2.3)
   tools        tâches exigeant les outils + tentatives hostiles réelles du modèle (protocole §2.4)
+  toolbench    banc d'outils : 10 tâches, 5 types, bras NT/NT3/T (+ T0 = agent figé) (§6.2)
   analyse      tableaux et tests exacts (McNemar, Holm) sur des fichiers de résultats
 
 Le modèle : endpoint natif de la configuration (`APEX_MODELS_DIR`) ; le script refuse de tourner si un
@@ -596,6 +597,108 @@ def phase_tools(out: Path, seeds: list[int], sections: tuple[str, ...] = TOOL_SE
     return 0
 
 
+#: Banc d'outils (§6.2) : 10 tâches, 5 catégories (`scripts/apex_bench_tasks.py`). T0 = le bras T exécuté depuis
+#: un arbre figé de l'agent AVANT les corrections (étiquette `--arm-label T0`), pour mesurer l'amélioration.
+TOOLBENCH_ARMS: dict[str, dict[str, Any]] = {
+    # NT : sans outils, une tentative, l'énoncé seul (aucun fichier de départ visible).
+    "NT": {"max_attempts": 1, "retry_adaptation": "none"},
+    # NT3 : sans outils, trois tentatives avec faits d'échec (bras C) — témoin « plus de calcul, sans outils ».
+    "NT3": {"max_attempts": 3, "retry_adaptation": "failure_facts"},
+    # T : une tentative = UN épisode outillé (≤ 8 tours), fichiers de départ déposés dans l'espace.
+    "T": {"max_attempts": 1, "retry_adaptation": "none", "tool_permissions": ALL_TOOLS, "max_tool_steps": 8},
+}
+_READ_TOOLS = ("fs.read", "fs.list", "project.inspect")
+_CHECK_TOOLS = ("solution.check", "tests.run", "code.run")
+
+
+def tool_metrics(attempts: list[dict[str, Any]], needs: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Comptes OBJECTIFS sur les tours persistés (pré-enregistrés §6.2). Un appel est UTILE s'il réussit et
+    apporte du neuf : lecture d'un chemin pas encore lu, écriture d'un contenu différent du précédent,
+    vérification après une écriture (pas deux fois la même vérification sans écriture entre). Tout le reste —
+    action illisible, soumission refusée, appel en erreur, doublon — est INUTILE. Une RÉPÉTITION est un tour
+    identique (outil, arguments, erreur) au tour précédent."""
+    steps = [s for a in attempts for s in (a.get("tool_steps") or [])]
+    read: set[str] = set()
+    last_write = None
+    checked_since_write: set[str] = set()
+    useful = repetitions = 0
+    previous = None
+    needed_read = False
+    acted_on_failed_check = failed_checks = 0
+    pending_failure = False
+    for s in steps:
+        key = (s.get("tool"), s.get("args"), s.get("error"), s.get("submit"))
+        repetitions += key == previous
+        previous = key
+        tool, ok = s.get("tool"), bool(s.get("ok"))
+        path = None
+        if s.get("args"):
+            try:
+                path = json.loads(s["args"]).get("path")
+            except (ValueError, AttributeError):
+                path = None
+        if tool in _READ_TOOLS and ok:
+            target = f"{tool}:{path}"
+            useful += target not in read
+            read.add(target)
+            needed_read = needed_read or (tool == "fs.read" and str(path or "").lstrip("./") in needs)
+        elif tool == "fs.write" and ok:
+            useful += s.get("args") != last_write
+            last_write = s.get("args")
+            checked_since_write = set()
+            if pending_failure:
+                acted_on_failed_check += 1
+                pending_failure = False
+        elif tool in _CHECK_TOOLS and ok:
+            useful += tool not in checked_since_write
+            checked_since_write.add(tool)
+            check = s.get("check") or {}
+            failed = (check.get("imported") is False or bool(check.get("examples_failed"))
+                      or check.get("status") in ("failed", "error"))
+            if failed:
+                failed_checks += 1
+                pending_failure = True
+    calls = sum(1 for s in steps if s.get("tool"))
+    return {
+        "steps": len(steps), "calls": calls, "useful": useful, "useless": len(steps) - useful
+        - sum(1 for s in steps if s.get("submit") and s.get("ok")),
+        "repetitions": repetitions, "invalid": sum(s.get("error") == "invalid_action" for s in steps),
+        "refused_submits": sum(s.get("error") == "nothing_to_submit" for s in steps),
+        "errors": _count([s["error"] for s in steps if s.get("error")]),
+        "verified": any(s.get("tool") in _CHECK_TOOLS and s.get("ok") for s in steps),
+        "checks": _count([s["tool"] for s in steps if s.get("tool") in _CHECK_TOOLS]),
+        "failed_checks": failed_checks, "acted_on_failed_check": acted_on_failed_check,
+        "needed_file_read": needed_read if needs else None,
+        "submitted": any(s.get("submit") and s.get("ok") for s in steps),
+    }
+
+
+def phase_toolbench(out: Path, seeds: list[int], arms: list[str], arm_label: str | None = None) -> int:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from apex_bench_tasks import TOOL_BENCH, bench_spec
+
+    candidates = native_candidates()
+    root = Path(tempfile.mkdtemp(prefix="apex-toolbench-"))
+    records = []
+    for arm in arms:
+        options = TOOLBENCH_ARMS[arm]
+        factory = session_factory(root / f"apex-{arm}.db")  # une base par bras : aucune mémoire partagée
+        for seed in seeds:
+            for bench in TOOL_BENCH:
+                task = create_task(factory, bench_spec(bench, with_seed="tool_permissions" in options))
+                # Budget ÉGAL : le garde-fou « no_progress » ne coupe aucun bras (NT3 joue ses 3 tentatives).
+                run = run_task(factory, candidates, task, seed=seed_for("toolbench", bench.name, seed),
+                               workspace=root / "ws", no_progress_patience=99, **options)
+                record = {"arm": arm_label or arm, "seed": seed, "kind": bench.name, "category": bench.category,
+                          **collect(factory, run)}
+                record["tool_metrics"] = tool_metrics(record["attempts"], bench.needs)
+                progress(record, f"banc-outils {record['arm']} graine {seed} {bench.name}")
+                records.append(record)
+    write(out, {"phase": "toolbench", "environment": environment_facts(candidates), "arms": arms,
+                "arm_label": arm_label, "seeds": seeds, "records": records})
+    return 0
+
+
 # -- analyse ---------------------------------------------------------------------------------------------------
 
 
@@ -737,6 +840,56 @@ def analyse_tools(data: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def analyse_toolbench(records: list[dict[str, Any]]) -> dict[str, Any]:
+    arms = sorted({r["arm"] for r in records})
+    table = {}
+    for arm in arms:
+        rs = [r for r in records if r["arm"] == arm]
+        n = len(rs)
+        metrics = [r["tool_metrics"] for r in rs]
+        row = {
+            "n": n, "success": sum(r["success"] for r in rs),
+            "mean_judge_score": round(sum(r["final_score"] for r in rs) / n, 3),
+            "mean_duration_s": round(sum(r["duration_s"] or 0 for r in rs) / n, 1),
+            "by_category": {c: f"{sum(r['success'] for r in rs if r['category'] == c)}/"
+                               f"{sum(1 for r in rs if r['category'] == c)}"
+                            for c in sorted({r["category"] for r in rs})},
+            "attempt_errors": _count([a["category"] for r in rs for a in r["attempts"] if a["verdict"] != "pass"]),
+        }
+        if any(m["steps"] for m in metrics):
+            row.update({
+                "mean_steps": round(sum(m["steps"] for m in metrics) / n, 2),
+                "calls": sum(m["calls"] for m in metrics), "useful": sum(m["useful"] for m in metrics),
+                "useless": sum(m["useless"] for m in metrics), "repetitions": sum(m["repetitions"] for m in metrics),
+                "invalid": sum(m["invalid"] for m in metrics), "refused_submits": sum(m["refused_submits"] for m in metrics),
+                "step_errors": _count([k for m in metrics for k, v in m["errors"].items() for _ in range(v)]),
+                "tools_used": _count([t for r in rs for t, v in r["tools_used"].items() for _ in range(v)]),
+                "verified_runs": sum(m["verified"] for m in metrics),
+                "failed_checks": sum(m["failed_checks"] for m in metrics),
+                "acted_on_failed_check": sum(m["acted_on_failed_check"] for m in metrics),
+                "needed_file_read": f"{sum(bool(m['needed_file_read']) for m in metrics if m['needed_file_read'] is not None)}/"
+                                    f"{sum(1 for m in metrics if m['needed_file_read'] is not None)}",
+                "submitted": sum(m["submitted"] for m in metrics),
+                "episode_stop": _count([a.get("episode_stop") for r in rs for a in r["attempts"]]),
+            })
+        table[arm] = row
+    primary = {}
+    if {"T", "T0"} <= set(arms):
+        primary["H-T1 agent corrigé (T vs T0)"] = _pair(records, "T0", "T", "success")
+    if {"T", "NT"} <= set(arms):
+        primary["H-T2 outils (T vs NT)"] = _pair(records, "NT", "T", "success")
+    secondary = {}
+    for first, second in (("NT3", "T"), ("NT", "T0"), ("NT", "NT3")):
+        if {first, second} <= set(arms):
+            secondary[f"{second} vs {first}"] = _pair(records, first, second, "success")
+    # Sans la catégorie « lecture » (donnée inaccessible sans outil) : l'effet des outils là où NT peut réussir.
+    solvable = [r for r in records if r["category"] != "lecture"]
+    if {"T", "NT"} <= set(arms):
+        secondary["T vs NT hors lecture"] = _pair(solvable, "NT", "T", "success")
+    return {"arms": table, "primary": primary, "holm_significant": holm({k: v["p"] for k, v in primary.items()}),
+            "secondary": secondary}
+
+
 def phase_analyse(paths: list[Path], out: Path | None) -> int:
     merged: dict[str, Any] = {}
     for path in paths:
@@ -749,6 +902,11 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
         report["adaptation"]["environment"] = merged["adaptation"][0]["environment"]
     if "memory" in merged:
         report["memory"] = analyse_memory([r for d in merged["memory"] for r in d["records"]])
+    if "toolbench" in merged:
+        report["toolbench"] = analyse_toolbench([r for d in merged["toolbench"] for r in d["records"]])
+        report["toolbench"]["environment"] = merged["toolbench"][0]["environment"]
+        report["toolbench"]["commits"] = sorted({str(d["environment"].get("commit")) + ":" + str(d.get("arm_label") or ",".join(d["arms"]))
+                                                 for d in merged["toolbench"]})
     if "tools" in merged:
         # Plusieurs fichiers (sections × graines) : une seule analyse sur l'union des enregistrements.
         report["tools"] = analyse_tools({
@@ -763,13 +921,15 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("phase", choices=("smoke", "adaptation", "memory", "tools", "analyse"))
+    parser.add_argument("phase", choices=("smoke", "adaptation", "memory", "tools", "toolbench", "analyse"))
     parser.add_argument("--seeds", default="0", help="graines séparées par des virgules")
     parser.add_argument("--arms", default="A,B,R,C,D")
     parser.add_argument("--kinds", default=None, help="tâches de référence (défaut : les 15)")
     parser.add_argument("--sections", default=",".join(TOOL_SECTIONS), help="outils : function,project,hostile")
     parser.add_argument("--no-progress-patience", type=int, default=None,
                         help="adaptation : garde-fou no_progress (99 = budget égal entre bras)")
+    parser.add_argument("--arm-label", default=None,
+                        help="toolbench : étiquette du bras dans les résultats (ex. T0 = agent d'un arbre figé)")
     parser.add_argument("--out", default=None)
     parser.add_argument("inputs", nargs="*", help="analyse : fichiers de résultats")
     args = parser.parse_args()
@@ -785,6 +945,8 @@ def main() -> int:
                                 args.kinds.split(",") if args.kinds else None, args.no_progress_patience)
     if args.phase == "memory":
         return phase_memory(out, seeds)
+    if args.phase == "toolbench":
+        return phase_toolbench(out, seeds, [a for a in args.arms.split(",") if a], args.arm_label)
     sections = tuple(x for x in args.sections.split(",") if x)
     assert set(sections) <= set(TOOL_SECTIONS), f"sections inconnues : {sections}"
     return phase_tools(out, seeds, sections)

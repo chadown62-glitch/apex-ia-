@@ -19,7 +19,11 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-_BACKTICKS = re.compile(r"`([^`\n]{3,300})`")
+#: Appariement des accents graves SANS borne de longueur, filtrée ensuite : avec `{3,300}` dans le motif, un
+#: identifiant court (`n`) n'était pas apparié et décalait toutes les paires suivantes — mesuré (08/10/2026), la
+#: moitié des exemples d'un énoncé perdus (`roman(4) == 'IV'` absorbé dans « `n` qui prend … : ` »).
+_BACKTICKS = re.compile(r"`([^`\n]*)`")
+_MIN_CHARS, _MAX_CHARS = 3, 300
 _MAX_EXAMPLES = 12
 _MAX_REPR = 200
 _MARKER = "APEX_PUBLIC_EXAMPLES:"
@@ -39,6 +43,8 @@ def extract_examples(description: str, function: str | None = None) -> tuple[Pub
     seen: set[str] = set()
     for match in _BACKTICKS.finditer(description or ""):
         text = match.group(1).strip()
+        if not _MIN_CHARS <= len(text) <= _MAX_CHARS:
+            continue
         example = _parse(text)
         if example is None or (function is not None and example.function != function) or text in seen:
             continue

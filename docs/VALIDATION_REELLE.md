@@ -231,3 +231,43 @@ pour les trois : `--no-progress-patience 99`), nombres aléatoires communs. Hypo
 **H-L1** L vs R ; **H-L2** L vs C ; **H2** C vs R. Descriptif : corrections (échec puis réussite), score du Judge,
 part des retries où le code a réellement changé, modes de stratégie, diagnostics manquants, durée. Règle : un effet
 n'est affirmé qu'après réplication sur graines {10, 11, 12, 13} (même direction, p < 0,05).
+
+Note (constatée avant toute lecture des résultats de L) : les 15 énoncés de référence ne contiennent AUCUN exemple
+public entre accents graves. Dans cette mesure, l'observation de L se limite donc à son propre code et aux faits
+d'échec ; l'apport des exemples publics (H-A2) se mesure sur le banc §6.2, dont chaque énoncé en contient.
+
+### 6.2 Banc d'outils — PRÉ-ENREGISTRÉ (avant toute mesure du banc)
+Banc (`scripts/apex_bench_tasks.py`) : 10 tâches, 5 types — `execution` ×5 (slugify, compress_ranges, parse_kv,
+roman, wrap_text : l'énoncé suffit, une erreur de détail se voit en exécutant les exemples publics), `test` ×2
+(normalize_phone, grade : tests unitaires publics fournis dans `tests/`), `lecture` ×1 (shipping_cost : les tarifs
+n'existent QUE dans `data/tarifs.json`), `modification` ×1 (median_fix : `solution.py` bogué fourni), `multi` ×1
+(to_meters : inspecter, lire `helpers/units.py`, écrire, valider avec les tests fournis). Cas cachés (8 à 10 par
+tâche) calculés par une implémentation de référence, disjoints des exemples publics ; exemples publics, tests
+fournis et code bogué vérifiés contre la référence (`tests/test_tool_bench.py`). `solution.py` est jugé seul :
+les énoncés `lecture`/`multi` le disent.
+
+Changements de l'agent mesurés (T contre T0 = agent figé à `1d529e2`, avant toute correction d'outils) : écritures
+entre triples guillemets acceptées (H-T1), refus `nothing_to_submit` qui dit quoi faire et arrêt à 4 répétitions
+(H-T2), `solution.check` — exécute solution.py sur les exemples PUBLICS de l'énoncé, sans argument (H-T3), rôle et
+exemple d'appel de chaque outil, historique compacté (H-T4), et **H-T5** (constatée en relisant le prompt outillé) :
+l'énoncé finit par « Réponds UNIQUEMENT avec le code Python », ce qui contredit « un seul objet JSON » ; la consigne
+est traduite (« écris ce code dans solution.py avec fs.write »), jamais retirée de l'énoncé. Correction connexe :
+l'extraction des exemples publics perdait un exemple sur deux quand un nom d'une lettre (`n`) précédait
+(`roman(4) == 'IV'` perdu) — corrigée et testée.
+
+Bras (tous : une base neuve par bras, garde-fou `no_progress` désactivé, graines de génération
+`seed_for("toolbench", tâche, graine)` identiques) : **NT** sans outils, 1 tentative, énoncé seul ; **NT3** sans
+outils, 3 tentatives avec faits d'échec (témoin « plus de calcul, sans outils ») ; **T** 1 tentative = un épisode
+outillé de 8 tours au plus, fichiers de départ dans l'espace, outils `workspace.read`, `workspace.write`,
+`sandbox.execute` ; **T0** = T exécuté depuis l'arbre figé de l'ancien agent (`--arm-label T0`). Graines {0, 1, 2, 3}
+→ 40 instances appariées par bras. Mesure LOCALE (poids substituts, §6).
+
+Hypothèses principales (McNemar exact, Holm 5 %) : **H-T1** T > T0 (l'agent corrigé) ; **H-T2** T > NT (les outils).
+Secondaires : T vs NT3, T0 vs NT, NT3 vs NT, T vs NT hors `lecture` (une tâche `lecture` est insoluble sans outil par
+construction : rapportée à part). Mesures par bras : réussite (par type), score du Judge, durée ; pour les bras
+outillés : tours, appels, appels UTILES (réussis et nouveaux : lecture d'un chemin pas encore lu, écriture d'un
+contenu différent, vérification après une écriture) et INUTILES (illisibles, soumissions refusées, erreurs,
+doublons), répétitions (tour identique au précédent), erreurs par code, épisodes avec vérification, vérifications
+en échec suivies d'une réécriture, lecture du fichier nécessaire (`lecture`/`multi`), raisons d'arrêt. Règle : un
+effet n'est affirmé qu'après réplication sur graines {10, 11, 12, 13} ; les échecs de T sont ensuite diagnostiqués
+sur les traces, corrigés, et remesurés sous un nouveau protocole pré-enregistré (jamais en modifiant celui-ci).

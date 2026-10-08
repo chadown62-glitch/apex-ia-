@@ -76,6 +76,17 @@ class Step:
             summary["args"] = _clip(action["arguments"], _PREVIEW_CHARS)
         if self.raw is not None:
             summary["raw"] = self.raw[:_PREVIEW_CHARS]
+        # Issue d'une VÉRIFICATION (comptes seulement) : sans elle, la trace ne dit pas si le modèle a agi sur un
+        # échec qu'il venait d'observer (banc d'outils, docs/VALIDATION_REELLE.md §6.2).
+        output = self.observation.get("output") or {}
+        if isinstance(output, dict):
+            if "examples_failed" in output or output.get("imported") is False:
+                summary["check"] = {"imported": output.get("imported"),
+                                    "examples": len(output.get("examples") or []),
+                                    "examples_failed": output.get("examples_failed")}
+            elif "tests_run" in output:
+                summary["check"] = {"tests_run": output.get("tests_run"), "status": output.get("status"),
+                                    "failures": output.get("failures"), "errors": output.get("errors")}
         return summary
 
 
@@ -177,8 +188,12 @@ def compose_prompt(task_prompt: str, tools: list[dict[str, Any]], steps: list[St
     instructions = _PROJECT_INSTRUCTIONS if project else _INSTRUCTIONS.replace("{verify}", (
         " Puis VÉRIFIE-la (solution.check exécute solution.py sur les exemples publics de l'énoncé), corrige si "
         "besoin, et soumets." if can_check else ""))
-    return (f"{instructions}{tools_text}\n\nTâche :\n{task_prompt}\n\nHistorique (du plus ancien au plus "
-            f"récent) :\n{past}\n\nTon action suivante (un seul objet JSON) :")
+    # L'énoncé d'une tâche « fonction » finit par « Réponds UNIQUEMENT avec le code Python » : en mode outillé,
+    # cette consigne contredit « un seul objet JSON ». Elle est traduite, jamais retirée de l'énoncé.
+    format_note = ("" if project else "\n(En mode outillé, « réponds avec le code » signifie : écris ce code dans "
+                   "solution.py avec fs.write. Chacune de tes réponses reste UN objet JSON.)")
+    return (f"{instructions}{tools_text}\n\nTâche :\n{task_prompt}{format_note}\n\nHistorique (du plus ancien au "
+            f"plus récent) :\n{past}\n\nTon action suivante (un seul objet JSON) :")
 
 
 _MAX_REPEATS = 4
@@ -203,7 +218,7 @@ def _repetitions(previous: list[Step], step: Step) -> int:
     return count
 
 
-def _has_worked(episode: "Episode", *, project: bool, context: ToolContext) -> bool:
+def _has_worked(episode: Episode, *, project: bool, context: ToolContext) -> bool:
     """Une soumission a-t-elle quelque chose à soumettre ? Fonction : solution.py existe. Projet : au moins
     une écriture réussie dans l'espace de travail pendant l'épisode."""
     if not project:
