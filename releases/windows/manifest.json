@@ -1,0 +1,59 @@
+{
+  "product": "APEX (APEX.exe : Panel + application APEX autonome)",
+  "version": "0.3.0",
+  "panel_protocol": 1,
+  "architecture": "win-x64",
+  "installer": {
+    "file": "APEX-Setup-x64-v0.3.0.exe",
+    "sha256": "fbe3246d2d33826d581f9e0436b7a5f0a42278c055d92f1b4080adffed075bee",
+    "bytes": 33116313
+  },
+  "panel": {
+    "executable": {
+      "file": "APEX.exe",
+      "sha256": "32fe998c79b935f212de4d781c4875ccfe12d635acc5a2d91bba9eff1f098c6e"
+    },
+    "assembly": {
+      "file": "APEX.dll",
+      "sha256": "58e44e734ecb6cb7b41f6d51f50709ad12e635decd354211247460fdaae82fe7"
+    },
+    "files": 213,
+    "bytes": 99328184
+  },
+  "application": {
+    "runtime_artifact": {
+      "release": true,
+      "source": "commit",
+      "source_commit": "800bde305ad7d8f51f801d926db9be0b7899fbeb",
+      "head_commit": null,
+      "content_hash_sha256": "c4fc7e7fb070223474700ed496a6d1ec32ee58d7aa29b836e7d9a694254d991f"
+    },
+    "python_runtime": {
+      "version": "3.12.10",
+      "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
+      "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8",
+      "bytes": 14515433,
+      "source": "paquet NuGet officiel « python » (python.org, CPython 3.12.10 x64) ; SHA-512 identique à celui du catalogue NuGet (vérifié le 08/10/2026)"
+    },
+    "requirements_lock_sha256": "02f2bdba93cc45e441dd0b60fd87f1d522416a9f1cf5fc553ef45f26e036ff25",
+    "files": 284
+  },
+  "install": {
+    "scope": "utilisateur courant, sans administrateur",
+    "directory": "%LOCALAPPDATA%\\Programs\\APEX",
+    "shortcuts": [
+      "Bureau\\APEX.lnk",
+      "Menu Démarrer\\APEX.lnk"
+    ]
+  },
+  "build": {
+    "commit": "800bde305ad7d8f51f801d926db9be0b7899fbeb",
+    "commit_of_worktree": "800bde305ad7d8f51f801d926db9be0b7899fbeb",
+    "uncommitted_changes": false,
+    "dotnet_sdk": "8.0.131",
+    "compiler": "Inno Setup 6.4.3 (NuGet Tools.InnoSetup, empreinte figée) sous wine-9.0 (Ubuntu 9.0~repack-4build3)",
+    "host": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39",
+    "built_at": "2026-10-08T22:47:21.262362+00:00"
+  },
+  "signed": false
+}

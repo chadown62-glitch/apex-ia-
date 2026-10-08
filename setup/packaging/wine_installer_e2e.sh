@@ -69,9 +69,13 @@ check W7_double_clic_raccourci_autre_repertoire "$ok" "Panel démarré depuis /t
 sleep 6; launch_shortcut; sleep 6
 [[ "$(panels)" -eq 1 ]]; check W8_second_double_clic_instance_unique $? "$(panels) Panel(s) après un second double-clic"
 out=$(wine "$APPW" --status-json 2>/dev/null); code=$?
-verdict=$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["headline"], d["cause"])' "$out" 2>/dev/null)
-[[ "$code" -eq 2 && "$verdict" == "APEX NOT READY WslNotInstalled" ]]
-check W9_verdict_sans_wsl $? "code $code, « $verdict » (Wine n'a pas wsl.exe : attendu)"
+verdict=$(python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["headline"], d["cause"], d.get("mode"))' "$out" 2>/dev/null)
+# 0.3.0 : l'application APEX est installée à côté du Panel (app\) -> mode Windows natif, sans WSL ; tant que
+# « Préparer APEX » n'a pas été fait, le seul verdict honnête est « runtime non préparé » (jamais « WSL absent »).
+if [[ -f "$APP/app/apex/standalone/__init__.py" ]]; then expected="APEX NOT READY RuntimeNotPrepared native"
+else expected="APEX NOT READY WslNotInstalled wsl"; fi
+[[ "$code" -eq 2 && "$verdict" == "$expected" ]]
+check W9_verdict_au_premier_lancement $? "code $code, « $verdict » (attendu : « $expected »)"
 install "$SETUP" "$WORK/install_running.log"; code=$?
 [[ "$code" -ne 0 && "$(panels)" -eq 1 ]]
 check W10_installation_refusee_pendant_execution $? "code $code, Panel toujours en cours : $(panels)"

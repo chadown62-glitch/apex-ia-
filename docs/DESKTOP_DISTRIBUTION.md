@@ -306,3 +306,53 @@ Artefact final : `APEX-Setup-x64-v0.2.1.exe`, 32 540 322 octets, SHA256
 dans git (binaire de 32 Mo). Il se reconstruit à l'identique par
 `setup/packaging/build_desktop_release.sh <sortie>` **sur le commit `4a37092`** (les dates des fichiers
 sont celles du commit : un commit ultérieur, même de documentation, change l'empreinte).
+
+## 8. APEX.exe 0.3.0 — mode Windows natif (APEX autonome, sans WSL ni Docker)
+
+### 8.1 Architecture
+
+```
+Windows ─► APEX.exe (Panel .NET, %LOCALAPPDATA%\Programs\APEX)
+            │  NativeBackendHost : lit %LOCALAPPDATA%\APEX\.apex\runtime\backend.json et .apex\api-token
+            │  BackendLauncher (natif) : <APEX_HOME>\python\3.12.10\python.exe -m apex.standalone serve --log | stop
+            ▼
+          python -m apex.standalone (app\ = artefact APEX Runtime, runtime_build, sans l'extension Recherche)
+            │  verrou d'instance → base SQLite (apex db upgrade) → apex doctor → apex serve (Startup Gate)
+            ▼
+          API + interface web (127.0.0.1:8000, jeton) ─► TaskLoop, Tool Engine, Workspace, Memory, Judge/Retry,
+                                                         ModelRuntime natif (transformers), sandbox AppContainer
+```
+
+- **Profil autonome** (`APEX_PROFILE=standalone`, posé par le lanceur) : même code que le profil serveur ;
+  seules changent les dépendances d'infrastructure (SQLite au lieu de PostgreSQL, pas de Redis, pas de
+  Docker). Doctor et Startup Gate mesurent l'infrastructure serveur sans l'exiger, jamais un PASS supposé
+  (`docs/PHASE_1_GATE.md` §11).
+- **Livraison** : un binaire de plus de 100 Mo ne peut pas être versionné sur GitHub, et la création de
+  « releases » est refusée à cette session (HTTP 403). L'installateur (≈ 33 Mo) est donc versionné dans
+  `releases/windows/` ; Python (≈ 15 Mo) et les bibliothèques (≈ 190 Mo, torch compris) sont téléchargés
+  au premier lancement par « Préparer APEX », **vérifiés par empreintes** (SHA-256 du paquet NuGet
+  python.org ; `pip --require-hashes` sur `setup/packaging/runtime/requirements-windows.lock`, résolu
+  pour win_amd64 avec les versions testées ici). Le modèle (≈ 3,1 Go) par « Installer le modèle ».
+- **Bibliothèques Visual C++** : torch 2.14 exige `VCRUNTIME140_THREADS.dll` (constaté : WinError 126) ;
+  le paquet `msvc-runtime` (figé par empreinte, DLL signées par la même autorité Microsoft que la
+  `vcruntime140.dll` du Python officiel) les dépose à côté de `python.exe`. Contrôle statique : les 993
+  imports des DLL de torch et du runtime vers les DLL Visual C++ sont tous exportés par les DLL livrées.
+
+### 8.2 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| REAL E2E Linux (ce conteneur) — Panel réel (mode natif forcé) + backend réel, artefact Runtime | `--start` → APEX DEGRADED en ≈ 10 s (API, base SQLite, sandbox, interface READY ; modèle absent) ; `--ui-url` → connexion 303 puis interface 200 ; tâche « écrire une fonction » créée et lancée par l'API → TaskLoop : planification, sonde des fournisseurs, `recovery.decided block (provider_unavailable)`, `task.blocked` — raison explicite, aucun résultat simulé ; `--stop` → « APEX arrêté proprement » ; relance puis arrêt |
+| WINE E2E — **Windows simulé, pas Windows** — APEX.exe win-x64 publié + `python.exe` officiel | « Préparer APEX » réel : Python téléchargé, empreinte vérifiée, extrait ; 47 paquets installés par pip `--require-hashes` depuis PyPI ; la vérification finale échoue sur `import torch` à cause de fonctions **non implémentées par Wine 9** (`GetNumaNodeProcessorMaskEx`, `ucrtbase.crealf`) — le marqueur « prêt » n'est donc pas écrit (comportement voulu) |
+| WINE E2E — chaîne Windows sans torch (aménagement de test déclaré : torch retiré, marqueur écrit à la main) | Panel → `python.exe -m apex.standalone serve` → SQLite (chemin Windows) → doctor → Gate → API ; Panel : chemins Windows, jeton, image du processus vérifiés ; statut DEGRADED (modèle absent ; **sandbox AppContainer indisponible sous Wine → toute exécution refusée**, fail-closed) ; interface ouverte ; tâche créée → « blocked » explicite ; second démarrage sans doublon ; arrêt propre ; relance ; **la tâche est retrouvée après relance** (persistance) ; arrêt sans backend → « rien à arrêter » |
+| WINE E2E — installateur 0.3.0 (`setup/packaging/wine_installer_e2e.sh`, 0.2.2 → 0.3.0) | **18/18 PASS** : installation sans administrateur, 216 fichiers, raccourcis Bureau/Menu Démarrer, entrée « Applications installées », validation post-installation, instance unique, premier lancement **« APEX NOT READY — RuntimeNotPrepared — native »** (W9), installation refusée Panel ouvert, relance après plantage, réinstallation, **mise à jour 0.2.2 → 0.3.0**, désinstallation, données conservées, installation interrompue puis relancée |
+| WINE E2E — application installée en mode natif (`setup/packaging/wine_native_e2e.sh`, même aménagement torch) | **9/9 PASS** : `app\` installé (284 fichiers) ; premier lancement « runtime à préparer » ; démarrage refusé sans runtime ; runtime prêt ; **Démarrer APEX → DEGRADED en 23 s** (Runtime, Backend, API, Database, Interface READY ; Modèles OFFLINE ; Sandbox OFFLINE sous Wine) ; interface ouverte (303) ; arrêt propre ; relance ; **désinstallation : APEX arrêté d'abord, runtime supprimé, base conservée** |
+| Tests | Python : `tests/test_standalone.py`, `tests/test_windows_sandbox.py`, `tests/test_runtime_packaging.py` (artefact, complétude des imports, lanceur depuis l'artefact) ; C# : `NativeModeTests` (30) et 229 tests du Panel |
+
+### 8.3 Non vérifié ici (bloquants de CET environnement, pas du produit)
+
+- **Aucun Windows réel** n'est disponible (GitHub Actions indisponible : facturation) : la sonde AppContainer
+  n'a été exécutée que sous Wine, où elle **refuse** (attendu) ; son succès sur un vrai Windows est à constater
+  sur la ligne **Sandbox** du Panel.
+- **Inférence réelle du modèle** : Hugging Face est bloqué par la politique réseau de ce bac à sable (HTTP 403) ;
+  le téléchargement du modèle et une tâche résolue par le modèle n'ont pas pu être exécutés ici.
