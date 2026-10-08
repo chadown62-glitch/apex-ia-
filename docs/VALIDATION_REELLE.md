@@ -320,3 +320,33 @@ effet affirmé seulement après réplication sur graines {10, 11, 12, 13}.
    B en réussite (McNemar, p ≥ 0,05 dans le sens défavorable) ET coûte moins que B en durée moyenne — ou si AUTO
    choisit le plan là où il aide. Rapporté : décisions, raisons, accord avec la décision rétrospectivement juste
    (planifier seulement où B réussit et A échoue), réussite et durée par bras.
+
+### 6.5 Preuve d'apprentissage — PRÉ-ENREGISTRÉ (avant toute mesure)
+Question : l'expérience d'APEX sur des tâches d'ENTRAÎNEMENT change-t-elle ses décisions sur des tâches NOUVELLES, et
+améliore-t-elle de façon reproductible sa réussite — au-delà de ce que donnent plus de calcul, plus de contexte ou une
+simple mémoire ?
+
+Constat qui fonde le banc (mesuré AVANT, sur l'entraînement seulement) : les erreurs du modèle sont systématiques — 9
+tâches de référence sur 15 échouent à CHAQUE première tentative en local, par familles : entrée invalide non ramenée à
+None (roman_to_int, median, parse_duration), « ignorer X mais PAS Y » (is_palindrome), « DERNIÈRE occurrence »
+(dedupe_keep_last), petits mots en minuscules sauf en tête (title_case). Évaluation (`LEARNING_EVAL`) : 9 fonctions
+NOUVELLES (hex_to_int, bin_to_int, mean_or_none, parse_hhmm, is_anagram, char_freq, last_positions,
+dedupe_chars_keep_last, headline), jamais vues à l'entraînement, chacune partageant UNE de ces clauses avec une tâche
+d'entraînement ; énoncés complets (la ligne de base a toute l'information) ; cas cachés calculés par référence, jamais
+présents dans la mémoire. dedupe_chars_keep_last est un transfert PROCHE (même règle sur des chaînes) : rapporté par
+famille. Ce banc mesure un transfert vers des tâches apparentées, pas un gain sur des tâches arbitraires.
+
+Protocole (`learning`, graines {0, 1, 2, 3}) : deux ENTRAÎNEMENTS par graine sur les 15 tâches de référence, budget
+égal (3 tentatives, `no_progress` désactivé) — **EXP** : bras L (diagnostic -> réparation ; leçon et code validé
+dans la mémoire) ; **NAIVE** : bras R (mêmes tentatives, retry identique : ni diagnostic ni leçon ; sa mémoire contient
+les mêmes énoncés et ses propres codes). Puis chaque tâche d'évaluation, UNE tentative, sur une copie neuve : **BASE**
+(sans mémoire), **EXP** (mémoire de l'entraînement L), **NAIVE** (mémoire de l'entraînement R). Contrôles : même nombre
+de tentatives à l'évaluation (1) pour tous ; NAIVE contrôle « plus de contexte / avoir une mémoire » et « avoir déjà vu
+des tâches proches » ; aucune réponse attendue dans la mémoire (index anti-fuite, testé) ; aucune tâche d'évaluation
+identique à une tâche d'entraînement ; mêmes graines de génération entre bras.
+
+Hypothèses (McNemar exact, Holm 5 %) : **H-L-a** EXP > BASE ; **H-L-b** EXP > NAIVE (apprendre de SES erreurs, pas
+seulement se souvenir). Secondaire : NAIVE vs BASE. Mesures : réussite par famille, score du Judge, durée, souvenir de
+la tâche apparentée retrouvé et UTILISÉ (`memory.used`), DÉCISION CHANGÉE (code différent de celui de BASE à graine
+égale), entraînement (réussites, corrections, leçons écrites). Critère de preuve : H-L-a ET H-L-b significatifs, puis
+répliqués (même sens, p < 0,05) sur graines {10, 11, 12, 13}. Sinon : limitation documentée avec les mesures.

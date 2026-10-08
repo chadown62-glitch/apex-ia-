@@ -203,3 +203,47 @@ def test_memorybench_analysis_separates_retrieved_used_and_impact() -> None:
     assert m["relevant_retrieved"] == 3 and m["used_relevant"] == 2 and m["success_if_used"] == "2/2"
     assert result["arms"]["M0"]["used_relevant"] == 1  # recalculé sur l'ancien rendu, même règle
     assert "used_relevant" not in result["arms"]["A"]
+
+
+# -- banc de preuve d'apprentissage (§6.5) ------------------------------------------------------------------------
+
+
+def test_learning_eval_tasks_are_new_functions_related_to_a_training_task_by_one_pitfall() -> None:
+    from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
+
+    names = [t.name for _, _, t in bench.LEARNING_EVAL]
+    assert len(names) == len(set(names)) == 9 and not set(names) & set(REFERENCE_TASK_KINDS)  # jamais une tâche vue
+    train_text = " ".join(build_reference_task_spec(k).description for k in REFERENCE_TASK_KINDS)
+    for family, related, task in bench.LEARNING_EVAL:
+        assert related in REFERENCE_TASK_KINDS and family
+        examples = extract_examples(task.statement, task.function)
+        assert examples and all(task.reference(*e.args) == e.expected for e in examples)
+        public = {json.dumps(list(e.args)) for e in examples}
+        assert not public & {json.dumps(list(a)) for a in task.hidden}
+        assert f"`{task.function}`" not in train_text  # la fonction évaluée n'apparaît dans aucun énoncé d'entraînement
+        expected = [c["expected"] for c in task.cases()]
+        assert len(set(map(json.dumps, expected))) >= 2  # des cas qui discriminent (jamais une constante)
+
+
+def test_learning_analysis_measures_transfer_decision_change_and_the_naive_control() -> None:
+    training = [{"arm": arm, "seed": 0, "runs": [{"kind": "median", "run_id": f"{arm}-median", "success": True,
+                                                  "first_pass": False, "corrected": True, "lesson": arm == "EXP"}]}
+                for arm in ("EXP", "NAIVE")]
+
+    def rec(arm, kind, success, code, used=False):
+        src = f"task_run:{arm}-median"
+        return {"arm": arm, "seed": 0, "kind": kind, "family": "entrée invalide -> None", "related": "median",
+                "success": success, "final_score": float(success), "duration_s": 1.0,
+                "attempts": [{"code": code}], "memory": None if arm == "BASE" else [{"source": src}],
+                "memory_used": [] if arm == "BASE" else [{"attempt": 1, "items": [{"source": src, "used": used}]}]}
+
+    records = [rec("BASE", "k1", False, "a"), rec("EXP", "k1", True, "b", used=True), rec("NAIVE", "k1", False, "a"),
+               rec("BASE", "k2", False, "c"), rec("EXP", "k2", True, "d", used=True), rec("NAIVE", "k2", True, "e"),
+               rec("BASE", "k3", True, "f"), rec("EXP", "k3", True, "f"), rec("NAIVE", "k3", True, "f")]
+    result = harness.analyse_learning(records, training)
+    assert result["primary"]["H-L-a expérience (EXP vs BASE)"]["second_only"] == 2
+    key = "H-L-b apprendre de ses erreurs, pas seulement se souvenir (EXP vs NAIVE)"
+    assert result["primary"][key]["second_only"] == 1
+    assert result["decision_changed_vs_base"] == {"EXP": 2, "NAIVE": 1}
+    assert result["eval"]["EXP"]["related_retrieved"] == 3 and result["eval"]["EXP"]["related_used"] == 2
+    assert result["training"]["EXP"]["with_lesson"] == 1 and result["training"]["NAIVE"]["with_lesson"] == 0

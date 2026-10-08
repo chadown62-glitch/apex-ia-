@@ -15,6 +15,7 @@ Sous-commandes (une par phase) :
   toolbench    banc d'outils : 10 tâches, 5 types, bras NT/NT3/T (+ T0 = agent figé) (§6.2)
   memorybench  banc mémoire : expérience (6 sources) puis cibles A/M/P (+ M0 = rendu d'avant) (§6.3)
   planauto     PLAN adaptatif : historique A/B sur 10 tâches, puis AUTO vs A vs B sur les 5 autres (§6.4)
+  learning     preuve d'apprentissage : entraînement L vs R, évaluation BASE/EXP/NAIVE sur tâches nouvelles (§6.5)
   analyse      tableaux et tests exacts (McNemar, Holm) sur des fichiers de résultats
 
 Le modèle : endpoint natif de la configuration (`APEX_MODELS_DIR`) ; le script refuse de tourner si un
@@ -617,6 +618,119 @@ _READ_TOOLS = ("fs.read", "fs.list", "project.inspect")
 _CHECK_TOOLS = ("solution.check", "tests.run", "code.run")
 
 
+def phase_learning(out: Path, seeds: list[int], train_dir: Path) -> int:
+    """Preuve d'apprentissage (§6.5). Par graine, deux ENTRAÎNEMENTS sur les 15 tâches de référence, budget égal
+    (3 tentatives, `no_progress` désactivé) : EXP = bras L (diagnostic -> réparation -> leçon en mémoire), NAIVE =
+    bras R (retry identique : mêmes tentatives, aucune correction ni leçon). Puis ÉVALUATION sur des tâches
+    NOUVELLES (`LEARNING_EVAL`), UNE tentative, sur une copie neuve par tâche : BASE (aucune mémoire), EXP
+    (mémoire de l'entraînement L), NAIVE (mémoire de l'entraînement R). Mêmes graines de génération entre bras."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from apex_bench_tasks import LEARNING_EVAL, memory_spec
+
+    from apex.tasks.solution_tasks import REFERENCE_TASK_KINDS, build_reference_task_spec
+
+    candidates = native_candidates()
+    root = Path(tempfile.mkdtemp(prefix="apex-learning-"))
+    train_dir.mkdir(parents=True, exist_ok=True)
+    records, training = [], []
+    for seed in seeds:
+        dbs = {}
+        for arm, train_arm in (("EXP", "L"), ("NAIVE", "R")):
+            db = train_dir / f"train-{arm}-s{seed}.db"
+            manifest = train_dir / f"train-{arm}-s{seed}.json"
+            if not db.exists():
+                factory = session_factory(root / f"train-{arm}-s{seed}.db")
+                runs = []
+                for kind in REFERENCE_TASK_KINDS:
+                    run = run_task(factory, candidates, create_task(factory, build_reference_task_spec(kind)),
+                                   seed=seed_for("learn-train", kind, seed), workspace=root / "ws",
+                                   no_progress_patience=99, **ARMS[train_arm])
+                    record = collect(factory, run, keep_code=False)
+                    progress(record, f"apprentissage entraînement {arm} graine {seed} {kind}")
+                    runs.append({"kind": kind, "run_id": run.id, "success": record["success"],
+                                 "first_pass": record["first_pass"], "corrected": record["corrected"],
+                                 "lesson": any(r.get("diagnosis") for r in record["repair"])})
+                _copy_db(root / f"train-{arm}-s{seed}.db", db)
+                manifest.write_text(json.dumps(runs, ensure_ascii=False, indent=1), encoding="utf-8")
+            dbs[arm] = db
+            training.append({"arm": arm, "seed": seed,
+                             "runs": json.loads(manifest.read_text(encoding="utf-8"))})
+        for family, related, bench in LEARNING_EVAL:
+            for arm in ("BASE", "EXP", "NAIVE"):
+                db = root / f"eval-{arm}-s{seed}-{bench.name}.db"
+                if arm == "BASE":
+                    db.unlink(missing_ok=True)
+                else:
+                    _copy_db(dbs[arm], db)  # copie neuve par tâche : aucune évaluation ne nourrit la suivante
+                factory = session_factory(db)
+                task = create_task(factory, memory_spec(bench))
+                run = run_task(factory, candidates, task, seed=seed_for("learn-eval", bench.name, seed),
+                               workspace=root / "ws", no_progress_patience=99, max_attempts=1,
+                               use_memory=arm != "BASE")
+                record = {"arm": arm, "seed": seed, "kind": bench.name, "family": family, "related": related,
+                          **collect(factory, run)}
+                progress(record, f"apprentissage évaluation {arm} graine {seed} {bench.name}")
+                records.append(record)
+    write(out, {"phase": "learning", "environment": environment_facts(candidates), "seeds": seeds,
+                "training": training, "records": records})
+    return 0
+
+
+def analyse_learning(records: list[dict[str, Any]], training: list[dict[str, Any]]) -> dict[str, Any]:
+    import hashlib as _h
+
+    table = {}
+    for arm in ("BASE", "EXP", "NAIVE"):
+        rs = [r for r in records if r["arm"] == arm]
+        if not rs:
+            continue
+        row = {"n": len(rs), "success": sum(r["success"] for r in rs),
+               "mean_judge_score": round(sum(r["final_score"] for r in rs) / len(rs), 3),
+               "mean_duration_s": round(sum(r["duration_s"] or 0 for r in rs) / len(rs), 1),
+               "by_family": {f: f"{sum(r['success'] for r in rs if r['family'] == f)}/{sum(1 for r in rs if r['family'] == f)}"
+                             for f in sorted({r["family"] for r in rs})}}
+        if arm != "BASE":
+            # Souvenir de la tâche d'entraînement APPARENTÉE (même famille d'erreur) : retrouvé ? utilisé ?
+            related = {(t["seed"], x["kind"]): f"task_run:{x['run_id']}" for t in training if t["arm"] == arm
+                       for x in t["runs"]}
+            uses = [[i for u in r.get("memory_used") or [] for i in u.get("items") or []] for r in rs]
+            source = [related.get((r["seed"], r["related"])) for r in rs]
+            row.update({
+                "memory_used_any": sum(any(i.get("used") for i in u) for u in uses),
+                "related_retrieved": sum(any(i.get("source") == src for i in r.get("memory") or [])
+                                         for r, src in zip(rs, source, strict=True)),
+                "related_used": sum(any(i.get("used") and i.get("source") == src for i in u)
+                                    for u, src in zip(uses, source, strict=True)),
+            })
+        table[arm] = row
+    # DÉCISION CHANGÉE : le code produit diffère-t-il de celui de BASE (même graine, même tâche) ?
+    by: dict[tuple[int, str], dict[str, Any]] = {}
+    for r in records:
+        by.setdefault((r["seed"], r["kind"]), {})[r["arm"]] = r
+
+    def fp(r: dict[str, Any]) -> str:
+        code = (r["attempts"][0].get("code") or "") if r.get("attempts") else ""
+        return _h.sha256(" ".join(code.split()).encode()).hexdigest()
+
+    changed = {arm: sum(1 for v in by.values() if arm in v and "BASE" in v and fp(v[arm]) != fp(v["BASE"]))
+               for arm in ("EXP", "NAIVE")}
+    primary = {}
+    if table.get("EXP") and table.get("BASE"):
+        primary["H-L-a expérience (EXP vs BASE)"] = _pair(records, "BASE", "EXP", "success")
+    if table.get("EXP") and table.get("NAIVE"):
+        primary["H-L-b apprendre de ses erreurs, pas seulement se souvenir (EXP vs NAIVE)"] = _pair(
+            records, "NAIVE", "EXP", "success")
+    train = {arm: {"runs": sum(len(t["runs"]) for t in training if t["arm"] == arm),
+                   "success": sum(x["success"] for t in training if t["arm"] == arm for x in t["runs"]),
+                   "corrected": sum(x["corrected"] for t in training if t["arm"] == arm for x in t["runs"]),
+                   "with_lesson": sum(x["lesson"] for t in training if t["arm"] == arm for x in t["runs"])}
+             for arm in ("EXP", "NAIVE")}
+    return {"eval": table, "decision_changed_vs_base": changed, "primary": primary,
+            "holm_significant": holm({k: v["p"] for k, v in primary.items()}),
+            "secondary": {"NAIVE vs BASE": _pair(records, "BASE", "NAIVE", "success")} if table.get("NAIVE") else {},
+            "training": train}
+
+
 def phase_planauto(out: Path, seeds: list[int]) -> int:
     """PLAN adaptatif (§6.4). Par graine, une base : HISTORIQUE = bras A puis B (une tentative) sur les 10 premières
     tâches de référence ; ÉVALUATION sur les 5 autres : AUTO (`plan_policy="auto"`, décision d'après cet
@@ -1130,6 +1244,10 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
         report["memorybench"]["sources"] = [{"seed": s["seed"], "success": sum(v["success"] for v in s["runs"].values()),
                                              "n": len(s["runs"])} for d in merged["memorybench"][:1] for s in d["sources"]]
         report["memorybench"]["environment"] = merged["memorybench"][0]["environment"]
+    if "learning" in merged:
+        report["learning"] = analyse_learning([r for d in merged["learning"] for r in d["records"]],
+                                              [t for d in merged["learning"] for t in d["training"]])
+        report["learning"]["environment"] = merged["learning"][0]["environment"]
     if "planauto" in merged:
         report["planauto"] = analyse_planauto([r for d in merged["planauto"] for r in d["records"]])
     if "toolbench" in merged:
@@ -1152,7 +1270,7 @@ def phase_analyse(paths: list[Path], out: Path | None) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("phase", choices=("smoke", "adaptation", "memory", "tools", "toolbench", "memorybench",
-                                          "planauto", "analyse"))
+                                          "planauto", "learning", "analyse"))
     parser.add_argument("--seeds", default="0", help="graines séparées par des virgules")
     parser.add_argument("--arms", default="A,B,R,C,D")
     parser.add_argument("--kinds", default=None, help="tâches de référence (défaut : les 15)")
@@ -1178,6 +1296,9 @@ def main() -> int:
                                 args.kinds.split(",") if args.kinds else None, args.no_progress_patience)
     if args.phase == "memory":
         return phase_memory(out, seeds)
+    if args.phase == "learning":
+        assert args.train_dir, "--train-dir requis (entraînements partagés entre processus)"
+        return phase_learning(out, seeds, Path(args.train_dir))
     if args.phase == "planauto":
         return phase_planauto(out, seeds)
     if args.phase == "memorybench":

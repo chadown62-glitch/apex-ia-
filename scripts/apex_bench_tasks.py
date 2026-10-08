@@ -504,3 +504,141 @@ def memory_spec(task: BenchTask) -> Any:
 
     return build_user_function_task_spec(function=task.function, description=task.statement, cases=task.cases(),
                                          title=f"Banc mémoire — {task.name}")
+
+
+# -- banc de preuve d'apprentissage (§6.5) : tâches d'ÉVALUATION indépendantes ---------------------------------
+#
+# Entraînement : les 15 tâches de référence (`REFERENCE_TASK_KINDS`). Évaluation : des fonctions NOUVELLES, jamais
+# vues à l'entraînement, chacune partageant avec une tâche d'entraînement une clause d'énoncé où le modèle se
+# trompe de façon systématique (observé sur l'entraînement, `real-2` et local : premières tentatives toujours en
+# échec) — « entrée invalide -> None » (roman_to_int, median, parse_duration), « ignorer X mais PAS Y »
+# (is_palindrome), « DERNIÈRE occurrence » (dedupe_keep_last), « petits mots en minuscules sauf en tête »
+# (title_case). Ce banc mesure un TRANSFERT vers des tâches proches mais non identiques ; il ne prétend pas mesurer
+# un gain sur des tâches arbitraires. Les énoncés sont complets : la ligne de base a toute l'information.
+
+
+def _hex_to_int(s: str) -> int | None:
+    if not s or any(c not in "0123456789ABCDEF" for c in s):
+        return None
+    return int(s, 16)
+
+
+def _bin_to_int(s: str) -> int | None:
+    if not s or any(c not in "01" for c in s):
+        return None
+    return int(s, 2)
+
+
+def _mean_or_none(nums: list[float]) -> float | None:
+    return sum(nums) / len(nums) if nums else None
+
+
+def _parse_hhmm(s: str) -> int | None:
+    match = re.fullmatch(r"(\d{2}):(\d{2})", s)
+    if not match or int(match.group(1)) > 23 or int(match.group(2)) > 59:
+        return None
+    return int(match.group(1)) * 60 + int(match.group(2))
+
+
+def _is_anagram(a: str, b: str) -> bool:
+    return sorted(a.lower()) == sorted(b.lower())
+
+
+def _char_freq(s: str) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for c in s.lower():
+        out[c] = out.get(c, 0) + 1
+    return out
+
+
+def _last_positions(items: list[Any]) -> dict[Any, int]:
+    return {v: i for i, v in enumerate(items)}
+
+
+def _dedupe_chars_keep_last(s: str) -> str:
+    last = {c: i for i, c in enumerate(s)}
+    return "".join(c for i, c in enumerate(s) if last[c] == i)
+
+
+_HEADLINE_SMALL = ("a", "an", "the", "of", "in")
+
+
+def _headline(s: str) -> str:
+    words = s.split(" ") if s else []
+    out = []
+    for i, w in enumerate(words):
+        low = w.lower()
+        out.append(low if i > 0 and low in _HEADLINE_SMALL else low[:1].upper() + low[1:])
+    return " ".join(out)
+
+
+#: (famille, tâche d'entraînement apparentée, tâche d'évaluation)
+LEARNING_EVAL: tuple[tuple[str, str, BenchTask], ...] = (
+    ("entrée invalide -> None", "roman_to_int", BenchTask(
+        "hex_to_int", "eval", "hex_to_int",
+        "Écris une fonction Python nommée exactement `hex_to_int` qui prend une chaîne `s` écrite en chiffres "
+        "hexadécimaux MAJUSCULES (0-9, A-F) et retourne sa valeur entière. Si la chaîne est vide ou contient le "
+        "moindre autre caractère (minuscules comprises), retourne None. Exemple : `hex_to_int('FF') == 255`."
+        + ANSWER,
+        _hex_to_int, (("1A",), ("0",), ("ff",), ("",), ("12G",), ("ABC",), ("7F3",), (" 1",)))),
+    ("entrée invalide -> None", "roman_to_int", BenchTask(
+        "bin_to_int", "eval", "bin_to_int",
+        "Écris une fonction Python nommée exactement `bin_to_int` qui prend une chaîne `s` de chiffres binaires "
+        "(0 et 1) et retourne sa valeur entière. Si la chaîne est vide ou contient le moindre autre caractère "
+        "(espaces compris), retourne None. Exemple : `bin_to_int('101') == 5`." + ANSWER,
+        _bin_to_int, (("0",), ("1111",), ("",), ("102",), ("1 0",), ("100000",), ("0b11",), ("011",)))),
+    ("entrée invalide -> None", "median", BenchTask(
+        "mean_or_none", "eval", "mean_or_none",
+        "Écris une fonction Python nommée exactement `mean_or_none` qui prend une liste de nombres `nums` et "
+        "retourne leur moyenne arithmétique. Une liste vide donne None. Exemple : `mean_or_none([1, 2, 3]) == 2.0`."
+        + ANSWER,
+        _mean_or_none, (([],), ([4],), ([1, 2],), ([-3, 3],), ([2.5, 3.5, 6],), ([10, 0, 5, 5],), ([7, 7, 7],),
+                        ([-1, -2],)))),
+    ("entrée invalide -> None", "parse_duration", BenchTask(
+        "parse_hhmm", "eval", "parse_hhmm",
+        "Écris une fonction Python nommée exactement `parse_hhmm` qui prend une chaîne `s` de la forme « HH:MM » "
+        "(heures sur 2 chiffres de 00 à 23, deux-points, minutes sur 2 chiffres de 00 à 59) et retourne le nombre "
+        "total de minutes. Toute autre chaîne (vide, autre format, valeurs hors bornes) donne None. Exemple : "
+        "`parse_hhmm('01:30') == 90`." + ANSWER,
+        _parse_hhmm, (("00:00",), ("23:59",), ("7:05",), ("12:60",), ("24:00",), ("",), ("10h30",), ("09:15",)))),
+    ("ignorer X mais PAS Y", "is_palindrome", BenchTask(
+        "is_anagram", "eval", "is_anagram",
+        "Écris une fonction Python nommée exactement `is_anagram` qui prend deux chaînes `a` et `b` et retourne "
+        "True si elles sont anagrammes l'une de l'autre (mêmes caractères, mêmes nombres d'occurrences, ordre "
+        "quelconque), False sinon. La comparaison doit IGNORER la casse mais PAS les espaces ni la ponctuation. "
+        "Exemple : `is_anagram('Chien', 'niche') == True`." + ANSWER,
+        _is_anagram, (("abc", "cab"), ("a b", "ab"), ("Dormitory", "dirtyroom"), ("A,b", "b,a"), ("abc", "abd"),
+                      ("rat!", "tar"), ("", ""), ("Listen", "Silent")))),
+    ("ignorer X mais PAS Y", "is_palindrome", BenchTask(
+        "char_freq", "eval", "char_freq",
+        "Écris une fonction Python nommée exactement `char_freq` qui prend une chaîne `s` et retourne le "
+        "dictionnaire {caractère: nombre d'occurrences}. Le décompte doit IGNORER la casse (clés en minuscules) "
+        "mais PAS les espaces ni la ponctuation, qui comptent comme des caractères. Exemple : "
+        "`char_freq('') == {}`." + ANSWER,
+        _char_freq, (("Aa",), ("a b",), ("Hi!",), ("xyz",), ("A, a.",), ("   ",), ("Bob",), ("?!",)))),
+    ("DERNIÈRE occurrence", "dedupe_keep_last", BenchTask(
+        "last_positions", "eval", "last_positions",
+        "Écris une fonction Python nommée exactement `last_positions` qui prend une liste `items` et retourne le "
+        "dictionnaire {valeur: indice de sa DERNIÈRE occurrence dans la liste}. Exemple : "
+        "`last_positions([]) == {}`." + ANSWER,
+        # Valeurs CHAÎNES seulement : des clés entières deviendraient des chaînes en JSON (comparaison ambiguë).
+        _last_positions, ((["a", "b", "a"],), (["u", "u", "u"],), (["z", "y", "x"],), (["x"],),
+                          (["0", "1", "0", "1", "2"],), (["b", "a", "b", "c", "a"],), (["p", "q", "p", "q"],),
+                          (["n", "m", "n"],)))),
+    ("DERNIÈRE occurrence", "dedupe_keep_last", BenchTask(
+        "dedupe_chars_keep_last", "eval", "dedupe_chars_keep_last",
+        "Écris une fonction Python nommée exactement `dedupe_chars_keep_last` qui prend une chaîne `s` et retourne "
+        "la chaîne sans caractère répété où chaque caractère n'apparaît qu'une fois, à la position de sa DERNIÈRE "
+        "occurrence dans `s` (l'ordre relatif de ces dernières occurrences est conservé). Exemple : "
+        "`dedupe_chars_keep_last('') == ''`." + ANSWER,
+        _dedupe_chars_keep_last, (("abca",), ("aaa",), ("abc",), ("abab",), ("banana",), ("xyzx",), ("aabbab",),
+                                  ("hello",)))),
+    ("petits mots en minuscules sauf en tête", "title_case", BenchTask(
+        "headline", "eval", "headline",
+        "Écris une fonction Python nommée exactement `headline` qui prend une chaîne `s` de mots séparés par un "
+        "espace et retourne la chaîne où chaque mot a sa première lettre en majuscule et les suivantes en "
+        "minuscules, SAUF les petits mots a, an, the, of, in, entièrement en minuscules — sauf s'ils sont le "
+        "premier mot. Une chaîne vide donne une chaîne vide. Exemple : `headline('') == ''`." + ANSWER,
+        _headline, (("the lord of the rings",), ("a tale of two cities",), ("HELLO WORLD",), ("in the mood",),
+                    ("war and peace",), ("an apple a day",), ("of mice",), ("python",)))),
+)
