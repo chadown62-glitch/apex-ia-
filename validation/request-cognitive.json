@@ -1,0 +1,232 @@
+{
+ "label": "cognitive-1",
+ "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+ "served_name": "qwen2.5-coder-1.5b-instruct",
+ "revision": "2e1fd397ee46e1388853d2af2c993145b0f1098a",
+ "jobs": [
+  {
+   "name": "adapt-R-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-C-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-L-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT3-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T0-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "mem-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-A-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-C-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-B-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-D-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "planauto-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "learn-s0",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-R-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-C-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-L-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT3-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T0-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "mem-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-A-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-C-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-B-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-D-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "planauto-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "learn-s1",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-R-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-C-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-L-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT3-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T0-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "mem-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-A-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-C-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-B-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-D-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "planauto-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "learn-s2",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-R-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-C-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "adapt-L-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-NT3-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "tools-T0-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "mem-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-A-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-C-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-B-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "plan2-D-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "planauto-s3",
+   "phase": "cognitive"
+  },
+  {
+   "name": "learn-s3",
+   "phase": "cognitive"
+  }
+ ]
+}

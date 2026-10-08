@@ -1,0 +1,2317 @@
+{
+ "_comment": "Jobs des expériences « cycle cognitif » (docs/VALIDATION_REELLE.md §6.1-6.5) : chaque étape rejoue le harnais depuis le commit FIGÉ mesuré localement (worktree), avec le harnais d'un autre commit quand `harness_from` le dit. Exécuteur : scripts/run_cognitive_job.py. Modèle : celui de l'environnement (APEX_MODELS_DIR) — la CI y met Qwen2.5-Coder-1.5B-Instruct (request-cognitive.json).",
+ "jobs": {
+  "adapt-R-s0": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s0.json"
+    }
+   ]
+  },
+  "adapt-C-s0": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s0.json"
+    }
+   ]
+  },
+  "adapt-L-s0": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s0.json"
+    }
+   ]
+  },
+  "tools-T-s0": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s0.json"
+    }
+   ]
+  },
+  "tools-NT-s0": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s0.json"
+    }
+   ]
+  },
+  "tools-NT3-s0": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s0.json"
+    }
+   ]
+  },
+  "tools-T0-s0": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s0.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s0": {
+   "protocol": "6.3",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s0.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s0.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s0.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s0.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s0": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s0.json"
+    }
+   ]
+  },
+  "plan2-C-s0": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s0.json"
+    }
+   ]
+  },
+  "plan2-B-s0": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s0.json"
+    }
+   ]
+  },
+  "plan2-D-s0": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "0",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s0.json"
+    }
+   ]
+  },
+  "planauto-s0": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "0"
+     ],
+     "out": "planauto-s0.json"
+    }
+   ]
+  },
+  "learn-s0": {
+   "protocol": "6.5",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "0",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s0.json"
+    }
+   ]
+  },
+  "adapt-R-s1": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s1.json"
+    }
+   ]
+  },
+  "adapt-C-s1": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s1.json"
+    }
+   ]
+  },
+  "adapt-L-s1": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s1.json"
+    }
+   ]
+  },
+  "tools-T-s1": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s1.json"
+    }
+   ]
+  },
+  "tools-NT-s1": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s1.json"
+    }
+   ]
+  },
+  "tools-NT3-s1": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s1.json"
+    }
+   ]
+  },
+  "tools-T0-s1": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s1.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s1": {
+   "protocol": "6.3",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s1.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s1.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s1.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s1.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s1": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s1.json"
+    }
+   ]
+  },
+  "plan2-C-s1": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s1.json"
+    }
+   ]
+  },
+  "plan2-B-s1": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s1.json"
+    }
+   ]
+  },
+  "plan2-D-s1": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "1",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s1.json"
+    }
+   ]
+  },
+  "planauto-s1": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "1"
+     ],
+     "out": "planauto-s1.json"
+    }
+   ]
+  },
+  "learn-s1": {
+   "protocol": "6.5",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "1",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s1.json"
+    }
+   ]
+  },
+  "adapt-R-s2": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s2.json"
+    }
+   ]
+  },
+  "adapt-C-s2": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s2.json"
+    }
+   ]
+  },
+  "adapt-L-s2": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s2.json"
+    }
+   ]
+  },
+  "tools-T-s2": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s2.json"
+    }
+   ]
+  },
+  "tools-NT-s2": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s2.json"
+    }
+   ]
+  },
+  "tools-NT3-s2": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s2.json"
+    }
+   ]
+  },
+  "tools-T0-s2": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s2.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s2": {
+   "protocol": "6.3",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s2.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s2.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s2.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s2.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s2": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s2.json"
+    }
+   ]
+  },
+  "plan2-C-s2": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s2.json"
+    }
+   ]
+  },
+  "plan2-B-s2": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s2.json"
+    }
+   ]
+  },
+  "plan2-D-s2": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "2",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s2.json"
+    }
+   ]
+  },
+  "planauto-s2": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "2"
+     ],
+     "out": "planauto-s2.json"
+    }
+   ]
+  },
+  "learn-s2": {
+   "protocol": "6.5",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "2",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s2.json"
+    }
+   ]
+  },
+  "adapt-R-s3": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s3.json"
+    }
+   ]
+  },
+  "adapt-C-s3": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s3.json"
+    }
+   ]
+  },
+  "adapt-L-s3": {
+   "protocol": "6.1",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s3.json"
+    }
+   ]
+  },
+  "tools-T-s3": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s3.json"
+    }
+   ]
+  },
+  "tools-NT-s3": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s3.json"
+    }
+   ]
+  },
+  "tools-NT3-s3": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s3.json"
+    }
+   ]
+  },
+  "tools-T0-s3": {
+   "protocol": "6.2",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s3.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s3": {
+   "protocol": "6.3",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s3.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s3.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s3.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s3.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s3": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s3.json"
+    }
+   ]
+  },
+  "plan2-C-s3": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s3.json"
+    }
+   ]
+  },
+  "plan2-B-s3": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s3.json"
+    }
+   ]
+  },
+  "plan2-D-s3": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "3",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s3.json"
+    }
+   ]
+  },
+  "planauto-s3": {
+   "protocol": "6.4",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "3"
+     ],
+     "out": "planauto-s3.json"
+    }
+   ]
+  },
+  "learn-s3": {
+   "protocol": "6.5",
+   "set": "primary",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "3",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s3.json"
+    }
+   ]
+  },
+  "adapt-R-s10": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s10.json"
+    }
+   ]
+  },
+  "adapt-C-s10": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s10.json"
+    }
+   ]
+  },
+  "adapt-L-s10": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s10.json"
+    }
+   ]
+  },
+  "tools-T-s10": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s10.json"
+    }
+   ]
+  },
+  "tools-NT-s10": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s10.json"
+    }
+   ]
+  },
+  "tools-NT3-s10": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s10.json"
+    }
+   ]
+  },
+  "tools-T0-s10": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s10.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s10": {
+   "protocol": "6.3",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s10.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s10.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s10.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s10.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s10": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s10.json"
+    }
+   ]
+  },
+  "plan2-C-s10": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s10.json"
+    }
+   ]
+  },
+  "plan2-B-s10": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s10.json"
+    }
+   ]
+  },
+  "plan2-D-s10": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "10",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s10.json"
+    }
+   ]
+  },
+  "planauto-s10": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "10"
+     ],
+     "out": "planauto-s10.json"
+    }
+   ]
+  },
+  "learn-s10": {
+   "protocol": "6.5",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "10",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s10.json"
+    }
+   ]
+  },
+  "adapt-R-s11": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s11.json"
+    }
+   ]
+  },
+  "adapt-C-s11": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s11.json"
+    }
+   ]
+  },
+  "adapt-L-s11": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s11.json"
+    }
+   ]
+  },
+  "tools-T-s11": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s11.json"
+    }
+   ]
+  },
+  "tools-NT-s11": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s11.json"
+    }
+   ]
+  },
+  "tools-NT3-s11": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s11.json"
+    }
+   ]
+  },
+  "tools-T0-s11": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s11.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s11": {
+   "protocol": "6.3",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s11.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s11.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s11.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s11.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s11": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s11.json"
+    }
+   ]
+  },
+  "plan2-C-s11": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s11.json"
+    }
+   ]
+  },
+  "plan2-B-s11": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s11.json"
+    }
+   ]
+  },
+  "plan2-D-s11": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "11",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s11.json"
+    }
+   ]
+  },
+  "planauto-s11": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "11"
+     ],
+     "out": "planauto-s11.json"
+    }
+   ]
+  },
+  "learn-s11": {
+   "protocol": "6.5",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "11",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s11.json"
+    }
+   ]
+  },
+  "adapt-R-s12": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s12.json"
+    }
+   ]
+  },
+  "adapt-C-s12": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s12.json"
+    }
+   ]
+  },
+  "adapt-L-s12": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s12.json"
+    }
+   ]
+  },
+  "tools-T-s12": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s12.json"
+    }
+   ]
+  },
+  "tools-NT-s12": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s12.json"
+    }
+   ]
+  },
+  "tools-NT3-s12": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s12.json"
+    }
+   ]
+  },
+  "tools-T0-s12": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s12.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s12": {
+   "protocol": "6.3",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s12.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s12.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s12.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s12.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s12": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s12.json"
+    }
+   ]
+  },
+  "plan2-C-s12": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s12.json"
+    }
+   ]
+  },
+  "plan2-B-s12": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s12.json"
+    }
+   ]
+  },
+  "plan2-D-s12": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "12",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s12.json"
+    }
+   ]
+  },
+  "planauto-s12": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "12"
+     ],
+     "out": "planauto-s12.json"
+    }
+   ]
+  },
+  "learn-s12": {
+   "protocol": "6.5",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "12",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s12.json"
+    }
+   ]
+  },
+  "adapt-R-s13": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "R",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-R-s13.json"
+    }
+   ]
+  },
+  "adapt-C-s13": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "C",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-C-s13.json"
+    }
+   ]
+  },
+  "adapt-L-s13": {
+   "protocol": "6.1",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "L",
+      "--no-progress-patience",
+      "99"
+     ],
+     "out": "adaptation-L-s13.json"
+    }
+   ]
+  },
+  "tools-T-s13": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "T"
+     ],
+     "out": "toolbench-T-s13.json"
+    }
+   ]
+  },
+  "tools-NT-s13": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "NT"
+     ],
+     "out": "toolbench-NT-s13.json"
+    }
+   ]
+  },
+  "tools-NT3-s13": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b5750de",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "NT3"
+     ],
+     "out": "toolbench-NT3-s13.json"
+    }
+   ]
+  },
+  "tools-T0-s13": {
+   "protocol": "6.2",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1d529e2",
+     "phase": "toolbench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "T",
+      "--arm-label",
+      "T0"
+     ],
+     "out": "toolbench-T0-s13.json",
+     "harness_from": "b5750de"
+    }
+   ]
+  },
+  "mem-s13": {
+   "protocol": "6.3",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "A",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-A-s13.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "M",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M-s13.json"
+    },
+    {
+     "commit": "1a1ed02",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "P",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-P-s13.json"
+    },
+    {
+     "commit": "b5750de",
+     "phase": "memorybench",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "M",
+      "--arm-label",
+      "M0",
+      "--train-dir",
+      "{work}/mem-train"
+     ],
+     "out": "memorybench-M0-s13.json",
+     "harness_from": "1a1ed02"
+    }
+   ]
+  },
+  "plan2-A-s13": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "A"
+     ],
+     "out": "adaptation-A-s13.json"
+    }
+   ]
+  },
+  "plan2-C-s13": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "C"
+     ],
+     "out": "adaptation-C-s13.json"
+    }
+   ]
+  },
+  "plan2-B-s13": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "B"
+     ],
+     "out": "adaptation-B-s13.json"
+    }
+   ]
+  },
+  "plan2-D-s13": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "6f90a14",
+     "phase": "adaptation",
+     "args": [
+      "--seeds",
+      "13",
+      "--arms",
+      "D"
+     ],
+     "out": "adaptation-D-s13.json"
+    }
+   ]
+  },
+  "planauto-s13": {
+   "protocol": "6.4",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "b27b158",
+     "phase": "planauto",
+     "args": [
+      "--seeds",
+      "13"
+     ],
+     "out": "planauto-s13.json"
+    }
+   ]
+  },
+  "learn-s13": {
+   "protocol": "6.5",
+   "set": "replication",
+   "steps": [
+    {
+     "commit": "f01e94a",
+     "phase": "learning",
+     "args": [
+      "--seeds",
+      "13",
+      "--train-dir",
+      "{work}/learn-train"
+     ],
+     "out": "learning-s13.json"
+    }
+   ]
+  }
+ }
+}
