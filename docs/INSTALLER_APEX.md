@@ -5,17 +5,19 @@ Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal
 **l'assistant APEX** : projets, conversations persistantes, quatre modes (Normal, Code, Design, Finance),
 paramètres centralisés et deux thèmes (APEX Night, APEX Dune). La version 0.4.1 affiche l'assistant **dans la
 fenêtre d'APEX.exe** (plus de navigateur) et permet de **choisir le moteur qui répond** : Ollama, le moteur
-intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental). L'installateur dépose le
+intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental). La version 0.4.2 ne change que le
+**rendu** : fond de soie ivoire (Dune) ou de ciel étoilé (Night), surfaces de verre, pastilles d'état
+lumineuses. L'installateur dépose le
 Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
 que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
 APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
 ## Récupérer l'installateur
 
-Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.1.exe`
-(≈ 33 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.2.exe`
+(≈ 40 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
 empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
-PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.1.exe -Algorithm SHA256` (même valeur que le `.sha256`).
+PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.2.exe -Algorithm SHA256` (même valeur que le `.sha256`).
 
 ## Prérequis
 
@@ -31,7 +33,7 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.1.exe -Algorithm SHA256` (même
 
 ## Installer et utiliser APEX (mode Windows natif)
 
-1. Double-cliquez sur `APEX-Setup-x64-v0.4.1.exe`. Le programme n'est pas signé : si Windows affiche
+1. Double-cliquez sur `APEX-Setup-x64-v0.4.2.exe`. Le programme n'est pas signé : si Windows affiche
    « Windows a protégé votre ordinateur », cliquez sur « Informations complémentaires » puis
    « Exécuter quand même » (seulement si le fichier vient bien du dépôt APEX). L'installateur vérifie
    lui-même que le Panel démarre et que l'application est complète, puis propose de lancer APEX.
@@ -89,7 +91,8 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.1.exe -Algorithm SHA256` (même
   30 par projet). Images, PDF et documents bureautiques sont refusés avec la raison : APEX ne sait pas les
   lire. La suppression d'un projet (confirmée) supprime ses conversations, ses pièces jointes et son
   espace de travail.
-- **Paramètres** : apparence (APEX Night / APEX Dune, animations, particules, réduction des animations),
+- **Paramètres** : apparence (APEX Night — ciel étoilé, APEX Dune — soie ivoire ; aussi le bouton ☾/☀ du
+  centre de contrôle ; animations, particules, réduction des animations),
   modèles (disponibilité mesurée, modèle préféré, température, longueur), runtime (délai d'une réponse),
   comportement (mode par défaut, mémoire entre conversations), outils, confidentialité, ressources
   (précision du modèle, threads). Enregistrés dans la base d'APEX, validés et bornés.

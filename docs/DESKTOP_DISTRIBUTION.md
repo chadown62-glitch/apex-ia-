@@ -470,3 +470,55 @@ moteur intégré, et le Cerveau APEX, marqué expérimental).
 - **Réponses du moteur intégré et d'Ollama sous Windows** : pas de modèle ici (Hugging Face et Ollama refusés
   par le réseau). Constaté par l'utilisateur sur son PC en 0.4.0 : Ollama répondait.
 - Durée réelle des réponses, mémoire, SmartScreen sur un PC utilisateur.
+
+## 11. APEX.exe 0.4.2 — le rendu graphique des maquettes (Night et Dune)
+
+Point de départ : deux maquettes du centre de contrôle fournies par l'utilisateur, claire et sombre, avec la
+demande de retravailler **uniquement le rendu graphique**. Dune : fond de soie ivoire aux reflets irisés,
+barre latérale, barre du haut et cartes en verre dépoli, pastilles READY vertes et OFFLINE rouges, valeur
+« OK » en vert, « Donnée indisponible » en rouge. Night : ciel profond violet, nébuleuse et étoiles, cartes de
+verre sombre au reflet brillant et au halo violet, bulles de verre dans les tuiles d'état, pastilles lumineuses.
+
+### 11.1 Ce qui a changé (rendu seul : aucune route, aucune donnée, aucun comportement)
+
+- **Fond peint** (`frontend/src/theme/ambient.ts`, `theme/Backdrop.tsx`, `theme/backdrop.css`), commun à
+  l'assistant et au centre de contrôle, peint **une fois** par thème et par taille de fenêtre, jamais animé :
+  Dune = surface de soie (champ de hauteur éclairé : diffus, reflet spéculaire, nacre discrète), calculée sur
+  une grille réduite puis agrandie ; Night = fond dégradé, voiles de nébuleuse, poussières sombres, étoiles
+  fixes. Déterministe (même fenêtre → même image), à la densité de l'écran (plafonnée à 2). Les particules
+  animées existantes restent par-dessus, avec leurs réglages.
+- **Verre** : une recette unique (`theme/theme.css`, reflet en haut, liseré lumineux, ombre, flou du fond)
+  appliquée à la barre latérale, la barre du haut, les panneaux, les tuiles d'état, les cartes d'agents et de
+  sections, et aux volets de discussion ; l'entrée active de la barre latérale devient une pastille de verre.
+  Champs de saisie et menus restent opaques (lisibilité). Sans `backdrop-filter`, un fond opaque prend le relais.
+- **Tuiles d'état** (`StatCard`) : bulle de verre décorative à droite ; la couleur de la valeur vient du mot
+  affiché (OK/PASS/READY vert, FAIL/ERROR/OFFLINE rouge, DEGRADED ambre, UNKNOWN atténué), jamais d'une donnée
+  cachée.
+- **Pastilles** : OFFLINE a sa propre pastille rouge (elle partageait la grise de UNKNOWN) ; liseré de la couleur
+  de l'état, point lumineux, halo en Night ; la pastille d'activité du haut devient une pastille de verre.
+- **Lisibilité** : en Night, le texte discret passe de `#8a85a8` à `#9c97bb` — mesuré à 3,79:1 sur le verre
+  rendu au-dessus de la nébuleuse (en-têtes de tableau), 4,77:1 après.
+
+### 11.2 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Interface (vitest, `tsc -b`) | **172 réussis, 0 échec** (165 + 7 : contraste des pastilles d'état sur chaque surface, ton des valeurs, fond peint à la densité de l'écran, déterministe, échec dit quand le canvas manque) ; typage OK |
+| Panel (.NET, `dotnet test setup/ApexSetup.sln`) | **577 réussis, 0 échec**, version 0.4.2 (aucun code du Panel modifié) |
+| Rendu réel — vrai backend autonome Linux + Chromium, 1440×900, écran 100 % **et** 150 % | captures des deux thèmes : centre de contrôle, accueil de l'assistant, conversation, agents, modèles, mobile 390 px (aucun débordement horizontal) ; **0 violation CSP, 0 erreur de page** |
+| Contraste **mesuré sur l'image rendue** (texte masqué, pire fond réel sous chaque texte, 5e centile) | tout texte courant ≥ 4,5:1 dans les deux thèmes (minimum Night 4,63 — pastilles ; Dune 4,73 — pastilles) ; seule exception, la valeur « UNKNOWN » en 28 px gras de Night : 3,9:1, au-dessus du seuil de 3:1 du grand texte |
+| Coût du fond | passage à Dune : une tâche de **133 ms** (mesurée, `longtask`) à la peinture de la soie, une fois ; passage à Night : aucune tâche longue (< 50 ms) |
+| WINE E2E — **Windows simulé, pas Windows** — installateur 0.4.2 (SHA-256 `85625a22…22987f1d`, commit `cc7a0f2`) | **35/35 PASS** : cycle de vie **17/17**, mise à jour **0.4.1 → 0.4.2** (raccourci et paramètres conservés) **18/18**. Dépendances identiques à 0.4.1 (même empreinte de `requirements-windows.lock`, même Python) : la préparation déjà faite reste valable |
+| Nouveau rendu servi par la **version Windows** du backend (python.exe 3.12.10 sous Wine, `APEX.exe --start`) | l'interface **installée** est servie (`…\Programs\APEX\app\frontend_dist`, contrôlé dans `GET /status`) ; captures des deux thèmes (centre de contrôle, assistant, agents, modèles, mobile) ; contraste mesuré identique au Linux (Night ≥ 4,64, Dune ≥ 4,73 hors grand texte) ; **0 violation CSP, 0 erreur de page** ; passage à Dune : une tâche de 145 ms. Premier essai lancé depuis le dossier du dépôt : `python -m` avait pris le paquet `apex` du dossier courant (le dépôt) — artefact du banc d'essai (le Panel installé n'est pas lancé depuis un dossier contenant `apex`), refait depuis un dossier neutre ; aperçus dans `releases/windows/apercu/`. **Correction pour §10.2** : la ligne « Interface contre la version Windows du backend » de 0.4.1 avait le même biais (code et interface du dépôt, au même commit, exécutés par le Python Windows installé) |
+
+### 11.3 Non vérifié ici (bloquants de CET environnement, pas du produit)
+
+- **Le nouveau rendu dans la fenêtre d'APEX.exe sur un vrai Windows** : comme en 0.4.1, WebView2 n'existe ni ici ni
+  sous Wine. WebView2 est le moteur de Microsoft Edge (Chromium) : le rendu vérifié ci-dessus est celui du même
+  moteur, mais pas sur le PC de l'utilisateur ni avec sa carte graphique.
+- **Coût du flou sur une petite carte graphique** : non mesuré sur du matériel réel.
+- **Note (hors rendu, non modifiée)** : le Panel lance `python -m apex.standalone` sans fixer le dossier de travail ;
+  `python -m` cherche d'abord dans ce dossier. Sans effet en usage normal (le Panel est lancé depuis son propre dossier,
+  qui ne contient pas de dossier `apex`), mais un lancement depuis un dossier contenant `apex` exécuterait ce code-là.
+- **Le cadre natif d'APEX.exe** (barre du haut du Panel, page **État et contrôle**) n'a pas changé : thème sombre
+  Fluent, hors des maquettes (qui montrent le centre de contrôle web).
