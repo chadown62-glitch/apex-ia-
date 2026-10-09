@@ -9,7 +9,7 @@
   -->
   <PropertyGroup>
     <!-- Première version packagée (Phase 6) — Setup n'a jamais été packagé avant cette phase. -->
-    <SetupProductVersion>0.4.0</SetupProductVersion>
+    <SetupProductVersion>0.4.1</SetupProductVersion>
     <Version>$(SetupProductVersion)</Version>
     <AssemblyVersion>$(SetupProductVersion).0</AssemblyVersion>
     <FileVersion>$(SetupProductVersion).0</FileVersion>
