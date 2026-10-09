@@ -99,7 +99,14 @@ class AttachmentService:
             attachment = _from_row(row)
         from apex.assistant.workspace import project_workspace
 
-        project_workspace(project_id).write_bytes(f"{WORKSPACE_DIR}/{name}", text.encode("utf-8"))
+        try:
+            project_workspace(project_id).write_bytes(f"{WORKSPACE_DIR}/{name}", text.encode("utf-8"))
+        except Exception as exc:
+            # Jamais une pièce « refusée » à l'écran mais conservée en base : la ligne est retirée.
+            with session_scope(self._session_factory) as session:
+                ProjectAttachmentRepository(session).delete(attachment.id)
+            raise RuntimeError(f"« {name} » non enregistré : écriture dans l'espace de travail du projet "
+                               f"impossible ({exc.__class__.__name__}: {exc})") from exc
         return attachment
 
     def list_all(self, project_id: str) -> list[Attachment]:

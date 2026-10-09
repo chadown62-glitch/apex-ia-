@@ -144,6 +144,27 @@ def test_symlinks_are_never_followed_nor_written_through(ctx, tmp_path) -> None:
     assert all(path != "link.txt" for path, _ in ctx.workspace.snapshot())  # jamais copié vers la sandbox
 
 
+def test_without_o_nofollow_like_windows_files_still_work_and_links_are_still_refused(ctx, tmp_path, monkeypatch) -> None:
+    """Le Python officiel de Windows n'a ni `O_NOFOLLOW` ni `O_NONBLOCK` (constaté : AttributeError sur toute
+    écriture d'outil et toute pièce jointe en mode natif). Sans ces drapeaux, lecture et écriture fonctionnent,
+    et un lien substitué au chemin vérifié est refusé par la comparaison d'identité du fichier ouvert."""
+    import apex.tools.workspace as workspace_module
+
+    monkeypatch.setattr(workspace_module, "_NOFOLLOW", 0)
+    monkeypatch.setattr(workspace_module, "_NONBLOCK", 0)
+    assert call(ctx, "fs.write", path="notes/a.txt", content="ligne 1\nligne 2\n").ok
+    assert (ctx.workspace.root / "notes" / "a.txt").read_bytes() == b"ligne 1\nligne 2\n"  # aucun \r ajouté
+    assert call(ctx, "fs.read", path="notes/a.txt").output["content"] == "ligne 1\nligne 2\n"
+    secret = tmp_path / "secret.txt"
+    secret.write_text("SECRET")
+    os.symlink(secret, ctx.workspace.root / "swapped.txt")
+    # Lien posé APRÈS la vérification du chemin : l'ouverture le suivrait, l'identité le refuse.
+    with pytest.raises(ToolFailure) as refused:
+        workspace_module.Workspace._open(ctx.workspace.root / "swapped.txt", os.O_RDONLY, "swapped.txt")
+    assert refused.value.code is ErrorCode.PATH_REFUSED
+    assert secret.read_text() == "SECRET"
+
+
 def test_special_files_and_size_limits_are_refused(tmp_path) -> None:
     ws = Workspace.create(tmp_path / "w", "small", limits=WorkspaceLimits(max_file_bytes=100, max_total_bytes=150,
                                                                              max_files=2))

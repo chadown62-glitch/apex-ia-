@@ -363,6 +363,26 @@ def test_only_real_text_attachments_are_accepted(env) -> None:
     assert service.delete(kept.id) and service.render_context(project.id) == ("", [])
 
 
+def test_an_attachment_whose_file_cannot_be_written_is_not_kept(env, monkeypatch) -> None:
+    """Constaté sur la version Windows (sous Wine) : l'écriture dans l'espace de travail échouait APRÈS
+    l'insertion en base — « refusé » à l'écran, mais la pièce restait dans le projet. Elle est désormais retirée."""
+    from apex.assistant import workspace as assistant_workspace
+    from apex.assistant.attachments import AttachmentService
+    from apex.projects.service import ProjectService
+
+    project = ProjectService(env).create(name="Maison", description="", created_by=Subject.HUMAN)
+
+    class _Broken:
+        def write_bytes(self, rel: str, content: bytes) -> bool:
+            raise OSError("disque plein")
+
+    monkeypatch.setattr(assistant_workspace, "project_workspace", lambda _project_id: _Broken())
+    service = AttachmentService(env)
+    with pytest.raises(RuntimeError, match="non enregistré"):
+        service.add(project.id, "notes.md", b"# notes")
+    assert service.list_all(project.id) == []
+
+
 # -- paramètres ------------------------------------------------------------------------------------------------
 
 

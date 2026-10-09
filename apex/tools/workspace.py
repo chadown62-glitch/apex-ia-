@@ -3,7 +3,8 @@
 Garanties (fail-closed, chacune testée adversarialement) :
 - un chemin d'outil est TOUJOURS relatif à la racine : absolu, `..`, caractère nul, antislash, `~` refusés ;
 - aucun lien symbolique n'est suivi ni créé : un composant symbolique refuse l'accès, et les fichiers sont
-  ouverts avec `O_NOFOLLOW` (pas de substitution entre la vérification et l'ouverture) ;
+  ouverts avec `O_NOFOLLOW` (pas de substitution entre la vérification et l'ouverture) — sous Windows, où ce
+  drapeau n'existe pas, l'identité du fichier ouvert (volume, index) est comparée à celle du chemin vérifié ;
 - seuls des fichiers réguliers et des répertoires sont manipulés (ni périphérique, ni tube) ;
 - tailles bornées : par fichier, au total, en nombre de fichiers ;
 - l'exécution de code ne touche JAMAIS ce répertoire : la sandbox reçoit une COPIE (`snapshot`).
@@ -19,6 +20,12 @@ from pathlib import Path
 from apex.tools.model import ErrorCode, ToolFailure
 
 _SKIPPED_DIRS = frozenset({"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"})
+#: Drapeaux POSIX absents de Windows (constaté avec le Python officiel 3.12.10 : `os.O_NOFOLLOW` y lève
+#: AttributeError, ce qui faisait échouer toute écriture d'outil et toute pièce jointe en mode natif).
+#: `O_BINARY` n'existe que sous Windows : sans lui, `os.write` convertirait « \n » en « \r\n ».
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+_NONBLOCK = getattr(os, "O_NONBLOCK", 0)
+_BINARY = getattr(os, "O_BINARY", 0)
 #: Fichiers nommés au plus dans l'observation d'un chemin absent.
 _ABSENT_HINT_FILES = 20
 
@@ -96,7 +103,7 @@ class Workspace:
         if not stat.S_ISREG(mode):  # tube nommé, périphérique, socket : jamais ouverts (un FIFO bloquerait)
             raise ToolFailure(ErrorCode.PATH_REFUSED, f"pas un fichier régulier : {rel}")
         try:
-            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            fd = self._open(path, os.O_RDONLY | _NONBLOCK, rel)
         except FileNotFoundError as exc:
             raise ToolFailure(ErrorCode.NOT_FOUND, self._absent(rel)) from exc
         except OSError as exc:
@@ -140,12 +147,28 @@ class Workspace:
             self.resolve(self.relative(parent))
         parent.mkdir(parents=True, exist_ok=True)
         self.resolve(rel)  # re-vérifie après création des répertoires (aucun lien introduit entre-temps)
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
+        fd = self._open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, rel)
         try:
             os.write(fd, content)
         finally:
             os.close(fd)
         return not existed
+
+    @staticmethod
+    def _open(path: Path, flags: int, rel: str) -> int:
+        """`os.open` sans jamais suivre un lien : `O_NOFOLLOW` là où il existe ; ailleurs (Windows), le fichier
+        ouvert doit être exactement celui qui a été vérifié (même volume, même index, pas un lien)."""
+        fd = os.open(path, flags | _NOFOLLOW | _BINARY, 0o644)
+        if _NOFOLLOW:
+            return fd
+        try:
+            checked, opened = os.lstat(path), os.fstat(fd)
+            if stat.S_ISLNK(checked.st_mode) or (checked.st_dev, checked.st_ino) != (opened.st_dev, opened.st_ino):
+                raise ToolFailure(ErrorCode.PATH_REFUSED, f"lien symbolique refusé : {rel!r}")
+        except BaseException:
+            os.close(fd)
+            raise
+        return fd
 
     def list_dir(self, rel: str = ".") -> list[dict[str, object]]:
         path = self.resolve(rel, allow_root=True)
