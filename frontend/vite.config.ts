@@ -20,5 +20,7 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./src/test/setup.ts"],
+    // theme.css est lu tel quel par theme/contrast.test.ts (contrastes mesurés sur le vrai fichier).
+    css: { include: [/theme\.css/] },
   },
 });

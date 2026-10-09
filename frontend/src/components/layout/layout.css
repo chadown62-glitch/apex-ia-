@@ -173,6 +173,7 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  flex-shrink: 0;
 }
 
 .topbar__hamburger {
@@ -185,6 +186,20 @@
   color: var(--text-muted);
   letter-spacing: 0.03em;
   white-space: nowrap;
+}
+
+.topbar__assistant-link {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.topbar__assistant-link:hover {
+  background: var(--bg-hover);
 }
 
 .topbar__status {

@@ -39,6 +39,28 @@ UI_DIST_ENV = "APEX_UI_DIST"
 BUILD_COMMAND = "bash scripts/apex-build-ui.sh"
 
 
+#: En-têtes de sécurité de TOUTE réponse de l'interface (page, fichiers du build) : aucun script en ligne
+#: ni d'une autre origine (le thème initial est un fichier, `theme-init.js`), aucune connexion hors d'APEX,
+#: aucune intégration dans un cadre d'un autre site, pas de devinette de type MIME, aucun référent transmis.
+UI_CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; "
+          "connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+#: Pages d'erreur générées ici (`_page`) : leur seul style est en ligne, aucun script.
+PAGE_CSP = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'"
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Opener-Policy": "same-origin",
+}
+
+
+def _secured[R: Response](response: R, csp: str = UI_CSP) -> R:
+    response.headers["Content-Security-Policy"] = csp
+    for name, value in SECURITY_HEADERS.items():
+        response.headers[name] = value
+    return response
+
+
 def ui_dist() -> Path:
     return Path(os.environ.get(UI_DIST_ENV) or "frontend/dist")
 
@@ -155,8 +177,8 @@ code{{background:#8882;padding:.1rem .3rem;border-radius:.2rem}}</style></head>
 
 
 def _page(status: int, title: str, body: str) -> HTMLResponse:
-    return HTMLResponse(_PAGE.format(title=title, body=body), status_code=status,
-                        headers={"Cache-Control": "no-store"})
+    return _secured(HTMLResponse(_PAGE.format(title=title, body=body), status_code=status,
+                                 headers={"Cache-Control": "no-store"}), PAGE_CSP)
 
 
 @page_router.get("/ui/login")
@@ -200,10 +222,10 @@ def spa(path: str) -> Response:
     if path:
         candidate = (root / path).resolve()
         if candidate.is_relative_to(root) and candidate.is_file():
-            return FileResponse(candidate)
+            return _secured(FileResponse(candidate))
         if "." in path.rsplit("/", 1)[-1]:
-            return Response(status_code=404)  # fichier absent du build : jamais la page à la place
-    return FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"})
+            return _secured(Response(status_code=404))  # fichier absent du build : jamais la page à la place
+    return _secured(FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"}))
 
 
 #: Jamais des pages de l'interface : l'API (404 JSON pour une route inconnue) et la documentation

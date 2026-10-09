@@ -204,11 +204,19 @@ def update_project(project_id: str, payload: ProjectPatchIn) -> DataEnvelope[dic
 
 @router.delete("/assistant/projects/{project_id}", response_model=DataEnvelope[dict[str, Any]])
 def delete_project(project_id: str) -> DataEnvelope[dict[str, Any]]:
+    from apex.api.dependencies import get_turn_manager
+    from apex.conversations.service import ConversationService
     from apex.policy.model import Subject
     from apex.projects.service import ProjectService
 
+    factory = _factory()
+    conversation_ids = [c.id for c in ConversationService(factory).list_filtered(project_id=project_id,
+                                                                                 standalone=False)]
+    if get_turn_manager().busy(conversation_ids):
+        raise HTTPException(status_code=409, detail="une réponse est en cours dans une conversation de ce projet : "
+                                                    "attendez-la ou annulez-la avant de supprimer le projet")
     try:
-        counts = ProjectService(_factory()).delete(project_id, requested_by=Subject.HUMAN)
+        counts = ProjectService(factory).delete(project_id, requested_by=Subject.HUMAN)
     except (ValueError, LookupError) as exc:
         raise _client_error(exc) from exc
     return DataEnvelope(status="real", data={"deleted": True, **counts})
@@ -271,6 +279,32 @@ def create_conversation(payload: ConversationIn) -> DataEnvelope[dict[str, Any]]
     except (ValueError, LookupError) as exc:
         raise _client_error(exc) from exc
     return DataEnvelope(status="real", data=_conversation_out(conversation))
+
+
+@router.get("/assistant/conversations/{conversation_id}", response_model=DataEnvelope[dict[str, Any]])
+def get_conversation(conversation_id: str) -> DataEnvelope[dict[str, Any]]:
+    from apex.conversations.service import ConversationService
+
+    conversation = ConversationService(_factory()).get(conversation_id)
+    if conversation is None:
+        raise HTTPException(status_code=404, detail=f"conversation « {conversation_id} » introuvable")
+    return DataEnvelope(status="real", data=_conversation_out(conversation))
+
+
+@router.delete("/assistant/conversations/{conversation_id}", response_model=DataEnvelope[bool])
+def delete_conversation(conversation_id: str) -> DataEnvelope[bool]:
+    """Supprime la conversation, ses messages et ses tours ; refusée (409) tant qu'une réponse y est en cours."""
+    from apex.api.dependencies import get_turn_manager
+    from apex.conversations.service import ConversationService
+    from apex.policy.model import Subject
+
+    service = ConversationService(_factory())
+    if service.get(conversation_id) is None:
+        raise HTTPException(status_code=404, detail=f"conversation « {conversation_id} » introuvable")
+    if get_turn_manager().busy([conversation_id]):
+        raise HTTPException(status_code=409, detail="une réponse est en cours dans cette conversation : "
+                                                    "attendez-la ou annulez-la avant de la supprimer")
+    return DataEnvelope(status="real", data=service.delete(conversation_id, requested_by=Subject.HUMAN))
 
 
 @router.patch("/assistant/conversations/{conversation_id}", response_model=DataEnvelope[dict[str, Any]])

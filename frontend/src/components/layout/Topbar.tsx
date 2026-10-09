@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import { useGate, useHealth, useMissions } from "../../api/hooks";
 import { IconButton } from "../ui/Button";
@@ -30,6 +31,9 @@ export function Topbar({ verdict }: { verdict: SystemVerdictView }) {
           ☰
         </IconButton>
         <div className="topbar__title">APEX Control Center</div>
+        <Link to="/" className="topbar__assistant-link">
+          ← Assistant
+        </Link>
       </div>
       <GlobalSearch />
       <div className="topbar__status">

@@ -61,6 +61,23 @@ def test_the_built_interface_is_served_at_the_root(dist: Path) -> None:
     assert "hors du build" not in client.get("/../secret.txt").text
 
 
+def test_every_interface_response_carries_a_strict_content_security_policy(dist: Path) -> None:
+    client = TestClient(create_app())
+
+    for path in ("/", "/c/une-conversation", "/assets/app.js", "/assets/missing.js"):
+        headers = client.get(path).headers
+        csp = headers["content-security-policy"]
+        # Aucun script en ligne ni d'une autre origine, aucune connexion hors d'APEX, aucun cadre.
+        assert "script-src 'self'" in csp and "unsafe-inline" not in csp and "unsafe-eval" not in csp
+        assert "connect-src 'self'" in csp and "frame-ancestors 'none'" in csp and "object-src 'none'" in csp
+        assert headers["x-content-type-options"] == "nosniff" and headers["x-frame-options"] == "DENY"
+        assert headers["referrer-policy"] == "no-referrer"
+    error_page = client.get("/ui/login?code=faux")
+    assert error_page.status_code == 401
+    assert "script-src" not in error_page.headers["content-security-policy"]  # default-src 'none' : aucun script
+    assert error_page.headers["content-security-policy"].startswith("default-src 'none'")
+
+
 def test_without_a_build_the_page_says_how_to_build_it(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv(ui.UI_DIST_ENV, str(tmp_path / "absent"))
 

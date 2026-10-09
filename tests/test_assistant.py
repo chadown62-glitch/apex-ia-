@@ -484,6 +484,64 @@ def test_api_full_path_project_conversation_turn_messages(env, monkeypatch, tmp_
     assert client.get(f"/api/v1/assistant/conversations/{conversation['id']}/messages", headers=h).status_code == 404
 
 
+def test_a_conversation_or_project_is_never_deleted_under_a_running_turn(env, monkeypatch, tmp_path) -> None:
+    from fastapi.testclient import TestClient
+
+    import apex.api.dependencies as dependencies
+    from apex.api.app import create_app
+    from apex.api.auth import get_or_create_api_token
+    from apex.projects.service import ProjectService
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(dependencies, "get_session_factory", lambda: env)
+    _no_memory(env)
+    block = threading.Event()
+    manager, _ = _manager(env, [], synchronous=False, block=block)
+    monkeypatch.setattr(dependencies, "_turn_manager", manager)
+    client = TestClient(create_app())
+    h = {"Authorization": f"Bearer {get_or_create_api_token()}"}
+    project = ProjectService(env).create(name="Chantier", description="", created_by=Subject.HUMAN)
+    conversation = _conversation(env, project_id=project.id)
+    assert client.get(f"/api/v1/assistant/conversations/{conversation.id}", headers=h).json()["data"]["title"] == "Essai"
+    assert client.get("/api/v1/assistant/conversations/inconnue", headers=h).status_code == 404
+    _, turn = manager.submit(conversation.id, "Une longue réponse")
+    refused = client.delete(f"/api/v1/assistant/conversations/{conversation.id}", headers=h)
+    assert refused.status_code == 409 and "annulez-la" in refused.json()["detail"]
+    assert client.delete(f"/api/v1/assistant/projects/{project.id}", headers=h).status_code == 409
+    assert manager.cancel(turn.id)
+    deadline = time.monotonic() + 10
+    while manager.get(turn.id).status in ("queued", "running") and time.monotonic() < deadline:
+        time.sleep(0.02)
+    assert client.delete(f"/api/v1/assistant/conversations/{conversation.id}", headers=h).json()["data"] is True
+    assert client.get(f"/api/v1/assistant/conversations/{conversation.id}", headers=h).status_code == 404
+    assert client.delete(f"/api/v1/assistant/projects/{project.id}", headers=h).json()["data"]["deleted"] is True
+    manager.shutdown()
+
+
+def test_simultaneous_submissions_never_create_two_concurrent_turns(env) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    _no_memory(env)
+    conversation = _conversation(env)
+    block = threading.Event()
+    manager, _ = _manager(env, [], synchronous=False, block=block)
+
+    def attempt(i: int) -> str:
+        try:
+            manager.submit(conversation.id, f"Message {i}")
+            return "accepted"
+        except TurnBusy:
+            return "busy"
+
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        outcomes = list(pool.map(attempt, range(6)))
+    assert outcomes.count("accepted") == 1 and outcomes.count("busy") == 5
+    active = [t for t in manager.by_conversation(conversation.id) if t.status in ("queued", "running")]
+    assert len(active) == 1
+    manager.cancel(active[0].id)
+    manager.shutdown()
+
+
 def test_the_runtime_artifact_ships_the_assistant() -> None:
     from runtime_build.selection import RUNTIME_PACKAGES
 

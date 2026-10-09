@@ -1,18 +1,23 @@
+import { useState } from "react";
+
 import { useTheme } from "./useTheme";
 
 export function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const isNight = theme === "night";
+  const label = isNight ? "Passer au thème APEX Dune" : "Passer au thème APEX Night";
 
   return (
     <button
       type="button"
       className="theme-toggle"
-      onClick={toggleTheme}
-      aria-label={isDark ? "Passer au thème clair" : "Passer au thème sombre"}
-      title={isDark ? "Thème clair" : "Thème sombre"}
+      onClick={async () => setSaveError(await toggleTheme())}
+      aria-label={label}
+      title={saveError ? `Thème appliqué sur cet appareil, mais non enregistré : ${saveError}` : label}
+      data-save-error={saveError ? "true" : undefined}
     >
-      <span aria-hidden="true">{isDark ? "☾" : "☀"}</span>
+      <span aria-hidden="true">{isNight ? "☾" : "☀"}</span>
     </button>
   );
 }

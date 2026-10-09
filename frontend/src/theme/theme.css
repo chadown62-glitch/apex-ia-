@@ -1,77 +1,96 @@
-/* APEX Control Center — jetons de design (design tokens).
-   Dark-first (demande explicite d'origine) : la palette sombre est la
-   valeur par défaut de :root ; le mode clair est l'exception, activée par
-   [data-theme="light"] (voir useTheme.ts pour la logique de résolution —
-   préférence explicite > préférence système > dark par défaut, jamais un
-   flash au chargement grâce au script bloquant dans index.html). */
+/* APEX — jetons de design (design tokens), deux thèmes sur UNE architecture.
+   - APEX Night (défaut, :root) : noir nocturne, touches violettes, verre fumé.
+   - APEX Dune ([data-theme="dune"]) : ivoire, crème, sable, verre dépoli — jamais
+     un blanc clinique.
+   Mêmes noms de jetons pour les deux : l'assistant ET le centre de contrôle les
+   consomment, un composant ne connaît jamais le thème actif. Le thème est posé
+   avant le premier rendu par public/theme-init.js, puis piloté par
+   theme/appearance.ts (paramètres serveur, cache local). Les contrastes
+   texte/fond sont vérifiés par theme/contrast.test.ts (WCAG AA). */
 
 :root {
   /* -- surfaces ------------------------------------------------------- */
-  --bg: #0a0d12;
-  --bg-elevated: #10141b;
-  --bg-panel: #141920;
-  --bg-hover: #1b222c;
+  --bg: #07070d;
+  --bg-elevated: #0e0d18;
+  --bg-panel: #12111e;
+  --bg-hover: #1a1829;
   /* Alias sémantiques utilisés par le design system (mêmes valeurs —
-     jamais une seconde échelle de couleurs, juste un nommage plus neutre
-     pour des composants génériques comme Card/Modal/Dropdown). */
+     jamais une seconde échelle de couleurs). */
   --surface: var(--bg-elevated);
   --surface-panel: var(--bg-panel);
   --surface-hover: var(--bg-hover);
-  --surface-overlay: rgba(6, 8, 11, 0.72);
+  --surface-overlay: rgba(4, 3, 10, 0.72);
 
-  --border: #232b36;
-  --border-strong: #2f3946;
+  --border: #24213a;
+  --border-strong: #332f50;
 
-  --text: #e6ebf2;
-  --text-muted: #8b96a5;
-  --text-faint: #5a6577;
-  --text-on-accent: #051119;
+  --text: #ece9f7;
+  --text-muted: #a7a3c2;
+  --text-faint: #8a85a8;
+  --text-on-accent: #120a26;
 
-  --accent: #4da3ff;
-  --accent-dim: #2c6bb0;
-  --accent-rgb: 77, 163, 255;
+  --accent: #a78bfa;
+  --accent-dim: #7c5cd6;
+  /* Survol des boutons pleins : garde le contraste de --text-on-accent (vérifié par contrast.test.ts). */
+  --accent-strong: #c4b5fd;
+  --accent-rgb: 167, 139, 250;
 
-  /* -- vocabulaire DataStatus/Gate/Health (apex.obs.status) — INCHANGÉ,
-     jamais fusionné avec la sévérité générique ci-dessous : deux
-     vocabulaires distincts pour deux questions distinctes. */
-  --status-real: #35d07f;
-  --status-real-bg: rgba(53, 208, 127, 0.12);
-  --status-simulated: #f2b84b;
-  --status-simulated-bg: rgba(242, 184, 75, 0.12);
-  --status-unknown: #8b96a5;
-  --status-unknown-bg: rgba(139, 150, 165, 0.12);
-  --status-planned: #a37cf0;
-  --status-planned-bg: rgba(163, 124, 240, 0.12);
-  --status-fail: #f2554b;
-  --status-fail-bg: rgba(242, 85, 75, 0.12);
-  --status-degraded: #f2b84b;
-  --status-degraded-bg: rgba(242, 184, 75, 0.12);
+  /* -- Liquid Glass ----------------------------------------------------- */
+  --glass-bg: rgba(20, 18, 34, 0.56);
+  --glass-bg-strong: rgba(15, 13, 27, 0.82);
+  --glass-border: rgba(196, 181, 253, 0.12);
+  --glass-highlight: rgba(255, 255, 255, 0.06);
+  --glass-blur: 18px;
+  --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  --glass-fallback: #14121f;
+  --backdrop:
+    radial-gradient(1200px 600px at 78% -10%, rgba(124, 92, 214, 0.22), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(76, 52, 160, 0.16), transparent 60%),
+    linear-gradient(180deg, #07070d 0%, #090813 55%, #06060b 100%);
+  --particle-rgb: 226, 220, 255;
+  --particle-accent-rgb: 167, 139, 250;
+  --bubble-user: rgba(124, 92, 214, 0.22);
+  --bubble-user-border: rgba(167, 139, 250, 0.32);
+  --code-bg: rgba(5, 4, 12, 0.72);
 
-  /* -- sévérité générique UI (Toast, validation de formulaire, alertes) —
-     couleurs délibérément identiques aux tokens status-* équivalents,
-     mais un nom distinct : ce sont deux questions différentes ("l'action a
-     réussi ?" vs "la donnée est-elle réelle ?"), jamais à confondre. */
-  --success: #35d07f;
-  --success-bg: rgba(53, 208, 127, 0.12);
-  --warning: #f2b84b;
-  --warning-bg: rgba(242, 184, 75, 0.12);
-  --error: #f2554b;
-  --error-bg: rgba(242, 85, 75, 0.12);
-  --info: #4da3ff;
-  --info-bg: rgba(77, 163, 255, 0.12);
+  /* -- vocabulaire DataStatus/Gate/Health (apex.obs.status) — jamais
+     fusionné avec la sévérité générique ci-dessous. */
+  --status-real: #4ade80;
+  --status-real-bg: rgba(74, 222, 128, 0.12);
+  --status-simulated: #fbbf24;
+  --status-simulated-bg: rgba(251, 191, 36, 0.12);
+  --status-unknown: #a7a3c2;
+  --status-unknown-bg: rgba(167, 163, 194, 0.12);
+  --status-planned: #c4b5fd;
+  --status-planned-bg: rgba(196, 181, 253, 0.12);
+  --status-fail: #f87171;
+  --status-fail-bg: rgba(248, 113, 113, 0.12);
+  --status-degraded: #fbbf24;
+  --status-degraded-bg: rgba(251, 191, 36, 0.12);
+
+  /* -- sévérité générique UI (Toast, validation, alertes). */
+  --success: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.12);
+  --warning: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.12);
+  --error: #f87171;
+  --error-bg: rgba(248, 113, 113, 0.12);
+  --info: #93c5fd;
+  --info-bg: rgba(147, 197, 253, 0.12);
 
   /* -- APEX status (état système, cf. components/status/ApexStatus.tsx) */
-  --apex-ready: #35d07f;
-  --apex-analyzing: #4da3ff;
-  --apex-learning: #a37cf0;
-  --apex-using-tool: #f2934b;
-  --apex-waiting: #f2b84b;
-  --apex-error: #f2554b;
+  --apex-ready: #4ade80;
+  --apex-analyzing: #93c5fd;
+  --apex-learning: #c4b5fd;
+  --apex-using-tool: #fb923c;
+  --apex-waiting: #fbbf24;
+  --apex-error: #f87171;
 
   /* -- rayons ----------------------------------------------------------- */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
   --radius-full: 999px;
 
   /* -- espacement (échelle 4px) ------------------------------------------ */
@@ -85,9 +104,10 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* -- typographie -------------------------------------------------------- */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  /* -- typographie (polices système : rien n'est téléchargé) --------------- */
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, Inter, Roboto, sans-serif;
+  --font-display: "Segoe UI Variable Display", "Segoe UI", -apple-system, BlinkMacSystemFont, Inter, Roboto, sans-serif;
+  --font-mono: "Cascadia Code", "Cascadia Mono", "SF Mono", Consolas, monospace;
   --text-xs: 11px;
   --text-sm: 12px;
   --text-base: 13px;
@@ -95,16 +115,17 @@
   --text-lg: 16px;
   --text-xl: 20px;
   --text-2xl: 26px;
+  --text-3xl: 34px;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
 
-  /* -- ombres (légères, cohérentes avec un fond sombre) -------------------- */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.44);
-  --shadow-glow-accent: 0 0 0 1px rgba(var(--accent-rgb), 0.4), 0 0 20px rgba(var(--accent-rgb), 0.18);
+  /* -- ombres -------------------------------------------------------------- */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow-accent: 0 0 0 1px rgba(var(--accent-rgb), 0.4), 0 0 24px rgba(var(--accent-rgb), 0.2);
 
   /* -- mouvement ------------------------------------------------------------ */
   --duration-fast: 120ms;
@@ -128,52 +149,79 @@
   --sidebar-width: 248px;
   --sidebar-width-collapsed: 64px;
   --topbar-height: 56px;
+
+  color-scheme: dark;
 }
 
-:root[data-theme="light"] {
-  --bg: #f5f7fa;
-  --bg-elevated: #ffffff;
-  --bg-panel: #ffffff;
-  --bg-hover: #eef1f5;
-  --surface-overlay: rgba(23, 27, 33, 0.4);
-  --border: #dde3ea;
-  --border-strong: #c7d0dc;
+:root[data-theme="dune"] {
+  --bg: #f3ede1;
+  --bg-elevated: #faf6ee;
+  --bg-panel: #f7f1e6;
+  --bg-hover: #ece3d3;
+  --surface-overlay: rgba(60, 46, 28, 0.32);
+  --border: #ddd0b9;
+  --border-strong: #cbb999;
 
-  --text: #171b21;
-  --text-muted: #5a6577;
-  --text-faint: #8b96a5;
-  --text-on-accent: #ffffff;
+  --text: #2b2318;
+  --text-muted: #64553f;
+  --text-faint: #725f45;
+  --text-on-accent: #fffaf0;
 
-  --accent: #1c6fd6;
-  --accent-dim: #4da3ff;
-  --accent-rgb: 28, 111, 214;
+  --accent: #8a5524;
+  --accent-dim: #b07a45;
+  --accent-strong: #6f421a;
+  --accent-rgb: 138, 85, 36;
 
-  --shadow-sm: 0 1px 2px rgba(23, 27, 33, 0.06);
-  --shadow-md: 0 4px 16px rgba(23, 27, 33, 0.08);
-  --shadow-lg: 0 12px 40px rgba(23, 27, 33, 0.14);
+  --glass-bg: rgba(252, 248, 240, 0.58);
+  --glass-bg-strong: rgba(250, 245, 236, 0.86);
+  --glass-border: rgba(122, 96, 60, 0.18);
+  --glass-highlight: rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 10px 40px rgba(92, 70, 38, 0.14);
+  --glass-fallback: #f6f0e4;
+  --backdrop:
+    radial-gradient(1100px 600px at 85% -15%, rgba(214, 186, 140, 0.42), transparent 60%),
+    radial-gradient(900px 520px at -10% 115%, rgba(196, 160, 112, 0.3), transparent 60%),
+    linear-gradient(180deg, #f5efe3 0%, #f0e7d7 60%, #eadfcb 100%);
+  --particle-rgb: 150, 118, 76;
+  --particle-accent-rgb: 196, 150, 96;
+  --bubble-user: rgba(196, 160, 112, 0.24);
+  --bubble-user-border: rgba(138, 85, 36, 0.24);
+  --code-bg: rgba(64, 48, 28, 0.06);
 
-  --focus-ring: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
-}
+  --status-real: #17663b;
+  --status-real-bg: rgba(23, 102, 59, 0.1);
+  --status-simulated: #8a5a00;
+  --status-simulated-bg: rgba(138, 90, 0, 0.1);
+  --status-unknown: #64553f;
+  --status-unknown-bg: rgba(100, 85, 63, 0.1);
+  --status-planned: #6d4bc0;
+  --status-planned-bg: rgba(109, 75, 192, 0.1);
+  --status-fail: #a3342b;
+  --status-fail-bg: rgba(163, 52, 43, 0.1);
+  --status-degraded: #8a5a00;
+  --status-degraded-bg: rgba(138, 90, 0, 0.1);
 
-/* Système sans préférence explicite ni choix persisté — le script
-   bloquant (index.html) gère déjà le cas normal ; ce bloc ne sert que de
-   filet si JS est indisponible et data-theme absent. */
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]):not([data-theme="light"]) {
-    --bg: #f5f7fa;
-    --bg-elevated: #ffffff;
-    --bg-panel: #ffffff;
-    --bg-hover: #eef1f5;
-    --border: #dde3ea;
-    --border-strong: #c7d0dc;
-    --text: #171b21;
-    --text-muted: #5a6577;
-    --text-faint: #8b96a5;
-    --text-on-accent: #ffffff;
-    --accent: #1c6fd6;
-    --accent-dim: #4da3ff;
-    --accent-rgb: 28, 111, 214;
-  }
+  --success: #17663b;
+  --success-bg: rgba(23, 102, 59, 0.1);
+  --warning: #8a5a00;
+  --warning-bg: rgba(138, 90, 0, 0.1);
+  --error: #a3342b;
+  --error-bg: rgba(163, 52, 43, 0.1);
+  --info: #2f5d8a;
+  --info-bg: rgba(47, 93, 138, 0.1);
+
+  --apex-ready: #17663b;
+  --apex-analyzing: #2f5d8a;
+  --apex-learning: #6d4bc0;
+  --apex-using-tool: #9a4f12;
+  --apex-waiting: #8a5a00;
+  --apex-error: #a3342b;
+
+  --shadow-sm: 0 1px 2px rgba(92, 70, 38, 0.08);
+  --shadow-md: 0 4px 16px rgba(92, 70, 38, 0.1);
+  --shadow-lg: 0 12px 40px rgba(92, 70, 38, 0.16);
+
+  color-scheme: light;
 }
 
 * {
@@ -215,16 +263,37 @@ button {
   border-radius: var(--radius-sm);
 }
 
-/* Respect absolu de prefers-reduced-motion — jamais contourné par un
-   composant individuel : toute transition/animation déclarée ailleurs doit
-   rester couverte par cette règle globale. */
+/* Réduction des animations — réglage « Réduire les animations » de
+   l'application (data-reduce-motion, posé par theme/appearance.ts) :
+   - "always" : toujours réduites ;
+   - "system" (défaut) : suit prefers-reduced-motion du système ;
+   - "never" : choix explicite de l'utilisateur, le système est ignoré.
+   Aucun composant ne contourne ces règles individuellement. */
+:root[data-reduce-motion="always"] *,
+:root[data-reduce-motion="always"] *::before,
+:root[data-reduce-motion="always"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root:not([data-reduce-motion="never"]) *,
+  :root:not([data-reduce-motion="never"]) *::before,
+  :root:not([data-reduce-motion="never"]) *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* « Animations » désactivées : plus d'animations décoratives (les
+   transitions d'état courtes restent, elles portent de l'information). */
+:root[data-animations="off"] *,
+:root[data-animations="off"] *::before,
+:root[data-animations="off"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
 }

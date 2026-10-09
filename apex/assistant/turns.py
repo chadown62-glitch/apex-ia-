@@ -185,6 +185,9 @@ class TurnManager:
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="apex-turn")
         self._cancels: dict[str, threading.Event] = {}
         self._lock = threading.Lock()
+        #: Sérialise « vérifier qu'aucun tour n'est actif, puis créer le tour » : deux envois simultanés
+        #: dans la même conversation ne créent jamais deux tours concurrents.
+        self._submit_lock = threading.Lock()
         self._sandbox_cache: tuple[float, Any] | None = None
 
     # -- interface publique ----------------------------------------------------------------------------
@@ -204,30 +207,39 @@ class TurnManager:
         conversation = ConversationRepository(self._session_factory).get(conversation_id)
         if conversation is None:
             raise LookupError(f"conversation « {conversation_id} » introuvable")
-        with session_scope(self._session_factory) as session:
-            active = [t for t in ConversationTurnRepository(session).by_conversation(conversation_id, limit=5)
-                      if t.status in ("queued", "running")]
-        if active:
-            raise TurnBusy("une réponse est déjà en cours dans cette conversation : attendez-la ou annulez-la")
         mode = get_mode(conversation.mode)
-        user_message = MessageRepository(self._session_factory).create(
-            conversation_id=conversation_id, role=MessageRole.USER, content=content, model_id=None,
-            provider_id=None, status=MessageStatus.REAL, error=None, meta={"mode": mode.id})
-        ConversationRepository(self._session_factory).touch(conversation_id)
-        turn_id = str(uuid.uuid4())
-        with session_scope(self._session_factory) as session:
-            row = ConversationTurnRepository(session).create(
-                id=turn_id, conversation_id=conversation_id, user_message_id=user_message.id, mode=mode.id,
-                created_at=_now())
-            view = TurnView.from_row(row)
-        with self._lock:
-            self._cancels[turn_id] = threading.Event()
+        with self._submit_lock:
+            if self.busy([conversation_id]):
+                raise TurnBusy("une réponse est déjà en cours dans cette conversation : attendez-la ou annulez-la")
+            user_message = MessageRepository(self._session_factory).create(
+                conversation_id=conversation_id, role=MessageRole.USER, content=content, model_id=None,
+                provider_id=None, status=MessageStatus.REAL, error=None, meta={"mode": mode.id})
+            ConversationRepository(self._session_factory).touch(conversation_id)
+            turn_id = str(uuid.uuid4())
+            with session_scope(self._session_factory) as session:
+                row = ConversationTurnRepository(session).create(
+                    id=turn_id, conversation_id=conversation_id, user_message_id=user_message.id, mode=mode.id,
+                    created_at=_now())
+                view = TurnView.from_row(row)
+            with self._lock:
+                self._cancels[turn_id] = threading.Event()
         if self._synchronous:
             self._safe_execute(turn_id)
             view = self.get(turn_id) or view
         else:
             self._executor.submit(self._safe_execute, turn_id)
         return user_message, view
+
+    def busy(self, conversation_ids: list[str]) -> bool:
+        """Vrai si l'une de ces conversations a un tour en file ou en cours (suppression refusée, nouvel envoi
+        refusé) : une conversation n'est jamais supprimée sous un tour qui écrit encore dedans."""
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ConversationTurnRepository
+
+        with session_scope(self._session_factory) as session:
+            repo = ConversationTurnRepository(session)
+            return any(t.status in ("queued", "running")
+                       for conversation_id in conversation_ids for t in repo.by_conversation(conversation_id, limit=5))
 
     def get(self, turn_id: str) -> TurnView | None:
         from apex.db.engine import session_scope

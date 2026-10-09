@@ -1,6 +1,8 @@
 .global-search {
   position: relative;
   width: 280px;
+  min-width: 0;
+  flex-shrink: 1;
 }
 
 .global-search__input {

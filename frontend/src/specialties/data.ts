@@ -50,7 +50,7 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     label: "Home",
     icon: "🏠",
     description: "Vue d'ensemble : santé système, Gate, agents, événements récents.",
-    path: "/",
+    path: "/control",
     status: "real",
     devStage: "connected",
     category: "workspace",

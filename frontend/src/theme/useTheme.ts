@@ -1,66 +1,33 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
-export type Theme = "dark" | "light";
+import { assistantApi, errorMessage } from "../assistant/api";
+import { setAppearance, useAppearance, type Appearance, type Theme } from "./appearance";
 
-const STORAGE_KEY = "apex-theme";
+export type { Theme } from "./appearance";
 
-function systemPrefersLight(): boolean {
-  return typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: light)").matches;
-}
-
-function readStoredTheme(): Theme | null {
+/**
+ * Applique un changement d'apparence tout de suite (DOM + cache local) puis l'enregistre dans les
+ * paramètres du backend. Renvoie `null` si l'enregistrement a réussi, sinon le message d'erreur — à
+ * afficher par l'appelant : un échec n'est jamais présenté comme un enregistrement.
+ */
+export async function saveAppearance(changes: Partial<Appearance>): Promise<string | null> {
+  setAppearance(changes);
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored === "light" || stored === "dark" ? stored : null;
-  } catch {
+    await assistantApi.updateSettings({ appearance: changes });
     return null;
+  } catch (error) {
+    return errorMessage(error);
   }
 }
 
-/** Même ordre de priorité que le script bloquant d'index.html : choix
- * explicite persisté > préférence système > "dark" par défaut. */
-function resolveInitialTheme(): Theme {
-  return readStoredTheme() ?? (systemPrefersLight() ? "light" : "dark");
-}
-
-function applyTheme(theme: Theme): void {
-  document.documentElement.setAttribute("data-theme", theme);
-}
-
-/**
- * Thème APEX — persisté (localStorage), reflète le DOM déjà posé par le
- * script bloquant d'index.html (jamais de flash au premier rendu). Tant
- * qu'aucun choix explicite n'a été fait, suit en direct la préférence
- * système (écoute `matchMedia`) ; dès que l'utilisateur bascule une fois,
- * ce choix est persisté et prime définitivement sur le système.
- */
-export function useTheme(): { theme: Theme; setTheme: (t: Theme) => void; toggleTheme: () => void } {
-  const [theme, setThemeState] = useState<Theme>(() => resolveInitialTheme());
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (readStoredTheme() !== null) return;
-    const media = window.matchMedia("(prefers-color-scheme: light)");
-    const onChange = () => setThemeState(media.matches ? "light" : "dark");
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
-
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* stockage indisponible — le thème reste actif pour cette session. */
-    }
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [theme, setTheme]);
-
+/** Thème APEX (Night | Dune) — même état pour toute l'interface (theme/appearance.ts). */
+export function useTheme(): {
+  theme: Theme;
+  setTheme: (t: Theme) => Promise<string | null>;
+  toggleTheme: () => Promise<string | null>;
+} {
+  const { theme } = useAppearance();
+  const setTheme = useCallback((next: Theme) => saveAppearance({ theme: next }), []);
+  const toggleTheme = useCallback(() => setTheme(theme === "night" ? "dune" : "night"), [theme, setTheme]);
   return { theme, setTheme, toggleTheme };
 }

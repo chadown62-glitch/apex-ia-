@@ -44,8 +44,8 @@
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: var(--accent-dim);
-  border-color: var(--accent-dim);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 .btn--secondary {
@@ -401,8 +401,10 @@
 }
 
 .modal-panel {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--glass-bg-strong);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   max-width: 520px;

@@ -56,6 +56,19 @@ function extractDetail(body: unknown, status: number): string {
   if (typeof body === "object" && body !== null && "detail" in body) {
     const detail = (body as { detail: unknown }).detail;
     if (typeof detail === "string") return detail;
+    // Validation FastAPI (422) : liste d'erreurs `{loc, msg}` — rendue lisible, jamais « HTTP 422 » seul.
+    if (Array.isArray(detail)) {
+      const messages = detail
+        .map((item) => {
+          if (typeof item !== "object" || item === null) return null;
+          const { loc, msg } = item as { loc?: unknown; msg?: unknown };
+          if (typeof msg !== "string") return null;
+          const field = Array.isArray(loc) ? loc.filter((part) => part !== "body").join(".") : "";
+          return field ? `${field} : ${msg}` : msg;
+        })
+        .filter((m): m is string => Boolean(m));
+      if (messages.length > 0) return messages.join(" ; ");
+    }
   }
   return `HTTP ${status}`;
 }

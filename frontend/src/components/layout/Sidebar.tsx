@@ -49,7 +49,7 @@ export function Sidebar({ specialties }: { specialties: Specialty[] }) {
                     <NavLink
                       to={specialty.path}
                       className={({ isActive }) => `sidebar__link ${isActive ? "sidebar__link--active" : ""}`}
-                      end={specialty.path === "/"}
+                      end={specialty.path === "/control"}
                       title={collapsed ? specialty.label : undefined}
                       onClick={() => setMobileOpen(false)}
                     >
