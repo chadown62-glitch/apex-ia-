@@ -15,7 +15,6 @@ Le Judge refuse :
 
 from __future__ import annotations
 
-import ctypes
 import hashlib
 import json
 import math
@@ -27,6 +26,7 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 
+from apex.brain.model import model_fingerprint
 from apex.knowledge.filters import canonical
 from apex.neural.dataset import Split, TrainingDataset
 from apex.neural.model import IGNORE_INDEX, ApexLM
@@ -144,16 +144,6 @@ class EvalReport:
         else:
             out["solved"] = round(self.token_accuracy, 5)  # fraction pondérée des tâches résolues
         return out
-
-
-def model_fingerprint(model: ApexLM) -> str:
-    """SHA-256 des poids réels (octets des tenseurs, dans l'ordre du state_dict)."""
-    digest = hashlib.sha256()
-    for name, tensor in model.state_dict().items():
-        data = tensor.detach().to("cpu").contiguous()
-        digest.update(name.encode())
-        digest.update(ctypes.string_at(data.data_ptr(), data.numel() * data.element_size()))
-    return "sha256:" + digest.hexdigest()
 
 
 @torch.no_grad()

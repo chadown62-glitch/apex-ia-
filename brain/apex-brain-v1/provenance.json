@@ -1,0 +1,69 @@
+{
+  "name": "experiment-002:v1",
+  "description": "Cerveau APEX : ApexLM, le réseau de neurones propre à APEX (tokenizer BPE d'APEX, aucun poids externe)",
+  "registry": {
+    "file": "docs/neural/registry.jsonl",
+    "index": 0,
+    "hash": "sha256:9545bd0fbe909ce9194c3a77959c1d454fe32e21efc8e3234d2f698c16d86306",
+    "decision": "accept",
+    "promoted": true,
+    "at": "2026-09-26T14:31:46.376183+00:00"
+  },
+  "experiment_report": "docs/neural/experiment-002.json",
+  "dataset_fingerprint": "sha256:0de29c88d42f7926403253c43a36d3a62bd7b37a382124c08d3a9c29072eed93",
+  "tokenizer_fingerprint": "d04294c7a7727714057e3f6b1aed94bf76193a7ec4154b0dfd5d87b83f3aa0a1",
+  "training": {
+    "step": 600,
+    "seed": 0,
+    "software": {
+      "apex": "0.1.2",
+      "torch": "2.14.0+cu130",
+      "python": "3.12.3",
+      "platform": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39"
+    }
+  },
+  "measures": {
+    "heldout": {
+      "benchmark": "heldout",
+      "benchmark_fingerprint": "sha256:73bceafeb56c3bbbc104d33220da672d27add9e289aecb639e6225c17ec2ada3",
+      "bits_per_byte": 2.53844,
+      "documents": 140,
+      "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+      "token_accuracy": 0.2475
+    },
+    "heldout_apex_docs": {
+      "benchmark": "heldout_apex_docs",
+      "benchmark_fingerprint": "sha256:027e4cd4c82a1394905ea2e479ef882c6531c50260873a4510eaa1ec3298d23b",
+      "bits_per_byte": 2.63978,
+      "documents": 81,
+      "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+      "token_accuracy": 0.24311
+    },
+    "heldout_stdlib": {
+      "benchmark": "heldout_stdlib",
+      "benchmark_fingerprint": "sha256:e5d671da420a41345837dc184c24dd328e206300b0fe9213c68a06e764935bba",
+      "bits_per_byte": 2.40071,
+      "documents": 59,
+      "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+      "token_accuracy": 0.25438
+    },
+    "validation": {
+      "benchmark": "validation",
+      "benchmark_fingerprint": "sha256:779eeab94cb9f73747dbf14a1e8e7756d31eb1959ed61eaa80c5e33bf52fc7c5",
+      "bits_per_byte": 2.89142,
+      "documents": 68,
+      "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+      "token_accuracy": 0.20629
+    }
+  },
+  "reproduction": "Ré-entraîné le 09/10/2026 avec le code et les documents du commit 59cdbd1 (état du 26/09/2026, lus à leur chemin d'origine /home/user/apex-ia-/docs), même recette (scripts/apex_neural_experiment.py --docs-mode train, graine 0, 600 pas) : empreintes des poids, du dataset et du tokenizer IDENTIQUES à celles du registre. Le fichier de checkpoint lui-même diffère (sha256 4e5f0498… au lieu de 7198b3ce… : il contient aussi l'horodatage et l'état de l'optimiseur), pas les poids.",
+  "limitations": [
+    "pré-entraîné à prédire la suite de textes techniques seulement (docstrings de la bibliothèque standard Python, documentation d'APEX) ; jamais entraîné à suivre des consignes ni à converser",
+    "1,9 M paramètres, contexte de 128 jetons : il continue le texte reçu ; sa sortie contient beaucoup de mots inventés",
+    "mesuré : prédiction de texte technique jamais vu (bits par octet) ; NON mesuré : raisonnement, code, compréhension, utilité d'une réponse"
+  ],
+  "sample_illustration_only": "Return the class formatter object, nuno and encords or non-linked to\nwhen a nameslines is created in the name (n",
+  "weights_sha256": "a411f4e3f06e56ec5e5cd18c476c51c9253076afa65ec74feef6c4b688ec162f",
+  "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+  "parameters": 1918656
+}

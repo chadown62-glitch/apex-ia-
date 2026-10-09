@@ -43,6 +43,10 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "artifacts",
         # Assistant 0.4.0 (projets, conversations, modes, paramètres, tours) — n'importe que du Runtime.
         "assistant",
+        # Cerveau APEX en service (0.4.1, choix de l'utilisateur) : INFÉRENCE seulement — architecture, tokenizer et
+        # chargement des poids d'ApexLM. Son entraînement, ses datasets et son évaluation restent dans `neural`
+        # (recherche), qui réexporte ces définitions (une seule source). N'importe que torch et la bibliothèque standard.
+        "brain",
         "cli",
         "config",
         "conversations",

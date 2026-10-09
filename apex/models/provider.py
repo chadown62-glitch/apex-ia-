@@ -66,6 +66,10 @@ def get_default_provider(endpoint: ModelEndpoint) -> ModelProvider:
         from apex.models.native import NativeTransformersProvider
 
         return NativeTransformersProvider(endpoint)
+    if backend.adapter == "apex_brain":
+        from apex.models.apex_brain import ApexBrainProvider
+
+        return ApexBrainProvider(endpoint)
     return OpenAICompatibleProvider(endpoint)
 
 

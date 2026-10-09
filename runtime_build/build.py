@@ -121,6 +121,12 @@ def _assemble_common(src_root: Path, out_dir: Path) -> None:
     # Configuration du profil autonome (APEX.exe) : même schéma que config.yaml, sans infrastructure serveur.
     shutil.copy2(src_root / "config.standalone.yaml", out_dir / "config.standalone.yaml")
 
+    # Cerveau APEX servi (0.4.1) : poids exportés d'une version PROMUE du registre (`brain/<nom>/`, safetensors,
+    # jamais un checkpoint d'entraînement), vérifiés à chaque chargement (SHA-256 du fichier, empreinte des poids).
+    brain = src_root / "brain"
+    if brain.is_dir():
+        shutil.copytree(brain, out_dir / "brain")
+
     frontend_dist = src_root / "frontend" / "dist"
     if frontend_dist.is_dir():
         shutil.copytree(frontend_dist, out_dir / "frontend_dist")

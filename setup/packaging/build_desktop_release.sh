@@ -27,7 +27,7 @@ started=$(date +%s)
 
 log "APEX Desktop $VERSION (protocole Panel $PROTOCOL)"
 COMMIT=$(git -C "$REPO_ROOT" rev-parse HEAD)
-DIRTY=$([[ -n "$(git -C "$REPO_ROOT" status --porcelain -- setup apex scripts runtime_build migrations frontend config.standalone.yaml alembic.ini)" ]] && echo true || echo false)
+DIRTY=$([[ -n "$(git -C "$REPO_ROOT" status --porcelain -- setup apex scripts runtime_build migrations frontend brain config.standalone.yaml alembic.ini)" ]] && echo true || echo false)
 log "commit $COMMIT (modifications non commitées dans setup/apex/scripts : $DIRTY)"
 
 # 1. Publication + contrôles (PE, aucun .pdb, aucun chemin de développement)
@@ -120,6 +120,10 @@ manifest = {
                              for k in ("release", "source", "source_commit", "head_commit", "content_hash_sha256")},
         "python_runtime": json.load(open(os.path.join(app, "runtime", "python-runtime.json")))["python"],
         "requirements_lock_sha256": sha(os.path.join(app, "runtime", "requirements-windows.lock")),
+        # Cerveau APEX servi (0.4.1) : version promue du registre, poids vérifiés à chaque chargement.
+        "brain": {k: json.load(open(os.path.join(app, "brain", "apex-brain-v1", "provenance.json"))).get(k)
+                  for k in ("name", "weights_sha256", "model_fingerprint", "parameters")}
+                 if os.path.isfile(os.path.join(app, "brain", "apex-brain-v1", "provenance.json")) else None,
         "files": sum(len(ns) for _, _, ns in os.walk(app)),
     },
     "install": {"scope": "utilisateur courant, sans administrateur", "directory": "%LOCALAPPDATA%\\Programs\\APEX",

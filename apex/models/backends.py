@@ -12,6 +12,9 @@ adaptateurs LoRA) SANS aucun faux backend :
 - **Natif en processus (`transformers`)** : IMPLÉMENTÉ depuis le 06/10/2026 (`apex.models.native`) — poids
   chargés dans le processus APEX, aucun serveur de modèles. Quantification : poids tels que distribués (CPU
   float32, GPU bf16) ; 4/8 bits non implémentés.
+- **Cerveau APEX (`apex_brain`)** : IMPLÉMENTÉ le 09/10/2026 (`apex.models.apex_brain`) — le réseau propre à
+  APEX (`apex.brain`), servi en processus ; EXPÉRIMENTAL (pré-entraîné, jamais instruit à converser). Jamais
+  candidat d'un rôle de la configuration : seulement choisi explicitement dans l'assistant.
 - **AirLLM** (chargement couche par couche) : PLANNED. Un endpoint qui le demande obtient un fournisseur
   honnêtement INDISPONIBLE (`UnavailableRuntimeProvider`) — jamais redirigé vers un adaptateur HTTP qui ne
   parlerait pas son protocole, jamais une réponse simulée.
@@ -60,6 +63,9 @@ BACKENDS: tuple[RuntimeBackend, ...] = (
     RuntimeBackend("transformers", BackendStatus.IMPLEMENTED, "native",
                    "inférence NATIVE dans le processus APEX (PyTorch + transformers), sans serveur de modèles",
                    "PEFT en processus — non implémenté"),
+    RuntimeBackend("apex_brain", BackendStatus.IMPLEMENTED, "apex_brain",
+                   "Cerveau APEX : ApexLM, le réseau propre à APEX, en processus — EXPÉRIMENTAL (pré-entraîné, "
+                   "pas instruit à converser)", "non applicable"),
 )
 _BY_RUNTIME = {b.runtime: b for b in BACKENDS}
 
