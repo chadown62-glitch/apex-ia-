@@ -68,7 +68,7 @@ export function useSystemVerdict(): { view: SystemVerdictView; status: SystemSta
 const STATE_CLASS: Record<string, string> = {
   ready: "real",
   degraded: "degraded",
-  offline: "unknown",
+  offline: "offline",
   error: "fail",
   unknown: "unknown",
 };

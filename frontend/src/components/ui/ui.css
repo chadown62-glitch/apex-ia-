@@ -200,8 +200,11 @@
 /* -- Card ------------------------------------------------------------------- */
 
 .ui-card {
-  background: var(--surface-panel);
-  border: 1px solid var(--border);
+  background: var(--glass-sheen), var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   transition: border-color var(--duration-base) var(--ease-standard), box-shadow var(--duration-base) var(--ease-standard);
@@ -212,8 +215,7 @@
 }
 
 .ui-card--interactive:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-sm);
+  border-color: rgba(var(--accent-rgb), 0.38);
 }
 
 /* -- Skeleton ------------------------------------------------------------------ */

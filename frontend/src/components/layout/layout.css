@@ -1,10 +1,14 @@
 .app-shell {
+  position: relative;
   display: flex;
   height: 100vh;
   overflow: hidden;
 }
 
+/* Le fond (soie / ciel, theme/Backdrop) est fixe derrière (z-index 0) ; barre latérale et contenu au-dessus. */
 .app-shell__main {
+  position: relative;
+  z-index: 1;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -20,10 +24,15 @@
 /* -- sidebar --------------------------------------------------------- */
 
 .sidebar {
+  position: relative;
+  z-index: 2;
   width: var(--sidebar-width);
   flex-shrink: 0;
-  background: var(--bg-elevated);
-  border-right: 1px solid var(--border);
+  background: var(--glass-sheen), var(--glass-bg);
+  border-right: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset -1px 0 0 var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -45,7 +54,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-border);
   min-height: var(--topbar-height);
 }
 
@@ -111,7 +120,8 @@
   align-items: center;
   gap: 10px;
   padding: 9px 10px;
-  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   text-decoration: none;
   font-size: var(--text-base);
@@ -120,13 +130,16 @@
 }
 
 .sidebar__link:hover {
-  background: var(--surface-hover);
+  background: rgba(var(--accent-rgb), 0.07);
   color: var(--text);
 }
 
+/* Entrée active : pastille de verre (maquettes) — reflet, liseré, ombre douce. */
 .sidebar__link--active {
-  background: rgba(var(--accent-rgb), 0.14);
-  color: var(--accent);
+  background: var(--glass-sheen), rgba(var(--accent-rgb), 0.12);
+  border-color: var(--glass-border);
+  box-shadow: 0 4px 14px rgba(var(--accent-rgb), 0.12), inset 0 1px 0 var(--glass-highlight);
+  color: var(--text);
 }
 
 .sidebar__icon {
@@ -164,8 +177,11 @@
   gap: var(--space-4);
   justify-content: space-between;
   padding: 0 var(--space-6);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--glass-border);
+  background: var(--glass-sheen), var(--glass-bg);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
 }
 
 .topbar__left {
@@ -181,9 +197,9 @@
 }
 
 .topbar__title {
-  font-size: var(--text-base);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
-  color: var(--text-muted);
+  color: var(--text);
   letter-spacing: 0.03em;
   white-space: nowrap;
 }
@@ -233,8 +249,9 @@
   width: 30px;
   height: 30px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-  background: transparent;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-sheen), var(--glass-bg);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
   color: var(--text-muted);
   cursor: pointer;
   font-size: var(--text-md);

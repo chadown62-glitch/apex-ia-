@@ -1,7 +1,11 @@
+/* Panneaux et tuiles : verre (recette de theme.css) — reflet en haut, liseré lumineux, flou du fond. */
 .panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  background: var(--glass-sheen), var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
   overflow: hidden;
   transition: border-color var(--duration-base) var(--ease-standard);
 }
@@ -11,7 +15,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .panel__title {
@@ -32,10 +36,15 @@
 }
 
 .stat-card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  background: var(--glass-sheen), var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -43,8 +52,28 @@
   transition: border-color var(--duration-base) var(--ease-standard), transform var(--duration-base) var(--ease-standard);
 }
 
+/* Bulle de verre décorative, à droite (maquettes) : jamais devant le texte, jamais cliquable. */
+.stat-card::after {
+  content: "";
+  position: absolute;
+  right: -22px;
+  top: 50%;
+  width: 112px;
+  height: 112px;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: var(--orb, none);
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.stat-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 .stat-card:hover {
-  border-color: var(--border-strong);
+  border-color: rgba(var(--accent-rgb), 0.38);
   transform: translateY(-1px);
 }
 
@@ -67,10 +96,29 @@
 }
 
 .stat-card__value {
-  font-size: 24px;
-  font-weight: 650;
+  font-size: 28px;
+  font-weight: 700;
   color: var(--text);
   line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+/* Ton de la valeur, déduit de la valeur elle-même (StatCard) : OK/PASS en vert, échec en rouge,
+   inconnu atténué — jamais une couleur sans le mot qui la justifie. */
+.stat-card__value[data-tone="ok"] {
+  color: var(--success);
+}
+
+.stat-card__value[data-tone="fail"] {
+  color: var(--error);
+}
+
+.stat-card__value[data-tone="warn"] {
+  color: var(--warning);
+}
+
+.stat-card__value[data-tone="unknown"] {
+  color: var(--text-muted);
 }
 
 .stat-card__bottom {

@@ -2,19 +2,7 @@
    seules les valeurs des jetons changent. Flou (backdrop-filter) réservé aux grandes surfaces (barre latérale,
    en-têtes, saisie, panneaux) pour rester léger ; les messages utilisent un verre sans flou. */
 
-.glass {
-  background: linear-gradient(180deg, var(--glass-highlight), transparent 42%), var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow), inset 0 1px 0 var(--glass-highlight);
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
-}
-
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .glass {
-    background: var(--glass-bg-strong);
-  }
-}
+/* `.glass` : recette commune définie dans theme/theme.css. */
 
 .ax-sr {
   position: absolute;
@@ -67,20 +55,6 @@
 
 .ax-shell.is-collapsed {
   --ax-sidebar-w: 76px;
-}
-
-.ax-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: var(--backdrop);
-  pointer-events: none;
-}
-
-.ax-backdrop__canvas {
-  width: 100%;
-  height: 100%;
-  display: block;
 }
 
 .ax-skip {

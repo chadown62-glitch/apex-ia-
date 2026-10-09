@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { SPECIALTIES } from "../../specialties/registry";
+import { Backdrop } from "../../theme/Backdrop";
 import { useSystemVerdict } from "../status/SystemVerdict";
 import { Sidebar } from "./Sidebar";
 import { SidebarProvider } from "./SidebarContext";
@@ -12,6 +13,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <div className="app-shell">
+        <Backdrop />
         <Sidebar specialties={SPECIALTIES} />
         <div className="app-shell__main">
           <Topbar verdict={view} />

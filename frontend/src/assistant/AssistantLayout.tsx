@@ -9,7 +9,7 @@ import { Outlet, useLocation } from "react-router-dom";
 
 import { useSystemVerdict } from "../components/status/SystemVerdict";
 import { AssistantSidebar } from "./AssistantSidebar";
-import { Backdrop } from "./Backdrop";
+import { Backdrop } from "../theme/Backdrop";
 import { IconMenu } from "./Icons";
 import "./assistant.css";
 

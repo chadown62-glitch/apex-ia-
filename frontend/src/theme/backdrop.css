@@ -1,0 +1,28 @@
+/* Fond d'APEX (theme/Backdrop.tsx) — commun à l'assistant et au centre de contrôle. */
+.ax-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: var(--backdrop);
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ax-backdrop__art,
+.ax-backdrop__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Le décor apparaît en fondu une fois peint (aucun flash) ; sans canvas, le dégradé reste. */
+.ax-backdrop__art {
+  opacity: 0;
+  transition: opacity var(--duration-slow) var(--ease-standard);
+}
+
+.ax-backdrop__art[data-painted="true"] {
+  opacity: 1;
+}

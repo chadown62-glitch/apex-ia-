@@ -28,6 +28,16 @@ describe("theme tokens — WCAG contrast measured on theme.css", () => {
       }
     });
 
+    it(`${name}: status pills (READY, OFFLINE, ERROR, DEGRADED) reach AA on the cards and their fallback`, () => {
+      for (const surface of ["bg", "bg-elevated", "bg-panel", "glass-fallback"]) {
+        for (const fg of ["status-real", "status-offline", "status-fail", "status-degraded", "status-unknown"]) {
+          const result = contrast(theme[fg], theme[surface]);
+          expect(result, `${fg}/${surface}`).not.toBeNull();
+          expect(result!.ratio, `${name} ${fg} ${theme[fg]} sur ${surface} ${theme[surface]}`).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+
     it(`${name}: faint text stays readable (≥ 4.5:1 on the page background) and accent buttons are legible`, () => {
       expect(contrast(theme["text-faint"], theme.bg)!.ratio).toBeGreaterThanOrEqual(4.5);
       expect(contrast(theme["text-on-accent"], theme.accent)!.ratio).toBeGreaterThanOrEqual(4.5);

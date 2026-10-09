@@ -1,6 +1,10 @@
 /**
- * Fond d'APEX — dégradé du thème (CSS `--backdrop`) et, si les particules sont activées, un canvas léger :
- * ciel étoilé discret (Night) ou poussière de sable en suspension (Dune).
+ * Fond d'APEX, commun à l'assistant et au centre de contrôle :
+ * 1. dégradé du thème (CSS `--backdrop`), visible immédiatement et sans canvas ;
+ * 2. décor peint UNE fois (`ambient.ts`) : soie ivoire (Dune) ou ciel profond et nébuleuse (Night), repeint
+ *    seulement au changement de thème ou de taille de fenêtre — jamais animé ;
+ * 3. si les particules sont activées, un canvas léger par-dessus : étoiles qui scintillent (Night) ou
+ *    poussière de sable en suspension (Dune).
  *
  * Sobriété : ~70 points au plus, 30 images/s maximum, résolution plafonnée (DPR ≤ 1,5), pause quand la
  * fenêtre est masquée. Sans mouvement autorisé (animations désactivées, « réduire les animations », ou
@@ -9,7 +13,9 @@
 
 import { useEffect, useRef } from "react";
 
-import { motionAllowed, useAppearance, type Theme } from "../theme/appearance";
+import { paintAmbient } from "./ambient";
+import { motionAllowed, useAppearance, type Theme } from "./appearance";
+import "./backdrop.css";
 
 interface Particle {
   x: number;
@@ -44,7 +50,28 @@ function cssRgb(name: string, fallback: string): string {
 export function Backdrop() {
   const appearance = useAppearance();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const artRef = useRef<HTMLCanvasElement>(null);
   const animate = motionAllowed(appearance);
+
+  useEffect(() => {
+    const art = artRef.current;
+    if (!art) return;
+    let timer = 0;
+    const paint = () => {
+      const painted = paintAmbient(art, appearance.theme, window.innerWidth, window.innerHeight, window.devicePixelRatio);
+      art.dataset.painted = painted ? "true" : "false";
+    };
+    paint();
+    const onResize = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(paint, 180); // une seule repeinture à la fin d'un redimensionnement
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [appearance.theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -117,6 +144,7 @@ export function Backdrop() {
 
   return (
     <div className="ax-backdrop" aria-hidden="true">
+      <canvas ref={artRef} className="ax-backdrop__art" />
       {appearance.particles && <canvas ref={canvasRef} className="ax-backdrop__canvas" data-animated={animate ? "true" : "false"} />}
     </div>
   );
