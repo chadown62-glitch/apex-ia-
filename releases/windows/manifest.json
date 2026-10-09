@@ -1,32 +1,32 @@
 {
   "product": "APEX (APEX.exe : Panel + application APEX autonome)",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "panel_protocol": 1,
   "architecture": "win-x64",
   "installer": {
-    "file": "APEX-Setup-x64-v0.4.0.exe",
-    "sha256": "925079cb4f92a091e329326ee33b798da35e65f4b65c5171454d5a7c73a3144c",
-    "bytes": 33157419
+    "file": "APEX-Setup-x64-v0.4.1.exe",
+    "sha256": "7644172359d690afa27c7b603d7f8b3c2d550f78047423441d1c2557a15c19ad",
+    "bytes": 40506564
   },
   "panel": {
     "executable": {
       "file": "APEX.exe",
-      "sha256": "d582d3879ace763f411684c432576861720e1e5e9aa9abeddcfeab5141bddd29"
+      "sha256": "e45670d996f27669dfc168bf445239d8db55a4149937894f5a24bcaaa5fc0f85"
     },
     "assembly": {
       "file": "APEX.dll",
-      "sha256": "e548cf41b3817b2ee0639a5a2591e182109134055303c73bca4dd4a66acf698c"
+      "sha256": "26ab445c881c12b2a5764d7506a7bd3a5067177183e01e27656ca983b7ae62a0"
     },
-    "files": 213,
-    "bytes": 99328184
+    "files": 217,
+    "bytes": 100990851
   },
   "application": {
     "runtime_artifact": {
       "release": true,
       "source": "commit",
-      "source_commit": "50bfe92103965666df4fd6ee083619cbe1d8bce0",
+      "source_commit": "439e108989fc64afa66eaff965ab58d6885e6e87",
       "head_commit": null,
-      "content_hash_sha256": "3c309285f8c600277d6f28a0942c30dd246de192318bbc379717917d5b573b5c"
+      "content_hash_sha256": "4bf56d2bff09c42ef30c77ff71cafe25e26372e581abafcfee317878c86d0868"
     },
     "python_runtime": {
       "version": "3.12.10",
@@ -36,7 +36,13 @@
       "source": "paquet NuGet officiel « python » (python.org, CPython 3.12.10 x64) ; SHA-512 identique à celui du catalogue NuGet (vérifié le 08/10/2026)"
     },
     "requirements_lock_sha256": "02f2bdba93cc45e441dd0b60fd87f1d522416a9f1cf5fc553ef45f26e036ff25",
-    "files": 294
+    "brain": {
+      "name": "experiment-002:v1",
+      "weights_sha256": "a411f4e3f06e56ec5e5cd18c476c51c9253076afa65ec74feef6c4b688ec162f",
+      "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+      "parameters": 1918656
+    },
+    "files": 305
   },
   "install": {
     "scope": "utilisateur courant, sans administrateur",
@@ -47,13 +53,13 @@
     ]
   },
   "build": {
-    "commit": "50bfe92103965666df4fd6ee083619cbe1d8bce0",
-    "commit_of_worktree": "50bfe92103965666df4fd6ee083619cbe1d8bce0",
+    "commit": "439e108989fc64afa66eaff965ab58d6885e6e87",
+    "commit_of_worktree": "439e108989fc64afa66eaff965ab58d6885e6e87",
     "uncommitted_changes": false,
     "dotnet_sdk": "8.0.131",
     "compiler": "Inno Setup 6.4.3 (NuGet Tools.InnoSetup, empreinte figée) sous wine-9.0 (Ubuntu 9.0~repack-4build3)",
     "host": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39",
-    "built_at": "2026-10-09T11:13:33.844817+00:00"
+    "built_at": "2026-10-09T17:15:43.386485+00:00"
   },
   "signed": false
 }

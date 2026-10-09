@@ -412,3 +412,61 @@ Windows ─► APEX.exe (Panel .NET, %LOCALAPPDATA%\Programs\APEX)
   Actions est bloqué par la facturation du compte.
 - Non mesurés sur un PC utilisateur : durée réelle des réponses, consommation mémoire, sandbox AppContainer
   (ligne **Sandbox** du Panel), exécution de code en mode Code, SmartScreen.
+
+## 10. APEX.exe 0.4.1 — l'assistant dans la fenêtre, choix du moteur, premiers défauts de Windows réel
+
+Point de départ : le **premier essai sur un vrai Windows** (Windows 11, 10.0.26200, PC de l'utilisateur, le
+09/10/2026, installateur 0.4.0). Constaté par l'utilisateur, captures à l'appui : préparation reprise puis
+réussie, modèle installé, APEX DEGRADED ; Ollama présent sur le PC (qwen2.5-coder:7b-instruct) ; l'interface
+s'ouvrait dans le navigateur et c'est Ollama qui répondait. Demandes : une interface **100 % dans APEX.exe**, et
+le **choix** entre Ollama et « le modèle qu'on développe nous-même » (précisé ensuite : les trois — Ollama, le
+moteur intégré, et le Cerveau APEX, marqué expérimental).
+
+### 10.1 Ce qui a été ajouté
+
+- **L'assistant dans la fenêtre** (`setup/src/ApexSetup.Dashboard/Views/AssistantHost.cs`) : composant Microsoft
+  Edge WebView2 (cœur seulement, `Microsoft.Web.WebView2` 1.0.4191.47) hébergé dans une fenêtre native enfant.
+  Deux pages : **Assistant** et **État et contrôle**. Lien à usage unique dès qu'APEX répond ; page vidée quand
+  APEX s'arrête ; nouveau lien après un redémarrage (autre processus) ; vue native masquée sous les calques
+  (diagnostic, fermeture) ; seule l'origine locale d'APEX s'affiche, tout autre lien part au navigateur du
+  système ; sans le composant : raison affichée, lien d'installation, repli sur le navigateur.
+  `APEX_PANEL_BROWSER=1` garde l'ancien comportement.
+- **Choix du moteur** (`apex/assistant/engines.py`, `GET /assistant/engines`, liste **Moteur**, Paramètres →
+  Modèles) : Automatique, Ollama, APEX intégré, Cerveau APEX. Le moteur choisi répond ou la réponse échoue avec la
+  raison — jamais un autre ; « Automatique » ne prend jamais le Cerveau.
+- **Cerveau APEX servi** (`apex/brain/`, `brain/apex-brain-v1/`, backend `apex_brain`) : la version promue
+  `experiment-002:v1`, reconstruite à l'identique (empreintes des poids, du dataset et du tokenizer égales au
+  registre ; voir `docs/NATIVE_INTELLIGENCE.md` §15). Expérimental, dit comme tel dans l'interface.
+
+### 10.2 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Tests ciblés ajoutés | `tests/test_assistant_engines.py` (11 : chaque moteur ne propose que ses modèles, « Automatique » jamais le Cerveau, le moteur choisi répond et jamais un autre, modèle préféré hors moteur refusé, **vrai tour de conversation servi par ApexLM**, Cerveau = version promue du registre (empreinte recalculée sur les poids chargés), poids modifiés jamais servis, provenance contredite refusée, le Cerveau ne reçoit que le dernier message, l'application embarque l'inférence et pas l'entraînement) ; `tests/test_windows_sandbox.py` (environnement AppContainer) ; `tests/test_native_runtime.py` (sondes de modèles lentes en parallèle) ; `EmbeddedAssistantTests` (.NET, 6 : accès conservé pendant une mesure lente, assistant dans la fenêtre et jamais le navigateur, suivi arrêt/redémarrage avec un nouveau lien, vue native masquée sous les calques, composant absent → raison + navigateur, hors Windows → navigateur) |
+| Suite Python complète (`pytest tests`, JUnit) | **4 011 tests : 3 828 réussis, 3 échecs, 180 ignorés, 0 erreur** (57 min, en parallèle de la validation Wine). Les deux échecs connus de 0.4.0, inchangés (§9.2) ; `test_experience_v2_script.py::test_calibration_then_experiment_then_analysis_end_to_end` a compté une panne d'infrastructure sous cette charge, puis **réussi relancé seul (23/23)** — il ne touche ni l'assistant ni le Cerveau |
+| Panel (.NET, `dotnet test setup/ApexSetup.sln`) | **577 réussis, 0 échec** (571 + 6), version 0.4.1 ; solution compilée sans avertissement |
+| Interface (vitest, `tsc -b`) | **165 réussis, 0 échec** ; typage OK |
+| Cerveau APEX reconstruit | ré-entraînement de `experiment-002` (code et documents de `59cdbd1`) : empreintes des poids, du dataset et du tokenizer **identiques** au registre ; BPB held-out 2,53844 ; verdicts du Judge identiques |
+| REAL E2E Linux — vrai backend autonome (`python -m apex.standalone serve`) + Chromium | parcours complet (projet, pièces jointes, tour, mode Code, paramètres, persistance serveur) **plus** : 4 moteurs mesurés, liste « Moteur » (« Ollama — indisponible », « Cerveau APEX (expérimental) »…), bandeau expérimental, **tour réel servi par ApexLM dans l'interface** (`apex_brain:apex-brain-v1`, 160 jetons, affiché avec le modèle), moteur indisponible nommé avec quoi faire, cartes des moteurs dans Paramètres, suppression en cascade ; **0 violation CSP, 0 erreur de page** ; seules réponses ≥ 400 : les deux refus voulus (PDF, valeur hors bornes) |
+| WINE E2E — **Windows simulé, pas Windows** — installateur 0.4.1 (SHA-256 `76441723…5c19ad`, commit `439e108`) | **44/44 PASS** : cycle de vie **17/17**, mise à jour **0.4.0 → 0.4.1** (W14 : raccourci et paramètres conservés) **18/18**, mode natif **9/9** (DEGRADED : Ollama OFFLINE et Modèles mesuré OFFLINE — plus de « UNKNOWN » ni d'« ERROR aucune réponse sous 2 s ») |
+| Fenêtre réelle d'APEX.exe 0.4.1 sous Wine (rendu logiciel, captures) | barre du haut (état, pages **Assistant** / **État et contrôle**, **Démarrer APEX**, **Ouvrir dans le navigateur**) ; Wine n'ayant pas WebView2, la page Assistant affiche la raison et le lien d'installation, et le journal du Panel le consigne — **le chemin « composant absent » est vérifié, pas l'affichage intégré** ; APEX démarré : DEGRADED, navigateur proposé ; arrêté : **Démarrer APEX** revient |
+| Interface contre la **version Windows** du backend (python.exe 3.12.10 sous Wine, `APEX.exe --start`) | même parcours que 0.4.0, mêmes résultats ; moteurs mesurés (Cerveau « indisponible : bibliothèque absente (torch) » — torch n'existe pas sous Wine, il est dans le runtime Windows) ; `--stop` / `--start` : 2 conversations, thème Dune et moteur choisi **conservés** |
+| WebView2 sous Wine | impossible : le téléchargement du composant (go.microsoft.com, msedge.sf.dl.delivery.mp.microsoft.com) est refusé par le réseau de ce bac à sable (403) |
+
+### 10.3 Défauts trouvés sur Windows réel, et corrigés
+
+| Constaté (capture de l'utilisateur) | Cause | Correctif |
+|---|---|---|
+| **Ouvrir APEX** grisé alors qu'APEX répondait | une mesure de 6,1 s, enchaînée sans pause (intervalle 5 s) ; l'accès à APEX était vidé au DÉBUT de chaque mesure, donc presque toujours vide quand le bouton était réévalué (et un clic n'aurait rien fait) | l'accès n'est remplacé qu'à la fin de la mesure (`PanelStatusService`) ; test qui bloque une mesure en cours |
+| **Sandbox OFFLINE** : « sonde AppContainer en erreur : OSError: [Errno 203] CreateProcessW : erreur Win32 203 » | ERROR_ENVVAR_NOT_FOUND : l'environnement passé au processus AppContainer ne contenait que SYSTEMROOT/TEMP/TMP ; pour un processus AppContainer, CreateProcessW recalcule les dossiers du conteneur à partir de cet environnement (LOCALAPPDATA…) | variables système standard transmises quand elles existent (jamais PATH, ni jeton, ni clé) ; en cas de refus, l'erreur nomme les variables passées et le texte Windows. **Non vérifiable ici** (Wine n'implémente pas AppContainer) |
+| **Modèles UNKNOWN** « non mesuré sous 6s », **Ollama ERROR** « aucune réponse sous 2s » | sous Windows, une connexion refusée sur 127.0.0.1 met ~2 s à échouer ; quatre endpoints Ollama sondés l'un après l'autre dépassaient le budget du statut | sondes en parallèle ; délai sur la boucle locale rapporté OFFLINE (« Ollama n'est probablement pas démarré ») |
+
+### 10.4 Non vérifié ici (bloquants de CET environnement, pas du produit)
+
+- **L'assistant réellement affiché dans la fenêtre** (WebView2) : ni Windows réel, ni composant WebView2 sous Wine
+  (téléchargement refusé). Vérifiés : compilation, logique (6 tests), et le repli quand le composant manque.
+- **La sandbox AppContainer** après correctif de l'erreur 203 : Wine n'implémente pas AppContainer. Si l'erreur
+  persiste, le message nomme désormais les variables passées et le texte Windows.
+- **Réponses du moteur intégré et d'Ollama sous Windows** : pas de modèle ici (Hugging Face et Ollama refusés
+  par le réseau). Constaté par l'utilisateur sur son PC en 0.4.0 : Ollama répondait.
+- Durée réelle des réponses, mémoire, SmartScreen sur un PC utilisateur.
