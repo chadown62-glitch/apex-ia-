@@ -33,7 +33,7 @@
 ;               %LOCALAPPDATA%\APEX\logs (journaux) — et TOUT ce qui vit dans WSL (jamais touché).
 ;
 ; Compilation : ISCC.exe (Inno Setup 6.4.3). Sous Linux, via Wine (voir build_desktop_release.sh).
-;   ISCC /DApexVersion=0.3.0 /DPublishDir=<dossier publié> /DAppDir=<application APEX> /DIconFile=<apex.ico> /O<sortie> ApexSetup.iss
+;   ISCC /DApexVersion=0.4.0 /DPublishDir=<dossier publié> /DAppDir=<application APEX> /DIconFile=<apex.ico> /O<sortie> ApexSetup.iss
 
 #ifndef ApexVersion
   #error ApexVersion doit être fourni (/DApexVersion=x.y.z) — jamais une version implicite.

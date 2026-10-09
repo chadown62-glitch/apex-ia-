@@ -1,28 +1,35 @@
 # Installer APEX (Windows)
 
 `APEX.exe` est l'application Windows d'APEX. Depuis la version 0.3.0, **APEX tourne directement sous
-Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal. L'installateur dépose le
+Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal. La version 0.4.0 ajoute
+**l'assistant APEX** : projets, conversations persistantes, quatre modes (Normal, Code, Design, Finance),
+paramètres centralisés et deux thèmes (APEX Night, APEX Dune). L'installateur dépose le
 Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
 que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
 APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
 ## Récupérer l'installateur
 
-Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.3.0.exe`
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.0.exe`
 (≈ 33 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
 empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
-PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.3.0.exe -Algorithm SHA256` (même valeur que le `.sha256`).
+PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.0.exe -Algorithm SHA256` (même valeur que le `.sha256`).
 
 ## Prérequis
 
 - Windows 10 (1903 ou plus récent) ou Windows 11, 64 bits, compte utilisateur normal (aucun droit
   administrateur demandé).
 - Une connexion Internet pour la **préparation unique** (≈ 190 Mo) et le **modèle** (≈ 3,1 Go).
-- ≈ 6 Go d'espace disque et, pour exécuter le modèle sur le processeur, 8 Go de mémoire ou plus.
+- ≈ 6 Go d'espace disque et, pour exécuter le modèle sur le processeur, 8 Go de mémoire ou plus. APEX mesure
+  la mémoire libre avant de charger le modèle : ≈ 7,5 Go libres pour la précision float32, ≈ 4 Go en
+  bfloat16 (choisie automatiquement si la mémoire manque) ; en dessous, la réponse est refusée avec les
+  chiffres mesurés, jamais un plantage.
+- Sur processeur, le modèle produit quelques mots par seconde (mesuré : 3 à 4 tokens/s sur 4 cœurs) : une
+  réponse longue prend plusieurs minutes.
 
 ## Installer et utiliser APEX (mode Windows natif)
 
-1. Double-cliquez sur `APEX-Setup-x64-v0.3.0.exe`. Le programme n'est pas signé : si Windows affiche
+1. Double-cliquez sur `APEX-Setup-x64-v0.4.0.exe`. Le programme n'est pas signé : si Windows affiche
    « Windows a protégé votre ordinateur », cliquez sur « Informations complémentaires » puis
    « Exécuter quand même » (seulement si le fichier vient bien du dépôt APEX). L'installateur vérifie
    lui-même que le Panel démarre et que l'application est complète, puis propose de lancer APEX.
@@ -38,13 +45,40 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.3.0.exe -Algorithm SHA256` (même
 4. **Démarrer APEX** : le Panel lance APEX (base embarquée, `apex doctor`, **Startup Gate** — jamais
    contourné), sans fenêtre de console. Quelques secondes plus tard : **APEX READY**, ou **APEX
    DEGRADED** avec la ligne concernée (ex. modèle non installé).
-5. **Ouvrir APEX** : l'interface web d'APEX s'ouvre dans votre navigateur (lien à usage unique). Page
-   **Tâches** : créez une tâche (ex. « écrire une fonction » avec ses cas de test), lancez-la, suivez ses
-   étapes (planification, génération, exécution isolée, vérification, nouvel essai) et son résultat.
+5. **Ouvrir APEX** : l'assistant APEX s'ouvre dans votre navigateur (lien à usage unique, voir
+   « Premier lancement de l'assistant » ci-dessous). Le **Centre de contrôle** (état du système, Gate,
+   page **Tâches**, mémoire) reste accessible depuis la barre latérale.
 6. **Arrêter APEX** : arrêt propre (APEX termine et libère ses fichiers). Fermer la fenêtre du Panel
-   pendant qu'APEX tourne **vous demande** s'il faut l'arrêter ou le laisser tourner.
-7. Relancer : double-clic sur **APEX**, **Démarrer APEX** — rien à réparer ; tâches, résultats et
-   mémoire sont conservés (base `%LOCALAPPDATA%\APEX\data\apex.db`).
+   pendant qu'APEX tourne **vous demande** s'il faut l'arrêter ou le laisser tourner. Une réponse en
+   cours au moment de l'arrêt est close au redémarrage avec le message « interrompu : APEX s'est arrêté
+   pendant la génération » — renvoyez le message.
+7. Relancer : double-clic sur **APEX**, **Démarrer APEX** — rien à réparer ; projets, conversations,
+   réglages, tâches et mémoire sont conservés (base `%LOCALAPPDATA%\APEX\data\apex.db`).
+
+### Premier lancement de l'assistant (0.4.0)
+
+- **Accueil** : choisissez un mode, écrivez votre message, Entrée. La conversation est créée et la réponse
+  du modèle s'affiche quand elle est prête (durée réelle affichée, bouton **Arrêter**).
+  - **Normal** : questions, explications, rédaction, raisonnement. Aucun outil.
+  - **Code** : APEX lit et écrit des fichiers dans l'espace de travail de la conversation (ou du projet),
+    et exécute du Python **seulement** si la sandbox Windows a été vérifiée (sinon il le dit). Panneau
+    **Fichiers** : les fichiers réellement présents, lisibles.
+  - **Design** : direction artistique, palettes, typographie, CSS ; contrastes WCAG calculés. Pas de
+    génération ni d'analyse d'images. Panneau **Nuancier** : les couleurs citées et leurs contrastes.
+  - **Finance** : budgets, prêts, épargne ; les calculs passent par des outils exacts (prêt, projection,
+    calculatrice) dont les tableaux s'affichent dans le panneau **Calculs**. Ni comptes bancaires ni cours
+    en temps réel.
+- **Projets** (barre latérale, **+**) : regroupent des conversations, des **consignes** envoyées au modèle
+  dans chaque conversation du projet, et des **pièces jointes texte** (code, notes, CSV, JSON… ; 512 Ko,
+  30 par projet). Images, PDF et documents bureautiques sont refusés avec la raison : APEX ne sait pas les
+  lire. La suppression d'un projet (confirmée) supprime ses conversations, ses pièces jointes et son
+  espace de travail.
+- **Paramètres** : apparence (APEX Night / APEX Dune, animations, particules, réduction des animations),
+  modèles (disponibilité mesurée, modèle préféré, température, longueur), runtime (délai d'une réponse),
+  comportement (mode par défaut, mémoire entre conversations), outils, confidentialité, ressources
+  (précision du modèle, threads). Enregistrés dans la base d'APEX, validés et bornés.
+- Sans modèle installé, l'accueil l'annonce (« Aucun modèle disponible ») et une réponse échoue avec la
+  raison exacte — jamais une réponse inventée.
 
 ### Où sont les fichiers (mode natif)
 
@@ -52,7 +86,7 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.3.0.exe -Algorithm SHA256` (même
 |---|---|
 | `%LOCALAPPDATA%\Programs\APEX` | le Panel `APEX.exe` et l'application (`app\`) |
 | `%LOCALAPPDATA%\APEX\python` | Python et bibliothèques préparés (supprimés à la désinstallation) |
-| `%LOCALAPPDATA%\APEX\data` | base, espaces de travail, artefacts (**conservés**) |
+| `%LOCALAPPDATA%\APEX\data` | base (projets, conversations, réglages, tâches), espaces de travail (`workspaces\assistant\` pour l'assistant), artefacts (**conservés**) |
 | `%LOCALAPPDATA%\APEX\models` | modèle téléchargé (**conservé**) |
 | `%LOCALAPPDATA%\APEX\.apex\runtime` | `launch.log` (démarrage), `prepare.log`, `model-install.log`, enregistrement du backend |
 
@@ -79,6 +113,21 @@ recours.
 | APEX BLOCKED | le Startup Gate ou `apex doctor` refuse le démarrage : raison affichée, détail dans **Journal du démarrage** |
 | « Un autre programme utilise le port 8000 » | fermer ce programme, puis **Démarrer APEX** |
 | « L'installation d'APEX est incomplète » | relancer l'installateur |
+| Téléchargement du modèle interrompu | cliquer de nouveau sur **Installer le modèle** : la reprise est automatique ; chaque fichier de poids est vérifié par son empreinte SHA-256 publiée, un fichier altéré est supprimé et retéléchargé |
+
+### Dépannage de l'assistant (0.4.0)
+
+| L'assistant affiche | Que faire |
+|---|---|
+| « Aucun modèle disponible » | Panel : **Installer le modèle**, puis **Arrêter APEX** / **Démarrer APEX** |
+| « La réponse a échoué — … mémoire insuffisante pour charger le modèle : … Go disponibles, … Go nécessaires » | fermer des applications, ou **Paramètres → Ressources → Précision : bfloat16**, puis **Réessayer** |
+| « La réponse a échoué — délai dépassé » | **Paramètres → Runtime** : allonger le délai (jusqu'à 3600 s), ou réduire **Modèles → Longueur maximale** |
+| « Une réponse est en cours : attendez-la ou arrêtez-la » | attendre la réponse, ou **Arrêter** ; une seule réponse à la fois par conversation |
+| Suppression refusée : « une réponse est en cours » | **Arrêter** la réponse, puis supprimer |
+| Pièce jointe « Refusé — format … non pris en charge » | APEX ne lit que des fichiers texte ; copier le contenu utile dans un `.txt` ou `.md` |
+| Mode Code : « Exécution de code indisponible sur ce PC » | la sandbox Windows n'est pas vérifiée (ligne **Sandbox** du Panel) : APEX écrit les fichiers mais n'exécute rien |
+| « Session APEX absente ou expirée » | rouvrir APEX depuis le Panel (**Ouvrir APEX**) |
+| « APEX INJOIGNABLE » | APEX est arrêté : Panel, **Démarrer APEX** |
 
 Sans fenêtre (automatisation) : `APEX.exe --prepare`, `APEX.exe --install-model`, `APEX.exe --start`,
 `APEX.exe --status-json`, `APEX.exe --ui-url`, `APEX.exe --stop`.
