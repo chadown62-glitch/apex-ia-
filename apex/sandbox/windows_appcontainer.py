@@ -57,6 +57,10 @@ _MAX_CAPTURE_BYTES = 1_000_000
 _PROBE_MEMORY_MB = 256
 _PROBE_TIMEOUT_S = 60.0
 _PYTHON_ALIASES = frozenset({"python3", "python", "python3.12"})
+#: Environnement système transmis au processus isolé (voir `WindowsAppContainerSandbox._env`).
+_SYSTEM_ENV = ("SYSTEMROOT", "SYSTEMDRIVE", "WINDIR", "COMSPEC", "PATHEXT", "OS", "PROCESSOR_ARCHITECTURE",
+               "NUMBER_OF_PROCESSORS", "ALLUSERSPROFILE", "PROGRAMDATA", "PUBLIC", "USERPROFILE", "APPDATA",
+               "LOCALAPPDATA", "HOMEDRIVE", "HOMEPATH")
 
 # -- constantes Win32 ------------------------------------------------------------------------------------------
 _HRESULT_ALREADY_EXISTS = 0x800700B7
@@ -199,7 +203,11 @@ def _error(api: str) -> OSError:
     import ctypes
 
     code = ctypes.get_last_error()  # type: ignore[attr-defined]
-    return OSError(code, f"{api} : erreur Win32 {code}")
+    try:
+        text = ctypes.FormatError(code).strip()  # type: ignore[attr-defined]
+    except Exception:
+        text = ""
+    return OSError(code, f"{api} : erreur Win32 {code}" + (f" ({text})" if text else ""))
 
 
 def appcontainer_sid(name: str = PROFILE_NAME) -> str:
@@ -323,7 +331,9 @@ def _launch(argv: list[str], *, cwd: Path, env: dict[str, str], memory_mb: int, 
         flags = _EXTENDED_STARTUPINFO_PRESENT | _CREATE_SUSPENDED | _CREATE_NO_WINDOW | _CREATE_UNICODE_ENVIRONMENT
         if not w.k32.CreateProcessW(argv[0], command_line, None, None, True, flags, _env_block(env), str(cwd),
                                     ctypes.byref(si), ctypes.byref(pi)):
-            raise _error("CreateProcessW")
+            error = _error("CreateProcessW")
+            # Noms des variables transmises (jamais leurs valeurs) : un refus lié à l'environnement est diagnosticable.
+            raise OSError(error.errno, f"{error.strerror} — environnement : {', '.join(sorted(env))}")
         if not w.k32.AssignProcessToJobObject(job, pi.hProcess):
             error = _error("AssignProcessToJobObject")
             w.k32.TerminateProcess(pi.hProcess, 1)  # jamais lancé hors du job : suspendu, puis tué
@@ -526,8 +536,15 @@ class WindowsAppContainerSandbox(SandboxProvider):
 
     @staticmethod
     def _env(work: Path) -> dict[str, str]:
-        env = {"SYSTEMROOT": os.environ.get("SYSTEMROOT", r"C:\Windows"), "TEMP": str(work), "TMP": str(work),
-               "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1", "PYTHONUTF8": "1"}
+        # Variables système standard, reprises du poste quand elles existent : pour un processus AppContainer,
+        # CreateProcessW relit l'environnement fourni (dossiers redirigés vers le profil du conteneur) et échoue
+        # avec l'erreur Win32 203 (ERROR_ENVVAR_NOT_FOUND) s'il y manque (constaté sur Windows 11 réel,
+        # 09/10/2026, avec SYSTEMROOT/TEMP/TMP seuls). Aucune variable propre à l'utilisateur ou à APEX
+        # (PATH, jetons, clés) : seulement des emplacements système, illisibles depuis le conteneur.
+        env = {name: os.environ[name] for name in _SYSTEM_ENV if os.environ.get(name)}
+        env.setdefault("SYSTEMROOT", r"C:\Windows")
+        env.update({"TEMP": str(work), "TMP": str(work),
+                    "PYTHONIOENCODING": "utf-8", "PYTHONDONTWRITEBYTECODE": "1", "PYTHONUTF8": "1"})
         return env
 
     # -- exécution -------------------------------------------------------------------------------------------

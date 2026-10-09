@@ -53,6 +53,9 @@ class ComponentStatus:
         return asdict(self)
 
 
+_LOOPBACK = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
 def _refused(exc: BaseException) -> bool:
     text = f"{exc.__class__.__name__}: {exc}".lower()
     return isinstance(exc, ConnectionRefusedError) or "refused" in text or "refusée" in text
@@ -127,6 +130,11 @@ def check_ollama(address: tuple[str, int] | None = None) -> ComponentStatus:
     except (urllib.error.URLError, OSError) as exc:
         reason = getattr(exc, "reason", exc)
         if isinstance(reason, TimeoutError) or isinstance(exc, TimeoutError):
+            if address is not None and address[0] in _LOOPBACK:
+                # Sous Windows, rien n'écoutant sur 127.0.0.1, la connexion n'est pas refusée tout de suite : elle
+                # expire (~2 s, constaté sur Windows 11 réel). Ce n'est pas un Ollama en panne.
+                return ComponentStatus("ollama", OFFLINE, f"aucune réponse sous {NETWORK_TIMEOUT_S:.0f}s sur "
+                                       f"{address[0]}:{address[1]} — Ollama n'est probablement pas démarré")
             return ComponentStatus("ollama", ERROR, f"aucune réponse sous {NETWORK_TIMEOUT_S:.0f}s")
         state = OFFLINE if _refused(reason if isinstance(reason, BaseException) else exc) else ERROR
         return ComponentStatus("ollama", state, f"{reason}")
@@ -154,16 +162,24 @@ def check_models(config: Any = None) -> ComponentStatus:
     from apex.models.registry import resolve_candidates
 
     config = config if config is not None else load_config()
+    generation = [c for c in resolve_candidates(config)
+                  if c.role in GENERATION_ROLES and c.endpoint is not None and c.endpoint.enabled]
+    endpoints = {(e.runtime, e.url, e.served_model): e for e in (c.endpoint for c in generation) if e is not None}
     seen: dict[tuple[str, str, str], tuple[bool, str]] = {}
+    if endpoints:
+        # En parallèle : sous Windows, une connexion refusée sur 127.0.0.1 met ~2 s à échouer (constaté sur
+        # Windows 11 réel, 09/10/2026) ; quatre modèles Ollama sondés l'un après l'autre dépassaient le budget du
+        # statut et « Modèles » restait UNKNOWN tant qu'Ollama n'était pas démarré.
+        with ThreadPoolExecutor(max_workers=len(endpoints), thread_name_prefix="apex-models") as pool:
+            futures = {key: pool.submit(lambda e=e: get_default_provider(e).detect()) for key, e in endpoints.items()}
+            for key, future in futures.items():
+                report = future.result()
+                seen[key] = (report.is_available, report.detail)
     usable: list[str] = []
-    for candidate in resolve_candidates(config):
+    for candidate in generation:
         endpoint = candidate.endpoint
-        if candidate.role not in GENERATION_ROLES or endpoint is None or not endpoint.enabled:
-            continue
+        assert endpoint is not None
         key = (endpoint.runtime, endpoint.url, endpoint.served_model)
-        if key not in seen:
-            report = get_default_provider(endpoint).detect()
-            seen[key] = (report.is_available, report.detail)
         if seen[key][0]:
             usable.append(f"{candidate.role} → {endpoint.served_model} ({endpoint.runtime})")
     if not seen:

@@ -68,6 +68,23 @@ def test_off_windows_the_backend_is_unavailable_and_refuses_to_execute(tmp_path)
         sandbox.execute(spec)
 
 
+def test_the_child_environment_carries_the_system_folders_appcontainer_needs_and_nothing_personal(
+        monkeypatch, tmp_path) -> None:
+    # Windows 11 réel (09/10/2026) : sans LOCALAPPDATA & co, CreateProcessW refusait le processus AppContainer
+    # avec l'erreur Win32 203 — la sandbox n'était jamais disponible.
+    for name, value in {"SYSTEMROOT": r"C:\Windows", "LOCALAPPDATA": r"C:\Users\u\AppData\Local",
+                        "APPDATA": r"C:\Users\u\AppData\Roaming", "USERPROFILE": r"C:\Users\u",
+                        "PATH": r"C:\secret\bin", "APEX_API_TOKEN": "jeton", "OPENAI_API_KEY": "cle"}.items():
+        monkeypatch.setenv(name, value)
+    env = wac.WindowsAppContainerSandbox._env(tmp_path)
+    assert env["LOCALAPPDATA"] == r"C:\Users\u\AppData\Local" and env["USERPROFILE"] == r"C:\Users\u"
+    assert env["SYSTEMROOT"] == r"C:\Windows" and env["APPDATA"] == r"C:\Users\u\AppData\Roaming"
+    assert env["TEMP"] == env["TMP"] == str(tmp_path)
+    assert not {"PATH", "APEX_API_TOKEN", "OPENAI_API_KEY"} & set(env)
+    raw = wac._env_block(env)[:]
+    assert raw.endswith("\0\0") and "\0LOCALAPPDATA=C:\\Users\\u\\AppData\\Local\0" in "\0" + raw
+
+
 def _report(available: bool, detail: str) -> SandboxCapabilityReport:
     return SandboxCapabilityReport(
         level=IsolationLevel.APPCONTAINER if available else IsolationLevel.NONE, namespaces_available=False,

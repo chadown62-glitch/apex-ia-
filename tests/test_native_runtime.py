@@ -205,3 +205,30 @@ def test_the_system_status_measures_whether_a_model_can_answer_not_whether_ollam
     assert overall(rows) == {"verdict": "ready", "not_ready": []}
     rows[1]["state"] = absent.state
     assert overall(rows) == {"verdict": "degraded", "not_ready": ["models"]}
+
+
+def test_slow_model_servers_are_probed_together_within_the_status_budget(monkeypatch) -> None:
+    """Windows 11 réel (09/10/2026) : sans Ollama, chaque connexion à 127.0.0.1 met ~2 s à échouer ; sondés l'un
+    après l'autre, les quatre endpoints Ollama de génération dépassaient le budget de 6 s (« Modèles » UNKNOWN)."""
+    import time
+
+    from apex.obs import component_checks as cc
+    from apex.obs.capability import CapabilityStatus
+    from apex.models import provider as provider_module
+    from apex.models.provider import ModelCapabilityReport
+
+    class Slow:
+        def __init__(self, endpoint) -> None:
+            self.endpoint = endpoint
+
+        def detect(self) -> ModelCapabilityReport:
+            time.sleep(1.0)
+            return ModelCapabilityReport(status=CapabilityStatus.UNAVAILABLE_ON_DEV, backend=self.endpoint.runtime,
+                                         detail="injoignable")
+
+    monkeypatch.setattr(provider_module, "get_default_provider", Slow)
+    started = time.perf_counter()
+    status = cc.check_models()
+    elapsed = time.perf_counter() - started
+    assert status.state == cc.OFFLINE and "injoignable" in status.detail
+    assert elapsed < 2.5, f"{elapsed:.1f} s : les endpoints ont été sondés l'un après l'autre"
