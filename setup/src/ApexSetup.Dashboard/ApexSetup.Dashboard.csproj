@@ -28,6 +28,12 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.10" />
+    <!-- 0.4.1 : l'interface de l'assistant s'affiche DANS la fenêtre d'APEX.exe (demande de l'utilisateur), via le
+         composant Microsoft Edge WebView2 de Windows (présent sur Windows 11 et sur les Windows 10 à jour). Seul
+         le cœur est utilisé (Microsoft.Web.WebView2.Core + WebView2Loader.dll), hébergé dans une fenêtre native
+         enfant (NativeControlHost) ; ni WinForms ni WPF. Hors Windows, ou sans le composant, le Panel le dit et
+         propose le navigateur. -->
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
   </ItemGroup>
 
   <ItemGroup>
@@ -39,5 +45,13 @@
   <ItemGroup>
     <InternalsVisibleTo Include="ApexSetup.Dashboard.Tests" />
   </ItemGroup>
+
+  <!-- Le paquet WebView2 référence aussi ses contrôles WPF et WinForms : inutiles ici (le cœur est hébergé dans une
+       fenêtre native enfant) et source de conflits WindowsBase. Retirés avant la résolution des références. -->
+  <Target Name="ApexWebView2CoreOnly" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.WinForms' Or '%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

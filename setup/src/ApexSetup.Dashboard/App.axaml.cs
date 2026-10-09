@@ -32,7 +32,10 @@ public sealed class App : Avalonia.Application
 
             var viewModel = new MainWindowViewModel(
                 composition.Settings, composition.Status, log, composition.Redactor, composition.DiagnosticContext,
-                action => Dispatcher.UIThread.Post(action), composition.Control, composition.Preparer);
+                action => Dispatcher.UIThread.Post(action), composition.Control, composition.Preparer,
+                // 0.4.1 : l'assistant s'affiche DANS la fenêtre (WebView2) sous Windows ; APEX_PANEL_BROWSER=1 garde
+                // l'ancien comportement (navigateur du système).
+                embeddedAssistant: OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("APEX_PANEL_BROWSER") != "1");
             var window = new MainWindow { DataContext = viewModel };
             viewModel.Clipboard = new WindowClipboard(window);
             desktop.MainWindow = window;

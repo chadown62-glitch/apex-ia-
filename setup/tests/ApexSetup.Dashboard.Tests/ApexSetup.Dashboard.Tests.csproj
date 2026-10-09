@@ -26,4 +26,11 @@
     <ProjectReference Include="..\..\src\ApexSetup.Dashboard\ApexSetup.Dashboard.csproj" />
   </ItemGroup>
 
+  <!-- Même retrait que dans ApexSetup.Dashboard : seul le cœur de WebView2 est utilisé (ni WPF ni WinForms). -->
+  <Target Name="ApexWebView2CoreOnly" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.WinForms' Or '%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+
 </Project>

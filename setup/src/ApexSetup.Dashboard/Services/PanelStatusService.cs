@@ -15,7 +15,7 @@ namespace ApexSetup.Dashboard.Services;
 /// </list>
 /// </summary>
 /// <summary>Accès au backend qui a RÉPONDU avec le jeton lu dans son dossier — seul point de départ de « Ouvrir APEX ».</summary>
-public sealed record BackendAccess(string Address, int Port, string Token, string? ProjectRoot, string? Distro)
+public sealed record BackendAccess(string Address, int Port, string Token, string? ProjectRoot, string? Distro, int Pid = 0)
 {
     public override string ToString() => $"BackendAccess({Address}:{Port}, {ProjectRoot})"; // jamais le jeton
 }
@@ -48,11 +48,31 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
     /// <summary>Appelé avec chaque jeton lu, pour que les journaux puissent le masquer s'il y apparaissait.</summary>
     public event Action<string>? SecretRead;
 
+    /// <summary>
+    /// Une mesure ; <see cref="LastAccess"/> n'est REMPLACÉ qu'à la fin, par le résultat de cette mesure. Jamais
+    /// vidé au début : constaté sur Windows réel (09/10/2026), une mesure de 6 s enchaînée sans pause (au-delà de
+    /// l'intervalle de 5 s) laissait l'accès vide presque en permanence — « Ouvrir APEX » restait grisé alors
+    /// qu'APEX répondait.
+    /// </summary>
     public async Task<PanelSnapshot> MeasureAsync(
         DashboardSettings settings, CancellationToken cancellationToken = default, LaunchAttempt? launch = null)
     {
         _launch = launch;
-        LastAccess = null;
+        _measured = null;
+        try
+        {
+            return await MeasureCoreAsync(settings, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            LastAccess = _measured;
+        }
+    }
+
+    private BackendAccess? _measured;
+
+    private async Task<PanelSnapshot> MeasureCoreAsync(DashboardSettings settings, CancellationToken cancellationToken)
+    {
         var watch = Stopwatch.StartNew();
         var distro = string.IsNullOrWhiteSpace(settings.WslDistro) ? null : settings.WslDistro.Trim();
         var probe = await host.ProbeAsync(distro, cancellationToken).ConfigureAwait(false);
@@ -130,7 +150,7 @@ public sealed class PanelStatusService(IBackendHost host, StatusClient client, F
         if (fetch.Outcome == FetchOutcome.Ok && fetch.Payload?.PanelProtocol == StatusEngine.SupportedProtocol
             && token.Value is { } verified && discovery.Record is { } served)
         {
-            LastAccess = new BackendAccess(address, port, verified, served.ProjectRoot, distroForReads);
+            _measured = new BackendAccess(address, port, verified, served.ProjectRoot, distroForReads, served.Pid);
         }
         bool? listening = null;
         if (fetch.Outcome == FetchOutcome.Refused && probe.Applicable && alive == true)

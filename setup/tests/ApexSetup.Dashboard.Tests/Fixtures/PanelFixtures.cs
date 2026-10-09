@@ -11,7 +11,17 @@ public sealed class FakeBackendHost : IBackendHost
     public Dictionary<string, FileRead> Files { get; } = new();
     public List<string> Reads { get; } = [];
 
-    public Task<HostProbe> ProbeAsync(string? preferredDistro, CancellationToken cancellationToken = default) => Task.FromResult(Probe);
+    /// <summary>Attendu au début de chaque mesure : simule une mesure lente (Windows réel : 6 s).</summary>
+    public Func<Task>? BeforeProbe { get; set; }
+
+    public async Task<HostProbe> ProbeAsync(string? preferredDistro, CancellationToken cancellationToken = default)
+    {
+        if (BeforeProbe is { } wait)
+        {
+            await wait();
+        }
+        return Probe;
+    }
 
     public Task<FileRead> ReadHomeFileAsync(string? distro, string relativePath, CancellationToken cancellationToken = default) =>
         Read("~/" + relativePath);

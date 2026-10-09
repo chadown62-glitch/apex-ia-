@@ -40,6 +40,13 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _isClosePromptVisible;
     private string? _actionMessage;
     private string _overlayTitle = "Diagnostic";
+    private bool _embedded;
+    private string? _embeddedProblem;
+    private bool _assistantWanted;
+    private bool _isAssistantPage;
+    private string? _assistantUrl;
+    private int _assistantPid;
+    private bool _openingAssistant;
 
     private DashboardSettings _settings = new();
     private string? _settingsProblem;
@@ -62,8 +69,12 @@ public sealed class MainWindowViewModel : ObservableObject
         Func<string?, DiagnosticContext> diagnosticContext,
         Action<Action>? uiDispatcher = null,
         PanelControl? control = null,
-        RuntimePreparer? preparer = null)
+        RuntimePreparer? preparer = null,
+        bool embeddedAssistant = false)
     {
+        _embedded = embeddedAssistant;
+        _assistantWanted = embeddedAssistant;
+        _isAssistantPage = embeddedAssistant;
         _control = control;
         _preparer = preparer;
         _settingsStore = settingsStore;
@@ -81,7 +92,10 @@ public sealed class MainWindowViewModel : ObservableObject
         RefreshCommand = new AsyncRelayCommand(_ => RefreshAsync());
         StartCommand = new AsyncRelayCommand(_ => StartAsync(), () => CanStart);
         StopCommand = new AsyncRelayCommand(_ => StopAsync(), () => CanStop);
-        OpenUiCommand = new AsyncRelayCommand(_ => OpenUiAsync(), () => CanOpen);
+        OpenUiCommand = new AsyncRelayCommand(_ => OpenUiAsync(inBrowser: !_embedded), () => CanOpen);
+        OpenInBrowserCommand = new AsyncRelayCommand(_ => OpenUiAsync(inBrowser: true), () => CanOpen);
+        ShowAssistantCommand = new AsyncRelayCommand(_ => ShowAssistantAsync());
+        ShowControlCommand = new RelayCommand(() => IsAssistantPage = false);
         ShowLaunchLogCommand = new AsyncRelayCommand(_ => ShowLaunchLogAsync());
         ShowDiagnosticCommand = new RelayCommand(() =>
         {
@@ -106,7 +120,7 @@ public sealed class MainWindowViewModel : ObservableObject
         });
         CancelCloseCommand = new RelayCommand(() => IsClosePromptVisible = false);
         foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand, StartCommand, StopCommand, OpenUiCommand, ShowLaunchLogCommand,
-                     PrepareCommand, InstallModelCommand, StopAndQuitCommand })
+                     PrepareCommand, InstallModelCommand, StopAndQuitCommand, OpenInBrowserCommand, ShowAssistantCommand })
         {
             command.Faulted += (_, ex) => _log.Log($"Erreur inattendue : {ex.Message}");
         }
@@ -157,13 +171,25 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool IsSettingsVisible
     {
         get => _isSettingsVisible;
-        private set => SetProperty(ref _isSettingsVisible, value);
+        private set
+        {
+            if (SetProperty(ref _isSettingsVisible, value))
+            {
+                OnPropertyChanged(nameof(IsAssistantHostVisible));
+            }
+        }
     }
 
     public bool IsDiagnosticVisible
     {
         get => _isDiagnosticVisible;
-        private set => SetProperty(ref _isDiagnosticVisible, value);
+        private set
+        {
+            if (SetProperty(ref _isDiagnosticVisible, value))
+            {
+                OnPropertyChanged(nameof(IsAssistantHostVisible));
+            }
+        }
     }
 
     public string DiagnosticText
@@ -220,7 +246,154 @@ public sealed class MainWindowViewModel : ObservableObject
     public bool IsClosePromptVisible
     {
         get => _isClosePromptVisible;
-        private set => SetProperty(ref _isClosePromptVisible, value);
+        private set
+        {
+            if (SetProperty(ref _isClosePromptVisible, value))
+            {
+                OnPropertyChanged(nameof(IsAssistantHostVisible));
+            }
+        }
+    }
+
+    // -- Assistant dans la fenêtre (0.4.1) -----------------------------------------------------------------
+
+    /// <summary>L'assistant s'affiche DANS cette fenêtre (composant WebView2 de Windows) ; faux = navigateur.</summary>
+    public bool IsEmbeddedAssistant => _embedded;
+
+    /// <summary>Page affichée : l'assistant (vrai) ou « État et contrôle » (faux).</summary>
+    public bool IsAssistantPage
+    {
+        get => _isAssistantPage;
+        private set
+        {
+            if (SetProperty(ref _isAssistantPage, value))
+            {
+                OnPropertyChanged(nameof(IsControlPage));
+                OnPropertyChanged(nameof(IsAssistantHostVisible));
+            }
+        }
+    }
+
+    public bool IsControlPage => !_isAssistantPage;
+
+    /// <summary>Lien d'ouverture affiché dans la fenêtre ; <c>null</c> = APEX ne répond pas, rien à afficher.</summary>
+    public string? AssistantUrl
+    {
+        get => _assistantUrl;
+        private set
+        {
+            if (SetProperty(ref _assistantUrl, value))
+            {
+                OnPropertyChanged(nameof(IsAssistantHostVisible));
+                OnPropertyChanged(nameof(AssistantMessage));
+            }
+        }
+    }
+
+    /// <summary>
+    /// La fenêtre native de l'assistant est visible : page de l'assistant, interface ouverte, aucun calque (une
+    /// fenêtre native passe au-dessus de tout ce qu'Avalonia dessine : elle masquerait le calque).
+    /// </summary>
+    public bool IsAssistantHostVisible =>
+        _embedded && _isAssistantPage && _assistantUrl is not null && !_isDiagnosticVisible && !_isClosePromptVisible
+        && !_isSettingsVisible;
+
+    /// <summary>Ce que la page de l'assistant dit quand l'interface n'est pas affichée (jamais une page vide).</summary>
+    public string AssistantMessage
+    {
+        get
+        {
+            if (!_embedded)
+            {
+                return _embeddedProblem is { } problem
+                    ? $"L'assistant ne peut pas s'afficher dans cette fenêtre : {problem}. Il s'ouvre dans votre navigateur "
+                      + "(« Ouvrir dans le navigateur »). Pour l'affichage intégré, installez « Microsoft Edge WebView2 Runtime » "
+                      + "depuis https://go.microsoft.com/fwlink/p/?LinkId=2124703, puis rouvrez APEX."
+                    : "L'assistant s'ouvre dans votre navigateur (« Ouvrir dans le navigateur »).";
+            }
+            if (_assistantUrl is not null)
+            {
+                return string.Empty;
+            }
+            if (_snapshot is null)
+            {
+                return "Vérification de l'état d'APEX…";
+            }
+            if (CanOpen)
+            {
+                return "Ouverture de l'assistant…";
+            }
+            if (_launch is { Running: true } || _snapshot.Cause is NotReadyCause.BackendStarting)
+            {
+                return "APEX démarre… L'assistant s'affichera ici dès qu'APEX répondra.";
+            }
+            if (CanStart)
+            {
+                return "APEX n'est pas démarré. Cliquez sur « Démarrer APEX » : l'assistant s'affichera ici.";
+            }
+            return $"{_snapshot.Headline} — {_snapshot.Guidance}";
+        }
+    }
+
+    /// <summary>« Démarrer APEX » proposé sur la page de l'assistant quand APEX ne tourne pas.</summary>
+    public bool IsStartOfferedOnAssistant => _assistantUrl is null && CanStart;
+
+    /// <summary>
+    /// Le composant d'affichage intégré n'a pas pu être créé (absent, erreur) : l'assistant passe au navigateur,
+    /// et la raison est affichée et journalisée.
+    /// </summary>
+    public void ReportEmbeddedFailure(string reason)
+    {
+        _ui(() =>
+        {
+            if (!_embedded)
+            {
+                return;
+            }
+            _embedded = false;
+            _embeddedProblem = reason;
+            AssistantUrl = null;
+            _log.Log($"Affichage intégré de l'assistant impossible : {reason} — « Ouvrir dans le navigateur » reste disponible.");
+            OnPropertyChanged(nameof(IsEmbeddedAssistant));
+            OnPropertyChanged(nameof(AssistantMessage));
+            OnPropertyChanged(nameof(IsAssistantHostVisible));
+        });
+    }
+
+    private async Task ShowAssistantAsync()
+    {
+        _ui(() => IsAssistantPage = true);
+        _assistantWanted = true;
+        if (_embedded && _assistantUrl is null && CanOpen)
+        {
+            await OpenUiAsync(inBrowser: false).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Après chaque mesure : l'interface intégrée suit APEX. Arrêté -> plus rien d'affiché (jamais une page
+    /// figée) ; démarré (ou redémarré : autre processus, la session précédente n'existe plus) -> nouveau lien
+    /// d'ouverture, si l'utilisateur veut l'assistant.
+    /// </summary>
+    private async Task SyncAssistantAsync()
+    {
+        if (!_embedded)
+        {
+            return;
+        }
+        var access = _statusService.LastAccess;
+        if (access is null || !CanOpen)
+        {
+            if (_assistantUrl is not null)
+            {
+                _ui(() => AssistantUrl = null);
+            }
+            return;
+        }
+        if (_assistantWanted && (_assistantUrl is null || access.Pid != _assistantPid))
+        {
+            await OpenUiAsync(inBrowser: false).ConfigureAwait(false);
+        }
     }
 
     /// <summary>La fenêtre doit se fermer (après le choix de l'utilisateur).</summary>
@@ -271,6 +444,9 @@ public sealed class MainWindowViewModel : ObservableObject
     public AsyncRelayCommand StartCommand { get; }
     public AsyncRelayCommand StopCommand { get; }
     public AsyncRelayCommand OpenUiCommand { get; }
+    public AsyncRelayCommand OpenInBrowserCommand { get; }
+    public AsyncRelayCommand ShowAssistantCommand { get; }
+    public RelayCommand ShowControlCommand { get; }
     public AsyncRelayCommand ShowLaunchLogCommand { get; }
     public AsyncRelayCommand PrepareCommand { get; }
     public AsyncRelayCommand InstallModelCommand { get; }
@@ -366,6 +542,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 RaiseActionsChanged();
             });
             await RememberVerifiedProjectRootAsync().ConfigureAwait(false);
+            await SyncAssistantAsync().ConfigureAwait(false);
         }
         finally
         {
@@ -455,31 +632,59 @@ public sealed class MainWindowViewModel : ObservableObject
         await RefreshAsync().ConfigureAwait(false);
     }
 
-    private async Task OpenUiAsync()
+    private async Task OpenUiAsync(bool inBrowser)
     {
         var access = _statusService.LastAccess;
-        if (_control is null || access is null)
+        if (_control is null || access is null || (!inBrowser && _openingAssistant))
         {
             return;
         }
-        var launch = await _control.Client.CreateLaunchCodeAsync(access.Address, access.Port, access.Token).ConfigureAwait(false);
-        string message;
-        if (!launch.Ok || launch.Url is null)
+        _openingAssistant = !inBrowser;
+        try
         {
-            message = $"Ouverture impossible : {launch.Detail}";
+            var launch = await _control.Client.CreateLaunchCodeAsync(access.Address, access.Port, access.Token).ConfigureAwait(false);
+            string message;
+            if (!launch.Ok || launch.Url is null)
+            {
+                message = $"Ouverture impossible : {launch.Detail}";
+            }
+            else if (!inBrowser && _embedded)
+            {
+                if (!SystemBrowserLauncher.IsLocalHttp(launch.Url))
+                {
+                    message = "Ouverture impossible : adresse refusée (seule l'interface APEX de cette machine peut s'afficher)";
+                }
+                else
+                {
+                    _assistantPid = access.Pid;
+                    _assistantWanted = true;
+                    _ui(() =>
+                    {
+                        AssistantUrl = launch.Url;
+                        IsAssistantPage = true;
+                    });
+                    message = launch.UiAvailable
+                        ? "Assistant APEX ouvert dans cette fenêtre (lien à usage unique)."
+                        : $"Interface non construite : {launch.Detail}";
+                }
+            }
+            else if (_control.Browser.Open(launch.Url) is { } error)
+            {
+                message = $"Ouverture impossible : {error}";
+            }
+            else
+            {
+                message = launch.UiAvailable
+                    ? "Interface APEX ouverte dans le navigateur (lien à usage unique)."
+                    : $"Navigateur ouvert, mais l'interface n'est pas construite : {launch.Detail}";
+            }
+            _log.Log(message); // jamais l'adresse : elle porte le code d'ouverture
+            _ui(() => ActionMessage = message);
         }
-        else if (_control.Browser.Open(launch.Url) is { } error)
+        finally
         {
-            message = $"Ouverture impossible : {error}";
+            _openingAssistant = false;
         }
-        else
-        {
-            message = launch.UiAvailable
-                ? "Interface APEX ouverte dans le navigateur (lien à usage unique)."
-                : $"Navigateur ouvert, mais l'interface n'est pas construite : {launch.Detail}";
-        }
-        _log.Log(message); // jamais l'adresse : elle porte le code d'ouverture
-        _ui(() => ActionMessage = message);
     }
 
     /// <summary>Où est le journal du démarrage — affiché tel quel à l'utilisateur.</summary>
@@ -570,6 +775,9 @@ public sealed class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(IsBusyPreparing));
         OnPropertyChanged(nameof(IsNative));
         OnPropertyChanged(nameof(IsWslSettingsVisible));
+        OnPropertyChanged(nameof(AssistantMessage));
+        OnPropertyChanged(nameof(IsStartOfferedOnAssistant));
+        OpenInBrowserCommand.NotifyCanExecuteChanged();
     }
 
     // -- Mode Windows natif : préparation du runtime et du modèle (toujours sur un geste de l'utilisateur) ----------

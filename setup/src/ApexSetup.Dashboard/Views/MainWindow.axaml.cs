@@ -21,8 +21,11 @@ public partial class MainWindow : Window
             if (DataContext is MainWindowViewModel vm)
             {
                 vm.CloseWindowRequested += (_, _) => Close();
+                AssistantView.Failed += (_, reason) => vm.ReportEmbeddedFailure(reason);
             }
         };
+        // Cookies de session et cache du composant d'affichage : avec les données d'APEX, jamais à côté de l'exécutable.
+        AssistantView.UserDataFolder = Path.Combine(Services.NativeRuntime.DefaultHome(), "webview");
     }
 }
 
