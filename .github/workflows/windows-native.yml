@@ -1,0 +1,115 @@
+# APEX 0.4.0 en mode Windows NATIF (sans WSL, Docker ni Ollama) sur un Windows réel hébergé par GitHub
+# (Windows Server, CPU, sans GPU). Ce n'est PAS Windows 10/11 client ni le PC de l'utilisateur : chaque résultat
+# est étiqueté « REAL WINDOWS SERVER (GitHub-hosted) ».
+#
+# Parcours d'un utilisateur, de bout en bout, sans aucune dérogation :
+#   installateur construit depuis CE commit -> installation silencieuse (sans administrateur)
+#   -> APEX.exe --prepare (Python embarqué + bibliothèques figées, empreintes vérifiées)
+#   -> APEX.exe --install-model (Qwen2.5-Coder-1.5B-Instruct, révision figée, SHA-256 publiés vérifiés)
+#   -> APEX.exe --start (préflight + Startup Gate) -> tours RÉELS de l'assistant (assistant_e2e.py run :
+#      Finance avec le vrai modèle, Code avec l'espace de travail et la sandbox si elle est vérifiée)
+#   -> APEX.exe --stop -> --start -> persistance (assistant_e2e.py verify) -> --stop
+#   -> désinstallation (APEX arrêté d'abord, données de l'utilisateur conservées).
+# Un prérequis absent (ex. modèle non téléchargeable) donne BLOCKED (code 3), jamais PASS.
+name: windows-native
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/apex-official-development-4kao8t]
+    paths:
+      - ".github/workflows/windows-native.yml"
+      - "apex/assistant/**"
+      - "setup/packaging/windows/ci/assistant_e2e.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-native
+  cancel-in-progress: false
+
+jobs:
+  native:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    env:
+      APEX_PANEL_START_TIMEOUT_S: "870"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the installer from this commit (same script as the release)
+        shell: bash
+        run: |
+          command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }
+          ISCC=$(bash setup/packaging/fetch_innosetup.sh "$RUNNER_TEMP/toolchain" | tail -1)
+          ISCC="$ISCC" bash setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/release"
+          cat "$RUNNER_TEMP/release/manifest.json"
+
+      - name: Install, prepare, install the model, start, real assistant turns, restart, persistence, uninstall
+        shell: pwsh
+        timeout-minutes: 200
+        run: |
+          $evidence = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\evidence").FullName
+          $setup = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence\install.log" -Wait -PassThru
+          $exe = "$env:LOCALAPPDATA\Programs\APEX\APEX.exe"
+          if ($p.ExitCode -ne 0 -or -not (Test-Path $exe)) { Write-Host "FAIL installation (code $($p.ExitCode))"; exit 1 }
+          # Attendre APEX.exe SEUL : `--start` laisse volontairement tourner le backend (python.exe d'APEX).
+          function Panel([string]$action, [int]$timeoutS = 2400) {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $exe; $psi.Arguments = $action
+            $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardOutput = $true
+            $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+            $proc = [Diagnostics.Process]::Start($psi)
+            $read = $proc.StandardOutput.ReadToEndAsync()
+            if (-not $proc.WaitForExit($timeoutS * 1000)) { try { $proc.Kill() } catch { }; Write-Host "APEX.exe $action : délai dépassé"; return 98 }
+            $out = $null; if ($read.Wait(30000)) { $out = $read.Result }
+            $out | Out-File -Append -Encoding utf8 "$evidence\panel.log"
+            $s = $null; try { $s = $out | ConvertFrom-Json } catch { }
+            Write-Host "APEX.exe $action : code $($proc.ExitCode) ; $($s.headline) / $($s.cause)"
+            return $proc.ExitCode
+          }
+          function Assistant([string]$phase) {
+            python setup/packaging/windows/ci/assistant_e2e.py $phase --out $evidence --timeout 2400 | Out-Host
+            return $LASTEXITCODE
+          }
+          if ((Panel '--prepare') -ne 0) { Write-Host 'BLOCKED : « Préparer APEX » a échoué (voir panel.log)'; exit 3 }
+          $model = Panel '--install-model' 3600
+          if ($model -ne 0) { Write-Host "BLOCKED : le modèle n'a pas pu être installé (code $model)" }
+          if ((Panel '--start' 900) -gt 1) { Write-Host 'FAIL : APEX ne démarre pas'; Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 80; exit 1 }
+          $codes = @()
+          $codes += Assistant 'run'
+          Panel '--stop' 300 | Out-Null
+          if ((Panel '--start' 900) -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; exit 1 }
+          $codes += Assistant 'verify'
+          Panel '--stop' 300 | Out-Null
+          Copy-Item "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" "$evidence\launch.log" -ErrorAction SilentlyContinue
+          $u = Start-Process "$env:LOCALAPPDATA\Programs\APEX\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          Start-Sleep -Seconds 5
+          $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
+          Write-Host "désinstallation : code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
+          Write-Host "codes des phases (run, verify) : $($codes -join ', ')"
+          if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
+          if ($codes -contains 1) { exit 1 }
+          if ($codes -contains 3 -or $model -ne 0) { exit 3 }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-native-evidence
+          path: |
+            ${{ runner.temp }}\evidence
+            ${{ runner.temp }}\release\manifest.json
+            ${{ runner.temp }}\release\build.log
