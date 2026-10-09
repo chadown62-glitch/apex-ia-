@@ -12,6 +12,7 @@ trace par choix, jamais parce qu'elle a été supprimée.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Callable
@@ -47,6 +48,7 @@ class FallbackResult:
 def _attempt(
     candidate: ModelCandidate, *, prompt: str, max_tokens: int | None, temperature: float | None,
     timeout_s: float, provider_factory: Callable[[ModelCandidate], ModelProvider],
+    system: str | None = None, cancel_event: threading.Event | None = None,
 ) -> GenerationAttempt:
     if candidate.endpoint is None:
         return GenerationAttempt(
@@ -57,7 +59,7 @@ def _attempt(
     provider = provider_factory(candidate)
     request = GenerationRequest(
         endpoint=candidate.endpoint, prompt=prompt, max_tokens=max_tokens,
-        temperature=temperature, timeout_s=timeout_s,
+        temperature=temperature, timeout_s=timeout_s, system=system, cancel_event=cancel_event,
     )
     try:
         result = provider.generate(request)
@@ -94,6 +96,8 @@ def generate_with_fallback(
     temperature: float | None = None,
     timeout_s: float = 30.0,
     provider_factory: Callable[[ModelCandidate], ModelProvider] = _default_provider_factory,
+    system: str | None = None,
+    cancel_event: threading.Event | None = None,
 ) -> FallbackResult:
     """Essaie chaque candidat dans l'ordre fourni (déjà classé par
     `apex.routing.router.select_model`, typiquement) — s'arrête au premier
@@ -107,6 +111,8 @@ def generate_with_fallback(
     # aucune chance d'un autre résultat. Le saut reste une tentative tracée, jamais silencieuse.
     exhausted: dict[tuple[str, str, str], str] = {}
     for candidate in candidates:
+        if cancel_event is not None and cancel_event.is_set():
+            break  # annulation demandée : aucun autre candidat n'est essayé
         key = _served_key(candidate)
         if key is not None and key in exhausted:
             attempts.append(GenerationAttempt(
@@ -117,7 +123,7 @@ def generate_with_fallback(
             continue
         attempt = _attempt(
             candidate, prompt=prompt, max_tokens=max_tokens, temperature=temperature,
-            timeout_s=timeout_s, provider_factory=provider_factory,
+            timeout_s=timeout_s, provider_factory=provider_factory, system=system, cancel_event=cancel_event,
         )
         attempts.append(attempt)
         if key is not None and attempt.category in (ModelErrorCategory.TIMEOUT, ModelErrorCategory.OFFLINE):

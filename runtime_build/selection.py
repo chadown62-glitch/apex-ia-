@@ -41,6 +41,8 @@ RUNTIME_PACKAGES: frozenset[str] = frozenset(
         "agents",
         "api",
         "artifacts",
+        # Assistant 0.4.0 (projets, conversations, modes, paramètres, tours) — n'importe que du Runtime.
+        "assistant",
         "cli",
         "config",
         "conversations",

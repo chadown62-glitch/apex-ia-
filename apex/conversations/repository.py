@@ -22,8 +22,26 @@ class ConversationRepository:
         with session_scope(self._session_factory) as session:
             _DbConversationRepository(session).create(
                 id=conversation.id, title=conversation.title, project_id=conversation.project_id,
-                created_by=conversation.created_by, created_at=conversation.created_at,
+                created_by=conversation.created_by, created_at=conversation.created_at, mode=conversation.mode,
             )
+
+    def set_mode(self, conversation_id: str, *, mode: str) -> Conversation | None:
+        from apex.conversations.model import _utcnow
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ConversationRepository as _DbConversationRepository
+
+        with session_scope(self._session_factory) as session:
+            row = _DbConversationRepository(session).set_mode(conversation_id, mode=mode, updated_at=_utcnow())
+            return Conversation.from_row(row) if row is not None else None
+
+    def list_filtered(self, *, project_id: str | None, standalone: bool, limit: int = 200) -> list[Conversation]:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ConversationRepository as _DbConversationRepository
+
+        with session_scope(self._session_factory) as session:
+            rows = _DbConversationRepository(session).list_filtered(
+                project_id=project_id, standalone=standalone, limit=limit)
+            return [Conversation.from_row(row) for row in rows]
 
     def rename(self, conversation_id: str, *, title: str) -> Conversation | None:
         from apex.db.engine import session_scope
@@ -80,6 +98,7 @@ class MessageRepository:
         provider_id: str | None,
         status: MessageStatus,
         error: str | None,
+        meta: dict | None = None,
     ) -> Message:
         import uuid
 
@@ -91,7 +110,7 @@ class MessageRepository:
             row = _DbMessageRepository(session).create(
                 id=str(uuid.uuid4()), conversation_id=conversation_id, role=role.value, content=content,
                 model_id=model_id, provider_id=provider_id, status=status.value, error=error,
-                created_at=_utcnow(),
+                created_at=_utcnow(), meta=meta,
             )
             return Message.from_row(row)
 

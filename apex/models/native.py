@@ -9,13 +9,21 @@ sous-répertoire (format Hugging Face : `config.json`, poids `safetensors`, fich
 JAMAIS téléchargé ici : des poids absents rendent le backend indisponible (`detect`), avec la commande à lancer
 (`apex models fetch`, action explicite de l'utilisateur, réseau requis).
 
-Exécution : GPU CUDA s'il est réellement présent (bf16), sinon CPU (float32). Une génération à la fois par
-modèle chargé (verrou) ; un délai (`timeout_s`) et une annulation (`cancel_event`) arrêtent la génération entre
-deux tokens ; une graine (`seed`) rend l'échantillonnage reproductible.
+Exécution : GPU CUDA s'il est réellement présent (bf16), sinon CPU. Sur CPU, la précision est choisie AVANT le
+chargement d'après la mémoire réellement disponible (`choose_precision`) : float32 si elle suffit (plus rapide :
+4,3 contre 3,0 tokens/s mesurés pour l'architecture 1,5B sur un Xeon 4 threads sans instructions bf16), sinon
+bfloat16 (moitié de la mémoire), sinon refus EXPLICITE « mémoire insuffisante » avec les chiffres — jamais un
+chargement qui ferait swapper ou planter le PC. Réglable (`configure` : précision, threads). Une génération à la
+fois par modèle chargé (verrou) ; un délai (`timeout_s`) et une annulation (`cancel_event`) arrêtent la
+génération entre deux tokens ; une graine (`seed`) rend l'échantillonnage reproductible.
 """
 
 from __future__ import annotations
 
+import json
+import os
+import struct
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -31,6 +39,116 @@ BACKEND = "native_transformers"
 #: Plafond de tokens générés quand l'appelant n'en fixe pas (un code complet tient largement dedans).
 DEFAULT_MAX_NEW_TOKENS = 1024
 _REQUIRED_FILES = ("config.json",)
+#: Précision demandée (`auto` | `float32` | `bfloat16`) et threads CPU (0 = défaut de PyTorch) — posés par les
+#: paramètres de l'application (`apex.assistant.settings`) ou `APEX_MODEL_PRECISION` / `APEX_MODEL_THREADS`.
+_PRECISIONS = ("auto", "float32", "bfloat16")
+_SETTINGS: dict[str, Any] = {"precision": os.environ.get("APEX_MODEL_PRECISION", "auto"),
+                             "threads": int(os.environ.get("APEX_MODEL_THREADS", "0") or 0)}
+#: Marge au-delà des poids : cache d'attention, activations, tokenizer, Python (mesurée large, jamais serrée).
+_OVERHEAD_FACTOR = 1.2
+_OVERHEAD_BYTES = 600 * 1024 * 1024
+_BYTES = {"float32": 4, "bfloat16": 2}
+_DTYPE_SIZES = {"F64": 8, "F32": 4, "BF16": 2, "F16": 2, "I64": 8, "I32": 4, "I16": 2, "I8": 1, "U8": 1, "BOOL": 1}
+
+
+def configure(*, precision: str | None = None, threads: int | None = None) -> bool:
+    """Applique les réglages ; vrai s'ils ont changé (les modèles chargés sont alors libérés : le prochain
+    tour les recharge avec la nouvelle précision)."""
+    changed = False
+    if precision is not None:
+        if precision not in _PRECISIONS:
+            raise ValueError(f"précision « {precision} » inconnue ({', '.join(_PRECISIONS)})")
+        changed |= _SETTINGS["precision"] != precision
+        _SETTINGS["precision"] = precision
+    if threads is not None:
+        if threads < 0:
+            raise ValueError("threads ≥ 0")
+        changed |= _SETTINGS["threads"] != threads
+        _SETTINGS["threads"] = threads
+    if changed:
+        unload_all()
+    return changed
+
+
+def available_memory_bytes() -> int | None:
+    """Mémoire physique DISPONIBLE maintenant (Windows : GlobalMemoryStatusEx ; Linux : MemAvailable) ;
+    `None` si elle ne peut pas être mesurée (jamais supposée)."""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            class _MemoryStatus(ctypes.Structure):
+                _fields_ = [("dwLength", ctypes.c_ulong), ("dwMemoryLoad", ctypes.c_ulong),
+                            ("ullTotalPhys", ctypes.c_ulonglong), ("ullAvailPhys", ctypes.c_ulonglong),
+                            ("ullTotalPageFile", ctypes.c_ulonglong), ("ullAvailPageFile", ctypes.c_ulonglong),
+                            ("ullTotalVirtual", ctypes.c_ulonglong), ("ullAvailVirtual", ctypes.c_ulonglong),
+                            ("ullAvailExtendedVirtual", ctypes.c_ulonglong)]
+
+            status = _MemoryStatus()
+            status.dwLength = ctypes.sizeof(_MemoryStatus)
+            if not ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):  # type: ignore[attr-defined]
+                return None
+            return int(status.ullAvailPhys)
+        for line in Path("/proc/meminfo").read_text().splitlines():
+            if line.startswith("MemAvailable:"):
+                return int(line.split()[1]) * 1024
+    except (OSError, ValueError, AttributeError):
+        return None
+    return None
+
+
+def parameter_count(path: Path) -> int | None:
+    """Nombre de paramètres lu dans les en-têtes safetensors (sans charger les poids) ; `None` sinon."""
+    total = 0
+    files = sorted(path.glob("*.safetensors"))
+    if not files:
+        return None
+    try:
+        for file in files:
+            with open(file, "rb") as handle:
+                size = struct.unpack("<Q", handle.read(8))[0]
+                header = json.loads(handle.read(size))
+            for name, info in header.items():
+                if name == "__metadata__":
+                    continue
+                count = 1
+                for dim in info["shape"]:
+                    count *= int(dim)
+                total += count
+    except (OSError, ValueError, KeyError, struct.error):
+        return None
+    return total
+
+
+def required_bytes(params: int, precision: str) -> int:
+    return int(params * _BYTES[precision] * _OVERHEAD_FACTOR) + _OVERHEAD_BYTES
+
+
+class InsufficientMemory(RuntimeError):
+    pass
+
+
+def choose_precision(params: int | None, available: int | None, requested: str = "auto",
+                     cuda: bool = False) -> str:
+    """Précision de chargement SUR CPU. `requested` explicite : respecté, mais refusé s'il ne tient pas en
+    mémoire. `auto` : float32 s'il tient, sinon bfloat16, sinon refus. Mémoire ou taille non mesurables :
+    la demande explicite, ou float32 (comportement antérieur) — jamais un refus sur une supposition."""
+    if cuda:
+        return "bfloat16"
+    gib = 1024 ** 3
+    if params is None or available is None:
+        return "float32" if requested == "auto" else requested
+    candidates = ["float32", "bfloat16"] if requested == "auto" else [requested]
+    for precision in candidates:
+        if required_bytes(params, precision) <= available:
+            return precision
+    need = {p: required_bytes(params, p) / gib for p in ("float32", "bfloat16")}
+    hint = ("" if requested == "bfloat16" or (requested == "auto")
+            else " ; la précision bfloat16 (Paramètres > Ressources) en demande moitié moins")
+    raise InsufficientMemory(
+        f"mémoire insuffisante pour charger le modèle : {available / gib:.1f} Go disponibles, "
+        f"{need['bfloat16']:.1f} Go nécessaires en bfloat16 ({need['float32']:.1f} Go en float32){hint}. "
+        "Fermez des applications puis relancez la génération.")
 _TOKENIZER_FILES = ("tokenizer.json", "tokenizer_config.json", "vocab.json", "tokenizer.model")
 
 
@@ -92,7 +210,10 @@ def _load(path: Path) -> tuple[_Loaded, bool]:
 
         started = time.perf_counter()
         cuda = torch.cuda.is_available()
-        dtype = torch.bfloat16 if cuda else torch.float32
+        precision = choose_precision(parameter_count(path), available_memory_bytes(), _SETTINGS["precision"], cuda)
+        dtype = torch.bfloat16 if precision == "bfloat16" else torch.float32
+        if _SETTINGS["threads"]:
+            torch.set_num_threads(int(_SETTINGS["threads"]))
         tokenizer = AutoTokenizer.from_pretrained(key, local_files_only=True)
         model = AutoModelForCausalLM.from_pretrained(key, local_files_only=True, dtype=dtype)
         device = "cuda" if cuda else "cpu"
@@ -165,6 +286,9 @@ class NativeTransformersProvider(ModelProvider):
         assert path is not None
         try:
             loaded, just_loaded = _load(path)
+        except InsufficientMemory as exc:
+            raise ModelProviderError("NativeTransformersProvider.generate", endpoint_url=self._endpoint.url,
+                                     detail=str(exc), category=ModelErrorCategory.PROVIDER_ERROR) from exc
         except Exception as exc:
             raise ModelProviderError("NativeTransformersProvider.generate", endpoint_url=self._endpoint.url,
                                      detail=f"chargement impossible : {exc.__class__.__name__}: {str(exc)[:300]}",
@@ -174,10 +298,12 @@ class NativeTransformersProvider(ModelProvider):
 
         tokenizer = loaded.tokenizer
         if getattr(tokenizer, "chat_template", None):
-            input_ids = tokenizer.apply_chat_template(
-                [{"role": "user", "content": request.prompt}], add_generation_prompt=True, return_tensors="pt")
+            messages = ([{"role": "system", "content": request.system}] if request.system else []) + [
+                {"role": "user", "content": request.prompt}]
+            input_ids = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
         else:
-            input_ids = tokenizer(request.prompt, return_tensors="pt").input_ids
+            text = f"{request.system}\n\n{request.prompt}" if request.system else request.prompt
+            input_ids = tokenizer(text, return_tensors="pt").input_ids
         prompt_tokens = int(input_ids.shape[-1])
         # Contexte RÉEL : le plus petit du contexte déclaré et de celui du modèle (jamais au-delà de ce qu'il
         # a été construit pour traiter).

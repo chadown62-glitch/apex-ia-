@@ -23,11 +23,13 @@ from apex.db.models import (
     AgentRow,
     AgentTeamRow,
     AgentTemplateRow,
+    AppSettingRow,
     AuditLogRow,
     BugRecordRow,
     ComputePoolRow,
     ConfiguredAgentRow,
     ConversationRow,
+    ConversationTurnRow,
     CurriculumChallengeRow,
     EvalRunRow,
     EventRow,
@@ -41,6 +43,7 @@ from apex.db.models import (
     MessageRow,
     MissionRow,
     PopulationMemberRow,
+    ProjectAttachmentRow,
     ProjectRow,
     SkillRow,
     TaskRow,
@@ -1423,18 +1426,54 @@ class ProjectRepository:
     """Persistance de `apex.projects` (passe « Première interface
     utilisable »). N'importe jamais `apex.projects` : même règle de couche
     que `MissionRepository` — méthodes en mots-clés, jamais un objet
-    `Project`. Aucune méthode de suppression : un projet regroupant déjà des
-    conversations, le supprimer silencieusement orphelinerait leur
-    `project_id` — hors scope MVP, à traiter si le besoin réel apparaît."""
+    `Project`. Suppression (0.4.0) : jamais silencieuse — `delete` retire le
+    projet ET ce qui lui appartient (conversations, leurs messages et tours,
+    pièces jointes), en une transaction : aucun `project_id` orphelin."""
 
     def __init__(self, session: Session) -> None:
         self._session = session
 
-    def create(self, *, id: str, name: str, description: str, created_by: str, created_at: datetime) -> ProjectRow:
-        row = ProjectRow(id=id, name=name, description=description, created_by=created_by, created_at=created_at)
+    def create(
+        self, *, id: str, name: str, description: str, created_by: str, created_at: datetime,
+        instructions: str | None = None,
+    ) -> ProjectRow:
+        row = ProjectRow(id=id, name=name, description=description, created_by=created_by, created_at=created_at,
+                         instructions=instructions, updated_at=created_at)
         self._session.add(row)
         self._session.flush()
         return row
+
+    def update(self, project_id: str, *, updated_at: datetime, **fields: str | None) -> ProjectRow | None:
+        row = self._session.get(ProjectRow, project_id)
+        if row is None:
+            return None
+        for name in ("name", "description", "instructions"):
+            if name in fields:
+                setattr(row, name, fields[name])
+        row.updated_at = updated_at
+        self._session.flush()
+        return row
+
+    def delete(self, project_id: str) -> dict[str, int] | None:
+        """Supprime le projet et tout ce qui lui appartient ; `None` s'il n'existe pas, sinon ce qui a été
+        supprimé (comptes)."""
+        row = self._session.get(ProjectRow, project_id)
+        if row is None:
+            return None
+        conversation_ids = list(self._session.scalars(
+            select(ConversationRow.id).where(ConversationRow.project_id == project_id)))
+        counts = {"conversations": len(conversation_ids), "messages": 0, "attachments": 0}
+        if conversation_ids:
+            counts["messages"] = self._session.execute(
+                sa_delete(MessageRow).where(MessageRow.conversation_id.in_(conversation_ids))).rowcount or 0
+            self._session.execute(
+                sa_delete(ConversationTurnRow).where(ConversationTurnRow.conversation_id.in_(conversation_ids)))
+            self._session.execute(sa_delete(ConversationRow).where(ConversationRow.id.in_(conversation_ids)))
+        counts["attachments"] = self._session.execute(
+            sa_delete(ProjectAttachmentRow).where(ProjectAttachmentRow.project_id == project_id)).rowcount or 0
+        self._session.delete(row)
+        self._session.flush()
+        return counts
 
     def get(self, project_id: str) -> ProjectRow | None:
         return self._session.get(ProjectRow, project_id)
@@ -1454,14 +1493,34 @@ class ConversationRepository:
 
     def create(
         self, *, id: str, title: str, project_id: str | None, created_by: str, created_at: datetime,
+        mode: str | None = None,
     ) -> ConversationRow:
         row = ConversationRow(
             id=id, title=title, project_id=project_id, created_by=created_by,
-            created_at=created_at, updated_at=created_at,
+            created_at=created_at, updated_at=created_at, mode=mode,
         )
         self._session.add(row)
         self._session.flush()
         return row
+
+    def set_mode(self, conversation_id: str, *, mode: str, updated_at: datetime) -> ConversationRow | None:
+        row = self._session.get(ConversationRow, conversation_id)
+        if row is None:
+            return None
+        row.mode = mode
+        row.updated_at = updated_at
+        self._session.flush()
+        return row
+
+    def list_filtered(self, *, project_id: str | None, standalone: bool, limit: int = 200) -> list[ConversationRow]:
+        """Conversations d'un projet (`project_id`), ou hors de tout projet (`standalone`), ou toutes."""
+        stmt = select(ConversationRow)
+        if project_id is not None:
+            stmt = stmt.where(ConversationRow.project_id == project_id)
+        elif standalone:
+            stmt = stmt.where(ConversationRow.project_id.is_(None))
+        stmt = stmt.order_by(ConversationRow.updated_at.desc()).limit(limit)
+        return list(self._session.scalars(stmt))
 
     def rename(self, conversation_id: str, *, title: str, updated_at: datetime) -> ConversationRow | None:
         row = self._session.get(ConversationRow, conversation_id)
@@ -1500,6 +1559,8 @@ class ConversationRepository:
         # (même simplification documentée que `MissionRow.assigned_agent`) —
         # supprimés explicitement ici, jamais laissés orphelins en base.
         self._session.execute(sa_delete(MessageRow).where(MessageRow.conversation_id == conversation_id))
+        self._session.execute(
+            sa_delete(ConversationTurnRow).where(ConversationTurnRow.conversation_id == conversation_id))
         self._session.flush()
         return True
 
@@ -1524,10 +1585,12 @@ class MessageRepository:
         status: str,
         error: str | None,
         created_at: datetime,
+        meta: dict[str, Any] | None = None,
     ) -> MessageRow:
         row = MessageRow(
             id=id, conversation_id=conversation_id, role=role, content=content,
             model_id=model_id, provider_id=provider_id, status=status, error=error, created_at=created_at,
+            meta=meta,
         )
         self._session.add(row)
         self._session.flush()
@@ -1816,3 +1879,84 @@ class AgentTeamRepository:
     def list_all(self, limit: int = 200) -> list[AgentTeamRow]:
         stmt = select(AgentTeamRow).order_by(AgentTeamRow.created_at.desc()).limit(limit)
         return list(self._session.scalars(stmt))
+
+
+class ConversationTurnRepository:
+    """Tours de conversation en cours (`ConversationTurnRow`) : seul état MUTABLE d'un échange — les messages,
+    eux, restent en insertion seule."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, *, id: str, conversation_id: str, user_message_id: str, mode: str,
+               created_at: datetime) -> ConversationTurnRow:
+        row = ConversationTurnRow(id=id, conversation_id=conversation_id, user_message_id=user_message_id,
+                                  mode=mode, status="queued", steps=[], created_at=created_at)
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def get(self, turn_id: str) -> ConversationTurnRow | None:
+        return self._session.get(ConversationTurnRow, turn_id)
+
+    def update(self, turn_id: str, **fields: Any) -> ConversationTurnRow | None:
+        row = self._session.get(ConversationTurnRow, turn_id)
+        if row is None:
+            return None
+        for name, value in fields.items():
+            setattr(row, name, value)
+        self._session.flush()
+        return row
+
+    def by_conversation(self, conversation_id: str, limit: int = 50) -> list[ConversationTurnRow]:
+        stmt = (select(ConversationTurnRow).where(ConversationTurnRow.conversation_id == conversation_id)
+                .order_by(ConversationTurnRow.created_at.desc()).limit(limit))
+        return list(self._session.scalars(stmt))
+
+    def unfinished(self) -> list[ConversationTurnRow]:
+        stmt = select(ConversationTurnRow).where(ConversationTurnRow.status.in_(("queued", "running")))
+        return list(self._session.scalars(stmt))
+
+
+class ProjectAttachmentRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def create(self, **fields: Any) -> ProjectAttachmentRow:
+        row = ProjectAttachmentRow(**fields)
+        self._session.add(row)
+        self._session.flush()
+        return row
+
+    def list_by_project(self, project_id: str) -> list[ProjectAttachmentRow]:
+        stmt = (select(ProjectAttachmentRow).where(ProjectAttachmentRow.project_id == project_id)
+                .order_by(ProjectAttachmentRow.created_at.asc()))
+        return list(self._session.scalars(stmt))
+
+    def get(self, attachment_id: str) -> ProjectAttachmentRow | None:
+        return self._session.get(ProjectAttachmentRow, attachment_id)
+
+    def delete(self, attachment_id: str) -> bool:
+        row = self._session.get(ProjectAttachmentRow, attachment_id)
+        if row is None:
+            return False
+        self._session.delete(row)
+        self._session.flush()
+        return True
+
+
+class AppSettingRepository:
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def all(self) -> dict[str, dict[str, Any]]:
+        return {row.key: dict(row.value or {}) for row in self._session.scalars(select(AppSettingRow))}
+
+    def put(self, key: str, value: dict[str, Any], *, updated_at: datetime) -> None:
+        row = self._session.get(AppSettingRow, key)
+        if row is None:
+            self._session.add(AppSettingRow(key=key, value=value, updated_at=updated_at))
+        else:
+            row.value = value
+            row.updated_at = updated_at
+        self._session.flush()

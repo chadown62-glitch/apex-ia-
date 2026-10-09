@@ -161,8 +161,16 @@ class TestConversationLifecycle(unittest.TestCase):
             self.service.delete(conversation.id, requested_by=Subject.SECURITY)
 
     def test_project_id_is_stored_when_provided(self) -> None:
-        conversation = self.service.create(title="c", created_by=Subject.HUMAN, project_id="proj-1")
-        self.assertEqual(conversation.project_id, "proj-1")
+        from apex.projects.service import ProjectService
+
+        project = ProjectService(self.factory).create(name="p", description="", created_by=Subject.HUMAN)
+        conversation = self.service.create(title="c", created_by=Subject.HUMAN, project_id=project.id)
+        self.assertEqual(conversation.project_id, project.id)
+
+    def test_an_unknown_project_is_refused(self) -> None:
+        """L'existence du projet est vérifiée au niveau service (aucune clé étrangère en base) — 0.4.0."""
+        with self.assertRaises(LookupError):
+            self.service.create(title="c", created_by=Subject.HUMAN, project_id="proj-inexistant")
 
 
 class TestSendMessage(unittest.TestCase):

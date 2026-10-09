@@ -100,6 +100,7 @@ class OllamaProvider(ModelProvider):
             options["temperature"] = request.temperature
         body: dict[str, Any] = {
             "model": self._endpoint.served_model, "prompt": request.prompt, "stream": stream,
+            **({"system": request.system} if request.system else {}),
         }
         if options:
             body["options"] = options

@@ -110,7 +110,7 @@ DEFAULT_ALLOWLIST: Mapping[Subject, frozenset[Action]] = {
             # interface utilisable ») : HUMAIN seul, même motif que
             # CREATE_MISSION — jamais un clone, jamais le CORE en autonomie.
             Action.CREATE_CONVERSATION, Action.UPDATE_CONVERSATION, Action.DELETE_CONVERSATION,
-            Action.SEND_MESSAGE, Action.CREATE_PROJECT,
+            Action.SEND_MESSAGE, Action.CREATE_PROJECT, Action.UPDATE_PROJECT, Action.DELETE_PROJECT,
             Action.CREATE_AGENT_TEMPLATE, Action.DELETE_AGENT_TEMPLATE,
             # Agents V1 : HUMAIN crée/édite/supprime un Agent et une Team —
             # jamais RUN_AGENT_EXECUTION (réservé à CORE, même motif que

@@ -38,6 +38,9 @@ class MessageStatus(str, Enum):
     #: `content` reste vide, `error` porte le détail (jamais un texte
     #: inventé à la place d'un échec réel).
     ERROR = "error"
+    #: Génération annulée par l'utilisateur (0.4.0) : `content` porte au plus ce qui était déjà produit,
+    #: jamais présenté comme une réponse complète.
+    CANCELLED = "cancelled"
 
 
 @dataclass
@@ -51,6 +54,8 @@ class Message:
     status: MessageStatus
     error: str | None
     created_at: datetime = field(default_factory=_utcnow)
+    #: Mode, outils appelés, tokens et durée MESURÉS (0.4.0) ; `None` pour un message antérieur.
+    meta: dict | None = None
 
     @classmethod
     def from_row(cls, row: "MessageRow") -> Message:
@@ -58,6 +63,7 @@ class Message:
             id=row.id, conversation_id=row.conversation_id, role=MessageRole(row.role),
             content=row.content, model_id=row.model_id, provider_id=row.provider_id,
             status=MessageStatus(row.status), error=row.error, created_at=row.created_at,
+            meta=getattr(row, "meta", None),
         )
 
 
@@ -69,18 +75,20 @@ class Conversation:
     created_by: str
     created_at: datetime = field(default_factory=_utcnow)
     updated_at: datetime = field(default_factory=_utcnow)
+    #: Mode de travail (`apex.assistant.modes`) ; `normal` pour une conversation antérieure.
+    mode: str = "normal"
 
     @classmethod
-    def new(cls, *, title: str, created_by: str, project_id: str | None = None) -> Conversation:
+    def new(cls, *, title: str, created_by: str, project_id: str | None = None, mode: str = "normal") -> Conversation:
         now = _utcnow()
         return cls(
             id=str(uuid.uuid4()), title=title, project_id=project_id,
-            created_by=created_by, created_at=now, updated_at=now,
+            created_by=created_by, created_at=now, updated_at=now, mode=mode,
         )
 
     @classmethod
     def from_row(cls, row: "ConversationRow") -> Conversation:
         return cls(
             id=row.id, title=row.title, project_id=row.project_id, created_by=row.created_by,
-            created_at=row.created_at, updated_at=row.updated_at,
+            created_at=row.created_at, updated_at=row.updated_at, mode=getattr(row, "mode", None) or "normal",
         )

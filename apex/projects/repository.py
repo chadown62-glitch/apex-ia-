@@ -23,7 +23,25 @@ class ProjectRepository:
             _DbProjectRepository(session).create(
                 id=project.id, name=project.name, description=project.description,
                 created_by=project.created_by, created_at=project.created_at,
+                instructions=project.instructions or None,
             )
+
+    def update(self, project_id: str, **fields: str | None) -> Project | None:
+        from datetime import UTC, datetime
+
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ProjectRepository as _DbProjectRepository
+
+        with session_scope(self._session_factory) as session:
+            row = _DbProjectRepository(session).update(project_id, updated_at=datetime.now(UTC), **fields)
+            return Project.from_row(row) if row is not None else None
+
+    def delete(self, project_id: str) -> dict[str, int] | None:
+        from apex.db.engine import session_scope
+        from apex.db.repositories import ProjectRepository as _DbProjectRepository
+
+        with session_scope(self._session_factory) as session:
+            return _DbProjectRepository(session).delete(project_id)
 
     def get(self, project_id: str) -> Project | None:
         from apex.db.engine import session_scope

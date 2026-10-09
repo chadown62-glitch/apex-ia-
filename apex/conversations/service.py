@@ -69,11 +69,21 @@ class ConversationService:
 
     # -- cycle de vie de la conversation ------------------------------------
 
-    def create(self, *, title: str, created_by: Subject, project_id: str | None = None) -> Conversation:
+    def create(
+        self, *, title: str, created_by: Subject, project_id: str | None = None, mode: str = "normal",
+    ) -> Conversation:
         self.policy.authorize(created_by, Action.CREATE_CONVERSATION)
         if not title.strip():
             raise ValueError("le titre de la conversation est obligatoire")
-        conversation = Conversation.new(title=title, created_by=created_by.value, project_id=project_id)
+        from apex.assistant.modes import get_mode
+
+        get_mode(mode)  # mode inconnu : refusé avant toute écriture
+        if project_id is not None:
+            from apex.projects.service import ProjectService
+
+            if ProjectService(self._session_factory).get(project_id) is None:
+                raise LookupError(f"projet « {project_id} » introuvable")
+        conversation = Conversation.new(title=title, created_by=created_by.value, project_id=project_id, mode=mode)
         self._conversations.create(conversation)
         self._record_event(conversation.id, "conversation.created", {})
         self._record_audit(conversation.id, actor=created_by.value, action="conversation.created", details={})
@@ -91,12 +101,44 @@ class ConversationService:
         )
         return conversation
 
+    def set_mode(self, conversation_id: str, *, mode: str, requested_by: Subject) -> Conversation:
+        self.policy.authorize(requested_by, Action.UPDATE_CONVERSATION)
+        from apex.assistant.modes import get_mode
+
+        get_mode(mode)
+        conversation = self._conversations.set_mode(conversation_id, mode=mode)
+        if conversation is None:
+            raise LookupError(f"conversation « {conversation_id} » introuvable")
+        self._record_audit(conversation_id, actor=requested_by.value, action="conversation.mode_changed",
+                           details={"mode": mode})
+        return conversation
+
+    def list_filtered(self, *, project_id: str | None = None, standalone: bool = False,
+                      limit: int = 200) -> list[Conversation]:
+        return self._conversations.list_filtered(project_id=project_id, standalone=standalone, limit=limit)
+
     def delete(self, conversation_id: str, *, requested_by: Subject) -> bool:
         self.policy.authorize(requested_by, Action.DELETE_CONVERSATION)
+        conversation = self._conversations.get(conversation_id)
         deleted = self._conversations.delete(conversation_id)
         if deleted:
             self._record_audit(conversation_id, actor=requested_by.value, action="conversation.deleted", details={})
+            if conversation is not None and conversation.project_id is None:
+                from apex.assistant.workspace import remove
+
+                try:
+                    remove("conversation", conversation_id)
+                except (OSError, ValueError):
+                    pass  # l'espace de travail reste sur le disque ; la conversation, elle, est supprimée
         return deleted
+
+    def recall(self, conversation_id: str, content: str, prompt: str) -> tuple[str, list[Any]]:
+        """Souvenirs système pertinents joints au prompt (voir `_recall`) — utilisé aussi par les tours
+        asynchrones de l'assistant."""
+        return self._recall(conversation_id, content, prompt)
+
+    def remember(self, conversation_id: str, message_id: str, question: str, answer: str) -> None:
+        self._remember(conversation_id, message_id, question, answer)
 
     def get(self, conversation_id: str) -> Conversation | None:
         return self._conversations.get(conversation_id)

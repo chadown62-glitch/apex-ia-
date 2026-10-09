@@ -38,6 +38,9 @@ class GenerationRequest:
     #: Graine d'échantillonnage (reproductibilité des expériences) — honorée par le backend natif ; les
     #: backends HTTP qui ne l'exposent pas l'ignorent (jamais présentée comme appliquée par eux).
     seed: int | None = None
+    #: Consignes « système » (mode de l'assistant, consignes de projet) : rôle `system` du modèle quand le
+    #: backend le connaît (gabarit de conversation natif, API chat), sinon placées en tête du prompt.
+    system: str | None = None
 
 
 @dataclass(frozen=True)

@@ -63,6 +63,39 @@ def get_session_factory() -> Any:
 _scheduler_service: "SchedulerService | None" = None
 _scheduler_lock = threading.Lock()
 
+_turn_manager: Any = None
+_turn_lock = threading.Lock()
+
+
+def get_turn_manager() -> Any:
+    """Gestionnaire des tours de l'assistant (`apex.assistant.turns.TurnManager`) — UN par processus : une
+    seule génération à la fois, un seul modèle en mémoire. À sa construction, les tours interrompus par un arrêt
+    précédent sont clos explicitement et les réglages du runtime (précision, threads) sont appliqués."""
+    global _turn_manager
+    if _turn_manager is None:
+        with _turn_lock:
+            if _turn_manager is None:
+                from apex.assistant.settings import SettingsService, apply_runtime
+                from apex.assistant.turns import TurnManager
+
+                factory = get_session_factory()
+                manager = TurnManager(factory)
+                manager.recover_unfinished()
+                settings, _ = SettingsService(factory).load()
+                apply_runtime(settings)
+                _turn_manager = manager
+    return _turn_manager
+
+
+def shutdown_turn_manager() -> None:
+    """Arrêt d'APEX : les générations en cours sont annulées (entre deux tokens) pour que le processus s'arrête
+    vite ; elles seront marquées « interrompues » au prochain démarrage."""
+    global _turn_manager
+    with _turn_lock:
+        if _turn_manager is not None:
+            _turn_manager.shutdown()
+            _turn_manager = None
+
 
 def get_scheduler_service() -> "SchedulerService":
     """Construit — UNE SEULE FOIS par processus — le Scheduler applicatif et

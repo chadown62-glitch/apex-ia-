@@ -1215,6 +1215,10 @@ class ProjectRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
+    #: Consignes propres au projet, jointes à chaque tour de ses conversations (migration c2e4a6b8d0f1) ;
+    #: NULL : projet antérieur ou sans consignes.
+    instructions: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1223,6 +1227,7 @@ class ProjectRow(Base):
             "description": self.description,
             "created_by": self.created_by,
             "created_at": self.created_at.isoformat(),
+            "instructions": self.instructions,
         }
 
 
@@ -1246,6 +1251,9 @@ class ConversationRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
+    #: Mode de travail (`normal` | `code` | `design` | `finance`, `apex.assistant.modes`) — migration
+    #: c2e4a6b8d0f1 ; NULL : conversation antérieure, relue comme `normal`.
+    mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1280,6 +1288,9 @@ class MessageRow(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False, index=True
     )
+    #: Ce que l'on sait de ce tour au moment de l'insertion (migration c2e4a6b8d0f1) : mode, outils appelés
+    #: et leurs résultats, tokens et durée MESURÉS. Écrit une seule fois, comme le reste du message.
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -1293,6 +1304,55 @@ class MessageRow(Base):
             "error": self.error,
             "created_at": self.created_at.isoformat(),
         }
+
+
+class ConversationTurnRow(Base):
+    """Un tour de conversation EN COURS (migration c2e4a6b8d0f1) : le message de l'utilisateur est inséré
+    tout de suite, la réponse seulement quand elle existe (les messages restent en insertion seule). Le tour
+    porte ce qui se passe entre les deux — file d'attente, étapes d'outils, annulation — pour que l'interface
+    affiche l'état RÉEL de la génération. `status` : queued | running | done | failed | cancelled."""
+
+    __tablename__ = "conversation_turns"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    user_message_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    assistant_message_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, index=True)
+    steps: Mapped[list[dict[str, Any]]] = mapped_column(JSON, nullable=False, default=list)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class ProjectAttachmentRow(Base):
+    """Pièce jointe TEXTE d'un projet (migration c2e4a6b8d0f1), jointe aux tours de ses conversations dans un
+    budget borné. Seuls les formats texte réellement lus par APEX sont acceptés (`apex.assistant.attachments`) :
+    jamais une image ou un binaire présenté comme « analysé »."""
+
+    __tablename__ = "project_attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    project_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    media_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
+
+
+class AppSettingRow(Base):
+    """Paramètres de l'application (migration c2e4a6b8d0f1) : une ligne par section (`appearance`, `models`,
+    `runtime`, `behavior`, `tools`, `privacy`, `resources`), valeur validée par `apex.assistant.settings`."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, nullable=False)
 
 
 class AgentTemplateRow(Base):

@@ -24,14 +24,19 @@ class Project:
     description: str
     created_by: str
     created_at: datetime = field(default_factory=_utcnow)
+    #: Consignes jointes à chaque tour des conversations du projet (0.4.0) ; vide : aucune.
+    instructions: str = ""
+    updated_at: datetime | None = None
 
     @classmethod
-    def new(cls, *, name: str, description: str, created_by: str) -> Project:
-        return cls(id=str(uuid.uuid4()), name=name, description=description, created_by=created_by)
+    def new(cls, *, name: str, description: str, created_by: str, instructions: str = "") -> Project:
+        return cls(id=str(uuid.uuid4()), name=name, description=description, created_by=created_by,
+                   instructions=instructions)
 
     @classmethod
     def from_row(cls, row: "ProjectRow") -> Project:
         return cls(
             id=row.id, name=row.name, description=row.description,
             created_by=row.created_by, created_at=row.created_at,
+            instructions=getattr(row, "instructions", None) or "", updated_at=getattr(row, "updated_at", None),
         )

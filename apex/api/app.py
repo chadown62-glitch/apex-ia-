@@ -83,6 +83,7 @@ from apex.api.routes import (
     agent_registry,
     agent_templates,
     agents,
+    assistant,
     audit,
     conversations,
     evals,
@@ -173,6 +174,16 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 
         logging.getLogger("apex.api").warning("réconciliation des TaskRun au démarrage impossible : %s", exc)
 
+    # Assistant : tours interrompus par un arrêt précédent -> clos explicitement dès le démarrage.
+    try:
+        from apex.api.dependencies import get_turn_manager
+
+        get_turn_manager()
+    except Exception as exc:  # jamais bloquant : retenté à la première requête de l'assistant
+        import logging
+
+        logging.getLogger("apex.api").warning("assistant : reprise des tours au démarrage impossible : %s", exc)
+
     # Tâches de fond de RECHERCHE (planificateur d'apprentissage autonome) : seulement si l'extension est
     # présente — le Runtime livré n'en a pas.
     scheduler_service = None
@@ -187,6 +198,9 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
+        from apex.api.dependencies import shutdown_turn_manager
+
+        shutdown_turn_manager()
         if scheduler_service is not None:
             scheduler_service.stop()
 
@@ -234,7 +248,7 @@ def create_app() -> FastAPI:
         agents.router, missions.router, scheduler.router, operator.router,
         conversations.router, projects.router, agent_templates.router, models.router,
         agent_registry.router, evals.router, status.router, task_runs.router, memory.router, ui.api_router,
-        system.router,
+        system.router, assistant.router,
         *research_routers,
     ):
         app.include_router(router, prefix=API_PREFIX, dependencies=[auth_dependency])

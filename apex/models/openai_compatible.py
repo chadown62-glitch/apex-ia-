@@ -181,7 +181,8 @@ class OpenAICompatibleProvider(ModelProvider):
 
         body: dict[str, Any] = {
             "model": self._endpoint.served_model,
-            "messages": [{"role": "user", "content": request.prompt}],
+            "messages": ([{"role": "system", "content": request.system}] if request.system else [])
+            + [{"role": "user", "content": request.prompt}],
         }
         if request.max_tokens is not None:
             body["max_tokens"] = request.max_tokens

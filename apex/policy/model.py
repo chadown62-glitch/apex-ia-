@@ -120,6 +120,10 @@ class Action(str, Enum):
     SEND_MESSAGE = "send_message"
     # -- Projects (passe « Première interface utilisable ») ------------------
     CREATE_PROJECT = "create_project"
+    # Assistant 0.4.0 : modifier (nom, description, consignes, pièces jointes) et supprimer un projet —
+    # HUMAIN seul, comme sa création.
+    UPDATE_PROJECT = "update_project"
+    DELETE_PROJECT = "delete_project"
     # -- AgentTemplate (passe « Première interface utilisable ») -------------
     # Une DÉFINITION d'agent, jamais un spawn réel (SPAWN_CLONE, inchangé) —
     # même distinction que documentée dans `apex.db.models.AgentTemplateRow`.
