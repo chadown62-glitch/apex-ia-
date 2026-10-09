@@ -391,3 +391,34 @@ Tests ajoutés par cette mission (tous réussis) :
 `test_knowledge_agent.py`, `test_knowledge_experience.py`,
 `test_improvement_native.py`, `test_native_cross_system.py`.
 Exécutés seuls : **143 collectés, 143 réussis, 59 sous-tests réussis, code 0.**
+
+## 15. Le Cerveau APEX dans l'application (0.4.1)
+
+Demande de l'utilisateur (09/10/2026) : pouvoir choisir, dans l'assistant, entre Ollama et « le modèle qu'on
+développe nous-même ». Ce modèle est ApexLM ; il est désormais servi par l'application Windows, comme moteur
+**expérimental**, à côté d'Ollama et du moteur intégré (Qwen2.5-Coder 1.5B exécuté par APEX).
+
+| Élément | Où | Garantie |
+|---|---|---|
+| Architecture, tokenizer, configuration du modèle | `apex/brain/` (paquet Runtime) | une seule définition : `apex/neural` (recherche) la réexporte |
+| Poids servis | `brain/apex-brain-v1/` (safetensors, 7,7 Mo) | jamais un checkpoint d'entraînement (pickle) ; SHA-256 du fichier ET empreinte des poids chargés comparés à `provenance.json` à chaque chargement — des poids modifiés sont refusés |
+| Version | `experiment-002:v1` | la version **promue** du registre (`docs/neural/registry.jsonl`, index 0, décision ACCEPT) |
+| Export | `scripts/apex_brain_export.py` | refuse une version non promue, ou des poids dont l'empreinte diffère de celle mesurée par le registre |
+| Backend | `apex/models/apex_brain.py` (`runtime: apex_brain`) | reçoit le dernier message seulement (contexte de 128 jetons), continue le texte ; sortie rendue telle quelle |
+| Choix | `apex/assistant/engines.py`, Paramètres → Modèles, liste « Moteur » | jamais candidat d'un rôle de la configuration : ni « Automatique », ni tâches, missions ou `apex solve` ne le choisissent |
+
+**Reproduction mesurée.** Les checkpoints n'étant pas versionnés, `experiment-002` a été relancée le 09/10/2026
+avec le code et les documents du commit `59cdbd1` (état du 26/09), lus à leur chemin d'origine
+(`/home/user/apex-ia-/docs` : les identifiants des documents, donc le découpage train/test, en dépendent — une
+première relance depuis un autre chemin donnait un autre découpage et d'autres poids). Résultat : empreintes des
+poids (`sha256:be46e658…`), du dataset (`sha256:0de29c88…`) et du tokenizer (`d04294c7…`) **identiques** au
+registre ; BPB held-out 2,53844, validation 2,89142, mêmes verdicts du Judge (V1 ACCEPT contre V0, V2 corrompue
+REJECT). Seul le fichier de checkpoint diffère (il contient aussi l'horodatage et l'état de l'optimiseur).
+
+**Ce qu'il fait dans l'assistant, mesuré.** 1 918 656 paramètres, CPU : ~190 jetons/s, chargement < 0,1 s.
+« Return the » → « current module processes. ## itertools.crement Return the codecstical keywords… » ;
+« Bonjour, qui es-tu ? » (décodage glouton) → une suite de chiffres et de ponctuation. Il ne converse pas : ce
+n'est pas un défaut de l'intégration, c'est l'état du modèle (§10 : ni SFT, ni préférences, ni RL). L'interface
+le dit avant l'envoi. Prochaine étape pour qu'il réponde : un jeu instruction/réponse validé, puis un
+entraînement supervisé jugé comme les versions précédentes (ACCEPT seulement sur gain significatif, sans
+régression de garde).

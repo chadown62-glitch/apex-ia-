@@ -1,19 +1,21 @@
 # Installer APEX (Windows)
 
 `APEX.exe` est l'application Windows d'APEX. Depuis la version 0.3.0, **APEX tourne directement sous
-Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal. La version 0.4.0 ajoute
+Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal. La version 0.4.0 a ajouté
 **l'assistant APEX** : projets, conversations persistantes, quatre modes (Normal, Code, Design, Finance),
-paramètres centralisés et deux thèmes (APEX Night, APEX Dune). L'installateur dépose le
+paramètres centralisés et deux thèmes (APEX Night, APEX Dune). La version 0.4.1 affiche l'assistant **dans la
+fenêtre d'APEX.exe** (plus de navigateur) et permet de **choisir le moteur qui répond** : Ollama, le moteur
+intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental). L'installateur dépose le
 Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
 que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
 APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
 ## Récupérer l'installateur
 
-Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.0.exe`
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.1.exe`
 (≈ 33 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
 empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
-PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.0.exe -Algorithm SHA256` (même valeur que le `.sha256`).
+PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.1.exe -Algorithm SHA256` (même valeur que le `.sha256`).
 
 ## Prérequis
 
@@ -29,7 +31,7 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.0.exe -Algorithm SHA256` (même
 
 ## Installer et utiliser APEX (mode Windows natif)
 
-1. Double-cliquez sur `APEX-Setup-x64-v0.4.0.exe`. Le programme n'est pas signé : si Windows affiche
+1. Double-cliquez sur `APEX-Setup-x64-v0.4.1.exe`. Le programme n'est pas signé : si Windows affiche
    « Windows a protégé votre ordinateur », cliquez sur « Informations complémentaires » puis
    « Exécuter quand même » (seulement si le fichier vient bien du dépôt APEX). L'installateur vérifie
    lui-même que le Panel démarre et que l'application est complète, puis propose de lancer APEX.
@@ -45,9 +47,12 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.0.exe -Algorithm SHA256` (même
 4. **Démarrer APEX** : le Panel lance APEX (base embarquée, `apex doctor`, **Startup Gate** — jamais
    contourné), sans fenêtre de console. Quelques secondes plus tard : **APEX READY**, ou **APEX
    DEGRADED** avec la ligne concernée (ex. modèle non installé).
-5. **Ouvrir APEX** : l'assistant APEX s'ouvre dans votre navigateur (lien à usage unique, voir
-   « Premier lancement de l'assistant » ci-dessous). Le **Centre de contrôle** (état du système, Gate,
-   page **Tâches**, mémoire) reste accessible depuis la barre latérale.
+5. **L'assistant s'affiche dans la fenêtre d'APEX** (page **Assistant**, en haut) dès qu'APEX répond — lien à
+   usage unique, rien à copier. La page **État et contrôle** garde les boutons du Panel (préparation, démarrage,
+   composants, journal). **Ouvrir dans le navigateur** reste disponible. L'affichage intégré utilise le composant
+   Microsoft Edge WebView2 de Windows (présent sur Windows 11 et sur les Windows 10 à jour) ; s'il manque, la
+   page le dit, donne le lien d'installation et l'assistant s'ouvre dans le navigateur. Le **Centre de
+   contrôle** (état du système, Gate, page **Tâches**, mémoire) reste accessible depuis la barre latérale.
 6. **Arrêter APEX** : arrêt propre (APEX termine et libère ses fichiers). Fermer la fenêtre du Panel
    pendant qu'APEX tourne **vous demande** s'il faut l'arrêter ou le laisser tourner. Une réponse en
    cours au moment de l'arrêt est close au redémarrage avec le message « interrompu : APEX s'est arrêté
@@ -57,6 +62,17 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.0.exe -Algorithm SHA256` (même
 
 ### Premier lancement de l'assistant (0.4.0)
 
+- **Moteur de réponse** (0.4.1) : la liste **Moteur**, à gauche de la zone de saisie (et **Paramètres →
+  Modèles**), choisit qui répond — l'état affiché est mesuré à l'instant par APEX :
+  - **Automatique** : Ollama s'il tourne avec un modèle déclaré, sinon le moteur intégré ; jamais le Cerveau.
+  - **Ollama** : seulement les modèles servis par Ollama sur ce PC (Ollama démarré).
+  - **APEX intégré** : Qwen2.5-Coder 1.5B exécuté directement par APEX (« Installer le modèle »), sans Ollama.
+  - **Cerveau APEX** (expérimental) : ApexLM, le réseau de neurones propre à APEX (1,9 M paramètres, tokenizer
+    d'APEX, aucun poids externe ; version promue `experiment-002:v1` du registre, poids vérifiés à chaque
+    chargement). Il est pré-entraîné à prédire la suite de textes techniques mais **n'a jamais été entraîné à
+    converser** : il continue le texte de votre message, et sa réponse n'a souvent pas de sens. L'interface le dit.
+  Le moteur choisi répond, ou la réponse échoue avec la raison — jamais un autre moteur à sa place. Chaque réponse
+  indique le modèle qui l'a produite.
 - **Accueil** : choisissez un mode, écrivez votre message, Entrée. La conversation est créée et la réponse
   du modèle s'affiche quand elle est prête (durée réelle affichée, bouton **Arrêter**).
   - **Normal** : questions, explications, rédaction, raisonnement. Aucun outil.
@@ -88,6 +104,8 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.0.exe -Algorithm SHA256` (même
 | `%LOCALAPPDATA%\APEX\python` | Python et bibliothèques préparés (supprimés à la désinstallation) |
 | `%LOCALAPPDATA%\APEX\data` | base (projets, conversations, réglages, tâches), espaces de travail (`workspaces\assistant\` pour l'assistant), artefacts (**conservés**) |
 | `%LOCALAPPDATA%\APEX\models` | modèle téléchargé (**conservé**) |
+| `%LOCALAPPDATA%\APEX\webview` | session et cache de l'affichage intégré de l'assistant (**conservés**) |
+| `%LOCALAPPDATA%\Programs\APEX\app\brain` | Cerveau APEX (poids, provenance), livré avec l'application |
 | `%LOCALAPPDATA%\APEX\.apex\runtime` | `launch.log` (démarrage), `prepare.log`, `model-install.log`, enregistrement du backend |
 
 ### Exécution de code isolée (sandbox Windows)
@@ -120,6 +138,9 @@ recours.
 | L'assistant affiche | Que faire |
 |---|---|
 | « Aucun modèle disponible » | Panel : **Installer le modèle**, puis **Arrêter APEX** / **Démarrer APEX** |
+| « Moteur « Ollama » indisponible » | démarrez Ollama sur ce PC, ou choisissez **APEX intégré** dans la liste **Moteur** |
+| « Cerveau APEX — expérimental » | normal : le Cerveau ne sait pas encore converser ; choisissez **APEX intégré** ou Ollama pour une vraie réponse |
+| Page **Assistant** : « ne peut pas s'afficher dans cette fenêtre » | installez « Microsoft Edge WebView2 Runtime » (https://go.microsoft.com/fwlink/p/?LinkId=2124703), rouvrez APEX ; en attendant, **Ouvrir dans le navigateur** |
 | « La réponse a échoué — … mémoire insuffisante pour charger le modèle : … Go disponibles, … Go nécessaires » | fermer des applications, ou **Paramètres → Ressources → Précision : bfloat16**, puis **Réessayer** |
 | « La réponse a échoué — délai dépassé » | **Paramètres → Runtime** : allonger le délai (jusqu'à 3600 s), ou réduire **Modèles → Longueur maximale** |
 | « Une réponse est en cours : attendez-la ou arrêtez-la » | attendre la réponse, ou **Arrêter** ; une seule réponse à la fois par conversation |
