@@ -1,21 +1,21 @@
 {
   "product": "APEX (APEX.exe : Panel + application APEX autonome)",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "panel_protocol": 1,
   "architecture": "win-x64",
   "installer": {
-    "file": "APEX-Setup-x64-v0.4.1.exe",
-    "sha256": "7644172359d690afa27c7b603d7f8b3c2d550f78047423441d1c2557a15c19ad",
-    "bytes": 40506564
+    "file": "APEX-Setup-x64-v0.4.2.exe",
+    "sha256": "85625a2231fa736c60f9639e06a936ea3e5e7a75145777481608d30622987f1d",
+    "bytes": 40503492
   },
   "panel": {
     "executable": {
       "file": "APEX.exe",
-      "sha256": "e45670d996f27669dfc168bf445239d8db55a4149937894f5a24bcaaa5fc0f85"
+      "sha256": "2f25634eba331d311aa32fb6f79b9c8b5d3d173b569853f96eb8e060dcc1c277"
     },
     "assembly": {
       "file": "APEX.dll",
-      "sha256": "26ab445c881c12b2a5764d7506a7bd3a5067177183e01e27656ca983b7ae62a0"
+      "sha256": "91299f17762cc27e924f4b58fe6afe2ffa7cd45d8905ea41b6e8d567c7a9db6e"
     },
     "files": 217,
     "bytes": 100990851
@@ -24,7 +24,7 @@
     "runtime_artifact": {
       "release": true,
       "source": "commit",
-      "source_commit": "439e108989fc64afa66eaff965ab58d6885e6e87",
+      "source_commit": "cc7a0f23523fa369a91027e21eaae64e89cda587",
       "head_commit": null,
       "content_hash_sha256": "4bf56d2bff09c42ef30c77ff71cafe25e26372e581abafcfee317878c86d0868"
     },
@@ -53,13 +53,13 @@
     ]
   },
   "build": {
-    "commit": "439e108989fc64afa66eaff965ab58d6885e6e87",
-    "commit_of_worktree": "439e108989fc64afa66eaff965ab58d6885e6e87",
+    "commit": "cc7a0f23523fa369a91027e21eaae64e89cda587",
+    "commit_of_worktree": "cc7a0f23523fa369a91027e21eaae64e89cda587",
     "uncommitted_changes": false,
     "dotnet_sdk": "8.0.131",
     "compiler": "Inno Setup 6.4.3 (NuGet Tools.InnoSetup, empreinte figée) sous wine-9.0 (Ubuntu 9.0~repack-4build3)",
     "host": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39",
-    "built_at": "2026-10-09T17:15:43.386485+00:00"
+    "built_at": "2026-10-09T18:43:24.358992+00:00"
   },
   "signed": false
 }
