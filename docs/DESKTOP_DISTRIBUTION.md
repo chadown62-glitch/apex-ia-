@@ -356,3 +356,59 @@ Windows ─► APEX.exe (Panel .NET, %LOCALAPPDATA%\Programs\APEX)
   sur la ligne **Sandbox** du Panel.
 - **Inférence réelle du modèle** : Hugging Face est bloqué par la politique réseau de ce bac à sable (HTTP 403) ;
   le téléchargement du modèle et une tâche résolue par le modèle n'ont pas pu être exécutés ici.
+
+## 9. APEX.exe 0.4.0 — l'assistant APEX (projets, conversations, modes, paramètres, interface Liquid Glass)
+
+### 9.1 Ce qui a été ajouté (relié au Runtime réel, aucune donnée fictive)
+
+- **Backend** (`apex/assistant/`, `apex/api/routes/assistant.py`) : projets complets (consignes, pièces jointes
+  texte réellement lues, suppression en cascade), conversations multiples par projet ou autonomes, quatre modes
+  (Normal, Code, Design, Finance) qui changent les consignes, les outils offerts au modèle et la vue ; tours
+  **asynchrones** (`conversation_turns`) avec boucle d'outils, délai, annulation entre deux tokens, reprise
+  explicite des tours interrompus par un arrêt ; paramètres en sept sections validés et persistés ; précision du
+  modèle choisie selon la mémoire **mesurée** (refus chiffré sinon) ; empreintes SHA-256 des poids vérifiées.
+- **Robustesse** : une seule réponse active par conversation (verrou : 6 envois simultanés → 1 tour, 5 refus
+  409) ; suppression d'une conversation ou d'un projet refusée (409) tant qu'une réponse y écrit ; CSP stricte
+  et en-têtes de sécurité sur toute l'interface (aucun script en ligne).
+- **Interface** (`frontend/src/assistant/`) : thèmes APEX Night et APEX Dune sur les mêmes jetons (contrastes
+  WCAG AA mesurés sur `theme.css` par un test), barre latérale coulissante et repliable, accueil, conversation
+  (suivi du tour en direct, arrêt, réessai, renommage, mode, suppression confirmée), projet, paramètres, vues de
+  mode (fichiers réels de l'espace de travail, nuancier + contraste, tableaux des outils financiers), rendu
+  Markdown sans HTML injecté ; animations, particules et réduction des mouvements réglables ; le centre de
+  contrôle reste sous `/control`.
+
+### 9.2 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Tests Python ciblés | `tests/test_assistant.py` (24 : projets, modes, tours, outils, annulation, reprise, concurrence, suppression refusée sous un tour, pièces jointes, paramètres, précision mémoire, empreintes des poids, vraie sandbox Linux en mode Code) ; `tests/test_assistant_ci_script.py` (3) ; `tests/test_api_ui.py` (CSP) ; `tests/test_tool_engine.py` (drapeaux Windows absents simulés) |
+| Suite Python complète (`pytest tests`, JUnit) | **3 997 tests : 3 815 réussis, 2 échecs, 180 ignorés, 0 erreur** (44 min). Les 2 échecs ne viennent pas de 0.4.0 : `test_gate_is_unknown_without_a_report` lit un rapport du Gate laissé dans `.apex/` de ce conteneur le 08/10 (réussit sans ce fichier, vérifié) ; `test_static_probes_do_not_refute_the_current_tree` échouait déjà au commit de départ `73b9ed7` (la désinstallation 0.3.0 supprime le runtime téléchargé `%LOCALAPPDATA%\APEX\python`, que la sonde classe « hors fichiers installés ») — sonde laissée intacte, à trancher |
+| Panel (.NET, `dotnet test setup/ApexSetup.sln`) | **571 réussis, 0 échec** (8 projets de tests), version 0.4.0 |
+| Interface (vitest) | **162 réussis, 0 échec** (25 fichiers), dont contrastes WCAG mesurés sur `theme.css` et rendu Markdown sans injection |
+| REAL E2E Linux (ce conteneur) — vrai backend (profil autonome) + Chromium (Playwright) | accueil → projet créé → pièce jointe CSV acceptée, PDF refusé avec la raison → conversation Finance → tour réel : **échec explicite « génération impossible (modèle local non installé) »**, détails techniques repliés, aucun texte inventé → renommage, passage en mode Code (fichier réel listé et lu) → Paramètres : Dune appliqué et enregistré, valeur hors bornes refusée par le backend, valeur valide enregistrée → cache local effacé : thème relu depuis le serveur → mobile (barre latérale coulissante) → suppression du projet en cascade (conversation 404). **0 violation CSP, 0 erreur de page** ; 34 routes de l'interface parcourues : 0 violation CSP |
+| Arrêt propre / redémarrage (Linux, vrai backend) | `python -m apex.standalone stop` → « APEX arrêté proprement » ; relance : conversations, messages et réglages identiques |
+| WINE E2E — **Windows simulé, pas Windows** — installateur 0.4.0 final (SHA-256 `925079cb…3a3144c`, commit `50bfe92`) | **44/44 PASS** : cycle de vie (`wine_installer_e2e.sh`) **17/17** ; mise à jour **0.3.0 → 0.4.0** (même script, W14) **18/18** ; mode natif (`wine_native_e2e.sh`, aménagement torch déclaré) **9/9** — démarrage par le Panel : DEGRADED (Runtime, Backend, API, Database, Interface READY ; Modèles OFFLINE ; Sandbox OFFLINE sous Wine), arrêt propre, relance, désinstallation (APEX arrêté d'abord, base conservée) |
+| Interface contre la **version Windows** du backend (python.exe 3.12.10 officiel sous Wine, démarré par `APEX.exe --start`) | même parcours d'interface que ci-dessus, avec le même résultat : pièce jointe CSV acceptée (après correctif, voir 9.3), PDF refusé, tour → échec explicite, fichier listé et lu en mode Code, réglages enregistrés et relus du serveur, suppression en cascade ; **0 violation CSP, 0 erreur de page** ; `assistant_e2e.py run` → **BLOCKED** (code 3 : aucun modèle) ; `APEX.exe --stop` puis `--start` : conversation et thème conservés |
+| CI Windows réel (`.github/workflows/windows-native.yml`) | écrite et poussée ; run 37896293634 **refusé par GitHub avant démarrage** : « recent account payments have failed or your spending limit needs to be increased » |
+
+### 9.3 Défauts trouvés et corrigés pendant la validation
+
+- **Windows natif — écritures d'outils et pièces jointes** : `os.O_NOFOLLOW` n'existe pas dans le Python Windows ;
+  toute écriture de l'espace de travail échouait (pièces jointes, `fs.write` du mode Code et du TaskLoop — défaut
+  antérieur à 0.4.0, invisible sous Linux). Corrigé (`apex/tools/workspace.py`) : identité du fichier ouvert
+  comparée au chemin vérifié, mode binaire ; vérifié avec le Python Windows sous Wine.
+- **Pièce jointe incohérente** : refusée à l'écran mais conservée en base si l'écriture du fichier échouait.
+  Corrigé : la ligne est retirée et l'erreur rapportée.
+- **Deux envois simultanés** pouvaient créer deux tours concurrents ; **suppression** d'une conversation sous un
+  tour actif possible. Corrigés (verrou ; 409 explicite).
+- `wine_native_e2e.sh` rendait le code de `wineserver -k` au lieu du verdict des vérifications.
+
+### 9.4 Non vérifié ici (bloquants de CET environnement, pas du produit)
+
+- **Aucune inférence réelle du modèle** : `huggingface.co` est refusé par la politique réseau de ce bac à sable
+  (HTTP 403) et aucun poids n'est présent sur le disque ; aucune réponse du vrai modèle n'a donc été produite
+  pour 0.4.0. Le parcours qui le prouvera est prêt (`windows-native.yml`, `assistant_e2e.py`).
+- **Aucun Windows réel** : Wine n'est pas Windows (pas de torch sous Wine 9, pas de sandbox AppContainer) ; GitHub
+  Actions est bloqué par la facturation du compte.
+- Non mesurés sur un PC utilisateur : durée réelle des réponses, consommation mémoire, sandbox AppContainer
+  (ligne **Sandbox** du Panel), exécution de code en mode Code, SmartScreen.
