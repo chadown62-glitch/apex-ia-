@@ -12,8 +12,8 @@ import { Button } from "../components/ui/Button";
 import { Switch } from "../components/ui/Field";
 import { setAppearance, useAppearance, type Appearance } from "../theme/appearance";
 import { saveAppearance } from "../theme/useTheme";
-import { assistantApi, errorMessage, type AppSettings } from "./api";
-import { keys, useModels, useModes, useSettings } from "./hooks";
+import { assistantApi, errorMessage, type AppSettings, type EngineId } from "./api";
+import { keys, useEngines, useModes, useSettings } from "./hooks";
 
 type SectionKey = Exclude<keyof AppSettings, "problems" | "appearance">;
 
@@ -133,7 +133,7 @@ function ThemeCard({ theme, active, onSelect }: { theme: Appearance["theme"]; ac
 
 export function SettingsView() {
   const settings = useSettings();
-  const models = useModels();
+  const engines = useEngines();
   const modes = useModes();
   const appearance = useAppearance();
   const queryClient = useQueryClient();
@@ -245,43 +245,55 @@ export function SettingsView() {
       </Section>
 
       {m && (
-        <Section id="modeles" title="Modèles" lead="Disponibilité mesurée maintenant par APEX (rien n'est chargé ni téléchargé ici).">
-          {models.isLoading ? (
-            <p className="ax-muted">Détection des modèles…</p>
-          ) : models.isError ? (
-            <p className="ax-inline-error">{errorMessage(models.error)}</p>
+        <Section id="modeles" title="Modèles" lead="Le moteur qui répond, et sa disponibilité mesurée maintenant par APEX (rien n'est chargé ni téléchargé ici).">
+          {engines.isLoading ? (
+            <p className="ax-muted">Détection des moteurs…</p>
+          ) : engines.isError ? (
+            <p className="ax-inline-error">{errorMessage(engines.error)}</p>
           ) : (
-            <ul className="ax-models">
-              {(models.data ?? []).map((model) => (
-                <li key={model.id} className={model.available ? "is-available" : "is-missing"}>
-                  <span className="ax-models__dot" aria-hidden="true" />
-                  <span className="ax-models__id">{model.id}</span>
-                  <span className="ax-models__runtime">{model.runtime ?? "—"}</span>
-                  <span className="ax-models__detail">{model.available ? "disponible" : model.detail ?? "indisponible"}</span>
-                </li>
+            <div className="ax-engine-cards" role="radiogroup" aria-label="Moteur de réponse">
+              {(engines.data ?? []).map((engine) => (
+                <button
+                  key={engine.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={m.engine === engine.id}
+                  className={`ax-engine-card ${m.engine === engine.id ? "is-selected" : ""} ${engine.available ? "is-available" : "is-missing"}`}
+                  onClick={() => modelSection.update({ engine: engine.id as EngineId, preferred_model: "auto" })}
+                >
+                  <span className="ax-engine-card__head">
+                    <span className="ax-engine-card__name">{engine.label}</span>
+                    {engine.experimental && <span className="ax-engine-card__tag">expérimental</span>}
+                  </span>
+                  <span className="ax-engine-card__desc">{engine.description}</span>
+                  <span className="ax-engine-card__state">
+                    <span className="ax-models__dot" aria-hidden="true" />
+                    {engine.available ? "disponible" : "indisponible"} — {engine.detail}
+                  </span>
+                </button>
               ))}
-              {(models.data ?? []).length === 0 && <li className="ax-muted">Aucun modèle déclaré dans la configuration.</li>}
-            </ul>
+            </div>
           )}
-          {!models.isLoading && !(models.data ?? []).some((x) => x.available) && (
-            <p className="ax-banner ax-banner--warning">
-              Aucun modèle disponible : dans le Panel APEX, « Installer le modèle » (une fois, ≈ 3,1 Go), puis redémarrez APEX.
-            </p>
-          )}
-          <Row label="Modèle préféré" hint="« Automatique » : APEX choisit parmi les modèles disponibles, avec repli.">
-            <select className="ax-select" value={m.preferred_model} onChange={(e) => modelSection.update({ preferred_model: e.target.value })}>
-              <option value="auto">Automatique</option>
-              {(models.data ?? []).map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.id}
-                  {model.available ? "" : " (indisponible)"}
-                </option>
-              ))}
-              {m.preferred_model !== "auto" && !(models.data ?? []).some((x) => x.id === m.preferred_model) && (
-                <option value={m.preferred_model}>{m.preferred_model} (non déclaré)</option>
-              )}
-            </select>
-          </Row>
+          {(() => {
+            const selected = engines.data?.find((e) => e.id === m.engine);
+            const choices = selected?.models ?? [];
+            return (
+              <Row label="Modèle" hint="« Automatique » : APEX choisit parmi les modèles disponibles de ce moteur, avec repli.">
+                <select className="ax-select" value={m.preferred_model} onChange={(e) => modelSection.update({ preferred_model: e.target.value })}>
+                  <option value="auto">Automatique</option>
+                  {choices.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.served_model ?? model.id}
+                      {model.available ? "" : " (indisponible)"}
+                    </option>
+                  ))}
+                  {m.preferred_model !== "auto" && !choices.some((x) => x.id === m.preferred_model) && (
+                    <option value={m.preferred_model}>{m.preferred_model} (hors de ce moteur)</option>
+                  )}
+                </select>
+              </Row>
+            );
+          })()}
           <Row label={`Température : ${m.temperature.toFixed(2)}`} hint="Basse : réponses plus constantes ; haute : plus variées.">
             <input type="range" min={0} max={1.5} step={0.05} value={m.temperature} onChange={(e) => modelSection.update({ temperature: e.target.valueAsNumber })} aria-label="Température" />
           </Row>

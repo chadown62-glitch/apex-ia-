@@ -102,7 +102,7 @@ export interface Attachment {
 
 export interface AppSettings {
   appearance: { theme: "night" | "dune"; animations: boolean; particles: boolean; reduce_motion: "system" | "always" | "never" };
-  models: { preferred_model: string; temperature: number; max_tokens: number };
+  models: { engine: EngineId; preferred_model: string; temperature: number; max_tokens: number };
   runtime: { generation_timeout_s: number };
   behavior: { default_mode: ModeId; use_memory: boolean; history_chars: number };
   tools: { workspace_write: boolean; code_execution: boolean; max_tool_steps: number };
@@ -117,6 +117,19 @@ export interface ModelOption {
   served_model: string | null;
   available: boolean;
   detail: string | null;
+}
+
+export type EngineId = "auto" | "ollama" | "integrated" | "brain";
+
+/** Moteur de réponse et sa disponibilité MESURÉE par le backend (`GET /assistant/engines`). */
+export interface EngineInfo {
+  id: EngineId;
+  label: string;
+  description: string;
+  experimental: boolean;
+  available: boolean;
+  detail: string;
+  models: ModelOption[];
 }
 
 export interface WorkspaceListing {
@@ -140,6 +153,7 @@ export const assistantApi = {
   updateSettings: (changes: Partial<Record<keyof AppSettings, Record<string, unknown>>>) =>
     data<AppSettings>("/assistant/settings", json("PUT", changes)),
   models: () => data<ModelOption[]>("/assistant/models"),
+  engines: () => data<EngineInfo[]>("/assistant/engines"),
 
   projects: () => data<Project[]>("/assistant/projects"),
   project: (id: string) => data<Project>(`/assistant/projects/${encodeURIComponent(id)}`),

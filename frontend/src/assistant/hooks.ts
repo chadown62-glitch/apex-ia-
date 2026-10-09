@@ -12,6 +12,7 @@ export const keys = {
   modes: ["assistant", "modes"] as const,
   settings: ["assistant", "settings"] as const,
   models: ["assistant", "models"] as const,
+  engines: ["assistant", "engines"] as const,
   projects: ["assistant", "projects"] as const,
   project: (id: string) => ["assistant", "project", id] as const,
   attachments: (projectId: string) => ["assistant", "attachments", projectId] as const,
@@ -35,6 +36,11 @@ export function useSettings() {
 
 export function useModels() {
   return useQuery({ queryKey: keys.models, queryFn: assistantApi.models, staleTime: 30_000 });
+}
+
+/** Moteurs de réponse (Automatique, Ollama, APEX intégré, Cerveau APEX) et leur disponibilité mesurée. */
+export function useEngines() {
+  return useQuery({ queryKey: keys.engines, queryFn: assistantApi.engines, staleTime: 30_000 });
 }
 
 export function useProjects() {

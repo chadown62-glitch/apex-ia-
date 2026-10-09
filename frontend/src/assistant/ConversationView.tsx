@@ -12,10 +12,10 @@ import { Button } from "../components/ui/Button";
 import { Modal } from "../components/ui/Modal";
 import { assistantApi, errorMessage, type Message, type ModeId } from "./api";
 import { Composer } from "./Composer";
-import { isActive, keys, useModels, useModes, useProjects, useTurns } from "./hooks";
+import { isActive, keys, useModes, useProjects, useTurns } from "./hooks";
 import { IconEdit, IconFolder, IconTrash } from "./Icons";
 import { MessageItem, TurnProgress } from "./MessageItem";
-import { ModelNotice } from "./ModelNotice";
+import { EngineNotice, EnginePicker } from "./EnginePicker";
 import { CodePanel, DesignPanel, FinancePanel } from "./ModePanels";
 
 interface LocationState {
@@ -38,7 +38,6 @@ export function ConversationView() {
   const messages = useQuery({ queryKey: keys.messages(conversationId), queryFn: () => assistantApi.messages(conversationId) });
   const turns = useTurns(conversationId);
   const modes = useModes();
-  const models = useModels();
   const projects = useProjects();
 
   const [sendError, setSendError] = useState<string | null>(handoff.error ?? null);
@@ -291,7 +290,7 @@ export function ConversationView() {
         </div>
 
         <div className="ax-conversation__composer">
-          {!activeTurn && lastAssistant?.status === "error" && <ModelNotice models={models} />}
+          {!activeTurn && <EngineNotice />}
           <Composer
             key={conversationId}
             onSubmit={send}
@@ -301,6 +300,7 @@ export function ConversationView() {
             error={sendError}
             initialDraft={handoff.draft}
             autoFocus
+            toolbar={<EnginePicker />}
           />
         </div>
       </div>

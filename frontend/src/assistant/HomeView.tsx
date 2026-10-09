@@ -10,10 +10,10 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { assistantApi, errorMessage, type ModeId } from "./api";
 import { Composer } from "./Composer";
-import { keys, useConversations, useModels, useModes, useProjects, useSettings } from "./hooks";
+import { keys, useConversations, useModes, useProjects, useSettings } from "./hooks";
 import { IconFolder } from "./Icons";
 import { ModePicker } from "./ModePicker";
-import { ModelNotice } from "./ModelNotice";
+import { EngineNotice, EnginePicker } from "./EnginePicker";
 
 function titleFrom(content: string): string {
   const firstLine = content.trim().split("\n")[0].trim();
@@ -34,7 +34,6 @@ export function HomeView() {
   const conversations = useConversations();
   const modes = useModes();
   const settings = useSettings();
-  const models = useModels();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [mode, setMode] = useState<ModeId | null>(null);
@@ -98,7 +97,7 @@ export function HomeView() {
         )}
       </div>
 
-      <ModelNotice models={models} />
+      <EngineNotice />
 
       <ModePicker modes={modes} value={selectedMode} onChange={setMode} />
 
@@ -115,6 +114,7 @@ export function HomeView() {
         onSubmit={start}
         error={error}
         submitLabel="Démarrer la conversation"
+        toolbar={<EnginePicker />}
       />
 
       {recent.length > 0 && (

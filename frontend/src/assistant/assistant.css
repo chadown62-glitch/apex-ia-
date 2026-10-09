@@ -2110,3 +2110,128 @@
   max-height: 220px;
   overflow: auto;
 }
+
+/* -- moteur de réponse (0.4.1) : sélecteur de la zone de saisie, cartes des Paramètres ------------------- */
+
+.ax-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-width: 0;
+}
+
+.ax-engine__label {
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+}
+
+.ax-engine__select {
+  max-width: 15rem;
+  padding: 4px 26px 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--glass-border);
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.ax-engine__select:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ax-composer__bar .ax-composer__hint {
+  flex: 1;
+  min-width: 0;
+}
+
+.ax-engine-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.ax-engine-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ax-engine-card.is-selected {
+  border-color: rgba(var(--accent-rgb), 0.7);
+  box-shadow: var(--shadow-glow-accent);
+}
+
+.ax-engine-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ax-engine-card__name {
+  font-weight: 600;
+}
+
+.ax-engine-card__tag {
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: var(--text-xs);
+}
+
+.ax-engine-card__desc {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.ax-engine-card__state {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--text-faint);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.ax-engine-card__state .ax-models__dot {
+  flex: none;
+  transform: translateY(-1px);
+}
+
+.ax-banner--info {
+  background: var(--info-bg);
+  border-color: color-mix(in srgb, var(--info) 35%, transparent);
+  color: var(--text);
+}
+
+.ax-banner--info strong {
+  color: var(--info);
+}
+
+.ax-model-state--experimental .ax-model-state__dot {
+  background: var(--info);
+}
+
+@media (max-width: 640px) {
+  .ax-composer__bar {
+    flex-wrap: wrap;
+  }
+
+  .ax-engine__select {
+    max-width: 11rem;
+  }
+}

@@ -24,7 +24,11 @@ class Appearance(_Section):
 
 
 class ModelSettings(_Section):
-    #: `auto` : le routage d'APEX choisit parmi les modèles disponibles ; sinon l'identifiant d'un modèle.
+    #: Moteur de réponse (`apex.assistant.engines`) : `auto` (Ollama puis moteur intégré, jamais le
+    #: Cerveau), `ollama`, `integrated` (Qwen 1.5B exécuté par APEX) ou `brain` (Cerveau APEX,
+    #: expérimental).
+    engine: Literal["auto", "ollama", "integrated", "brain"] = "auto"
+    #: `auto` : le routage d'APEX choisit parmi les modèles du moteur ; sinon l'identifiant d'un modèle.
     preferred_model: str = Field(default="auto", max_length=200)
     temperature: float = Field(default=0.4, ge=0.0, le=1.5)
     max_tokens: int = Field(default=768, ge=64, le=4096)

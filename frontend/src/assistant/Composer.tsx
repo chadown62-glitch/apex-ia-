@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { IconSend } from "./Icons";
 
@@ -17,6 +17,7 @@ export function Composer({
   initialDraft = "",
   autoFocus,
   submitLabel = "Envoyer",
+  toolbar,
 }: {
   onSubmit: (content: string) => Promise<void>;
   disabled?: boolean;
@@ -26,6 +27,8 @@ export function Composer({
   initialDraft?: string;
   autoFocus?: boolean;
   submitLabel?: string;
+  /** Contrôles affichés à gauche de la barre (choix du moteur). */
+  toolbar?: ReactNode;
 }) {
   const [draft, setDraft] = useState(initialDraft);
   const [pending, setPending] = useState(false);
@@ -83,6 +86,7 @@ export function Composer({
         aria-describedby="ax-composer-hint"
       />
       <div className="ax-composer__bar">
+        {toolbar}
         <span id="ax-composer-hint" className={`ax-composer__hint ${tooLong ? "is-error" : ""}`}>
           {disabled && disabledReason
             ? disabledReason

@@ -8,7 +8,7 @@ import { HomeView } from "./HomeView";
 import { FinancePanel, DesignPanel } from "./ModePanels";
 import { ProjectView } from "./ProjectView";
 import { SettingsView } from "./SettingsView";
-import { MODES, SETTINGS, conversation, installFakeApi, message, real, renderAt, turn, type FakeApi } from "./testing";
+import { MODES, SETTINGS, conversation, engines, installFakeApi, message, real, renderAt, turn, type FakeApi } from "./testing";
 
 const originalFetch = globalThis.fetch;
 let api: FakeApi;
@@ -19,7 +19,7 @@ beforeEach(() => {
   api = installFakeApi();
   api.on("GET", "/assistant/modes", MODES);
   api.on("GET", "/assistant/settings", SETTINGS);
-  api.on("GET", "/assistant/models", [{ id: "coder-1.5b", runtime: "transformers", served_model: "q", available: true, detail: null }]);
+  api.on("GET", "/assistant/engines", engines());
   api.on("GET", "/assistant/projects", []);
   api.on("GET", "/assistant/conversations", []);
 });
@@ -50,12 +50,42 @@ describe("HomeView", () => {
   });
 
   it("warns before sending when no model is available, without inventing one", async () => {
-    api.on("GET", "/assistant/models", [{ id: "coder-1.5b", runtime: "transformers", served_model: "q", available: false, detail: "poids absents" }]);
+    api.on("GET", "/assistant/engines", engines({ auto: false, integrated: false }));
     renderAt("/", [{ path: "/", element: <HomeView /> }]);
     expect(await screen.findByText("Aucun modèle disponible")).toBeInTheDocument();
-    // Le détail mesuré de chaque modèle déclaré reste accessible, replié.
-    const details = screen.getByText(/Détails techniques \(1 modèle déclaré\)/).closest("details")!;
-    expect(details.querySelector("li")?.textContent).toBe("coder-1.5b : poids absents");
+    // Le détail mesuré de chaque modèle du moteur choisi reste accessible, replié.
+    const details = screen.getByText("Détails techniques").closest("details")!;
+    expect(details.querySelector("li")?.textContent).toBe("qwen-1.5b : poids absents");
+  });
+
+  it("lets the user choose the engine next to the message box and saves it to APEX", async () => {
+    api.on("PUT", "/assistant/settings", (body) => real({ ...SETTINGS, models: { ...SETTINGS.models, ...(body as { models: object }).models } }));
+    renderAt("/", [{ path: "/", element: <HomeView /> }]);
+    const picker = await screen.findByRole("combobox", { name: "Moteur" });
+    await waitFor(() => expect(within(picker).getAllByRole("option")).toHaveLength(4));
+    expect(within(picker).getByRole("option", { name: "Ollama — indisponible" })).toBeInTheDocument();
+    expect(within(picker).getByRole("option", { name: "Cerveau APEX (expérimental)" })).toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: "integrated" } });
+    await waitFor(() =>
+      expect(api.calls.find((c) => c.method === "PUT" && c.path === "/assistant/settings")?.body).toEqual({
+        models: { engine: "integrated", preferred_model: "auto" },
+      }),
+    );
+    await waitFor(() => expect(picker).toHaveValue("integrated"));
+  });
+
+  it("says plainly that the APEX brain is experimental and cannot converse yet", async () => {
+    api.on("GET", "/assistant/settings", { ...SETTINGS, models: { ...SETTINGS.models, engine: "brain" } });
+    renderAt("/", [{ path: "/", element: <HomeView /> }]);
+    expect(await screen.findByText("Cerveau APEX — expérimental")).toBeInTheDocument();
+    expect(screen.getByText(/pas encore entraîné à\s+converser/)).toBeInTheDocument();
+  });
+
+  it("names the unavailable engine and what to do instead of a generic error", async () => {
+    api.on("GET", "/assistant/settings", { ...SETTINGS, models: { ...SETTINGS.models, engine: "ollama" } });
+    renderAt("/", [{ path: "/", element: <HomeView /> }]);
+    expect(await screen.findByText("Moteur « Ollama » indisponible")).toBeInTheDocument();
+    expect(screen.getByText(/Démarrez Ollama sur ce PC/)).toBeInTheDocument();
   });
 
   it("keeps the draft and shows the backend's reason when the conversation cannot be created", async () => {
@@ -116,8 +146,9 @@ describe("ConversationView", () => {
     fireEvent.change(input, { target: { value: "Budget 2027" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(await screen.findByRole("heading", { name: /Budget 2027/ })).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole("combobox")).not.toBeDisabled());
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "code" } });
+    const modeSelect = screen.getByRole("combobox", { name: "Mode" });
+    await waitFor(() => expect(modeSelect).not.toBeDisabled());
+    fireEvent.change(modeSelect, { target: { value: "code" } });
     await waitFor(() => expect(api.calls.filter((c) => c.method === "PATCH").map((c) => c.body)).toEqual([{ title: "Budget 2027" }, { mode: "code" }]));
   });
 

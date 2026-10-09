@@ -71,7 +71,7 @@ export const MODES = [
 
 export const SETTINGS = {
   appearance: { theme: "night", animations: true, particles: true, reduce_motion: "system" },
-  models: { preferred_model: "auto", temperature: 0.4, max_tokens: 768 },
+  models: { engine: "auto", preferred_model: "auto", temperature: 0.4, max_tokens: 768 },
   runtime: { generation_timeout_s: 900 },
   behavior: { default_mode: "normal", use_memory: true, history_chars: 6000 },
   tools: { workspace_write: true, code_execution: true, max_tool_steps: 6 },
@@ -79,6 +79,22 @@ export const SETTINGS = {
   resources: { model_precision: "auto", cpu_threads: 0 },
   problems: [],
 };
+
+/** Moteurs tels que les rend `GET /assistant/engines` ; `available` par moteur, ajustable par test. */
+export function engines(available: Partial<Record<"auto" | "ollama" | "integrated" | "brain", boolean>> = {}) {
+  const state = { auto: true, ollama: false, integrated: true, brain: true, ...available };
+  const model = (id: string, runtime: string, ok: boolean, detail: string) => ({ id, runtime, served_model: id, available: ok, detail });
+  return [
+    { id: "auto", label: "Automatique", description: "APEX choisit.", experimental: false, available: state.auto,
+      detail: state.auto ? "1 modèle(s) disponible(s)" : "poids absents", models: [model("qwen-1.5b", "transformers", state.auto, "poids absents")] },
+    { id: "ollama", label: "Ollama", description: "Ollama local.", experimental: false, available: state.ollama,
+      detail: state.ollama ? "1 modèle(s) disponible(s)" : "Ollama injoignable", models: [model("qwen-7b", "ollama", state.ollama, "Ollama injoignable")] },
+    { id: "integrated", label: "APEX intégré", description: "Qwen 1.5B par APEX.", experimental: false, available: state.integrated,
+      detail: state.integrated ? "1 modèle(s) disponible(s)" : "poids absents", models: [model("qwen-1.5b", "transformers", state.integrated, "poids absents")] },
+    { id: "brain", label: "Cerveau APEX", description: "ApexLM, expérimental.", experimental: true, available: state.brain,
+      detail: state.brain ? "1 modèle(s) disponible(s)" : "poids modifiés", models: [model("apex-brain:v1:fp32", "apex_brain", state.brain, "poids modifiés")] },
+  ];
+}
 
 export function conversation(over: object = {}) {
   return {

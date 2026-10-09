@@ -10,7 +10,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 
 import { Modal } from "../components/ui/Modal";
 import { assistantApi, errorMessage, type Conversation, type Project } from "./api";
-import { keys, useConversations, useModels, useProjects } from "./hooks";
+import { keys, useConversations, useEngines, useProjects, useSettings } from "./hooks";
 import {
   IconChevron,
   IconFolder,
@@ -105,7 +105,8 @@ export function AssistantSidebar({
 }) {
   const projects = useProjects();
   const conversations = useConversations();
-  const models = useModels();
+  const engines = useEngines();
+  const settings = useSettings();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,13 +127,17 @@ export function AssistantSidebar({
   const activeProjectId = location.pathname.startsWith("/p/") ? location.pathname.slice(3) : null;
   const activeConversation = (conversations.data ?? []).find((c) => location.pathname === `/c/${c.id}`);
 
-  const modelReady = models.data?.some((m) => m.available);
-  const modelState = models.isLoading ? "pending" : models.isError ? "unknown" : modelReady ? "ready" : "missing";
+  // État du moteur CHOISI (Automatique, Ollama, APEX intégré, Cerveau APEX), tel que le backend vient de le mesurer.
+  const chosenId = settings.data?.models.engine ?? "auto";
+  const chosen = engines.data?.find((e) => e.id === chosenId);
+  const modelState = engines.isLoading || settings.isLoading ? "pending" : engines.isError || !chosen ? "unknown"
+    : !chosen.available ? "missing" : chosen.experimental ? "experimental" : "ready";
   const modelLabel = {
-    pending: "Vérification du modèle…",
-    unknown: "État du modèle inconnu",
-    ready: "Modèle prêt",
-    missing: "Aucun modèle disponible",
+    pending: "Vérification du moteur…",
+    unknown: "État du moteur inconnu",
+    ready: chosen?.id === "auto" ? "Modèle prêt (automatique)" : `${chosen?.label ?? "Moteur"} prêt`,
+    experimental: `${chosen?.label ?? "Moteur"} (expérimental)`,
+    missing: chosen?.id === "auto" ? "Aucun modèle disponible" : `${chosen?.label ?? "Moteur"} indisponible`,
   }[modelState];
 
   function isExpanded(project: Project) {
@@ -264,7 +269,7 @@ export function AssistantSidebar({
             to="/settings#modeles"
             className={`ax-model-state ax-model-state--${modelState}`}
             onClick={onCloseMobile}
-            title={modelState === "missing" ? "Aucun modèle n'est disponible : installez-le depuis le Panel APEX (« Installer le modèle »)." : modelLabel}
+            title={modelState === "missing" ? `${modelLabel} : ${chosen?.detail ?? ""}` : chosen?.description ?? modelLabel}
           >
             <span className="ax-model-state__dot" aria-hidden="true" />
             {!collapsed && <span>{modelLabel}</span>}

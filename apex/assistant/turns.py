@@ -469,17 +469,23 @@ class TurnManager:
         return load_config()
 
     def _candidates(self, settings: AppSettings) -> tuple[list[Any], str]:
-        from apex.models.registry import resolve_candidates
+        from apex.assistant.engines import INFO, candidates_for
         from apex.routing.model import RoutingRequest
         from apex.routing.router import select_model
 
-        candidates = list(resolve_candidates(self._load_config()))
+        engine = settings.models.engine
+        candidates = candidates_for(engine, self._load_config())
+        if not candidates:
+            return [], f"aucun modèle déclaré pour le moteur « {INFO[engine].label} »"
         preferred = settings.models.preferred_model
         if preferred and preferred != "auto":
             chosen = [c for c in candidates if c.ref.id == preferred]
             if not chosen:
-                return [], f"le modèle choisi dans les Paramètres (« {preferred} ») n'est pas déclaré"
+                return [], (f"le modèle choisi dans les Paramètres (« {preferred} ») n'appartient pas au "
+                            f"moteur « {INFO[engine].label} »")
             candidates = chosen
+        if engine == "brain":
+            return candidates, ""  # choix explicite d'un modèle unique : rien à router
         decision = select_model(candidates, RoutingRequest())
         if decision.selected is None:
             return [], decision.reason

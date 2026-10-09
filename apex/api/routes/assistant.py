@@ -124,6 +124,20 @@ def update_settings(changes: dict[str, Any]) -> DataEnvelope[dict[str, Any]]:
     return DataEnvelope(status="real", data={**settings.model_dump(), "problems": []})
 
 
+@router.get("/assistant/engines", response_model=DataEnvelope[list[dict[str, Any]]])
+def list_engines() -> DataEnvelope[list[dict[str, Any]]]:
+    """Moteurs de réponse (Automatique, Ollama, APEX intégré, Cerveau APEX), leurs modèles et leur disponibilité
+    MESURÉE (`apex.assistant.engines`)."""
+    try:
+        from apex.assistant.engines import describe
+        from apex.config.loader import load_config
+
+        data = describe(load_config())
+    except Exception as exc:
+        return DataEnvelope(status="unknown", data=None, detail=f"{exc.__class__.__name__}: {exc}")
+    return DataEnvelope(status="real", data=data)
+
+
 @router.get("/assistant/models", response_model=DataEnvelope[list[dict[str, Any]]])
 def list_models() -> DataEnvelope[list[dict[str, Any]]]:
     """Modèles déclarés et leur disponibilité MESURÉE (détection réelle, rien n'est chargé ni téléchargé)."""
