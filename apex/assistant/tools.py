@@ -52,7 +52,7 @@ def evaluate(expression: str) -> float | int:
             return _number(node.value)
         if isinstance(node, ast.BinOp) and type(node.op) in _BINARY:
             left, right = walk(node.left), walk(node.right)
-            if isinstance(node.op, ast.Pow) and (abs(right) > 1000 or abs(left) > 1e6 and abs(right) > 3):
+            if isinstance(node.op, ast.Pow) and (abs(right) > 1000 or (abs(left) > 1e6 and abs(right) > 3)):
                 raise ToolFailure(ErrorCode.RESOURCE_LIMIT, "puissance trop grande")
             try:
                 return _number(_BINARY[type(node.op)](left, right))
@@ -95,7 +95,7 @@ def projection(*, initial: float, monthly_contribution: float, annual_rate_perce
         rows.append({"year": year, "contributed": round(contributed, 2), "balance": round(balance, 2),
                      "gains": round(balance - contributed, 2), "balance_real": round(balance / deflator, 2)})
     return {
-        "formula": "solde(mois) = solde(mois - 1) × (1 + t) + versement ; t = (1 + taux annuel)^(1/12) − 1",
+        "formula": "solde(mois) = solde(mois - 1) × (1 + t) + versement ; t = (1 + taux annuel)^(1/12) − 1",  # noqa: RUF001 — symboles mathématiques affichés à l'utilisateur
         "monthly_rate_percent": round(monthly_rate * 100, 6),
         "rows": rows,
         "final": rows[-1],
@@ -112,7 +112,7 @@ def _projection(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[
 
 
 def loan(*, principal: float, annual_rate_percent: float, years: int) -> dict[str, Any]:
-    """Prêt amortissable à mensualité constante : M = P × r / (1 − (1 + r)^−n), r = taux annuel / 12."""
+    """Prêt amortissable à mensualité constante : M = P × r / (1 − (1 + r)^−n), r = taux annuel / 12."""  # noqa: RUF002 — symboles mathématiques affichés à l'utilisateur
     n = years * 12
     r = annual_rate_percent / 100 / 12
     payment = principal / n if r == 0 else principal * r / (1 - (1 + r) ** -n)
@@ -125,7 +125,7 @@ def loan(*, principal: float, annual_rate_percent: float, years: int) -> dict[st
             interest_year += interest
         rows.append({"year": year, "interest": round(interest_year, 2), "remaining": round(balance, 2)})
     total = payment * n
-    return {"formula": "M = P × r / (1 − (1 + r)^−n), r = taux annuel / 12, n = mois",
+    return {"formula": "M = P × r / (1 − (1 + r)^−n), r = taux annuel / 12, n = mois",  # noqa: RUF001 — symboles mathématiques affichés à l'utilisateur
             "monthly_payment": round(payment, 2), "total_paid": round(total, 2),
             "total_interest": round(total - principal, 2), "rows": rows,
             "assumptions": {"principal": principal, "annual_rate_percent": annual_rate_percent, "years": years}}

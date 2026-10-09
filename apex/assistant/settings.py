@@ -113,7 +113,7 @@ class SettingsService:
         try:
             updated = AppSettings.model_validate(merged)
         except ValidationError as exc:
-            raise ValueError("; ".join(f"{'.'.join(str(p) for p in e['loc'])} : {e['msg']}" for e in exc.errors()))
+            raise ValueError("; ".join(f"{'.'.join(str(p) for p in e['loc'])} : {e['msg']}" for e in exc.errors())) from exc
         with session_scope(self._session_factory) as session:
             repo = AppSettingRepository(session)
             now = datetime.now(UTC)

@@ -128,8 +128,12 @@ class ConversationService:
 
                 try:
                     remove("conversation", conversation_id)
-                except (OSError, ValueError):
-                    pass  # l'espace de travail reste sur le disque ; la conversation, elle, est supprimée
+                except (OSError, ValueError) as exc:
+                    # La conversation est supprimée ; son espace de travail reste sur le disque — dit, jamais tu.
+                    from apex.obs.logging import get_logger
+
+                    get_logger("conversations").warning("espace de travail non supprimé", conversation_id=conversation_id,
+                                                         error=f"{exc.__class__.__name__}: {exc}")
         return deleted
 
     def recall(self, conversation_id: str, content: str, prompt: str) -> tuple[str, list[Any]]:
