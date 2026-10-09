@@ -16,7 +16,8 @@ sleep 1
 wine cmd /c ver >/dev/null 2>&1
 U="$WINEPREFIX/drive_c/users/$(whoami)"; APP="$U/AppData/Local/Programs/APEX"; H="$U/AppData/Local/APEX"
 APPW='C:\users\'"$(whoami)"'\AppData\Local\Programs\APEX\APEX.exe'
-ok() { echo "CHECK $1 $([[ $2 == 0 ]] && echo PASS || echo FAIL) $3"; }
+FAILED=0
+ok() { [[ $2 == 0 ]] || FAILED=1; echo "CHECK $1 $([[ $2 == 0 ]] && echo PASS || echo FAIL) $3"; }
 verdict() { python3 -c 'import json,sys; d=json.loads(sys.argv[1]); print(d["headline"], d["cause"], d.get("mode"))' "$1" 2>/dev/null; }
 wine "$SETUP" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG="C:\\install.log" >/dev/null 2>&1; c=$?
 [[ $c == 0 && -f "$APP/app/apex/standalone/__init__.py" && -f "$APP/app/runtime/requirements-windows.lock" ]]
@@ -49,3 +50,5 @@ sleep 3
 [[ $c == 0 && ! -d "$H/python" && -f "$H/data/apex.db" && ! -f "$H/.apex/runtime/backend.json" ]]
 ok N9_desinstallation $? "code $c ; APEX arrêté avant suppression ; runtime supprimé ; base conservée ($(du -h "$H/data/apex.db" 2>/dev/null | cut -f1))"
 wineserver -k 2>/dev/null
+# Code de sortie = verdict des vérifications (et non celui de `wineserver -k`, non nul s'il n'y a rien à arrêter).
+exit $FAILED
