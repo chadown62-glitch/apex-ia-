@@ -54,6 +54,10 @@ public sealed class App : Avalonia.Application
                 // L'accusé part du FIL D'INTERFACE : il prouve au second lancement que cette fenêtre répond.
                 guard.OnActivationRequested(() => Dispatcher.UIThread.Post(() =>
                 {
+                    if (!window.IsVisible)
+                    {
+                        window.Show(); // fenêtre vivante mais masquée : elle redevient visible
+                    }
                     window.WindowState = Avalonia.Controls.WindowState.Normal;
                     window.Activate();
                     guard.Acknowledge();
