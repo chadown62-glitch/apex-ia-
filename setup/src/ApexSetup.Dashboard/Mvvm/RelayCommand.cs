@@ -4,13 +4,16 @@ namespace ApexSetup.Dashboard.Mvvm;
 
 public sealed class RelayCommand(Action execute, Func<bool>? canExecute = null) : ICommand
 {
+    private readonly bool _ownedByInterface = InterfaceThread.IsCurrent();
+
     public event EventHandler? CanExecuteChanged;
 
     public bool CanExecute(object? parameter) => canExecute?.Invoke() ?? true;
 
     public void Execute(object? parameter) => execute();
 
-    public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void RaiseCanExecuteChanged() =>
+        InterfaceThread.Notify(_ownedByInterface, () => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
 }
 
 /// <summary>
@@ -34,6 +37,12 @@ public sealed class AsyncRelayCommand(Func<CancellationToken, Task> execute, Fun
     private CancellationTokenSource? _cts;
     private bool _isRunning;
 
+    /// <summary>
+    /// Créée sur le fil d'interface : « l'état a changé » y est toujours annoncé. La fin d'une action (le <c>finally</c>
+    /// ci-dessous) s'exécute souvent sur un fil d'arrière-plan : c'était le « Call from invalid thread » de 0.4.3.
+    /// </summary>
+    private readonly bool _ownedByInterface = InterfaceThread.IsCurrent();
+
     public event EventHandler? CanExecuteChanged;
 
     /// <summary>Levé quand <see cref="execute"/> lève une exception — jamais silencieux, jamais fatal (voir docstring de la classe).</summary>
@@ -45,7 +54,7 @@ public sealed class AsyncRelayCommand(Func<CancellationToken, Task> execute, Fun
         private set
         {
             _isRunning = value;
-            CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+            NotifyCanExecuteChanged();
         }
     }
 
@@ -83,5 +92,6 @@ public sealed class AsyncRelayCommand(Func<CancellationToken, Task> execute, Fun
 
     public void Cancel() => _cts?.Cancel();
 
-    public void NotifyCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
+    public void NotifyCanExecuteChanged() =>
+        InterfaceThread.Notify(_ownedByInterface, () => CanExecuteChanged?.Invoke(this, EventArgs.Empty));
 }

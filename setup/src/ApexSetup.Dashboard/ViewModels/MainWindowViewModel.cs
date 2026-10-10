@@ -519,18 +519,21 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             _log.Log($"Paramètres : {_settingsProblem}");
         }
-        var settingsViewModel = new SettingsViewModel(_settingsStore, _settings, () => _settings);
-        settingsViewModel.Saved += (_, saved) =>
-        {
-            _settings = saved;
-            _settingsProblem = null;
-            IsSettingsVisible = false;
-            _log.Log($"Paramètres enregistrés (distribution WSL : {saved.WslDistro ?? "par défaut"} ; dossier APEX : {saved.EffectiveProjectRoot().Path}).");
-            _ = RefreshAsync();
-        };
-        settingsViewModel.CloseRequested += (_, _) => IsSettingsVisible = false;
+        var settings = _settings;
         _ui(() =>
         {
+            // Créé SUR le fil d'interface (0.4.4) : son bouton « Enregistrer » y est toujours mis à jour,
+            // même quand leur action se termine sur un autre fil (sinon : « Call from invalid thread », comme en 0.4.3).
+            var settingsViewModel = new SettingsViewModel(_settingsStore, settings, () => _settings);
+            settingsViewModel.Saved += (_, saved) =>
+            {
+                _settings = saved;
+                _settingsProblem = null;
+                IsSettingsVisible = false;
+                _log.Log($"Paramètres enregistrés (distribution WSL : {saved.WslDistro ?? "par défaut"} ; dossier APEX : {saved.EffectiveProjectRoot().Path}).");
+                _ = RefreshAsync();
+            };
+            settingsViewModel.CloseRequested += (_, _) => IsSettingsVisible = false;
             Settings = settingsViewModel;
             OnPropertyChanged(nameof(Settings));
         });
