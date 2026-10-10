@@ -522,3 +522,52 @@ verre sombre au reflet brillant et au halo violet, bulles de verre dans les tuil
   qui ne contient pas de dossier `apex`), mais un lancement depuis un dossier contenant `apex` exécuterait ce code-là.
 - **Le cadre natif d'APEX.exe** (barre du haut du Panel, page **État et contrôle**) n'a pas changé : thème sombre
   Fluent, hors des maquettes (qui montrent le centre de contrôle web).
+
+## 12. APEX.exe 0.4.3 — « je double-clique sur l'icône et rien ne se passe »
+
+Constaté par l'utilisateur sur son PC (Windows 11, 10/10/2026), après installation de 0.4.2 : double-clic sur
+l'icône APEX du bureau, et rien ne s'affiche.
+
+### 12.1 Cause probable, et pourquoi aucune validation ne l'avait vue
+
+- 0.4.2 ne change rien au Panel par rapport à 0.4.1. 0.4.1 a ajouté l'affichage de l'assistant dans la fenêtre
+  (composant Microsoft Edge WebView2), **créé dès la construction de la fenêtre**, qu'APEX tourne ou non.
+- Ce chemin n'avait jamais tourné avec le composant présent : Wine n'a pas WebView2 (le Panel y prend le chemin
+  « composant absent », vérifié) et les essais Windows de GitHub ne démarrent plus (« The job was not started
+  because recent account payments have failed or your spending limit needs to be increased », depuis le
+  09/10/2026). Les workflows Windows existants ne pilotaient d'ailleurs APEX.exe que sans fenêtre (`--start`…).
+- Un plantage ou un blocage à cet endroit ne laisse rien à l'écran ; et le double-clic suivant demandait à cette
+  instance bloquée de se montrer, puis se terminait sans un mot (instance unique).
+- **Non prouvé** : sans le PC de l'utilisateur ni Windows avec le composant, la cause exacte (plantage, blocage,
+  et où) n'a pas pu être observée. Le journal du Panel de l'utilisateur la dira (`%LOCALAPPDATA%\APEX\logs`).
+
+### 12.2 Ce qui a changé (Panel seulement)
+
+- **La fenêtre s'ouvre toujours d'abord** : le composant d'affichage n'est créé que quand il y a une page à
+  montrer (APEX démarré), jamais à l'ouverture de la fenêtre (`Views/MainWindow.axaml.cs`).
+- **Sentinelle** (`Services/EmbeddedDisplayGuard.cs`) : une marque entoure la création ; laissée par un autre
+  processus, elle signifie que le lancement précédent s'est arrêté ou bloqué là. Ce lancement-ci n'y touche pas :
+  l'assistant passe au navigateur, la page le dit, **Réessayer dans la fenêtre** est proposé.
+- **Création prudente et journalisée** (`Views/AssistantHost.cs`) : présence du composant vérifiée avant toute
+  création, chaque étape écrite dans le journal, arrêt du processus du composant → navigateur avec la raison.
+- **Fenêtre bloquée** (`Services/SingleInstanceGuard.cs`) : la fenêtre ouverte accuse réception depuis son fil
+  d'interface ; sans réponse en 8 s, le nouveau lancement affiche « APEX est déjà ouvert, mais sa fenêtre ne répond
+  pas — la fermer et rouvrir APEX ? » ; **Oui** ferme ce seul processus (jamais le moteur d'APEX) et rouvre la fenêtre.
+- **Plantage au démarrage** (`Services/StartupSafety.cs`, `Program.cs`) : journalisé (pile complète) et annoncé
+  dans une boîte de message Windows, indépendante de l'interface graphique, avec le chemin du journal.
+
+### 12.3 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Panel (.NET, `dotnet test setup/ApexSetup.sln`) | **582 réussis, 0 échec** (577 + 5 : tentative interrompue → navigateur puis **Réessayer dans la fenêtre** ; nouvel essai immédiat même quand le fil d'interface est occupé (le test échoue sur la version précédente) ; sentinelle : marque d'un autre processus signalée, la sienne non, marque illisible ignorée ; demande d'activation arrivée avant la fenêtre rejouée). Un premier passage a compté un échec dans `LaunchControlTests` : le test utilise le port 8000, où l'essai Wine de la même minute venait de démarrer un vrai APEX — relancé une fois le port libéré : réussi |
+| WINE — **Windows simulé, pas Windows** — scénarios de la fenêtre, installateur 0.4.3 (SHA-256 `8633f0de…6fa3be24`, commit `d341a24`), captures | **13/13 PASS** : double-clic → fenêtre affichée, **aucune création du composant tant qu'APEX ne tourne pas** ; second double-clic sur une fenêtre qui répond → rend la main en 0,3 s, une seule fenêtre ; APEX démarré → création tentée, composant absent sous Wine → raison journalisée, navigateur, marque retirée ; **fenêtre bloquée (processus suspendu) + double-clic → boîte « APEX est déjà ouvert, mais sa fenêtre ne répond pas »**, Oui → l'ancienne fermée, une nouvelle affichée, **le moteur d'APEX toujours en marche** ; **marque d'un lancement interrompu → page « au lancement précédent… », Ouvrir dans le navigateur, Réessayer dans la fenêtre**, aucune création tentée ; **plantage au démarrage (bibliothèque retirée) → boîte « APEX n'a pas pu s'ouvrir » avec le chemin du journal, pile complète dans le journal** |
+| WINE — cycle de vie et mise à jour | cycle de vie **17/17**, mise à jour **0.4.2 → 0.4.3** **18/18** (raccourci et paramètres conservés) ; bibliothèques identiques (même empreinte) : pas de nouvelle préparation |
+| Interface web, moteur d'APEX | inchangés depuis 0.4.2 |
+
+### 12.4 Non vérifié ici
+
+- **La cause exacte sur le PC de l'utilisateur**, et l'affichage intégré réel (WebView2 présent) : ni Windows, ni
+  composant WebView2 ici ; essais Windows de GitHub indisponibles (facturation du compte). Ce qui est garanti par
+  construction et vérifié sous Wine : la fenêtre s'ouvre sans toucher au composant ; un blocage ou un plantage est
+  annoncé au lancement suivant au lieu d'un silence ; l'assistant reste utilisable dans le navigateur.

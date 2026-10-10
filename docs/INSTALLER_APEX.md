@@ -5,19 +5,20 @@ Windows** (« mode Windows natif ») : ni WSL, ni Docker, ni Ollama, ni terminal
 **l'assistant APEX** : projets, conversations persistantes, quatre modes (Normal, Code, Design, Finance),
 paramètres centralisés et deux thèmes (APEX Night, APEX Dune). La version 0.4.1 affiche l'assistant **dans la
 fenêtre d'APEX.exe** (plus de navigateur) et permet de **choisir le moteur qui répond** : Ollama, le moteur
-intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental). La version 0.4.2 ne change que le
+intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental). La version 0.4.2 a changé le
 **rendu** : fond de soie ivoire (Dune) ou de ciel étoilé (Night), surfaces de verre, pastilles d'état
-lumineuses. L'installateur dépose le
+lumineuses. La version 0.4.3 corrige le lancement : la fenêtre s'ouvre toujours, et un lancement qui échoue le
+dit (voir « Si rien ne s'affiche au double-clic »). L'installateur dépose le
 Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
 que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
 APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
 ## Récupérer l'installateur
 
-Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.2.exe`
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.3.exe`
 (≈ 40 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
 empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
-PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.2.exe -Algorithm SHA256` (même valeur que le `.sha256`).
+PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.3.exe -Algorithm SHA256` (même valeur que le `.sha256`).
 
 ## Prérequis
 
@@ -33,7 +34,7 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.2.exe -Algorithm SHA256` (même
 
 ## Installer et utiliser APEX (mode Windows natif)
 
-1. Double-cliquez sur `APEX-Setup-x64-v0.4.2.exe`. Le programme n'est pas signé : si Windows affiche
+1. Double-cliquez sur `APEX-Setup-x64-v0.4.3.exe`. Le programme n'est pas signé : si Windows affiche
    « Windows a protégé votre ordinateur », cliquez sur « Informations complémentaires » puis
    « Exécuter quand même » (seulement si le fichier vient bien du dépôt APEX). L'installateur vérifie
    lui-même que le Panel démarre et que l'application est complète, puis propose de lancer APEX.
@@ -120,6 +121,22 @@ sonde réelle** ; si l'une n'est pas observée, la ligne **Sandbox** est OFFLINE
 code est refusée** (jamais d'exécution non isolée). Docker Desktop, s'il est présent et vérifié, sert de
 recours.
 
+### Si rien ne s'affiche au double-clic (0.4.3)
+
+Constaté sur un vrai Windows 11 avec 0.4.2 : double-clic sur l'icône, et rien. Depuis 0.4.3, un lancement ne
+finit plus jamais en silence :
+
+| Ce que vous voyez | Ce que cela veut dire, que faire |
+|---|---|
+| « APEX est déjà ouvert, mais sa fenêtre ne répond pas » | une fenêtre d'APEX est restée bloquée : **Oui** la ferme et rouvre APEX (le moteur d'APEX, s'il tourne, n'est pas arrêté) |
+| « APEX n'a pas pu s'ouvrir. Erreur : … » | plantage au démarrage : la boîte donne le fichier journal à envoyer (`%LOCALAPPDATA%\APEX\logs\panel-AAAAMMJJ.log`) |
+| Page **Assistant** : « au lancement précédent, la fenêtre s'est fermée ou bloquée pendant la création du composant d'affichage » | APEX a reconnu l'incident et ne retente pas seul : l'assistant s'ouvre dans le navigateur ; **Réessayer dans la fenêtre** pour retenter |
+| Toujours rien | Gestionnaire des tâches (**Ctrl+Maj+Échap**) : terminer chaque « APEX », puis double-clic ; si rien encore, envoyer le journal ci-dessus |
+
+Pour forcer l'assistant dans le navigateur (jamais dans la fenêtre) : variable d'environnement utilisateur
+`APEX_PANEL_BROWSER=1` (PowerShell : `[Environment]::SetEnvironmentVariable('APEX_PANEL_BROWSER','1','User')`),
+puis rouvrir APEX.
+
 ### Dépannage (mode natif)
 
 | Le Panel affiche | Que faire |
@@ -143,7 +160,7 @@ recours.
 | « Aucun modèle disponible » | Panel : **Installer le modèle**, puis **Arrêter APEX** / **Démarrer APEX** |
 | « Moteur « Ollama » indisponible » | démarrez Ollama sur ce PC, ou choisissez **APEX intégré** dans la liste **Moteur** |
 | « Cerveau APEX — expérimental » | normal : le Cerveau ne sait pas encore converser ; choisissez **APEX intégré** ou Ollama pour une vraie réponse |
-| Page **Assistant** : « ne peut pas s'afficher dans cette fenêtre » | installez « Microsoft Edge WebView2 Runtime » (https://go.microsoft.com/fwlink/p/?LinkId=2124703), rouvrez APEX ; en attendant, **Ouvrir dans le navigateur** |
+| Page **Assistant** : « ne peut pas s'afficher dans cette fenêtre » | composant absent : installez « Microsoft Edge WebView2 Runtime » (https://go.microsoft.com/fwlink/p/?LinkId=2124703), puis **Réessayer dans la fenêtre** ; en attendant, **Ouvrir dans le navigateur** |
 | « La réponse a échoué — … mémoire insuffisante pour charger le modèle : … Go disponibles, … Go nécessaires » | fermer des applications, ou **Paramètres → Ressources → Précision : bfloat16**, puis **Réessayer** |
 | « La réponse a échoué — délai dépassé » | **Paramètres → Runtime** : allonger le délai (jusqu'à 3600 s), ou réduire **Modèles → Longueur maximale** |
 | « Une réponse est en cours : attendez-la ou arrêtez-la » | attendre la réponse, ou **Arrêter** ; une seule réponse à la fois par conversation |
