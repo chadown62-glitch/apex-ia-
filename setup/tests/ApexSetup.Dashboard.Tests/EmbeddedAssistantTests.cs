@@ -80,7 +80,7 @@ public class EmbeddedAssistantTests
 
     private static void Stopped(FakeBackendHost host) => host.Files.Remove("~/" + BackendDiscovery.RelativePath);
 
-    private static Rig Build(int port, bool embedded = true)
+    private static Rig Build(int port, bool embedded = true, Action<Action>? ui = null)
     {
         var host = new FakeBackendHost();
         Serving(host, port);
@@ -93,7 +93,7 @@ public class EmbeddedAssistantTests
         var browser = new RecordingBrowser();
         var control = new PanelControl(new BackendLauncher(new NoStarter(), new FakeProcessRunner(), wsl: true), client, browser);
         var vm = new MainWindowViewModel(store, service, log, redactor,
-            problem => new DiagnosticContext("OS", ".NET", "/install", "/settings.json", "/logs", null, problem), null, control,
+            problem => new DiagnosticContext("OS", ".NET", "/install", "/settings.json", "/logs", null, problem), ui, control,
             embeddedAssistant: embedded);
         return new Rig(vm, service, host, browser, log);
     }
@@ -252,6 +252,36 @@ public class EmbeddedAssistantTests
         Assert.NotNull(rig.Vm.AssistantUrl);
         Assert.True(rig.Vm.IsAssistantHostVisible);
         Assert.Single(rig.Browser.Opened); // l'essai se fait dans la fenêtre, pas dans un nouvel onglet
+    }
+
+    [Fact]
+    public async Task Retry_opens_in_the_window_at_once_even_while_the_interface_thread_is_busy()
+    {
+        // Le fil d'interface ne traite les actions postées qu'après coup (comme Dispatcher.UIThread.Post) : le nouvel
+        // essai doit quand même ouvrir l'assistant tout de suite, pas à la mesure suivante.
+        await using var server = ApexServer();
+        var queue = new List<Action>();
+        void Flush()
+        {
+            while (queue.Count > 0)
+            {
+                var batch = queue.ToList();
+                queue.Clear();
+                batch.ForEach(a => a());
+            }
+        }
+        var rig = Build(new Uri(server.BaseUrl).Port, ui: queue.Add);
+        rig.Vm.ReportInterruptedAttempt("au lancement précédent, la fenêtre s'est bloquée pendant la création du composant");
+        await rig.Vm.InitializeAsync();
+        Flush();
+        Assert.True(rig.Vm.CanRetryEmbedded);
+        Assert.Null(rig.Vm.AssistantUrl);
+
+        await rig.Vm.RetryEmbeddedCommand.ExecuteAsync(); // aucune action postée n'a encore été traitée
+        Flush();
+        Assert.NotNull(rig.Vm.AssistantUrl);
+        Assert.True(rig.Vm.IsAssistantHostVisible);
+        Assert.Empty(rig.Browser.Opened);
     }
 
     [Fact]

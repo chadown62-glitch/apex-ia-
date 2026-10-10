@@ -42,6 +42,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private string _overlayTitle = "Diagnostic";
     private bool _embedded;
     private readonly bool _embeddedRequested;
+    private readonly object _embeddedGate = new();
     private string? _embeddedProblem;
     private bool _assistantWanted;
     private bool _isAssistantPage;
@@ -364,7 +365,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void DisableEmbedded(string reason, string logLine)
     {
-        _ui(() =>
+        // L'état change TOUT DE SUITE (la mesure en cours, sur un autre fil, ne rouvre plus rien dans la fenêtre) ;
+        // seules les notifications passent par le fil d'interface.
+        lock (_embeddedGate)
         {
             if (!_embedded)
             {
@@ -372,8 +375,11 @@ public sealed class MainWindowViewModel : ObservableObject
             }
             _embedded = false;
             _embeddedProblem = reason;
+        }
+        _log.Log(logLine);
+        _ui(() =>
+        {
             AssistantUrl = null;
-            _log.Log(logLine);
             OnPropertyChanged(nameof(IsEmbeddedAssistant));
             OnPropertyChanged(nameof(AssistantMessage));
             OnPropertyChanged(nameof(IsAssistantHostVisible));
@@ -389,11 +395,14 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private async Task RetryEmbeddedAsync()
     {
-        _ui(() =>
+        lock (_embeddedGate)
         {
             _embedded = true;
             _embeddedProblem = null;
-            _log.Log("Affichage intégré : nouvel essai demandé.");
+        }
+        _log.Log("Affichage intégré : nouvel essai demandé.");
+        _ui(() =>
+        {
             OnPropertyChanged(nameof(IsEmbeddedAssistant));
             OnPropertyChanged(nameof(AssistantMessage));
             OnPropertyChanged(nameof(CanRetryEmbedded));
