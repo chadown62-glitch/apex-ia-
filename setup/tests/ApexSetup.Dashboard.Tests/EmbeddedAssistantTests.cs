@@ -216,12 +216,42 @@ public class EmbeddedAssistantTests
         Assert.False(rig.Vm.IsAssistantHostVisible);
         Assert.Contains("WebView2 n'est pas installé", rig.Vm.AssistantMessage);
         Assert.Contains("go.microsoft.com/fwlink/p/?LinkId=2124703", rig.Vm.AssistantMessage);
+        Assert.True(rig.Vm.CanRetryEmbedded); // après installation du composant : « Réessayer dans la fenêtre »
         Assert.Contains(rig.Log.Entries, e => e.Message.Contains("Affichage intégré de l'assistant impossible"));
 
         await rig.Vm.OpenUiCommand.ExecuteAsync();
         Assert.Single(rig.Browser.Opened);
         await rig.Vm.RefreshAsync();
         Assert.Null(rig.Vm.AssistantUrl); // jamais réactivé en silence
+    }
+
+    [Fact]
+    public async Task After_an_interrupted_attempt_the_assistant_uses_the_browser_and_can_retry_in_the_window()
+    {
+        // 0.4.3, Windows réel (0.4.2) : « je double-clique et rien ne se passe ». Le lancement suivant ne retente pas
+        // en silence la création qui a planté ou bloqué la fenêtre : il le dit, passe au navigateur, propose de réessayer.
+        await using var server = ApexServer();
+        var rig = Build(new Uri(server.BaseUrl).Port);
+        rig.Vm.ReportInterruptedAttempt("au lancement précédent, la fenêtre s'est fermée ou bloquée pendant la création du composant");
+        await rig.Vm.InitializeAsync();
+
+        Assert.False(rig.Vm.IsEmbeddedAssistant);
+        Assert.Null(rig.Vm.AssistantUrl);
+        Assert.False(rig.Vm.IsAssistantHostVisible); // le composant n'est jamais créé à ce lancement
+        Assert.True(rig.Vm.CanRetryEmbedded);
+        Assert.Contains("lancement précédent", rig.Vm.AssistantMessage);
+        Assert.Contains("Réessayer dans la fenêtre", rig.Vm.AssistantMessage);
+        Assert.DoesNotContain("installez", rig.Vm.AssistantMessage); // ce n'est pas un composant absent
+        Assert.Contains(rig.Log.Entries, e => e.Message.Contains("Affichage intégré désactivé pour ce lancement"));
+        await rig.Vm.OpenUiCommand.ExecuteAsync();
+        Assert.Single(rig.Browser.Opened);
+
+        await rig.Vm.RetryEmbeddedCommand.ExecuteAsync();
+        Assert.True(rig.Vm.IsEmbeddedAssistant);
+        Assert.False(rig.Vm.CanRetryEmbedded);
+        Assert.NotNull(rig.Vm.AssistantUrl);
+        Assert.True(rig.Vm.IsAssistantHostVisible);
+        Assert.Single(rig.Browser.Opened); // l'essai se fait dans la fenêtre, pas dans un nouvel onglet
     }
 
     [Fact]
@@ -233,8 +263,59 @@ public class EmbeddedAssistantTests
 
         Assert.False(rig.Vm.IsAssistantPage);
         Assert.Null(rig.Vm.AssistantUrl);
+        Assert.False(rig.Vm.CanRetryEmbedded); // hors Windows, rien à réessayer
         Assert.Empty(rig.Browser.Opened); // rien n'est ouvert sans un clic
         await rig.Vm.OpenUiCommand.ExecuteAsync();
         Assert.Single(rig.Browser.Opened);
+    }
+}
+
+/// <summary>
+/// 0.4.3 — sentinelle de la création du composant d'affichage : une marque laissée par un AUTRE processus veut dire
+/// que le lancement précédent s'est arrêté ou bloqué pendant la création.
+/// </summary>
+public class EmbeddedDisplayGuardTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "apex-display-guard-" + Guid.NewGuid().ToString("N"));
+
+    private EmbeddedDisplayGuard Guard() => new(Path.Combine(_dir, "webview-attempt.json"));
+
+    [Fact]
+    public void An_attempt_left_by_another_process_is_reported_once_cleared_it_is_not()
+    {
+        var guard = Guard();
+        Assert.Null(guard.Interrupted()); // aucune tentative
+
+        guard.Begin("0.4.3", pid: Environment.ProcessId + 100_000);
+        var reason = guard.Interrupted();
+        Assert.NotNull(reason);
+        Assert.Contains("lancement précédent", reason);
+        Assert.Contains("0.4.3", reason);
+        Assert.Contains("WebView2", reason);
+
+        guard.End();
+        Assert.Null(guard.Interrupted());
+        Assert.False(File.Exists(guard.File));
+    }
+
+    [Fact]
+    public void The_running_process_own_attempt_is_not_a_crash_and_an_unreadable_mark_is_ignored()
+    {
+        var guard = Guard();
+        guard.Begin("0.4.3");
+        Assert.Null(guard.Interrupted()); // tentative en cours de CE processus
+
+        File.WriteAllText(guard.File, "{ pas du json");
+        Assert.Null(guard.Interrupted());
+        guard.End();
+        guard.End(); // idempotent
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
     }
 }

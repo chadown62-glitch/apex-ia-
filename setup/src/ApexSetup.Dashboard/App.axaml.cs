@@ -21,9 +21,8 @@ public sealed class App : Avalonia.Application
             var composition = PanelComposition.Create();
             var log = composition.Log;
 
-            // Un plantage du Panel laisse une trace exploitable dans le journal fichier.
-            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-                log.Log($"PLANTAGE du Panel : {(e.ExceptionObject as Exception)?.ToString() ?? e.ExceptionObject}");
+            // Un plantage du Panel est journalisé et annoncé par Program (StartupSafety), avant même la fenêtre.
+            log.Log($"Panel {Services.PanelInfo.Version} ouvert ({Services.PanelInfo.OperatingSystem}).");
             TaskScheduler.UnobservedTaskException += (_, e) =>
             {
                 log.Log($"Erreur asynchrone non observée : {e.Exception.GetBaseException().Message}");
@@ -36,21 +35,34 @@ public sealed class App : Avalonia.Application
                 // 0.4.1 : l'assistant s'affiche DANS la fenêtre (WebView2) sous Windows ; APEX_PANEL_BROWSER=1 garde
                 // l'ancien comportement (navigateur du système).
                 embeddedAssistant: OperatingSystem.IsWindows() && Environment.GetEnvironmentVariable("APEX_PANEL_BROWSER") != "1");
-            var window = new MainWindow { DataContext = viewModel };
+            // 0.4.3 : si le lancement précédent s'est arrêté ou bloqué pendant la création du composant d'affichage
+            // (WebView2), celui-ci n'y touche pas : l'assistant passe au navigateur, « Réessayer dans la fenêtre » reste proposé.
+            var displayGuard = Services.EmbeddedDisplayGuard.Default();
+            if (viewModel.IsEmbeddedAssistant && displayGuard.Interrupted() is { } interrupted)
+            {
+                displayGuard.End();
+                viewModel.ReportInterruptedAttempt(interrupted);
+            }
+
+            var window = new MainWindow { DataContext = viewModel, DisplayGuard = displayGuard };
             viewModel.Clipboard = new WindowClipboard(window);
             desktop.MainWindow = window;
+            window.Opened += (_, _) => log.Log("Fenêtre du Panel affichée.");
 
             if (Program.Guard is { } guard)
             {
-                guard.ActivationRequested += () => Dispatcher.UIThread.Post(() =>
+                // L'accusé part du FIL D'INTERFACE : il prouve au second lancement que cette fenêtre répond.
+                guard.OnActivationRequested(() => Dispatcher.UIThread.Post(() =>
                 {
                     window.WindowState = Avalonia.Controls.WindowState.Normal;
                     window.Activate();
-                });
+                    guard.Acknowledge();
+                }));
             }
             desktop.ShutdownRequested += (_, _) =>
             {
                 _closing.Cancel();
+                displayGuard.End(); // fermeture normale : jamais prise pour un plantage au prochain lancement
                 log.Log("Panel fermé.");
             };
 

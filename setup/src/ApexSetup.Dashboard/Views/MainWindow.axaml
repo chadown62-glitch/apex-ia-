@@ -45,13 +45,16 @@
 
         <!-- Page « Assistant » : l'interface d'APEX dans la fenêtre (composant WebView2 de Windows). -->
         <Grid Grid.Row="1" IsVisible="{Binding IsAssistantPage}">
-            <views:AssistantHost Name="AssistantView" Url="{Binding AssistantUrl}" IsVisible="{Binding IsAssistantHostVisible}" />
+            <!-- Le composant d'affichage (AssistantHost, WebView2) est créé par le code-behind seulement quand il y a une
+                 page à afficher — jamais à l'ouverture de la fenêtre (0.4.3). -->
+            <ContentControl Name="AssistantSlot" />
             <StackPanel IsVisible="{Binding !IsAssistantHostVisible}" HorizontalAlignment="Center" VerticalAlignment="Center"
                         MaxWidth="620" Spacing="16" Margin="24">
                 <TextBlock Name="AssistantMessageText" Text="{Binding AssistantMessage}" TextWrapping="Wrap" FontSize="16" TextAlignment="Center" />
                 <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
                     <Button Name="AssistantStartButton" Content="Démarrer APEX" Command="{Binding StartCommand}" IsVisible="{Binding IsStartOfferedOnAssistant}" FontWeight="SemiBold" />
                     <Button Content="Ouvrir dans le navigateur" Command="{Binding OpenInBrowserCommand}" IsVisible="{Binding !IsEmbeddedAssistant}" />
+                    <Button Name="RetryEmbeddedButton" Content="Réessayer dans la fenêtre" Command="{Binding RetryEmbeddedCommand}" IsVisible="{Binding CanRetryEmbedded}" />
                     <Button Content="État et contrôle" Command="{Binding ShowControlCommand}" />
                 </StackPanel>
             </StackPanel>

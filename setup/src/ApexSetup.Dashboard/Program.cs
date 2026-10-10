@@ -58,21 +58,55 @@ public static class Program
             return HeadlessActions.InstallModelAsync().GetAwaiter().GetResult();
         }
 
-        // Un second double-clic ramène le Panel existant au premier plan au lieu d'en ouvrir un autre.
-        Guard = SingleInstanceGuard.TryAcquire();
+        // 0.4.3 (Windows réel, 0.4.2 : « je double-clique sur l'icône et rien ne se passe ») : un lancement ne finit
+        // jamais en silence. Tout plantage est journalisé et annoncé (boîte de message Windows, indépendante de
+        // l'interface graphique).
+        AppDomain.CurrentDomain.UnhandledException += (_, e) => StartupSafety.ReportCrash(e.ExceptionObject as Exception, "erreur non gérée");
+
+        // Un second double-clic ramène le Panel existant au premier plan au lieu d'en ouvrir un autre ; si cette
+        // fenêtre ne répond pas (bloquée, ou jamais affichée), il le dit et propose de la fermer.
+        Guard = SingleInstanceGuard.TryAcquire(null, ActivationTimeout, out var other);
         if (Guard is null)
         {
-            return 0;
+            if (other != OtherInstance.Unresponsive)
+            {
+                return 0;
+            }
+            var stuck = StartupSafety.OtherPanels();
+            var log = StartupSafety.EarlyLog();
+            log.Log($"Nouveau lancement : la fenêtre d'APEX déjà ouverte ne répond pas depuis {ActivationTimeout.TotalSeconds:0} s "
+                    + $"(processus {string.Join(", ", stuck.Select(p => p.Id))}).");
+            if (!StartupSafety.AskToCloseUnresponsive(stuck.Select(p => p.Id).ToList()))
+            {
+                log.Log("Fenêtre bloquée laissée ouverte (choix de l'utilisateur).");
+                return 0;
+            }
+            log.Log($"Fenêtre bloquée fermée à la demande de l'utilisateur : {StartupSafety.Terminate(stuck)}.");
+            Guard = SingleInstanceGuard.AcquireWhenReleased(TimeSpan.FromSeconds(15));
+            if (Guard is null)
+            {
+                StartupSafety.Inform("L'ancienne fenêtre d'APEX n'a pas pu être fermée. Fermez « APEX » dans le Gestionnaire des tâches "
+                                     + "(Ctrl+Maj+Échap), puis rouvrez APEX.");
+                return 1;
+            }
         }
         try
         {
             return BuildAvaloniaApp(SoftwareRendering(args)).StartWithClassicDesktopLifetime(args);
+        }
+        catch (Exception ex)
+        {
+            StartupSafety.ReportCrash(ex, "fenêtre");
+            return 1;
         }
         finally
         {
             Guard.Dispose();
         }
     }
+
+    /// <summary>Délai laissé à la fenêtre déjà ouverte pour revenir au premier plan avant de la dire bloquée.</summary>
+    internal static readonly TimeSpan ActivationTimeout = TimeSpan.FromSeconds(8);
 
     /// <summary>Même mesure que la fenêtre, imprimée sur la sortie standard (diagnostic, tests, support).</summary>
     public static async Task<int> RunHeadlessAsync(bool diagnosticText)

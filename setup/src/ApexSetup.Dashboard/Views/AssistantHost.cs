@@ -4,6 +4,7 @@ using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Platform;
+using ApexSetup.Dashboard.Services;
 using Microsoft.Web.WebView2.Core;
 
 namespace ApexSetup.Dashboard.Views;
@@ -15,6 +16,10 @@ namespace ApexSetup.Dashboard.Views;
 /// lien s'ouvre dans le navigateur du système, jamais dans la fenêtre d'APEX.
 /// Hors Windows (tests, Linux), rien n'est créé. Composant absent ou en erreur : <see cref="Failed"/> donne la
 /// raison, le Panel l'affiche et propose le navigateur — jamais une fenêtre vide sans explication.
+/// <para>0.4.3 (Windows réel, 0.4.2 : « je double-clique et rien ne se passe ») : ce contrôle n'est créé que quand
+/// il y a une page à afficher (jamais à l'ouverture de la fenêtre) ; chaque étape est journalisée ; une marque
+/// (<see cref="EmbeddedDisplayGuard"/>) entoure la création pour qu'un plantage ou un blocage soit reconnu au
+/// lancement suivant.</para>
 /// </summary>
 public sealed class AssistantHost : NativeControlHost
 {
@@ -30,6 +35,12 @@ public sealed class AssistantHost : NativeControlHost
 
     /// <summary>Dossier des données du composant (cookies de session, cache) : jamais à côté de l'exécutable.</summary>
     public string? UserDataFolder { get; set; }
+
+    /// <summary>Sentinelle de la création (plantage ou blocage reconnu au lancement suivant).</summary>
+    public EmbeddedDisplayGuard? DisplayGuard { get; set; }
+
+    /// <summary>Journal du Panel : chaque étape de la création y est écrite (jamais l'adresse, elle porte le code).</summary>
+    public Action<string>? Log { get; set; }
 
     /// <summary>Le composant n'a pas pu être créé ; la raison est lisible par l'utilisateur.</summary>
     public event EventHandler<string>? Failed;
@@ -55,7 +66,15 @@ public sealed class AssistantHost : NativeControlHost
         {
             return base.CreateNativeControlCore(parent);
         }
-        var session = new WebViewSession(parent.Handle, UserDataFolder, reason => Failed?.Invoke(this, reason));
+        DisplayGuard?.Begin(PanelInfo.Version);
+        var guard = DisplayGuard;
+        var session = new WebViewSession(parent.Handle, UserDataFolder, Log ?? (_ => { }),
+            ready: () => guard?.End(),
+            failed: reason =>
+            {
+                guard?.End(); // échec propre : la raison est connue et affichée, ce n'est pas un plantage
+                Failed?.Invoke(this, reason);
+            });
         _session = session;
         _ = session.InitializeAsync(Url, Bounds.Size, TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0);
         return new PlatformHandle(session.Handle, "HWND");
@@ -70,6 +89,7 @@ public sealed class AssistantHost : NativeControlHost
         }
         _session?.Dispose();
         _session = null;
+        DisplayGuard?.End(); // retrait propre (APEX arrêté, page quittée) : ce n'est pas un plantage
     }
 }
 
@@ -82,16 +102,29 @@ internal sealed class WebViewSession : IDisposable
     private const int WsClipChildren = 0x02000000;
 
     private readonly string? _userDataFolder;
+    private readonly Action<string> _log;
+    private readonly Action _ready;
     private readonly Action<string> _failed;
     private CoreWebView2Controller? _controller;
     private string? _pendingUrl;
     private string? _origin;
     private bool _disposed;
+    private bool _shown;
+    private bool _failedOnce;
 
-    public WebViewSession(IntPtr parent, string? userDataFolder, Action<string> failed)
+    public WebViewSession(IntPtr parent, string? userDataFolder, Action<string> log, Action ready, Action<string> failed)
     {
         _userDataFolder = userDataFolder;
-        _failed = failed;
+        _log = log;
+        _ready = ready;
+        _failed = reason =>
+        {
+            if (!_failedOnce)
+            {
+                _failedOnce = true;
+                failed(reason);
+            }
+        };
         Handle = CreateWindowExW(0, "Static", string.Empty, WsChild | WsVisible | WsClipChildren, 0, 0, 1, 1,
             parent, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
     }
@@ -108,7 +141,11 @@ internal sealed class WebViewSession : IDisposable
         }
         try
         {
+            // Présence du composant vérifiée AVANT toute création (lecture du registre, sans lancer le composant).
+            var runtime = CoreWebView2Environment.GetAvailableBrowserVersionString();
+            _log($"Affichage intégré : création du composant Microsoft Edge WebView2 {runtime}…");
             var environment = await CoreWebView2Environment.CreateAsync(null, _userDataFolder);
+            _log("Affichage intégré : environnement WebView2 créé ; création de la vue…");
             var controller = await environment.CreateCoreWebView2ControllerAsync(Handle);
             if (_disposed)
             {
@@ -116,6 +153,7 @@ internal sealed class WebViewSession : IDisposable
                 return;
             }
             _controller = controller;
+            _log("Affichage intégré : vue WebView2 créée ; chargement de l'assistant…");
             var core = controller.CoreWebView2;
             core.Settings.AreDevToolsEnabled = false;
             core.Settings.IsStatusBarEnabled = false;
@@ -138,6 +176,31 @@ internal sealed class WebViewSession : IDisposable
                 {
                     e.Cancel = true; // seule l'interface locale d'APEX s'affiche ici
                     OpenOutside(e.Uri);
+                }
+            };
+            core.NavigationCompleted += (_, e) =>
+            {
+                if (_shown)
+                {
+                    return;
+                }
+                _shown = true;
+                _log(e.IsSuccess
+                    ? "Affichage intégré : assistant affiché dans la fenêtre."
+                    : $"Affichage intégré : composant fonctionnel, mais la page n'a pas chargé ({e.WebErrorStatus}).");
+                _ready();
+            };
+            // Le composant tourne dans ses propres processus : s'il s'arrête, la fenêtre d'APEX reste ouverte et
+            // l'assistant passe au navigateur, avec la raison.
+            core.ProcessFailed += (_, e) =>
+            {
+                if (e.ProcessFailedKind == CoreWebView2ProcessFailedKind.BrowserProcessExited)
+                {
+                    _failed($"le composant Microsoft Edge WebView2 s'est arrêté ({e.Reason})");
+                }
+                else
+                {
+                    _log($"Affichage intégré : un processus du composant WebView2 s'est arrêté ({e.ProcessFailedKind}, {e.Reason}).");
                 }
             };
             Resize(size, scale);

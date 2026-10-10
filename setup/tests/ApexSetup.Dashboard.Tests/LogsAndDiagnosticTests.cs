@@ -179,6 +179,31 @@ public class SingleInstanceGuardTests
     }
 }
 
+public class ActivationReplayTests
+{
+    [Fact]
+    public void An_activation_requested_before_the_window_exists_is_replayed_when_it_registers()
+    {
+        // Un second double-clic pendant que la première fenêtre se crée : la demande n'est pas perdue (sinon, sous
+        // Windows, le second lancement attendrait un accusé qui ne viendrait jamais et croirait la fenêtre bloquée).
+        var guard = SingleInstanceGuard.TryAcquire("-" + Guid.NewGuid().ToString("N"));
+        Assert.NotNull(guard);
+        try
+        {
+            guard!.Signal();
+            var calls = 0;
+            guard.OnActivationRequested(() => calls++);
+            Assert.Equal(1, calls); // rejouée à l'enregistrement
+            guard.Signal();
+            Assert.Equal(2, calls);
+        }
+        finally
+        {
+            guard!.Dispose();
+        }
+    }
+}
+
 /// <summary>Sortie de <c>--diagnostic</c> / <c>--status-json</c> redirigée vers un fichier ou un tube.</summary>
 public class HeadlessOutputTests
 {

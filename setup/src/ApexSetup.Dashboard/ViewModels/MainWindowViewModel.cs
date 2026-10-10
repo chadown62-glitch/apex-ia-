@@ -41,6 +41,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private string? _actionMessage;
     private string _overlayTitle = "Diagnostic";
     private bool _embedded;
+    private readonly bool _embeddedRequested;
     private string? _embeddedProblem;
     private bool _assistantWanted;
     private bool _isAssistantPage;
@@ -73,6 +74,7 @@ public sealed class MainWindowViewModel : ObservableObject
         bool embeddedAssistant = false)
     {
         _embedded = embeddedAssistant;
+        _embeddedRequested = embeddedAssistant;
         _assistantWanted = embeddedAssistant;
         _isAssistantPage = embeddedAssistant;
         _control = control;
@@ -96,6 +98,7 @@ public sealed class MainWindowViewModel : ObservableObject
         OpenInBrowserCommand = new AsyncRelayCommand(_ => OpenUiAsync(inBrowser: true), () => CanOpen);
         ShowAssistantCommand = new AsyncRelayCommand(_ => ShowAssistantAsync());
         ShowControlCommand = new RelayCommand(() => IsAssistantPage = false);
+        RetryEmbeddedCommand = new AsyncRelayCommand(_ => RetryEmbeddedAsync(), () => CanRetryEmbedded);
         ShowLaunchLogCommand = new AsyncRelayCommand(_ => ShowLaunchLogAsync());
         ShowDiagnosticCommand = new RelayCommand(() =>
         {
@@ -120,7 +123,7 @@ public sealed class MainWindowViewModel : ObservableObject
         });
         CancelCloseCommand = new RelayCommand(() => IsClosePromptVisible = false);
         foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand, StartCommand, StopCommand, OpenUiCommand, ShowLaunchLogCommand,
-                     PrepareCommand, InstallModelCommand, StopAndQuitCommand, OpenInBrowserCommand, ShowAssistantCommand })
+                     PrepareCommand, InstallModelCommand, StopAndQuitCommand, OpenInBrowserCommand, ShowAssistantCommand, RetryEmbeddedCommand })
         {
             command.Faulted += (_, ex) => _log.Log($"Erreur inattendue : {ex.Message}");
         }
@@ -305,11 +308,16 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (!_embedded)
             {
-                return _embeddedProblem is { } problem
-                    ? $"L'assistant ne peut pas s'afficher dans cette fenêtre : {problem}. Il s'ouvre dans votre navigateur "
-                      + "(« Ouvrir dans le navigateur »). Pour l'affichage intégré, installez « Microsoft Edge WebView2 Runtime » "
-                      + "depuis https://go.microsoft.com/fwlink/p/?LinkId=2124703, puis rouvrez APEX."
-                    : "L'assistant s'ouvre dans votre navigateur (« Ouvrir dans le navigateur »).";
+                if (_embeddedProblem is not { } problem)
+                {
+                    return "L'assistant s'ouvre dans votre navigateur (« Ouvrir dans le navigateur »).";
+                }
+                var next = problem.Contains("n'est pas installé", StringComparison.Ordinal)
+                    ? "Pour l'affichage intégré, installez « Microsoft Edge WebView2 Runtime » depuis "
+                      + "https://go.microsoft.com/fwlink/p/?LinkId=2124703, puis cliquez sur « Réessayer dans la fenêtre »."
+                    : "« Réessayer dans la fenêtre » pour retenter l'affichage intégré.";
+                return $"L'assistant ne peut pas s'afficher dans cette fenêtre : {problem}. Il s'ouvre dans votre navigateur "
+                       + $"(« Ouvrir dans le navigateur »). {next}";
             }
             if (_assistantUrl is not null)
             {
@@ -342,7 +350,19 @@ public sealed class MainWindowViewModel : ObservableObject
     /// Le composant d'affichage intégré n'a pas pu être créé (absent, erreur) : l'assistant passe au navigateur,
     /// et la raison est affichée et journalisée.
     /// </summary>
-    public void ReportEmbeddedFailure(string reason)
+    public void ReportEmbeddedFailure(string reason) =>
+        DisableEmbedded(reason, $"Affichage intégré de l'assistant impossible : {reason} — « Ouvrir dans le navigateur » reste disponible.");
+
+    /// <summary>
+    /// 0.4.3 — le lancement précédent s'est arrêté ou bloqué pendant la création du composant d'affichage
+    /// (<see cref="EmbeddedDisplayGuard"/>) : ce lancement-ci n'y touche pas, l'assistant passe au navigateur, et
+    /// « Réessayer dans la fenêtre » reste proposé.
+    /// </summary>
+    public void ReportInterruptedAttempt(string reason) =>
+        DisableEmbedded(reason, $"Affichage intégré désactivé pour ce lancement : {reason}. L'assistant s'ouvre dans le navigateur ; "
+                                + "« Réessayer dans la fenêtre » pour retenter.");
+
+    private void DisableEmbedded(string reason, string logLine)
     {
         _ui(() =>
         {
@@ -353,12 +373,37 @@ public sealed class MainWindowViewModel : ObservableObject
             _embedded = false;
             _embeddedProblem = reason;
             AssistantUrl = null;
-            _log.Log($"Affichage intégré de l'assistant impossible : {reason} — « Ouvrir dans le navigateur » reste disponible.");
+            _log.Log(logLine);
             OnPropertyChanged(nameof(IsEmbeddedAssistant));
             OnPropertyChanged(nameof(AssistantMessage));
             OnPropertyChanged(nameof(IsAssistantHostVisible));
+            OnPropertyChanged(nameof(CanRetryEmbedded));
+            RetryEmbeddedCommand.NotifyCanExecuteChanged();
         });
     }
+
+    /// <summary>« Réessayer dans la fenêtre » : l'affichage intégré était voulu (Windows) et a été abandonné.</summary>
+    public bool CanRetryEmbedded => _embeddedRequested && !_embedded && _embeddedProblem is not null;
+
+    public AsyncRelayCommand RetryEmbeddedCommand { get; }
+
+    private async Task RetryEmbeddedAsync()
+    {
+        _ui(() =>
+        {
+            _embedded = true;
+            _embeddedProblem = null;
+            _log.Log("Affichage intégré : nouvel essai demandé.");
+            OnPropertyChanged(nameof(IsEmbeddedAssistant));
+            OnPropertyChanged(nameof(AssistantMessage));
+            OnPropertyChanged(nameof(CanRetryEmbedded));
+            RetryEmbeddedCommand.NotifyCanExecuteChanged();
+        });
+        await ShowAssistantAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>Une ligne dans le journal du Panel (étapes du composant d'affichage).</summary>
+    public void LogLine(string message) => _log.Log(message);
 
     private async Task ShowAssistantAsync()
     {
