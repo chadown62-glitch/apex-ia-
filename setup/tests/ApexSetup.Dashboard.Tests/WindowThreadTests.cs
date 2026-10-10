@@ -5,6 +5,7 @@ using ApexSetup.Dashboard.ViewModels;
 using ApexSetup.Dashboard.Views;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 using Avalonia.Headless;
 using Avalonia.Threading;
 using Xunit;
@@ -170,6 +171,82 @@ public class WindowThreadTests
         }, CancellationToken.None);
 
         Assert.Null(outcome);
+    }
+
+    /// <summary>Ce que Windows réel a fait le 10/10/2026 (0.4.4) : la fenêtre enfant de l'hôte natif est refusée au rattachement.</summary>
+    private sealed class RefusedNativeHost : Control
+    {
+        protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+        {
+            base.OnAttachedToVisualTree(e);
+            throw new InvalidOperationException(
+                "Unable to create child window for native control host. Application manifest with supported OS list might be required.");
+        }
+    }
+
+    [Fact]
+    public async Task When_Windows_refuses_the_display_window_APEX_stays_open_and_uses_the_browser()
+    {
+        var guardFile = Path.Combine(Path.GetTempPath(), "apex-guard-" + Guid.NewGuid().ToString("N"), "webview-attempt.json");
+        var outcome = await HeadlessPanel.Session.Value.Dispatch(async () =>
+        {
+            await using var server = EmbeddedAssistantTests.ApexServer();
+            var port = new Uri(server.BaseUrl).Port;
+            var host = new FakeBackendHost();
+            EmbeddedAssistantTests.Serving(host, port);
+            var redactor = new Redactor();
+            var log = new InMemoryLogSink(redactor);
+            var client = new StatusClient(new HttpClient());
+            var service = new PanelStatusService(host, client);
+            var store = new JsonSettingsStore(Path.Combine(Path.GetTempPath(), "apex-window-" + Guid.NewGuid() + ".json"));
+            await store.SaveAsync(new DashboardSettings { ApiPort = port });
+            var control = new PanelControl(new BackendLauncher(new Starter(), new FakeProcessRunner(), wsl: true), client, new NoBrowser());
+            var vm = new MainWindowViewModel(store, service, log, redactor,
+                problem => new DiagnosticContext("OS", ".NET", "/install", "/settings.json", "/logs", null, problem),
+                action => Dispatcher.UIThread.Post(action), control, embeddedAssistant: true);
+            var guard = new EmbeddedDisplayGuard(guardFile);
+            var window = new MainWindow { DataContext = vm, DisplayGuard = guard, AssistantHostFactory = _ => new RefusedNativeHost() };
+            window.Show();
+            string? error = null;
+            try
+            {
+                await Task.Run(vm.InitializeAsync); // APEX répond : l'assistant s'ouvre dans la fenêtre… qui est refusée
+                await Until(() => !vm.IsEmbeddedAssistant);
+            }
+            catch (InvalidOperationException ex)
+            {
+                error = ex.ToString();
+            }
+            var result = (error, vm.IsEmbeddedAssistant, vm.CanRetryEmbedded, vm.AssistantMessage, window.IsVisible,
+                guard.Interrupted(), File.Exists(guardFile),
+                log.Entries.Any(e => e.Message.Contains("Unable to create child window")));
+            window.Close();
+            await Settle();
+            return result;
+        }, CancellationToken.None);
+
+        Assert.Null(outcome.Item1);                    // aucune exception : APEX.exe reste ouvert
+        Assert.False(outcome.Item2);                   // l'assistant passe au navigateur
+        Assert.True(outcome.Item3);                    // « Réessayer dans la fenêtre » proposé
+        Assert.Contains("n'a pas pu être créée", outcome.Item4);
+        Assert.Contains("navigateur", outcome.Item4);
+        Assert.True(outcome.Item5);                    // la fenêtre est toujours là
+        Assert.Null(outcome.Item6);                    // échec propre : pas pris pour un plantage au lancement suivant
+        Assert.False(outcome.Item7);
+        Assert.True(outcome.Item8);                    // la raison exacte est dans le journal
+    }
+
+    [Fact]
+    public void The_APEX_exe_manifest_declares_Windows_10_and_11()
+    {
+        // Sans cette déclaration, Windows réel refuse la fenêtre enfant de l'hôte natif (constaté le 10/10/2026).
+        var project = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..", "src", "ApexSetup.Dashboard"));
+        var manifest = System.Xml.Linq.XDocument.Load(Path.Combine(project, "app.manifest"));
+        System.Xml.Linq.XNamespace compat = "urn:schemas-microsoft-com:compatibility.v1";
+        var supported = manifest.Descendants(compat + "supportedOS").Select(e => (string?)e.Attribute("Id")).ToList();
+        Assert.Contains("{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}", supported);
+        Assert.Contains("<ApplicationManifest>app.manifest</ApplicationManifest>",
+            File.ReadAllText(Path.Combine(project, "ApexSetup.Dashboard.csproj")));
     }
 
     [Fact]

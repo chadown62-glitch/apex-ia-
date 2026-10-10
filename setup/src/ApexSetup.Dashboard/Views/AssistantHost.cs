@@ -66,8 +66,7 @@ public sealed class AssistantHost : NativeControlHost
         {
             return base.CreateNativeControlCore(parent);
         }
-        DisplayGuard?.Begin(PanelInfo.Version);
-        var guard = DisplayGuard;
+        var guard = DisplayGuard; // marque posée par la fenêtre AVANT le rattachement (MainWindow)
         var session = new WebViewSession(parent.Handle, UserDataFolder, Log ?? (_ => { }),
             ready: () => guard?.End(),
             failed: reason =>

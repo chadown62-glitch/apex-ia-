@@ -18,6 +18,20 @@
       </requestedPrivileges>
     </security>
   </trustInfo>
+  <!--
+    0.4.5 — Windows 10 et 11 déclarés. Constaté sur Windows 11 réel (10/10/2026, 0.4.4) : à l'ouverture de l'assistant
+    dans la fenêtre, « Unable to create child window for native control host. Application manifest with supported OS
+    list might be required. » Sans cette déclaration, Windows traite APEX.exe comme un programme d'avant Windows 8 et
+    refuse la fenêtre enfant « superposée » (WS_EX_LAYERED) dont Avalonia a besoin pour héberger un composant natif
+    (WebView2). Wine n'applique pas cette règle : seul un vrai Windows l'a montré. Même déclaration que le modèle
+    d'application d'Avalonia. Vérifiée dans APEX.exe publié par publish_dashboard.sh.
+  -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 10 et Windows 11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+    </application>
+  </compatibility>
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>

@@ -51,6 +51,16 @@ if [[ "$kind" != *"PE32+"* || "$kind" != *"MS Windows"* ]]; then
 fi
 echo "[publish_dashboard.sh] Vérifié : $EXE -> $kind"
 
+# 0.4.5 : le manifeste intégré à APEX.exe doit déclarer Windows 10/11 (supportedOS). Sans lui, Windows réel refuse la
+# fenêtre enfant qui héberge l'assistant (« Unable to create child window for native control host », constaté le
+# 10/10/2026) — Wine ne le montre pas. grep -c (sans -q) : pas de SIGPIPE sous pipefail.
+win10=$(grep -a -F -c "8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a" "$EXE" || true)
+if [[ "${win10:-0}" -lt 1 ]]; then
+  echo "[publish_dashboard.sh] ERREUR : le manifeste d'APEX.exe ne déclare pas Windows 10/11 (supportedOS)" >&2
+  exit 1
+fi
+echo "[publish_dashboard.sh] Vérifié : le manifeste d'APEX.exe déclare Windows 10/11 (supportedOS)"
+
 if command -v strings >/dev/null 2>&1; then
   # BUG RÉEL trouvé par revue (RELEASE LOCK 2/2) : ce script tourne sous
   # `set -o pipefail` (voir l'en-tête). `strings "$EXE" | grep -qE ...`

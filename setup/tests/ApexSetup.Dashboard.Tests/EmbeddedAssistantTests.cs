@@ -41,7 +41,7 @@ public class EmbeddedAssistantTests
 
     private static int _codes;
 
-    private static LocalHttpTestServer ApexServer() => new(async ctx =>
+    internal static LocalHttpTestServer ApexServer() => new(async ctx =>
     {
         var path = ctx.Request.Url!.AbsolutePath;
         var authorized = ctx.Request.Headers["Authorization"] == $"Bearer {PanelData.Token}";
@@ -71,7 +71,7 @@ public class EmbeddedAssistantTests
         ctx.Response.Close();
     });
 
-    private static void Serving(FakeBackendHost host, int port, int pid = 4242)
+    internal static void Serving(FakeBackendHost host, int port, int pid = 4242)
     {
         host.Files["~/" + BackendDiscovery.RelativePath] = FileRead.Ok(PanelData.DiscoveryJson(port: port, pid: pid));
         host.Files[$"/proc/{pid}/cmdline"] = FileRead.Ok("python\0-m\0apex.cli.main\0serve");
