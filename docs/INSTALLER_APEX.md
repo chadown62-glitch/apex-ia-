@@ -8,17 +8,18 @@ fenêtre d'APEX.exe** (plus de navigateur) et permet de **choisir le moteur qui 
 intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental). La version 0.4.2 a changé le
 **rendu** : fond de soie ivoire (Dune) ou de ciel étoilé (Night), surfaces de verre, pastilles d'état
 lumineuses. La version 0.4.3 corrige le lancement : la fenêtre s'ouvre toujours, et un lancement qui échoue le
-dit (voir « Si rien ne s'affiche au double-clic »). L'installateur dépose le
+dit (voir « Si rien ne s'affiche au double-clic »). La version 0.4.4 corrige la fermeture d'APEX.exe juste
+après **Démarrer APEX** (« Call from invalid thread »). L'installateur dépose le
 Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
 que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
 APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
 ## Récupérer l'installateur
 
-Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.3.exe`
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.4.exe`
 (≈ 40 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
 empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
-PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.3.exe -Algorithm SHA256` (même valeur que le `.sha256`).
+PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.4.exe -Algorithm SHA256` (même valeur que le `.sha256`).
 
 ## Prérequis
 
@@ -34,7 +35,7 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.3.exe -Algorithm SHA256` (même
 
 ## Installer et utiliser APEX (mode Windows natif)
 
-1. Double-cliquez sur `APEX-Setup-x64-v0.4.3.exe`. Le programme n'est pas signé : si Windows affiche
+1. Double-cliquez sur `APEX-Setup-x64-v0.4.4.exe`. Le programme n'est pas signé : si Windows affiche
    « Windows a protégé votre ordinateur », cliquez sur « Informations complémentaires » puis
    « Exécuter quand même » (seulement si le fichier vient bien du dépôt APEX). L'installateur vérifie
    lui-même que le Panel démarre et que l'application est complète, puis propose de lancer APEX.

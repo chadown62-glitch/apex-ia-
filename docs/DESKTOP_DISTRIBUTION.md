@@ -571,3 +571,43 @@ l'icône APEX du bureau, et rien ne s'affiche.
   composant WebView2 ici ; essais Windows de GitHub indisponibles (facturation du compte). Ce qui est garanti par
   construction et vérifié sous Wine : la fenêtre s'ouvre sans toucher au composant ; un blocage ou un plantage est
   annoncé au lancement suivant au lieu d'un silence ; l'assistant reste utilisable dans le navigateur.
+
+## 13. APEX.exe 0.4.4 — « Call from invalid thread » après « Démarrer APEX »
+
+Constaté par l'utilisateur sur son PC (Windows 11, 10/10/2026, 0.4.3), capture à l'appui : la fenêtre s'ouvre
+(correctif 0.4.3), puis environ 2 s après **Démarrer APEX**, boîte « APEX n'a pas pu s'ouvrir — Erreur :
+InvalidOperationException — Call from invalid thread », et APEX.exe se ferme.
+
+### 13.1 Cause (reproduite, pas supposée)
+
+- Un bouton se termine souvent sur un fil d'arrière-plan (après un `await … ConfigureAwait(false)`) ; la commande
+  (`Mvvm/RelayCommand.cs`, `AsyncRelayCommand`) prévenait alors le bouton « mon état a changé » **depuis ce fil**. Avalonia
+  (comme Windows) refuse qu'un contrôle soit lu ou modifié hors du fil d'interface : exception, fermeture d'APEX.exe.
+- **Reproduit sous Wine avec l'installateur 0.4.3** par un vrai clic sur **Démarrer APEX** dans la fenêtre : journal
+  « PLANTAGE du Panel (fenêtre) : System.InvalidOperationException: Call from invalid thread … at
+  Avalonia.Controls.Button.CanExecuteChanged ». Même erreur que la capture de l'utilisateur.
+- Pourquoi la validation 0.4.3 ne l'avait pas vu : APEX y était démarré par `APEX.exe --start` (sans fenêtre), jamais
+  par le bouton ; les tests unitaires exécutent les notifications sur le fil du test, où rien ne l'interdit.
+- Même défaut, autre bouton : la vue-modèle des **Paramètres** était créée hors du fil d'interface (son bouton
+  **Enregistrer** aurait fermé APEX.exe de la même façon).
+
+### 13.2 Correctif
+
+- `Mvvm/InterfaceThread.cs` : un objet créé sur le fil d'interface (vue-modèles et commandes de la vraie fenêtre)
+  renvoie **toutes** ses notifications (`PropertyChanged`, `CanExecuteChanged`) sur ce fil, d'où qu'elles partent ;
+  hors fenêtre (tests unitaires, modes sans fenêtre), rien ne change.
+- La vue-modèle des Paramètres est créée sur le fil d'interface.
+
+### 13.3 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Panel (.NET, `dotnet test setup/ApexSetup.sln`) | **586 réussis, 0 échec**, deux passages (582 + 4 tests sur la **vraie fenêtre** avec la plateforme sans écran d'Avalonia, même règle de fil que Windows : clic sur **Démarrer APEX** puis arrêt d'APEX, démarrage qui échoue aussitôt, **Enregistrer** des paramètres, bouton seul). **Les quatre échouent sur le code précédent avec exactement « Call from invalid thread »** et réussissent avec le correctif |
+| WINE — **Windows simulé, pas Windows** — vrai clic sur **Démarrer APEX** dans la fenêtre (message envoyé à la fenêtre) | **0.4.3 : plantage reproduit** (« PLANTAGE du Panel (fenêtre) : System.InvalidOperationException: Call from invalid thread … at Avalonia.Controls.Button.CanExecuteChanged ») ; **0.4.4 (SHA-256 `e8c132cb…b2f443c7`, commit `301bac0`) : aucun plantage**, APEX démarré par le bouton (STARTING puis DEGRADED : ni modèle ni Ollama sous Wine), fenêtre toujours ouverte |
+| WINE — scénarios de la fenêtre (§12.3), cycle de vie, mise à jour | **13/13**, cycle de vie **17/17**, mise à jour **0.4.3 → 0.4.4** **18/18** (raccourci et paramètres conservés) ; bibliothèques identiques : pas de nouvelle préparation |
+
+### 13.4 Non vérifié ici
+
+- Windows réel (le PC de l'utilisateur) et l'affichage intégré avec WebView2 présent : mêmes limites qu'en §12.4.
+- Si le moteur d'APEX lui-même ne démarre pas sur ce PC, le Panel l'affiche désormais au lieu de se fermer : raison
+  dans la fenêtre, détail dans **Journal du démarrage**.
