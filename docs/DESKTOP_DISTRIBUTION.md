@@ -611,3 +611,44 @@ InvalidOperationException — Call from invalid thread », et APEX.exe se ferme.
 - Windows réel (le PC de l'utilisateur) et l'affichage intégré avec WebView2 présent : mêmes limites qu'en §12.4.
 - Si le moteur d'APEX lui-même ne démarre pas sur ce PC, le Panel l'affiche désormais au lieu de se fermer : raison
   dans la fenêtre, détail dans **Journal du démarrage**.
+
+## 14. APEX.exe 0.4.5 — Windows 10/11 déclarés ; une fenêtre d'affichage refusée ne ferme plus APEX
+
+Constaté par l'utilisateur sur son PC (Windows 11, 10/10/2026, 0.4.4), journal et capture à l'appui. **Ce qui marche
+désormais sur Windows réel** (journal de l'utilisateur) : la fenêtre s'ouvre ; **Préparer APEX** (Python 3.12.10,
+torch 2.14.0+cpu, ≈ 70 s) ; **Installer le modèle** ; **Démarrer APEX** sans plantage (correctif 0.4.4) ; **APEX READY**
+avec **Modèles READY** et **Sandbox READY** — le correctif AppContainer de 0.4.1 (erreur Win32 203) est donc vérifié sur
+Windows réel. Puis, à l'ouverture de l'assistant dans la fenêtre : « Unable to create child window for native control
+host. Application manifest with supported OS list might be required. », et APEX.exe se ferme.
+
+### 14.1 Cause
+
+- Le manifeste d'APEX.exe (`app.manifest`) ne déclarait aucune version de Windows prise en charge. Windows traite alors le
+  programme comme antérieur à Windows 8 et refuse la fenêtre enfant « superposée » (WS_EX_LAYERED) qu'Avalonia crée pour
+  héberger un composant natif (ici WebView2). Le message d'Avalonia nomme la cause ; son propre modèle d'application
+  contient cette déclaration. **Wine n'applique pas cette règle** : aucune validation sous Wine ne pouvait le montrer.
+- L'exception survenait au rattachement de la fenêtre enfant, AVANT la sentinelle de 0.4.3 : sans correctif, chaque
+  lancement avec APEX démarré se serait fermé de la même façon.
+
+### 14.2 Correctif
+
+- `app.manifest` : Windows 10 et 11 déclarés (`supportedOS {8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}`) ; `publish_dashboard.sh`
+  vérifie la déclaration DANS l'APEX.exe publié (manifeste extrait du binaire : XML valide, `asInvoker`, `PerMonitorV2`
+  et Windows 10/11 présents).
+- `Views/MainWindow.axaml.cs` : la marque de tentative est posée AVANT le rattachement ; tout échec du rattachement fait
+  passer l'assistant au navigateur, avec la raison et **Réessayer dans la fenêtre** — jamais une fermeture.
+
+### 14.3 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Panel (.NET, `dotnet test setup/ApexSetup.sln`) | **588 réussis, 0 échec** (586 + 2 : la vraie fenêtre avec un hôte refusé exactement comme Windows l'a fait → APEX reste ouvert, assistant au navigateur, **Réessayer dans la fenêtre**, raison au journal, marque retirée — ce test échoue sans le filet avec le message constaté ; la déclaration Windows 10/11 du manifeste) |
+| APEX.exe publié | manifeste extrait du binaire : XML valide, `asInvoker`, `PerMonitorV2`, Windows 10/11 déclarés ; contrôle ajouté à `publish_dashboard.sh` |
+| WINE — **Windows simulé, pas Windows** — installateur 0.4.5 (SHA-256 `c7a2707b…7f630278`, commit `d83fcd7`) | scénarios de la fenêtre **13/13** ; vrai clic sur **Démarrer APEX** : APEX démarré par le bouton, fenêtre ouverte, composant absent sous Wine → navigateur avec la raison, **aucun plantage** ; cycle de vie **17/17** ; mise à jour **0.4.4 → 0.4.5** **18/18** |
+| Ce que Wine ne peut pas montrer | la règle de Windows sur les fenêtres enfants superposées (cause de ce défaut) et WebView2 : vérifiables seulement sur Windows réel |
+
+### 14.4 Non vérifié ici
+
+- **L'affichage de l'assistant dans la fenêtre sur Windows réel** : c'est la première fois que le composant WebView2 sera
+  créé pour de bon (le manifeste lève le refus de Windows constaté). S'il échoue, APEX le dit et passe au navigateur ;
+  s'il plante ou bloque, le lancement suivant le reconnaît (§12).
