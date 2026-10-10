@@ -142,6 +142,8 @@ internal sealed class WebViewSession : IDisposable
         try
         {
             // Présence du composant vérifiée AVANT toute création (lecture du registre, sans lancer le composant).
+            // Chaque étape est journalisée AVANT d'être tentée : la dernière ligne dit où un blocage s'est produit.
+            _log("Affichage intégré : recherche du composant Microsoft Edge WebView2…");
             var runtime = CoreWebView2Environment.GetAvailableBrowserVersionString();
             _log($"Affichage intégré : création du composant Microsoft Edge WebView2 {runtime}…");
             var environment = await CoreWebView2Environment.CreateAsync(null, _userDataFolder);
