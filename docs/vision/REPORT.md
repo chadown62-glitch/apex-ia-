@@ -35,7 +35,8 @@ Cloud Linux CPU, 32 GiB RAM, quota quatre CPU ; aucun GPU/CUDA disponible.
 Python 3.12.14, PyTorch 2.14.1+cpu, torchvision 0.29.1+cpu, transformers 4.57.6,
 lm-format-enforcer 0.11.3, Pillow 12.3.0 et Tesseract 5.5.0.
 
-- 44 contrôles de contrat/OCR réussis, dont cinq avec le binaire Tesseract réel.
+- 46 contrôles de contrat/OCR réussis, dont cinq avec le binaire Tesseract réel
+  et deux vérifications de libération des ressources sur exception native.
   Les doubles des tests de contrat ne prouvent aucune qualité de modèle.
 - Ruff, formatage et mypy du namespace vision réussis.
 - CLI OCR seule : statut `partial`, réponse VLM absente, sortie `3`.
@@ -88,7 +89,30 @@ valide au calcul. Les sorties sont dans `evidence/document-length-failure.*`.
 Des bornes par champ sont maintenant imposées pendant le décodage et vérifiées
 après génération ; les saturations sont signalées sans réparer le contenu.
 Le budget de réponse est passé à 1 024 tokens et le délai à trente minutes.
-Le même tableau est retesté avant toute affirmation de réussite.
+Le même tableau a été retesté : le contrôle numérique et de schéma passe,
+avec `3 g/cm3`, 608 tokens et 969 secondes. Le VLM a lu les cellules `6` et `2`
+que l'OCR n'avait pas extraites. Il décrit concrètement le tableau et le rectangle.
+RSS après génération : 8,74 GiB. La qualité pédagogique reste **PARTIAL** :
+l'analyse finit au milieu d'une phrase, deux incertitudes saturent leur limite,
+des entrées portent les noms `help_steps`/`answer` et quelques caractères
+inappropriés apparaissent. Ces champs ne sont ni corrigés ni masqués.
+L'assertion numérique minimale ne valide donc pas l'ensemble de la sortie.
+Le résultat réel est conservé dans `evidence/document-bounded.json`.
+
+Le décodage borné apporte une sortie JSON complète dans ce cas, mais ne résout
+pas à lui seul les dérives textuelles du modèle. Une qualification de qualité
+sur documents réels et sur la variante GPU reste nécessaire avant raccordement
+dans un parcours utilisateur. Le statut `complete` décrit la fin du pipeline ;
+les saturations sont explicitement remontées dans les faits et limitations.
+
+L'équation, avec ce même décodage borné, a ensuite **échoué** au test sémantique :
+les étapes calculent `x = 4`, mais `answer` vaut `null`. L'analyse sature 600
+caractères et le modèle invente un manque d'informations dans les incertitudes.
+L'image et la transcription sont lisibles. Mesures : 562 secondes, 444 tokens,
+8,34 GiB RSS après génération. `evidence/exercise-bounded.*` conserve la sortie
+réelle. Les réussites intermédiaires précédentes ne valent donc pas validation
+de cette version. Aucun `null` n'est remplacé artificiellement par le calcul
+des étapes ; l'assertion `answer` contenant `4` reste inchangée.
 
 ## Mesures et limites
 

@@ -1,0 +1,54 @@
+{
+  "environment": "Linux cloud CPU only, 32 GiB cgroup, four CPU quota",
+  "model": {
+    "repo": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "commit": "66285546d2b821cf421d4f5eb2576359d3770cd3",
+    "parameters": 3754622976,
+    "device": "cpu",
+    "dtype": "torch.bfloat16",
+    "quantization": "none"
+  },
+  "junit": {
+    "resource-contracts-recheck": {
+      "tests": "46",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "14.591",
+      "timestamp": "2026-10-11T22:37:49.059135+00:00"
+    },
+    "bounded-document": {
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "time": "970.106",
+      "timestamp": "2026-10-11T22:08:51.906249+00:00"
+    }
+  },
+  "cases": {
+    "document.png": {
+      "raw_result": "document-bounded.json",
+      "numeric_schema_check": "passed",
+      "manual_quality": "partial",
+      "observed_answer": "3 g/cm3",
+      "text_budget_hits": [
+        "analysis",
+        "uncertainties[0]",
+        "uncertainties[2]"
+      ],
+      "elapsed_s": 969.2413877629997,
+      "generation_s": 921.5783042740004,
+      "load_s": 42.084272316999886,
+      "completion_tokens": 608,
+      "rss_after_generation_bytes": 9380171776
+    }
+  },
+  "limitations": [
+    "synthetic images, not camera photos",
+    "numeric/schema checks do not prove all field contents",
+    "GPU/Windows/NF4 unverified",
+    "RSS snapshots, not process peaks",
+    "remaining current pretrained cases still running"
+  ]
+}

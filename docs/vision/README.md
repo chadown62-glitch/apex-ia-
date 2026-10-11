@@ -8,6 +8,11 @@ Le point d'entrée est `python -m apex.vision`. Il accepte une image locale et
 produit un résultat structuré. Il n'ajoute pas de bouton d'upload à l'assistant
 existant : le raccordement nécessite un contrat accepté avec Claude.
 
+Prototype en revue : l'inférence existe réellement, mais la qualité de tous les
+champs n'est pas qualifiée. Un résultat numérique correct peut accompagner des
+phrases coupées ou des étapes dégradées. Lire `REPORT.md` et les sorties dans
+`evidence/` avant de considérer ce spécialiste comme une aide scolaire fiable.
+
 ## Architecture et choix
 
 Qwen2.5-VL-3B-Instruct est un modèle vision-language préentraîné, utilisé comme
