@@ -1,0 +1,168 @@
+{
+  "name": "apex-brain-v2",
+  "description": "Cerveau APEX v2 : ApexLM, modèle de langage construit et entraîné de zéro par APEX (architecture, tokenizer, données et entraînement propres ; aucun poids externe)",
+  "generation": 2,
+  "tokenizer_fingerprint": "f52fff3de1979a5b7ee8df4f9fe5d29bc1120db922f246b6e3f8c86d2e8f165d",
+  "training": {
+    "pretrain": {
+      "stage": "pretrain",
+      "steps": 6000,
+      "max_steps": 6000,
+      "tokens_seen": 98304000,
+      "training_time_s": 21131.3,
+      "sessions": 3,
+      "hardware": {
+        "device": "cpu",
+        "gpu": null,
+        "vram_gb": null,
+        "torch": "2.14.0+cu130",
+        "threads": 4
+      },
+      "median_tokens_per_s": 5111.6,
+      "final_loss": 1.8256834745407104,
+      "last_validation": {
+        "step": 6000,
+        "code": {
+          "loss": 2.16703,
+          "bpb": 0.84636,
+          "tokens": 99328
+        },
+        "en": {
+          "loss": 2.73843,
+          "bpb": 1.12579,
+          "tokens": 99328
+        },
+        "fr": {
+          "loss": 1.40834,
+          "bpb": 0.62082,
+          "tokens": 99328
+        },
+        "translation": {
+          "loss": 2.25611,
+          "bpb": 1.04551,
+          "tokens": 99328
+        },
+        "all": {
+          "loss": 2.14248,
+          "bpb": 0.90983,
+          "tokens": 397312
+        }
+      },
+      "config": {
+        "window": 1024,
+        "batch_size": 16,
+        "grad_accumulation_steps": 1,
+        "lr": 0.003,
+        "warmup_steps": 300,
+        "min_lr_ratio": 0.1,
+        "weights": {
+          "en": 0.35,
+          "code": 0.3,
+          "fr": 0.25,
+          "translation": 0.1
+        },
+        "seed": 0
+      }
+    },
+    "instruction": {
+      "stage": "sft",
+      "steps": 1500,
+      "max_steps": 1500,
+      "tokens_seen": 24576000,
+      "training_time_s": 6239.7,
+      "sessions": 1,
+      "hardware": {
+        "device": "cpu",
+        "gpu": null,
+        "vram_gb": null,
+        "torch": "2.14.0+cu130",
+        "threads": 4
+      },
+      "median_tokens_per_s": 4904.8,
+      "final_loss": 1.3399949073791504,
+      "last_validation": {
+        "step": 1500,
+        "sft_validation_loss": 0.08814,
+        "tokens": 58992
+      },
+      "config": {
+        "window": 1024,
+        "batch_size": 16,
+        "grad_accumulation_steps": 1,
+        "lr": 0.001,
+        "warmup_steps": 50,
+        "min_lr_ratio": 0.1,
+        "weights": {
+          "en": 0.35,
+          "code": 0.3,
+          "fr": 0.25,
+          "translation": 0.1
+        },
+        "seed": 0
+      }
+    }
+  },
+  "data": {
+    "tokens_manifest_sha256": "ab8f453cd243eb10269c54ffa602f2175385a386b1a3e7a1affca3f4e3063793",
+    "corpus_manifest_sha256": "0d64017adcdc6bef2d0350defeebeeea20128e11db2e579c7e9b420e1195ca93"
+  },
+  "weights_file": "model.q5.safetensors",
+  "quantization": "apex-q5/1",
+  "quantization_report": {
+    "tensors": 41,
+    "parameters_q5": 15728640,
+    "parameters_full": 7552,
+    "bytes_q5": 11826688,
+    "bytes_float32": 62944768,
+    "max_relative_rmse": 0.037014,
+    "mean_relative_rmse": 0.035375
+  },
+  "weights_sha256": "d48a52e85a386d737897732c86c7650c300acd56dac1c1104151e179ce3f4265",
+  "model_fingerprint": "sha256:578cd2b7f29841609d9b0d26655edc923539c722b376b8b37bfddb533244a393",
+  "parameters": 15736192,
+  "evaluation": {
+    "measured_at": "2026-10-11T16:38:36+0000",
+    "tasks_rate": 0.4788,
+    "tasks": {
+      "arithmetic": 0.075,
+      "logic": 0.85,
+      "text_ops": 0.175,
+      "code_fix": 0.775,
+      "json": 1.0,
+      "list_ops": 0.45,
+      "dates": 0.3,
+      "honesty": 0.825,
+      "code_write": 0.625,
+      "program_output": 0.25,
+      "conversation_memory": 1.0,
+      "word_problem": 0.525,
+      "conversion": 0.6,
+      "code_write_heldout": 0.0,
+      "knowledge_command": 0.025,
+      "knowledge_python": 0.05,
+      "translation": 0.375
+    },
+    "over_refusal_rate": 0.0,
+    "decode_tokens_per_s_cpu": [
+      202.98,
+      157.06,
+      204.57
+    ],
+    "time_to_first_token_s_cpu": [
+      0.0147,
+      0.056,
+      0.0962
+    ],
+    "stability_errors": 0,
+    "bpb_served": {
+      "loss": 2.35833,
+      "bpb": 0.98688,
+      "tokens": 772096
+    },
+    "bpb_float32": {
+      "loss": 2.35478,
+      "bpb": 0.9854,
+      "tokens": 772096
+    }
+  }
+}

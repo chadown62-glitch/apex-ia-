@@ -93,7 +93,8 @@ Format propre à APEX : blocs de 32 poids, `w ≈ minimum + q * échelle`, q sur
 float16, 20 octets par bloc (6 bits par poids au total). Échelle et minimum **ajustés par moindres carrés**
 (erreur relative 3,5 % au lieu de 3,8 % sans ajustement, mesuré sur matrices gaussiennes). Fichier 5,3 fois plus
 petit qu'en float32. Deux usages : déquantifié au chargement (le plus rapide) ou **Q5 résident** (`Q5Linear`,
-poids compressés en mémoire, plus lent : mesuré ×2 sur un petit modèle CPU, faute de noyau fusionné).
+poids compressés en mémoire, plus lent faute de noyau fusionné : ×2 sur un modèle de test, **×6,5** sur le
+Cerveau livré — voir §9).
 
 ## 7. Moteur d'inférence (`apex/brain/inference.py`) et intégration
 
@@ -113,12 +114,75 @@ l'application. Intégrité vérifiée à chaque chargement (SHA-256 du fichier, 
 AirLLM charge un modèle **couche par couche** depuis le disque pour faire tourner des modèles de 70 milliards de
 paramètres sur 4 à 8 Go de VRAM. Le Cerveau APEX tient entièrement en mémoire (16 à 120 M paramètres) : la
 technique a été **mesurée** sur ApexLM (`layer_streaming_benchmark` : mêmes jetons, débit comparé, voir §9) au
-lieu d'être supposée. La bibliothèque AirLLM elle-même ne lit que des architectures Hugging Face (Llama…), pas
-ApexLM. Décision : non intégrée au chemin principal, faute de bénéfice mesuré.
+lieu d'être supposée : **10 fois plus lent** sur le modèle livré. La bibliothèque AirLLM elle-même ne lit que des
+architectures Hugging Face (Llama…), pas ApexLM. Décision : non intégrée au chemin principal, faute de bénéfice
+mesuré.
 
-## 9. Mesures
+## 9. Mesures — modèle de validation livré (`brain/apex-brain-v2`, 11/10/2026)
 
-À compléter avec les mesures du modèle de validation (fin d'entraînement).
+Tout est mesuré sur le Cerveau **réellement servi** (`brain/apex-brain-v2/evaluation.json`, même répertoire et
+même moteur d'inférence que l'application). Environnement : 4 cœurs CPU (AVX-512), aucun GPU, torch 2.14.
+
+**Entraînement.** 15,7 M paramètres (8 couches, largeur 384, 6 têtes dont 2 clé/valeur, contexte 1 024).
+Pré-entraînement : 6 000 étapes, **98,3 M jetons**, 5,9 h (3 sessions reprises au checkpoint après des
+redémarrages de l'environnement), ≈ 5 100 jetons/s compilé. Instruction : 1 500 étapes, 24,6 M jetons
+(20 % de rappel du corpus contre l'oubli), 1,7 h.
+
+| Validation du corpus (bits par octet, plus bas = mieux) | étape 500 | fin du pré-entraînement | après instruction, servi en Q5 |
+|---|---|---|---|
+| français | 1,312 | 0,621 | 0,637 |
+| code | 1,602 | 0,846 | 1,007 |
+| traduction | 1,931 | 1,046 | 1,046 |
+| anglais | 1,827 | 1,126 | 1,188 |
+| **ensemble** | 1,665 | **0,910** | **0,987** |
+
+L'instruction a coûté **8 %** de modélisation du corpus (0,910 → 0,985 en float32), surtout sur le code, malgré
+le rappel de 20 %. **Coût de la quantification APEX-Q5 : 0,9854 → 0,9869 bit/octet (+0,15 %)** pour un fichier
+de 11,8 Mo au lieu de 62,9 Mo (erreur relative moyenne des poids 3,5 %).
+
+**Exercices jamais vus** (660, décodage glouton, notation automatique ; plancher = réponse vide ou question
+recopiée, mesuré à 0 % partout sauf traduction 2,5 %) : **316/660 = 47,9 %**, refus abusif 0 %.
+
+| Famille | Réussite | | Famille | Réussite |
+|---|---|---|---|---|
+| mémoire de conversation | 100 % | | conversions | 60 % |
+| JSON | 100 % | | problèmes en mots | 52,5 % |
+| logique | 85 % | | listes | 45 % |
+| honnêteté (limites) | 82,5 % | | traduction (phrases jamais vues) | 37,5 % |
+| correction de bug | 77,5 % | | dates | 30 % |
+| fonction Python (fonctions vues) | 62,5 % | | sortie de programme | 25 % |
+| | | | opérations sur du texte | 17,5 % |
+| | | | arithmétique | 7,5 % |
+| | | | connaissances : fonctions Python | 5 % |
+| | | | connaissances : commandes | 2,5 % |
+| | | | **fonctions jamais montrées** | **0 %** |
+
+Lecture honnête : le modèle a appris les **formats** (JSON, structure des réponses, limites, rappel d'un fait
+de la conversation) et des fonctions **vues** ; il **ne généralise pas** à une fonction jamais montrée (0/20),
+calcule mal (7,5 %) et ne retient presque rien des connaissances (2,5–5 %). C'est la limite attendue de 15,7 M
+paramètres et 98 M jetons : le vrai Cerveau (≈ 113 M paramètres, ≈ 2,6 G jetons sur le GPU) est fait pour ça.
+
+**Vitesse (CPU, 4 fils, poids déquantifiés)** : premier jeton en 15 ms (invite de 32 jetons) à 96 ms
+(768 jetons) ; génération **157 à 205 jetons/s** ; 63 Mo de poids en mémoire. Mode « Q5 résident » : 22 Mo en
+mémoire mais **24 jetons/s** contre 157 à invite égale (6,5 fois plus lent, faute de noyau fusionné) — d'où le
+mode déquantifié par défaut.
+
+**Stabilité et mémoire** : 100 générations d'affilée, **0 erreur**, mémoire résidente stable (+1,6 Mo) ;
+5 cycles chargement/génération/déchargement sans croissance (634,5 Mo après chaque cycle) ; le déchargement
+rend la mémoire (742 → 632 Mo).
+
+**Conversation plus longue que le contexte** (83 messages) : les 9 plus anciens sont retirés, la génération
+aboutit ; le fait donné au début n'est plus dans le contexte, le modèle n'invente pas le nom mais produit une
+réponse **dégénérée** (répétitions). Dans APEX, l'invite du Cerveau est bornée à la moitié du contexte
+(512 jetons), en dessous de la zone où cette dégradation a été observée (≈ 970 jetons).
+
+**Chargement couche par couche (AirLLM)** : mêmes jetons, mais **10 fois plus lent** (19 contre
+194 jetons/s), sans gain utile puisque le Cerveau tient en mémoire. Non intégré.
+
+**Exemples réels** (même Cerveau, `apex_brain_build.py chat`) : « Quelle est la météo à Paris ? » → « Je n'ai
+pas accès à Internet ni à des informations en temps réel… » (juste) ; « Combien font 37 × 24 ? » → « 37 × 24 =
+37 × 20 + 37 × 4 = 1960 + 37 / 37 × 24 = 2856. » (faux : 888) ; « Qui es-tu ? » → la même phrase sur l'accès à
+Internet (hors sujet).
 
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 

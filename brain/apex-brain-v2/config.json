@@ -1,0 +1,17 @@
+{
+  "context_length": 1024,
+  "device": "cpu",
+  "dropout": 0.0,
+  "dtype": "float32",
+  "hidden_size": 384,
+  "intermediate_size": 1024,
+  "norm_eps": 1e-05,
+  "num_heads": 6,
+  "num_kv_heads": 2,
+  "num_layers": 8,
+  "pad_token_id": 258,
+  "qk_norm": true,
+  "rope_theta": 10000.0,
+  "tie_embeddings": true,
+  "vocab_size": 8192
+}
