@@ -610,3 +610,18 @@ def test_code_mode_executes_in_the_real_sandbox_when_it_is_verified(env) -> None
     assert executed["tool"] == "code.run" and executed["ok"] is True, executed
     assert "5050" in json.dumps(executed["observation"])  # sortie RÉELLE du programme
     assert "code.run" in provider.requests[0].system
+
+
+def test_conversational_models_receive_the_conversation_as_structured_turns(env) -> None:
+    """Cerveau APEX v2 (10/10/2026) : un modèle qui connaît la conversation reçoit les tours précédents tels
+    quels (rôles user/assistant), le dernier étant le nouveau message — en plus du prompt aplati historique."""
+    _no_memory(env)
+    manager, provider = _manager(env, ["Enchanté, Léa.", "Tu t'appelles Léa."])
+    conversation = _conversation(env)
+    manager.submit(conversation.id, "Je m'appelle Léa.")
+    manager.submit(conversation.id, "Comment je m'appelle ?")
+    first, second = provider.requests
+    assert first.messages == (("user", "Je m'appelle Léa."),)
+    assert second.messages == (("user", "Je m'appelle Léa."), ("assistant", "Enchanté, Léa."),
+                               ("user", "Comment je m'appelle ?"))
+    assert "Comment je m'appelle ?" in second.prompt and second.system

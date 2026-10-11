@@ -259,9 +259,13 @@ class ConversationService:
         return user_message, assistant_message
 
     def _recall(self, conversation_id: str, content: str, prompt: str) -> tuple[str, list[Any]]:
+        context, items = self.recall_context(conversation_id, content)
+        return (f"{context}\n\n{prompt}" if context else prompt), items
+
+    def recall_context(self, conversation_id: str, content: str) -> tuple[str, list[Any]]:
         """Mémoire LONG TERME : souvenirs système pertinents d'AUTRES conversations, de documents et d'exécutions
-        (la conversation courante est déjà dans la transcription). Rien n'est ajouté sans pertinence ; une
-        mémoire indisponible n'empêche jamais de répondre."""
+        (la conversation courante est déjà dans la transcription), mis en forme avec leur source ; ("", []) sans
+        souvenir pertinent. Une mémoire indisponible n'empêche jamais de répondre."""
         from apex.memory.model import MemoryCategory
         from apex.memory.retrieval import render_context
         from apex.memory.service import MemoryService
@@ -275,11 +279,11 @@ class ConversationService:
         except Exception as exc:
             self._record_event(conversation_id, "conversation.memory_unavailable",
                                {"error": f"{exc.__class__.__name__}: {exc}"[:300]})
-            return prompt, []
+            return "", []
         if not items:
-            return prompt, []
+            return "", []
         header = "Souvenirs pertinents d'APEX (autres conversations, documents, exécutions — avec leur source) :"
-        return f"{render_context(items, header=header)}\n\n{prompt}", items
+        return render_context(items, header=header), items
 
     def _remember(self, conversation_id: str, message_id: str, question: str, answer: str) -> None:
         from apex.memory.indexing import index_conversation_exchange

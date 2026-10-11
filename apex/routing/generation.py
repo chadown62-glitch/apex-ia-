@@ -49,6 +49,7 @@ def _attempt(
     candidate: ModelCandidate, *, prompt: str, max_tokens: int | None, temperature: float | None,
     timeout_s: float, provider_factory: Callable[[ModelCandidate], ModelProvider],
     system: str | None = None, cancel_event: threading.Event | None = None,
+    messages: tuple[tuple[str, str], ...] | None = None,
 ) -> GenerationAttempt:
     if candidate.endpoint is None:
         return GenerationAttempt(
@@ -60,6 +61,7 @@ def _attempt(
     request = GenerationRequest(
         endpoint=candidate.endpoint, prompt=prompt, max_tokens=max_tokens,
         temperature=temperature, timeout_s=timeout_s, system=system, cancel_event=cancel_event,
+        messages=messages,
     )
     try:
         result = provider.generate(request)
@@ -98,6 +100,7 @@ def generate_with_fallback(
     provider_factory: Callable[[ModelCandidate], ModelProvider] = _default_provider_factory,
     system: str | None = None,
     cancel_event: threading.Event | None = None,
+    messages: tuple[tuple[str, str], ...] | None = None,
 ) -> FallbackResult:
     """Essaie chaque candidat dans l'ordre fourni (déjà classé par
     `apex.routing.router.select_model`, typiquement) — s'arrête au premier
@@ -124,6 +127,7 @@ def generate_with_fallback(
         attempt = _attempt(
             candidate, prompt=prompt, max_tokens=max_tokens, temperature=temperature,
             timeout_s=timeout_s, provider_factory=provider_factory, system=system, cancel_event=cancel_event,
+            messages=messages,
         )
         attempts.append(attempt)
         if key is not None and attempt.category in (ModelErrorCategory.TIMEOUT, ModelErrorCategory.OFFLINE):

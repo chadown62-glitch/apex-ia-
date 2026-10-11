@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 _DTYPES = ("float32", "bfloat16", "float16")
+_V2_DEFAULTS: dict[str, Any] = {"num_kv_heads": None, "qk_norm": False}
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,12 @@ class ModelConfig:
     dtype: str = "float32"
     device: str = "cpu"
     pad_token_id: int | None = None
+    #: Génération 2 — têtes clé/valeur partagées (attention groupée, GQA) : `None` = une par tête de requête
+    #: (attention multi-têtes classique, Cerveau v1). Moins de têtes K/V = cache d'inférence plus petit.
+    num_kv_heads: int | None = None
+    #: Génération 2 — normalisation RMS des requêtes et des clés par tête (stabilité à fort taux
+    #: d'apprentissage).
+    qk_norm: bool = False
 
     def __post_init__(self) -> None:
         positive = (
@@ -49,13 +56,25 @@ class ModelConfig:
             raise ValueError(f"dtype inconnu : {self.dtype}")
         if self.pad_token_id is not None and not 0 <= self.pad_token_id < self.vocab_size:
             raise ValueError("pad_token_id hors du vocabulaire")
+        if self.num_kv_heads is not None and (self.num_kv_heads < 1 or self.num_heads % self.num_kv_heads):
+            raise ValueError("num_heads doit être un multiple de num_kv_heads")
 
     @property
     def head_dim(self) -> int:
         return self.hidden_size // self.num_heads
 
+    @property
+    def kv_heads(self) -> int:
+        return self.num_kv_heads if self.num_kv_heads is not None else self.num_heads
+
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        """Les champs de la génération 2 n'apparaissent que s'ils sont utilisés : une configuration v1 garde
+        exactement son contenu (et son empreinte)."""
+        data = asdict(self)
+        for name, default in _V2_DEFAULTS.items():
+            if data[name] == default:
+                del data[name]
+        return data
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ModelConfig:

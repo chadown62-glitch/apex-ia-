@@ -5,7 +5,9 @@
 - `ollama`     : seulement les modèles servis par Ollama sur ce poste.
 - `integrated` : seulement le moteur intégré (`transformers`, Qwen2.5-Coder 1.5B exécuté par APEX
                  lui-même, sans Ollama).
-- `brain`      : le Cerveau APEX (`apex_brain`, ApexLM, le réseau propre à APEX) — expérimental.
+- `brain`      : le Cerveau APEX (`apex_brain`, ApexLM, le modèle construit et entraîné de zéro par
+                 APEX) : la génération la plus récente installée (v2, instruite à converser, sinon v1,
+                 expérimentale).
 
 Le Cerveau n'est pas un candidat de la configuration (`config*.yaml`) : il n'est donc jamais choisi par le
 routage automatique, ni par les tâches, missions ou `apex solve`. Il n'existe que comme choix explicite
@@ -41,22 +43,40 @@ INFO = {
     "integrated": EngineInfo("integrated", "APEX intégré",
                              "Qwen2.5-Coder 1.5B exécuté directement par APEX, sans Ollama ni serveur."),
     "brain": EngineInfo("brain", "Cerveau APEX",
-                        "ApexLM, le réseau de neurones propre à APEX (1,9 M paramètres). Expérimental : "
-                        "pré-entraîné sur des textes techniques, pas encore entraîné à converser — il "
-                        "continue le texte reçu.",
+                        "ApexLM, le modèle de langage construit et entraîné de zéro par APEX, exécuté par "
+                        "APEX lui-même. Petit modèle : ses réponses doivent être vérifiées.",
                         experimental=True),
 }
 
 
+#: Générations du Cerveau, de la plus récente à la plus ancienne : la première installée est servie.
+BRAIN_GENERATIONS = ("apex-brain-v2", "apex-brain-v1")
+
+
 def brain_candidate() -> Any:
-    """Le Cerveau APEX servi (poids livrés avec l'application, `apex.brain.artifact`)."""
-    from apex.brain.artifact import DEFAULT_NAME, default_root
+    """Le Cerveau APEX servi : la génération la plus récente présente dans les dossiers des Cerveaux
+    (`apex.brain.artifact.brain_roots` : celui de l'utilisateur d'abord, puis celui de l'application),
+    décrite d'après SES fichiers (contexte, quantification)."""
+    import json
+
+    from apex.brain.artifact import DEFAULT_NAME, brain_roots, default_root
     from apex.config.schema import ModelEndpoint, ModelRef
     from apex.models.registry import ModelCandidate
 
-    ref = ModelRef(family="apex-brain", version="v1", quantization="fp32", capability_class="experimental")
-    endpoint = ModelEndpoint(pool_id="local", runtime="apex_brain", url=f"file://{default_root()}",
-                             served_model=DEFAULT_NAME, max_context=128)
+    found = next(((root, name) for name in BRAIN_GENERATIONS for root in brain_roots()
+                  if (root / name / "provenance.json").is_file()), None)
+    root, name = found if found is not None else (default_root(), DEFAULT_NAME)
+    version = name.rsplit("-", 1)[-1]
+    try:
+        config = json.loads((root / name / "config.json").read_text(encoding="utf-8"))
+        provenance = json.loads((root / name / "provenance.json").read_text(encoding="utf-8"))
+        context, quantization = int(config["context_length"]), provenance.get("quantization")
+    except (OSError, ValueError, KeyError, TypeError):
+        context, quantization = 128, None
+    ref = ModelRef(family="apex-brain", version=version, quantization="apex-q5" if quantization else "fp32",
+                   capability_class="experimental" if version == "v1" else "generalist")
+    endpoint = ModelEndpoint(pool_id="local", runtime="apex_brain", url=f"file://{root}", served_model=name,
+                             max_context=context)
     return ModelCandidate(role="assistant", ref=ref, resident=False, endpoint=endpoint)
 
 
@@ -100,8 +120,11 @@ def describe(config: Any, *, detect: Any = None) -> list[dict[str, Any]]:
         available = [m for m in models if m["available"]]
         detail = (f"{len(available)} modèle(s) disponible(s)" if available
                   else (models[0]["detail"] if models else "aucun modèle déclaré pour ce moteur"))
+        experimental = info.experimental
+        if engine == "brain" and available:
+            experimental = not all(m.get("conversational") for m in available)
         out.append({"id": engine, "label": info.label, "description": info.description,
-                    "experimental": info.experimental, "available": bool(available), "detail": detail,
+                    "experimental": experimental, "available": bool(available), "detail": detail,
                     "models": models})
     return out
 
@@ -113,5 +136,6 @@ def _models(candidates: list[Any], reports: dict[tuple[str, str, str], Any]) -> 
         report = reports[(endpoint.runtime, endpoint.url, endpoint.served_model)]
         rows.setdefault(candidate.ref.id, {
             "id": candidate.ref.id, "served_model": endpoint.served_model, "runtime": endpoint.runtime,
-            "available": report.is_available, "detail": report.detail})
+            "available": report.is_available, "detail": report.detail,
+            "conversational": bool((report.facts or {}).get("conversational"))})
     return list(rows.values())

@@ -41,6 +41,10 @@ class GenerationRequest:
     #: Consignes « système » (mode de l'assistant, consignes de projet) : rôle `system` du modèle quand le
     #: backend le connaît (gabarit de conversation natif, API chat), sinon placées en tête du prompt.
     system: str | None = None
+    #: La même demande sous forme de CONVERSATION — tours (`user`/`assistant`, du plus ancien au plus
+    #: récent), le dernier étant le message à traiter. Utilisée par les backends conversationnels (Cerveau
+    #: APEX v2) ; les autres utilisent `prompt` (même contenu, mis à plat). `None` : seul `prompt` existe.
+    messages: tuple[tuple[str, str], ...] | None = None
 
 
 @dataclass(frozen=True)

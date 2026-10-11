@@ -81,6 +81,28 @@ def compose_history(history: Sequence[Message], content: str, budget: int) -> tu
             + "\n".join(reversed(lines)) + f"\n\nNouveau message de l'utilisateur :\n{content}", len(lines))
 
 
+def compose_turns(history: Sequence[Message], budget: int) -> list[tuple[str, str]]:
+    """Les mêmes échanges que `compose_history`, en TOURS (`user`/`assistant`) pour les modèles qui
+    connaissent la conversation : du plus ancien au plus récent, dans `budget` caractères."""
+    turns: list[tuple[str, str]] = []
+    remaining = budget
+    for message in reversed(list(history)):
+        role = {MessageRole.USER: "user", MessageRole.ASSISTANT: "assistant"}.get(message.role)
+        if role is None or message.status is not MessageStatus.REAL or not message.content.strip():
+            continue
+        text = message.content.strip()
+        if len(text) > 2000:
+            text = text[:2000] + " […]"
+        if len(text) > remaining:
+            break
+        turns.append((role, text))
+        remaining -= len(text)
+    turns.reverse()
+    while turns and turns[0][0] != "user":
+        turns.pop(0)  # une conversation commence par l'utilisateur
+    return turns
+
+
 def render_tools(names: Sequence[str]) -> str:
     lines = []
     for name in names:
@@ -335,10 +357,15 @@ class TurnManager:
         content = user_message.content
         history = [m for m in messages if m.id != user_message.id and m.created_at <= user_message.created_at]
         prompt, history_used = compose_history(history, content, settings.behavior.history_chars)
+        turns = compose_turns(history, settings.behavior.history_chars)
         conversations = ConversationService(self._session_factory)
         recalled: list[Any] = []
+        context_blocks: list[str] = []
         if settings.behavior.use_memory:
-            prompt, recalled = conversations.recall(conversation.id, content, prompt)
+            memory_context, recalled = conversations.recall_context(conversation.id, content)
+            if memory_context:
+                prompt = f"{memory_context}\n\n{prompt}"
+                context_blocks.append(memory_context)
         project = None
         attachments: list[str] = []
         if conversation.project_id:
@@ -351,6 +378,8 @@ class TurnManager:
                 context, attachments = AttachmentService(self._session_factory).render_context(project.id)
                 if context:
                     prompt = f"{context}\n\n{prompt}"
+                    context_blocks.insert(0, context)
+        last_user = "\n\n".join([*context_blocks, content])
         tools = self._tools(mode, conversation, settings, turn_id)
         offered = tools["offered"] if tools else []
         system = system_prompt(mode, project_name=project.name if project else None,
@@ -388,12 +417,15 @@ class TurnManager:
                 return
             last_call = offered and step_number > max_steps
             step_prompt = prompt
+            step_user = last_user
             if observations:
-                step_prompt += ("\n\nOutils déjà utilisés pendant ce tour (résultats réels) :\n"
-                                + "\n".join(observations[-6:]))
-                step_prompt += ("\n\nLimite d'outils atteinte : réponds maintenant à l'utilisateur, sans outil."
-                                if last_call else
-                                "\n\nContinue : appelle un autre outil si nécessaire, sinon réponds à l'utilisateur.")
+                suffix = ("\n\nOutils déjà utilisés pendant ce tour (résultats réels) :\n"
+                          + "\n".join(observations[-6:]))
+                suffix += ("\n\nLimite d'outils atteinte : réponds maintenant à l'utilisateur, sans outil."
+                           if last_call else
+                           "\n\nContinue : appelle un autre outil si nécessaire, sinon réponds à l'utilisateur.")
+                step_prompt += suffix
+                step_user += suffix
             from apex.routing.generation import generate_with_fallback
 
             kwargs: dict[str, Any] = {}
@@ -401,7 +433,8 @@ class TurnManager:
                 kwargs["provider_factory"] = self._provider_factory
             outcome = generate_with_fallback(
                 ranked, prompt=step_prompt, system=system, max_tokens=settings.models.max_tokens,
-                temperature=settings.models.temperature, timeout_s=remaining, cancel_event=cancel, **kwargs)
+                temperature=settings.models.temperature, timeout_s=remaining, cancel_event=cancel,
+                messages=(*turns, ("user", step_user)), **kwargs)
             if outcome.result is None:
                 if cancel.is_set():
                     break

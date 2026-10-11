@@ -56,33 +56,92 @@ class RotaryEmbedding(nn.Module):
         self.register_buffer("cos", angles.cos(), persistent=False)
         self.register_buffer("sin", angles.sin(), persistent=False)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, offset: int = 0) -> torch.Tensor:
+        """`offset` : position du premier élément (décodage incrémental : les jetons déjà en cache)."""
         seq_len = x.shape[-2]
-        cos = self.cos[:seq_len].to(x.dtype)
-        sin = self.sin[:seq_len].to(x.dtype)
+        if offset + seq_len > self.cos.shape[0]:
+            raise ValueError(f"position {offset + seq_len} au-delà du contexte {self.cos.shape[0]}")
+        cos = self.cos[offset : offset + seq_len].to(x.dtype)
+        sin = self.sin[offset : offset + seq_len].to(x.dtype)
         x1, x2 = x[..., 0::2], x[..., 1::2]
         rotated = torch.stack((x1 * cos - x2 * sin, x1 * sin + x2 * cos), dim=-1)
         return rotated.flatten(-2)
+
+
+class KVCache:
+    """Cache clé/valeur du décodage incrémental : chaque jeton n'est calculé qu'UNE fois (le décodage naïf
+    recalcule toute la fenêtre à chaque jeton). Préalloué pour `max_length` positions ; `length` = positions
+    déjà calculées. `trim(n)` revient en arrière (réutilisation d'un préfixe commun entre deux tours)."""
+
+    def __init__(self, config: ModelConfig, batch: int, max_length: int, *,
+                 device: torch.device | str = "cpu",
+                 dtype: torch.dtype = torch.float32) -> None:
+        if not 0 < max_length <= config.context_length:
+            raise ValueError(f"cache de {max_length} positions : entre 1 et le contexte "
+                             f"{config.context_length}")
+        shape = (batch, config.kv_heads, max_length, config.head_dim)
+        self.keys = [torch.zeros(shape, device=device, dtype=dtype) for _ in range(config.num_layers)]
+        self.values = [torch.zeros(shape, device=device, dtype=dtype) for _ in range(config.num_layers)]
+        self.max_length = max_length
+        self.length = 0
+
+    def nbytes(self) -> int:
+        return sum(t.numel() * t.element_size() for t in (*self.keys, *self.values))
+
+    def trim(self, length: int) -> None:
+        if not 0 <= length <= self.length:
+            raise ValueError(f"longueur {length} hors de [0, {self.length}]")
+        self.length = length
 
 
 class CausalSelfAttention(nn.Module):
     def __init__(self, config: ModelConfig, rope: RotaryEmbedding) -> None:
         super().__init__()
         self.num_heads = config.num_heads
+        self.kv_heads = config.kv_heads
         self.head_dim = config.head_dim
-        self.qkv = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=False)
+        self.kv_dim = self.kv_heads * self.head_dim
+        # Une seule projection fusionnée [requêtes | clés | valeurs] : en attention multi-têtes (v1), même
+        # forme (3 x hidden) et même nom de paramètre — les poids v1 se chargent tels quels.
+        self.qkv = nn.Linear(config.hidden_size, config.hidden_size + 2 * self.kv_dim, bias=False)
         self.out = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         self.dropout = config.dropout
         self.rope = rope
+        if config.qk_norm:
+            self.q_norm: RMSNorm | None = RMSNorm(self.head_dim, config.norm_eps)
+            self.k_norm: RMSNorm | None = RMSNorm(self.head_dim, config.norm_eps)
+        else:
+            self.q_norm = self.k_norm = None
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, cache: KVCache | None = None, layer: int = 0) -> torch.Tensor:
         batch, seq_len, hidden = x.shape
-        q, k, v = self.qkv(x).split(hidden, dim=-1)
-        shape = (batch, seq_len, self.num_heads, self.head_dim)
-        q, k, v = (t.view(shape).transpose(1, 2) for t in (q, k, v))
-        q, k = self.rope(q), self.rope(k)
+        q, k, v = self.qkv(x).split((hidden, self.kv_dim, self.kv_dim), dim=-1)
+        q = q.view(batch, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
+        k = k.view(batch, seq_len, self.kv_heads, self.head_dim).transpose(1, 2)
+        v = v.view(batch, seq_len, self.kv_heads, self.head_dim).transpose(1, 2)
+        if self.q_norm is not None and self.k_norm is not None:
+            q, k = self.q_norm(q), self.k_norm(k)
+        offset = cache.length if cache is not None else 0
+        q, k = self.rope(q, offset), self.rope(k, offset)
+        mask: torch.Tensor | None = None
+        causal = True
+        if cache is not None:
+            end = offset + seq_len
+            if end > cache.max_length:
+                raise ValueError(f"cache plein : {end} positions > {cache.max_length}")
+            cache.keys[layer][:batch, :, offset:end] = k.to(cache.keys[layer].dtype)
+            cache.values[layer][:batch, :, offset:end] = v.to(cache.values[layer].dtype)
+            k = cache.keys[layer][:batch, :, :end].to(q.dtype)
+            v = cache.values[layer][:batch, :, :end].to(q.dtype)
+            if offset:
+                causal = False
+                if seq_len > 1:  # le jeton i voit le cache et les nouveaux jetons jusqu'à lui-même
+                    rows = torch.arange(seq_len, device=x.device)[:, None] + offset
+                    mask = torch.arange(end, device=x.device)[None, :] <= rows
         attended = F.scaled_dot_product_attention(
-            q, k, v, is_causal=True, dropout_p=self.dropout if self.training else 0.0
+            q, k, v, attn_mask=mask, is_causal=causal and mask is None,
+            dropout_p=self.dropout if self.training else 0.0,
+            enable_gqa=self.kv_heads != self.num_heads,
         )
         projected: torch.Tensor = self.out(attended.transpose(1, 2).reshape(batch, seq_len, hidden))
         return projected
@@ -109,8 +168,8 @@ class TransformerBlock(nn.Module):
         self.mlp = SwiGLU(config)
         self.drop = nn.Dropout(config.dropout)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = x + self.drop(self.attn(self.attn_norm(x)))
+    def forward(self, x: torch.Tensor, cache: KVCache | None = None, layer: int = 0) -> torch.Tensor:
+        x = x + self.drop(self.attn(self.attn_norm(x), cache, layer))
         out: torch.Tensor = x + self.drop(self.mlp(self.mlp_norm(x)))
         return out
 
@@ -119,6 +178,10 @@ class ApexLM(nn.Module):
     def __init__(self, config: ModelConfig) -> None:
         super().__init__()
         self.config = config
+        #: Entraînement : recalculer les activations de chaque bloc pendant la rétropropagation au lieu de
+        #: les garder (beaucoup moins de mémoire GPU, environ un tiers de calcul en plus). Sans effet en
+        #: inférence.
+        self.activation_checkpointing = False
         self.embed = nn.Embedding(config.vocab_size, config.hidden_size)
         rope = RotaryEmbedding(config.head_dim, config.context_length, config.rope_theta)
         self.layers = [TransformerBlock(config, rope) for _ in range(config.num_layers)]
@@ -142,17 +205,33 @@ class ApexLM(nn.Module):
         return sum(p.numel() for p in {id(p): p for p in self.parameters()}.values())
 
     def forward(
-        self, input_ids: torch.Tensor, targets: torch.Tensor | None = None
+        self, input_ids: torch.Tensor, targets: torch.Tensor | None = None, *, cache: KVCache | None = None,
+        last_only: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor | None]:
+        """`cache` : décodage incrémental (les positions continuent celles du cache, qui est complété).
+        `last_only` : logits de la dernière position seulement (génération : évite la tête de sortie, la
+        plus grosse matrice d'un petit modèle, sur toute l'invite)."""
         if input_ids.dim() != 2:
             raise ValueError("input_ids doit être de forme (batch, séquence)")
-        if input_ids.shape[1] > self.config.context_length:
+        start = cache.length if cache is not None else 0
+        if start + input_ids.shape[1] > self.config.context_length:
             raise ValueError(
-                f"séquence de {input_ids.shape[1]} tokens > contexte {self.config.context_length}"
+                f"séquence de {start + input_ids.shape[1]} tokens > contexte {self.config.context_length}"
             )
         x = self.embed(input_ids)
-        for block in self.layers:
-            x = block(x)
+        recompute = (self.activation_checkpointing and self.training and cache is None
+                     and torch.is_grad_enabled())
+        for index, block in enumerate(self.layers):
+            if recompute:
+                from torch.utils.checkpoint import checkpoint
+
+                x = checkpoint(block, x, use_reentrant=False)
+            else:
+                x = block(x, cache, index)
+        if cache is not None:
+            cache.length = start + input_ids.shape[1]
+        if last_only:
+            x = x[:, -1:]
         logits = self.head(self.norm(x))
         loss = None if targets is None else language_modeling_loss(logits, targets)
         return logits, loss
