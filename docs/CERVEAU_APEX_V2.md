@@ -173,8 +173,10 @@ rend la mémoire (742 → 632 Mo).
 
 **Conversation plus longue que le contexte** (83 messages) : les 9 plus anciens sont retirés, la génération
 aboutit ; le fait donné au début n'est plus dans le contexte, le modèle n'invente pas le nom mais produit une
-réponse **dégénérée** (répétitions). Dans APEX, l'invite du Cerveau est bornée à la moitié du contexte
-(512 jetons), en dessous de la zone où cette dégradation a été observée (≈ 970 jetons).
+réponse **dégénérée** (répétitions) au lieu de dire qu'il ne sait pas. Ce n'est pas un effet de la longueur :
+48 exercices (JSON, logique, conversions, correction de bug, honnêteté, problèmes) précédés d'un historique de
+plus en plus long réussissent **37 à 39 fois sur 48** de 130 à 868 jetons d'invite, sans tendance. C'est la
+question sur un fait sorti du contexte qui le met en échec.
 
 **Chargement couche par couche (AirLLM)** : mêmes jetons, mais **10 fois plus lent** (19 contre
 194 jetons/s), sans gain utile puisque le Cerveau tient en mémoire. Non intégré.
