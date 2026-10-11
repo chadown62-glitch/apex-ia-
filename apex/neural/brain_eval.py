@@ -63,7 +63,7 @@ def evaluate_tasks(
     started = time.perf_counter()
     for row in rows:
         result = engine.chat(_messages(row), SamplingSettings(max_new_tokens=max_new_tokens))
-        passed = score(row["check"], result.text)
+        passed = score(row["check"], result.text, row["messages"][-2]["content"])
         family = per_family.setdefault(
             row["family"], {"passed": 0, "total": 0, "failures": [], "examples": []}
         )
@@ -89,6 +89,24 @@ def evaluate_tasks(
         "rate": round(passed / total, 4) if total else None,
         "elapsed_s": round(time.perf_counter() - started, 1),
     }
+
+
+def baselines(rows: Sequence[dict[str, Any]]) -> dict[str, dict[str, float]]:
+    """Planchers de la notation, sans aucun modèle : réponse vide, et réponse qui RÉPÈTE la question (une
+    traduction notée par recouvrement partage des mots avec la phrase source, par exemple). Le taux d'une
+    famille n'a de sens qu'au-dessus de son plancher."""
+    from apex.neural.tasks import score
+
+    answers = {"empty": lambda row: "", "echo": lambda row: row["messages"][-2]["content"]}
+    result: dict[str, dict[str, float]] = {}
+    for name, answer_of in answers.items():
+        counts: dict[str, list[int]] = {}
+        for row in rows:
+            family = counts.setdefault(row["family"], [0, 0])
+            family[0] += int(score(row["check"], answer_of(row), row["messages"][-2]["content"]))
+            family[1] += 1
+        result[name] = {family: round(passed / total, 4) for family, (passed, total) in counts.items()}
+    return result
 
 
 def evaluate_bpb(model: Any, data_dir: Path, *, window: int, eval_tokens: int = 200_000) -> dict[str, Any]:
@@ -335,6 +353,7 @@ def full_report(
     report: dict[str, Any] = {"brain": str(brain_dir), "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     engine = BrainEngine(brain_dir, device="cpu")
     report["tasks"] = evaluate_tasks(engine, eval_rows)
+    report["baselines"] = baselines(eval_rows)
     report["speed"] = benchmark_speed(engine)
     report["long_conversation"] = long_conversation(engine)
     report["stability"] = stability(engine, eval_rows, count=stability_count)

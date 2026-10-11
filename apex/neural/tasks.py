@@ -2095,23 +2095,60 @@ def run_function_tests(
     return ok == total, "; ".join(out[:-1])[:300] or f"{ok}/{total} tests"
 
 
-def score(check: dict[str, Any], answer: str) -> bool:
-    """La réponse du modèle satisfait-elle la vérification de l'exemple ?"""
-    kind = check["type"]
-    if kind == "exact":
-        import re
+_POLARITY = {
+    "true": True,
+    "vrai": True,
+    "yes": True,
+    "oui": True,
+    "false": False,
+    "faux": False,
+    "no": False,
+    "non": False,
+}
+_NUMBER = r"(?<![\w.])-?\d+(?:[.,]\d+)?(?![\w])"
 
+
+def _without_question(answer: str, question: str | None) -> str:
+    """La réponse sans la question recopiée mot pour mot (espaces et retours à la ligne libres) : répéter
+    l'énoncé (qui contient souvent la bonne réponse parmi d'autres : « oui ou non ? », la liste dont on
+    cherche le maximum) ne rapporte rien."""
+    import re
+
+    words = question.split() if question else []
+    if len(" ".join(words)) <= 3:
+        return answer
+    return re.sub(r"\s+".join(re.escape(word) for word in words), " ", answer)
+
+
+def score(check: dict[str, Any], answer: str, question: str | None = None) -> bool:
+    """La réponse du modèle satisfait-elle la vérification de l'exemple ? `question` (le dernier message de
+    l'utilisateur) : retirée de la réponse si elle y est recopiée. Réponse exacte : un nombre attendu doit
+    être le DERNIER nombre de la réponse, un vrai/faux ou oui/non le DERNIER mot de ce type, et la casse
+    compte quand la réponse attendue en porte (« CAT »)."""
+    import re
+
+    kind = check["type"]
+    if kind in ("exact", "refusal") and question:
+        answer = _without_question(answer, question)
+    if kind == "exact":
         expected = str(check["answer"]).strip()
         if "\n" in expected:
             return expected in answer
+        if re.fullmatch(_NUMBER, expected):
+            # Les apartés entre parenthèses ne sont pas la réponse : « 1138 ÷ 8 = 142 (reste 2) ».
+            numbers = re.findall(_NUMBER, re.sub(r"\([^()]*\)", " ", answer))
+            return bool(numbers) and numbers[-1].replace(",", ".") == expected.replace(",", ".")
+        polarity = _POLARITY.get(expected.lower())
+        if polarity is not None:
+            words = re.findall(r"\b(?:" + "|".join(_POLARITY) + r")\b", answer, re.IGNORECASE)
+            return bool(words) and _POLARITY[words[-1].lower()] is polarity
         pattern = r"(?<![\w.-])" + re.escape(expected) + r"(?![\w])"
-        return re.search(pattern, answer, re.IGNORECASE if expected.isalpha() else 0) is not None
+        flags = re.IGNORECASE if expected == expected.lower() else 0
+        return re.search(pattern, answer, flags) is not None
     if kind == "code":
         passed, _ = run_function_tests(extract_code(answer), check["function"], check["tests"])
         return passed
     if kind == "json":
-        import re
-
         for candidate in re.findall(r"\{.*?\}", answer, re.S):
             try:
                 if json.loads(candidate) == check["answer"]:
@@ -2123,7 +2160,7 @@ def score(check: dict[str, Any], answer: str) -> bool:
         lowered = answer.lower()
         return any(marker in lowered for marker in _REFUSAL_MARKERS)
     if kind == "overlap":
-        return overlap(check["answer"], answer) >= float(check["threshold"])
+        return overlap(check["answer"], answer, question) >= float(check["threshold"])
     return False
 
 
@@ -2133,10 +2170,14 @@ def _content_words(text: str) -> list[str]:
     return [word for word in re.findall(r"\w+", text.lower()) if len(word) > 3 or word.isdigit()]
 
 
-def overlap(reference: str, answer: str) -> float:
+def overlap(reference: str, answer: str, question: str | None = None) -> float:
     """Part des mots porteurs de sens de la référence présents dans la réponse. Seul le début de la réponse
-    compte (trois fois la longueur de la référence) : un long déversement de texte ne « couvre » rien."""
+    compte (trois fois la longueur de la référence) : un long déversement de texte ne « couvre » rien. Avec
+    `question`, seuls comptent les mots de la référence ABSENTS de la question (en traduction, les noms
+    propres et les nombres de la phrase source ne prouvent rien), sauf s'ils y sont tous."""
     wanted = set(_content_words(reference))
+    if question:
+        wanted = (wanted - set(_content_words(question))) or wanted
     if not wanted:
         return 0.0
     words = _content_words(answer)

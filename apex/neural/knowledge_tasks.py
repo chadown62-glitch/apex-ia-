@@ -238,9 +238,9 @@ def translation_pairs(corpus_dir: Path) -> Iterator[tuple[str, str]]:
                 continue
             if not (20 <= len(english) <= 160 and 20 <= len(french) <= 200):
                 continue
-            letters = sum(c.isalpha() for c in english) / len(english)
-            if letters < 0.7 or not english[0].isupper():
-                continue
+            letters = min(sum(c.isalpha() for c in text) / len(text) for text in (english, french))
+            if letters < 0.6 or not english[0].isupper():
+                continue  # soulignements « ===== », listes de symboles…
             seen.add(english)
             yield english, french
 

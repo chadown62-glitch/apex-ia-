@@ -606,6 +606,35 @@ def test_overlap_scoring_counts_reference_words_and_ignores_long_dumps() -> None
     assert overlap("Change file owner and group", dump) == 0.0  # la réponse utile doit venir en tête
 
 
+def test_repeating_the_question_never_scores() -> None:
+    """Planchers mesurés avant correction : répéter la question obtenait 50 % en logique et en listes (la
+    bonne réponse figure dans l'énoncé). Désormais : question recopiée retirée, dernier nombre ou dernier
+    vrai/faux décisif, casse respectée quand elle fait la réponse, apartés entre parenthèses ignorés."""
+    from apex.neural.tasks import score
+
+    def exact(answer: str) -> dict:
+        return {"type": "exact", "answer": answer}
+
+    question = "Quel est le plus petit nombre parmi : -15, 70, -20, 42 ?"
+    assert not score(exact("-20"), question, question)
+    assert score(exact("-20"), f"{question} Le plus petit est -20.", question)
+    assert not score(exact("true"), "Is 79 >= 7 true?", "Is 79 >= 7 true?")
+    assert score(exact("true"), "It is true.", "Is 79 >= 7 true?")
+    assert not score(exact("true"), "It is true... no, it is false.", "Is 79 >= 7 true?")
+    assert not score(exact("CAT"), "cat", "Convert this word to uppercase: cat")
+    assert score(exact("142"), "1138 ÷ 8 = 142 (remainder 2).", "What is 1138 ÷ 8 (integer division)?")
+    assert not score(exact("142"), "1138 ÷ 8 = 140, then 142 + 2 = 144.", "What is 1138 ÷ 8?")
+    program = "Qu'affiche ce programme ?\n```python\nprint(2)\nprint(4)\n```"
+    assert score(exact("2\n4"), "Il affiche :\n```\n2\n4\n```", program)
+    translation = {"type": "overlap", "answer": "Source 3 définie par l'utilisateur", "threshold": 0.5}
+    assert not score(
+        translation, "User defined source 3", "Traduis en français : « User defined source 3 »"
+    )
+    assert score(
+        translation, "Source 3 définie par l'utilisateur", "Traduis en français : « User defined source 3 »"
+    )
+
+
 def test_knowledge_exercises_come_from_human_text_and_evaluation_is_never_trained(tmp_path) -> None:
     from apex.neural.corpus import gzip_jsonl
     from apex.neural.knowledge_tasks import knowledge_examples, translation_examples
