@@ -12,6 +12,9 @@
   cache), périphérique — rendues avec chaque réponse, jamais estimées.
 - **Mémoire** : `unload()` libère réellement les poids (et la mémoire GPU) ; `BrainEngine` peut garder les
   poids compressés en APEX-Q5 (`weights="q5_resident"`).
+- **Calcul exact** : quand le modèle écrit `<|tool_call|> expression <|tool_result|>`, l'expression est
+  évaluée par `apex.brain.calc` et le résultat est placé dans la réponse (et dans le contexte du modèle) ;
+  le texte rendu montre le résultat, pas l'expression. Chaque appel figure dans les mesures (`tool_calls`).
 """
 
 from __future__ import annotations
@@ -27,8 +30,21 @@ from typing import Any
 
 import torch
 
-from apex.brain.chat import Message, encode_chat, stop_ids, supports_chat
+from apex.brain import calc
+from apex.brain.chat import (
+    TOOL_CALL,
+    TOOL_RESULT,
+    Message,
+    encode_chat,
+    stop_ids,
+    supports_chat,
+    supports_tools,
+)
 from apex.brain.model import ApexLM, KVCache
+
+#: Appels de calcul au plus par réponse, et longueur maximale d'une expression (en jetons).
+MAX_TOOL_CALLS = 16
+MAX_CALL_TOKENS = 64
 
 
 class GenerationCancelled(RuntimeError):
@@ -62,6 +78,7 @@ class GenerationStats:
     device: str = "cpu"
     weights: str = ""
     kv_cache_bytes: int = 0
+    tool_calls: list[dict[str, str]] = field(default_factory=list)
 
     @property
     def tokens_per_s(self) -> float | None:
@@ -246,6 +263,7 @@ class BrainEngine:
         cancel: threading.Event | None = None,
         deadline: float | None = None,
         on_text: Callable[[str], None] | None = None,
+        tools: bool = True,
     ) -> GenerationResult:
         self.load()
         assert self.model is not None
@@ -269,31 +287,66 @@ class BrainEngine:
         produced: list[int] = []
         text_parts: list[str] = []
         stats.finish_reason = "length"
+        use_tools = tools and supports_tools(tokenizer)
+        call_id = tokenizer.special_id(TOOL_CALL) if use_tools else -1
+        result_id = tokenizer.special_id(TOOL_RESULT) if use_tools else -1
+        call_start: int | None = None  # position de l'expression en cours dans `produced`
+
+        def emit(piece: str) -> None:
+            if piece:
+                text_parts.append(piece)
+                if on_text is not None:
+                    on_text(piece)
+
+        def feed(ids: list[int]) -> torch.Tensor:
+            out, _ = model(torch.tensor([ids], device=self.device), cache=cache, last_only=True)
+            return out
+
         with self.lock:
             self.last_used = time.time()
             prefill_started = time.perf_counter()
-            logits, _ = model(torch.tensor([prompt], device=self.device), cache=cache, last_only=True)
+            logits = feed(prompt)
             stats.prefill_s = time.perf_counter() - prefill_started
             decode_started = time.perf_counter()
-            for index in range(max_new):
+            while len(produced) < max_new:
                 if cancel is not None and cancel.is_set():
                     raise GenerationCancelled("génération annulée")
                 if deadline is not None and time.perf_counter() > deadline:
                     raise GenerationTimeout("délai de génération dépassé")
                 token = self._sample(logits[0, -1].float(), produced, settings, generator)
-                if index == 0:
+                if stats.time_to_first_token_s is None:
                     stats.time_to_first_token_s = round(time.perf_counter() - started, 4)
-                if token in stops:
+                if call_start is not None and len(produced) - call_start >= MAX_CALL_TOKENS:
+                    token = result_id  # expression démesurée : refermée, la calculatrice dira l'erreur
+                if use_tools and token == call_id and call_start is None:
+                    if len(stats.tool_calls) >= MAX_TOOL_CALLS:
+                        stats.finish_reason = "tool_limit"
+                        break
+                    emit(stream.flush())
+                    produced.append(token)
+                    call_start = len(produced)
+                    logits = feed([token])
+                    continue
+                if use_tools and token == result_id and call_start is not None:
+                    expression = tokenizer.decode(produced[call_start:])
+                    answer = calc.run(expression)
+                    answer_ids = tokenizer.encode(answer)
+                    if len(produced) + 1 + len(answer_ids) >= max_new:
+                        break  # plus de place pour le résultat : arrêt sur la longueur
+                    stats.tool_calls.append({"expression": expression.strip(), "result": answer})
+                    produced += [token, *answer_ids]
+                    call_start = None
+                    emit(answer)
+                    logits = feed([token, *answer_ids])
+                    continue
+                if token in stops and call_start is None:
                     stats.finish_reason = "stop"
                     break
                 produced.append(token)
-                piece = stream.push(tokenizer.token_bytes(token))
-                if piece:
-                    text_parts.append(piece)
-                    if on_text is not None:
-                        on_text(piece)
-                if index + 1 < max_new:
-                    logits, _ = model(torch.tensor([[token]], device=self.device), cache=cache)
+                if call_start is None:
+                    emit(stream.push(tokenizer.token_bytes(token)))
+                if len(produced) < max_new:
+                    logits = feed([token])
             stats.decode_s = time.perf_counter() - decode_started
             self.last_used = time.time()
         tail = stream.flush()

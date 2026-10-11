@@ -33,6 +33,8 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
+from apex.brain.chat import calc_markup as _c
+
 SYSTEM_FR = (
     "Tu es le Cerveau APEX, un modèle de langage construit et entraîné de zéro par APEX, exécuté en local. "
     "Réponds avec exactitude et concision. Si une information te manque ou si tu ne sais pas, dis-le."
@@ -140,13 +142,13 @@ def arithmetic(rng: random.Random, lang: str) -> TaskExample:
                     f"{a} {symbol} {b} = ?",
                 ),
             )
-        steps = _multiplication_steps(a, b, "×") if op == "*" and b >= 10 and a >= 10 else ""
+        # Calcul exact délégué à la calculatrice du Cerveau (`apex.brain.calc`) : le modèle écrit l'opération.
         if op == "//":
-            answer = f"{a} ÷ {b} = {result} (reste {a % b})."
+            answer = f"{a} ÷ {b} = {_c(f'{a}//{b}')} (reste {_c(f'{a}%{b}')})."
         elif op == "%":
-            answer = f"{a} = {b} × {a // b} + {result}, donc le reste est {result}."
+            answer = f"{a} mod {b} = {_c(f'{a}%{b}')}."
         else:
-            answer = f"{steps}{a} {symbol} {b} = {result}."
+            answer = f"{a} {symbol} {b} = {_c(f'{a}{op}{b}')}."
     else:
         symbol = {"+": "+", "-": "-", "*": "×", "//": "÷", "%": "mod"}[op]
         if op == "//":
@@ -169,27 +171,13 @@ def arithmetic(rng: random.Random, lang: str) -> TaskExample:
                     f"{a} {symbol} {b} = ?",
                 ),
             )
-        steps = _multiplication_steps(a, b, "×") if op == "*" and b >= 10 and a >= 10 else ""
         if op == "//":
-            answer = f"{a} ÷ {b} = {result} (remainder {a % b})."
+            answer = f"{a} ÷ {b} = {_c(f'{a}//{b}')} (remainder {_c(f'{a}%{b}')})."
         elif op == "%":
-            answer = f"{a} = {b} × {a // b} + {result}, so the remainder is {result}."
+            answer = f"{a} mod {b} = {_c(f'{a}%{b}')}."
         else:
-            answer = f"{steps}{a} {symbol} {b} = {result}."
+            answer = f"{a} {symbol} {b} = {_c(f'{a}{op}{b}')}."
     return TaskExample("arithmetic", lang, user, answer, {"type": "exact", "answer": str(result)})
-
-
-def _multiplication_steps(a: int, b: int, symbol: str) -> str:
-    parts = []
-    for position, digit in enumerate(reversed(str(b))):
-        if digit != "0":
-            parts.append(int(digit) * 10**position)
-    if len(parts) < 2:
-        return ""
-    parts.reverse()
-    decomposition = " + ".join(f"{a} {symbol} {p}" for p in parts)
-    partials = " + ".join(str(a * p) for p in parts)
-    return f"{a} {symbol} {b} = {decomposition} = {partials}\n"
 
 
 def word_problem(rng: random.Random, lang: str) -> TaskExample:
@@ -219,26 +207,26 @@ def word_problem(rng: random.Random, lang: str) -> TaskExample:
         if kind == "give_buy":
             user = f"{name} a {a} {plural}. Elle en donne {b}, puis en achète {c}. Combien de {plural} a-t-elle maintenant ?"
             result = a - b + c
-            answer = f"Elle commence avec {a}, en donne {b} : {a} - {b} = {a - b}. Elle en achète {c} : {a - b} + {c} = {result}. Elle a maintenant {result} {plural}."
+            answer = f"Elle commence avec {a}, en donne {b} : {a} - {b} = {_c(f'{a}-{b}')}. Elle en achète {c} : {a - b} + {c} = {_c(f'{a - b}+{c}')}. Elle a maintenant {result} {plural}."
         elif kind == "groups":
             groups = rng.randint(2, 9)
             each = rng.randint(2, 12)
             result = groups * each
             user = f"{name} range des {plural} dans {groups} boîtes de {each}. Combien de {plural} y a-t-il en tout ?"
-            answer = f"{groups} boîtes × {each} {plural} = {result}. Il y a {result} {plural} en tout."
+            answer = f"{groups} boîtes × {each} {plural} = {_c(f'{groups}*{each}')}. Il y a {result} {plural} en tout."
         else:
             price = rng.randint(2, 15)
             count = rng.randint(2, 9)
             result = price * count
             user = f"Un article coûte {price} euros. Combien coûtent {count} articles ?"
-            answer = f"{count} × {price} = {result}. Les {count} articles coûtent {result} euros."
+            answer = f"{count} × {price} = {_c(f'{count}*{price}')}. Les {count} articles coûtent {result} euros."
     else:
         name = _pick(rng, names_en)
         plural, _ = items_en[rng.randrange(len(items_en))]
         if kind == "give_buy":
             user = f"{name} has {a} {plural}, gives away {b}, then buys {c} more. How many {plural} does {name} have now?"
             result = a - b + c
-            answer = f"Start with {a}, give away {b}: {a} - {b} = {a - b}. Buy {c}: {a - b} + {c} = {result}. {name} now has {result} {plural}."
+            answer = f"Start with {a}, give away {b}: {a} - {b} = {_c(f'{a}-{b}')}. Buy {c}: {a - b} + {c} = {_c(f'{a - b}+{c}')}. {name} now has {result} {plural}."
         elif kind == "groups":
             groups = rng.randint(2, 9)
             each = rng.randint(2, 12)
@@ -246,13 +234,15 @@ def word_problem(rng: random.Random, lang: str) -> TaskExample:
             user = (
                 f"{name} puts {plural} into {groups} boxes of {each}. How many {plural} are there in total?"
             )
-            answer = f"{groups} boxes × {each} {plural} = {result}. There are {result} {plural} in total."
+            answer = f"{groups} boxes × {each} {plural} = {_c(f'{groups}*{each}')}. There are {result} {plural} in total."
         else:
             price = rng.randint(2, 15)
             count = rng.randint(2, 9)
             result = price * count
             user = f"One item costs {price} dollars. How much do {count} items cost?"
-            answer = f"{count} × {price} = {result}. The {count} items cost {result} dollars."
+            answer = (
+                f"{count} × {price} = {_c(f'{count}*{price}')}. The {count} items cost {result} dollars."
+            )
     return TaskExample("word_problem", lang, user, answer, {"type": "exact", "answer": str(result)})
 
 
@@ -428,16 +418,9 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
         answer = f"Le plus petit est {result}." if lang == "fr" else f"The smallest is {result}."
     elif kind == "sum":
         result = str(sum(numbers))
-        running, steps = 0, []
-        for n in numbers:
-            running += n
-            steps.append(str(running))
+        expression = "+".join(f"({n})" if n < 0 else str(n) for n in numbers)
         user = f"Additionne ces nombres : {shown}" if lang == "fr" else f"Add up these numbers: {shown}"
-        answer = (
-            f"Sommes successives : {', '.join(steps)}. Le total est {result}."
-            if lang == "fr"
-            else f"Running totals: {', '.join(steps)}. The total is {result}."
-        )
+        answer = f"Le total est {_c(expression)}." if lang == "fr" else f"The total is {_c(expression)}."
     elif kind == "count":
         result = str(len(numbers))
         user = (
@@ -552,9 +535,9 @@ def conversions(rng: random.Random, lang: str) -> TaskExample:
             else f"How many {small_en} are in {value} {big_en}?"
         )
         answer = (
-            f"1 {big} = {factor} {small}, donc {value} {big} = {value} × {factor} = {result} {small}."
+            f"1 {big} = {factor} {small}, donc {value} {big} = {value} × {factor} = {_c(f'{value}*{factor}')} {small}."
             if lang == "fr"
-            else f"1 {big} = {factor} {small}, so {value} {big} = {value} × {factor} = {result} {small}."
+            else f"1 {big} = {factor} {small}, so {value} {big} = {value} × {factor} = {_c(f'{value}*{factor}')} {small}."
         )
     else:
         result = value
@@ -565,9 +548,9 @@ def conversions(rng: random.Random, lang: str) -> TaskExample:
             else f"Convert {total} {small_en} to {big_en}."
         )
         answer = (
-            f"{total} ÷ {factor} = {result}, donc {total} {small} = {result} {big}."
+            f"{total} ÷ {factor} = {_c(f'{total}/{factor}')}, donc {total} {small} = {result} {big}."
             if lang == "fr"
-            else f"{total} ÷ {factor} = {result}, so {total} {small} = {result} {big}."
+            else f"{total} ÷ {factor} = {_c(f'{total}/{factor}')}, so {total} {small} = {result} {big}."
         )
     return TaskExample("conversion", lang, user, answer, {"type": "exact", "answer": str(result)})
 

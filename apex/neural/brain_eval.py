@@ -22,7 +22,7 @@ from typing import Any
 
 import torch
 
-from apex.brain.chat import Message
+from apex.brain.chat import Message, visible_text
 from apex.brain.inference import BrainEngine, SamplingSettings
 
 
@@ -76,7 +76,7 @@ def evaluate_tasks(
         sample = {
             "question": row["messages"][-2]["content"][:300],
             "answer": result.text[:400],
-            "expected": row["messages"][-1]["content"][:300],
+            "expected": visible_text(row["messages"][-1]["content"])[:300],
         }
         if not passed and len(family["failures"]) < keep_failures:
             family["failures"].append(sample)

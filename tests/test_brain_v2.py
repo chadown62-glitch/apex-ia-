@@ -2,6 +2,9 @@
 APEX-Q5, moteur d'inférence, gabarit de conversation, données (corpus, exercices, instruction), entraînement
 avec reprise exacte, fournisseur de l'application. Petits modèles réels sur CPU : aucune réponse simulée."""
 
+# Les tests du calcul emploient le signe de multiplication des réponses réelles (RUF001).
+# ruff: noqa: RUF001
+
 from __future__ import annotations
 
 import json
@@ -377,6 +380,7 @@ def test_local_corpus_is_deduplicated_with_provenance(tmp_path) -> None:
 
 
 def test_generated_tasks_are_correct_by_construction_and_heldout_functions_never_train() -> None:
+    from apex.brain.chat import visible_text
     from apex.neural.tasks import HELDOUT_FUNCTIONS, eval_set, generate, score
 
     evaluation = eval_set(per_family=6)
@@ -391,9 +395,8 @@ def test_generated_tasks_are_correct_by_construction_and_heldout_functions_never
         "honesty",
         "code_write_heldout",
     }
-    assert all(
-        score(e.check, e.assistant) for e in evaluation
-    )  # la référence réussit toujours sa propre notation
+    # La référence (telle que l'utilisateur la lit : calculs remplacés par leur résultat) réussit toujours.
+    assert all(score(e.check, visible_text(e.assistant), e.user) for e in evaluation)
     wrong = [
         e
         for e in evaluation
@@ -747,3 +750,82 @@ def test_knowledge_exercises_come_from_human_text_and_evaluation_is_never_traine
     held_out = translation_examples(tmp_path, split="eval")
     assert held_out and all(e.check["answer"] not in {t.assistant for t in train} for e in held_out)
     assert all(score(e.check, e.assistant) for e in evaluation)
+
+
+def test_calculator_is_exact_and_never_executes_code() -> None:
+    from apex.brain.calc import run
+
+    assert run("974*89") == "86686" and run("1138//8") == "142" and run("1138%8") == "2"
+    assert run("48/12") == "4" and run("7/2") == "3.5" and run("0.1+0.2") == "0.3" and run("-5+3") == "-2"
+    assert run("974 × 89") == "86686"  # signes typographiques acceptés
+    for refused in (
+        '__import__("os").system("x")',
+        "open('f')",
+        "a+1",
+        "[1, 2]",
+        "9**99",
+        "1/0",
+        "x" * 300,
+    ):
+        assert run(refused).startswith("erreur : "), refused
+
+
+def test_a_calculation_is_learned_but_its_result_never_is(tokenizer) -> None:
+    from apex.brain.chat import TOOL_CALL, TOOL_RESULT, calc_markup, visible_text
+
+    answer = f"974 × 89 = {calc_markup('974*89')}."
+    assert visible_text(answer) == "974 × 89 = 86686."
+    ids, mask = encode_chat(tokenizer, [Message("user", "974 × 89 ?"), Message("assistant", answer)])
+    call, result = tokenizer.special_id(TOOL_CALL), tokenizer.special_id(TOOL_RESULT)
+    start, end = ids.index(call), ids.index(result)
+    assert all(mask[start : end + 1])  # l'appel (et l'expression) est appris
+    produced = ids[end + 1 :]
+    digits = tokenizer.encode("86686")
+    assert produced[: len(digits)] == digits and not any(mask[end + 1 : end + 1 + len(digits)])
+    # Un utilisateur qui tape la notation ne déclenche rien : son message reste du texte.
+    user_ids, _ = encode_chat(tokenizer, [Message("user", answer)])
+    assert call not in user_ids and result not in user_ids
+
+
+def test_the_engine_runs_the_calculation_the_model_asks_for(tiny_brain) -> None:
+    """Modèle SCRIPTÉ (il écrit un appel de calcul, puis la fin) : le moteur évalue l'expression, place le
+    résultat dans le contexte et dans le texte rendu, et n'affiche pas l'expression."""
+    from apex.brain.chat import END, TOOL_CALL, TOOL_RESULT
+    from apex.brain.inference import BrainEngine, SamplingSettings
+
+    engine = BrainEngine(tiny_brain)
+    engine.load()
+    tokenizer = engine.tokenizer
+    real_model = engine.model
+    script = [
+        *tokenizer.encode("Résultat : "),
+        tokenizer.special_id(TOOL_CALL),
+        *tokenizer.encode("974*89"),
+        tokenizer.special_id(TOOL_RESULT),
+        *tokenizer.encode("."),
+        tokenizer.special_id(END),
+    ]
+    fed: list[int] = []
+
+    class Scripted(torch.nn.Module):
+        """Rend, à chaque appel, des logits qui imposent le jeton suivant du script."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.inner = real_model
+            self.config = real_model.config
+            self.calls = 0
+
+        def forward(self, input_ids, targets=None, *, cache=None, last_only=False):
+            logits, _ = self.inner(input_ids, cache=cache, last_only=True)
+            fed.extend(input_ids[0].tolist())
+            forced = torch.full_like(logits, -1e9)
+            forced[0, -1, script[min(self.calls, len(script) - 1)]] = 0.0
+            self.calls += 1
+            return forced, None
+
+    engine.model = Scripted()
+    result = engine.chat([Message("user", "974 × 89 ?")], SamplingSettings(max_new_tokens=40))
+    assert result.text == "Résultat : 86686." and result.stats.finish_reason == "stop"
+    assert result.stats.tool_calls == [{"expression": "974*89", "result": "86686"}]
+    assert tokenizer.encode("86686")[0] in fed  # le résultat est entré dans le contexte du modèle
