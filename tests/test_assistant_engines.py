@@ -1,10 +1,13 @@
 """Choix du moteur de réponse (0.4.1) et Cerveau APEX servi.
 
-Demande de l'utilisateur (09/10/2026, après un essai sur Windows réel où Ollama répondait toujours) : choisir
-entre Ollama, le moteur intégré d'APEX et le Cerveau APEX (le réseau propre à APEX). Ces tests prouvent que le
-choix est RESPECTÉ (jamais un autre moteur à la place), que le Cerveau n'est jamais pris en automatique, et que
-les poids servis sont ceux de la version promue du registre (empreintes vérifiées), jamais des poids modifiés.
-Le Cerveau tourne ici pour de vrai (1,9 M paramètres, CPU)."""
+Demande de l'utilisateur (09/10/2026, après un essai sur Windows réel où Ollama répondait toujours) :
+choisir entre Ollama, le moteur intégré d'APEX et le Cerveau APEX (le réseau propre à APEX). Ces tests
+prouvent que le choix est RESPECTÉ (jamais un autre moteur à la place), que le Cerveau v1 n'est jamais pris
+en automatique, et que les poids servis sont ceux de la version promue du registre (empreintes vérifiées),
+jamais des poids modifiés. Le Cerveau tourne ici pour de vrai (1,9 M paramètres, CPU).
+
+Ces tests servent le seul Cerveau v1 (il continue un texte), quel que soit le contenu de `brain/` ; le
+Cerveau v2 conversationnel, pris en premier en automatique, a ses propres tests (tests/test_brain_v2.py)."""
 
 from __future__ import annotations
 
@@ -29,6 +32,18 @@ from tests.test_conversations_service import BASE_CONFIG
 
 REPO = Path(__file__).resolve().parents[1]
 BRAIN = REPO / "brain" / artifact.DEFAULT_NAME
+
+
+@pytest.fixture(scope="module")
+def _v1_root(tmp_path_factory) -> Path:
+    root = tmp_path_factory.mktemp("brain-v1")
+    shutil.copytree(BRAIN, root / artifact.DEFAULT_NAME)
+    return root
+
+
+@pytest.fixture(autouse=True)
+def _brain_v1_only(_v1_root, monkeypatch) -> None:
+    monkeypatch.setenv(artifact.BRAIN_DIR_ENV, str(_v1_root))
 
 
 def _config_with_both_engines():

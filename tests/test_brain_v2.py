@@ -486,7 +486,17 @@ def test_replay_mixes_corpus_windows_into_instruction_batches_reproducibly(token
     assert torch.equal(again[0], following[0]) and torch.equal(again[1], following[1])
 
 
-def test_status_counts_a_conversational_brain_as_a_usable_model(tiny_brain, monkeypatch) -> None:
+@pytest.fixture(scope="module")
+def v1_only(tmp_path_factory) -> Path:
+    """Dossier de Cerveaux ne contenant que le v1 livré (il continue un texte), quel que soit `brain/`."""
+    import shutil
+
+    root = tmp_path_factory.mktemp("brain-v1")
+    shutil.copytree(Path(__file__).resolve().parents[1] / "brain" / "apex-brain-v1", root / "apex-brain-v1")
+    return root
+
+
+def test_status_counts_a_conversational_brain_as_a_usable_model(tiny_brain, v1_only, monkeypatch) -> None:
     """Panel (« Modèles ») : un Cerveau v2 intègre répond seul, sans Ollama ni autre modèle ; le v1 n'est
     pas compté (il continue un texte)."""
     from apex.obs import component_checks as cc
@@ -495,12 +505,11 @@ def test_status_counts_a_conversational_brain_as_a_usable_model(tiny_brain, monk
     monkeypatch.setenv("APEX_BRAIN_DIR", str(tiny_brain.parent))
     status = cc.check_models()
     assert status.state == cc.READY and "Cerveau APEX → apex-brain-v2" in status.detail
-    v1_only = Path(__file__).resolve().parents[1] / "brain"
     monkeypatch.setenv("APEX_BRAIN_DIR", str(v1_only))
     assert "Cerveau APEX" not in cc.check_models().detail
 
 
-def test_automatic_engine_puts_a_conversational_brain_first(tiny_brain, monkeypatch) -> None:
+def test_automatic_engine_puts_a_conversational_brain_first(tiny_brain, v1_only, monkeypatch) -> None:
     """Demande de l'utilisateur (10/10/2026) : le modèle construit de zéro par APEX est le cerveau
     principal. En automatique, un Cerveau v2 intègre passe en premier ; les modèles déclarés restent en
     repli. Le v1 (il continue un texte) n'est jamais pris en automatique."""
@@ -514,7 +523,7 @@ def test_automatic_engine_puts_a_conversational_brain_first(tiny_brain, monkeypa
     monkeypatch.setenv("APEX_BRAIN_DIR", str(tiny_brain.parent))
     auto = engines.candidates_for("auto", config)
     assert auto[0].endpoint.runtime == "apex_brain" and len(auto) > 1
-    monkeypatch.setenv("APEX_BRAIN_DIR", str(Path(__file__).resolve().parents[1] / "brain"))  # v1 seul
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(v1_only))
     assert all(c.endpoint.runtime != "apex_brain" for c in engines.candidates_for("auto", config))
 
 
