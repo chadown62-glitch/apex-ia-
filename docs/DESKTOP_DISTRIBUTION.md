@@ -652,3 +652,29 @@ host. Application manifest with supported OS list might be required. », et APEX
 - **L'affichage de l'assistant dans la fenêtre sur Windows réel** : c'est la première fois que le composant WebView2 sera
   créé pour de bon (le manifeste lève le refus de Windows constaté). S'il échoue, APEX le dit et passe au navigateur ;
   s'il plante ou bloque, le lancement suivant le reconnaît (§12).
+
+## 15. APEX.exe 0.5.0 — le Cerveau APEX v2, construit et entraîné de zéro par APEX
+
+Le Panel est **inchangé** depuis 0.4.5 (aucune différence sous `setup/src` ni `setup/tests`). L'application livre le
+**Cerveau APEX v2** (`brain/apex-brain-v2` : ApexLM 15,7 M paramètres, poids APEX-Q5 de 11,8 Mo, évaluation et
+provenance à côté des poids), servi en premier en mode Automatique ; le Cerveau v1 reste livré mais n'est plus servi.
+Conception, entraînement et mesures : [`docs/CERVEAU_APEX_V2.md`](CERVEAU_APEX_V2.md) (§9 pour les chiffres).
+
+### 15.1 Validation — ce qui a réellement été exécuté (et où)
+
+| Niveau | Résultat |
+|---|---|
+| Suite Python complète (Linux, cerveau v2 en place dans `brain/`) | tout réussit sauf **1 test** : `test_experience_v2_script::test_calibration_then_experiment_then_analysis_end_to_end` ; seul il réussit (3/3), sous forte charge artificielle il échoue 3 fois sur 26 (des exécutions comptées en échec d'infrastructure) — code et test **inchangés depuis 0.4.5** ; un plantage de Python (segfault) observé **une fois** sur ces 26 passages, cause non trouvée (pile non capturée en 22 essais avec `faulthandler`) |
+| Interface web | `tsc` sans erreur ; **173 tests réussis** (27 fichiers) |
+| Cerveau embarqué dans l'application construite | intègre (SHA-256 et empreinte des poids), sert une réponse réelle par le fournisseur d'APEX (161 jetons/s, CPU, conteneur de développement) |
+| Installateur 0.5.0 (SHA-256 `3d90fc7a…4f7855160dc1ba7a21c29852c8007c1f2e9e9c`, commit `4a63cbe`, 51,8 Mo) | construit depuis le commit (artefact « release ») ; manifeste : les deux Cerveaux avec leurs empreintes |
+| WINE — **Windows simulé, pas Windows** | cycle de vie **17/17** (le fichier de poids du Cerveau v2 présent dans le dossier installé) ; mise à jour **0.4.5 → 0.5.0** **18/18** (raccourci et paramètres conservés) ; robustesse **10/10** |
+
+### 15.2 Non vérifié ici
+
+- **Le Cerveau v2 sous Windows réel** : Wine n'exécute pas torch (voir `setup/packaging/wine_native_e2e.sh`) ; la
+  réponse du Cerveau dans APEX.exe sur un vrai PC (vitesse comprise) reste à constater.
+- **L'entraînement du vrai Cerveau sur GPU** (`scripts/wsl/apex-brain-train.sh`) : aucun GPU dans l'environnement de
+  développement ; la logique d'ajustement du lot à la mémoire est testée avec des quantités simulées, le chemin
+  CUDA lui-même ne l'est pas. Les chemins des jeux de données Hugging Face ne sont pas joignables d'ici (un échec
+  de source est rapporté sans arrêter la construction du corpus).

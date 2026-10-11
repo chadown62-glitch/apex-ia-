@@ -1,21 +1,21 @@
 {
   "product": "APEX (APEX.exe : Panel + application APEX autonome)",
-  "version": "0.4.5",
+  "version": "0.5.0",
   "panel_protocol": 1,
   "architecture": "win-x64",
   "installer": {
-    "file": "APEX-Setup-x64-v0.4.5.exe",
-    "sha256": "c7a2707b2a6955333dd7489f7dd8154c961f96f0b4ced6f82171d3477f630278",
-    "bytes": 40515182
+    "file": "APEX-Setup-x64-v0.5.0.exe",
+    "sha256": "3d90fc7a9065392001da1ea98f4f7855160dc1ba7a21c29852c8007c1f2e9e9c",
+    "bytes": 51808415
   },
   "panel": {
     "executable": {
       "file": "APEX.exe",
-      "sha256": "8c6674c74c6acda2a8208bd2bbe3f31c884ae8e4cfb2abb09f21dcf349dcfdc6"
+      "sha256": "7cf1eed7ed9bda3bf2a63cfd95f6af1b05bc713dc3961415bc129b8193c38a5b"
     },
     "assembly": {
       "file": "APEX.dll",
-      "sha256": "f51109684b71473bb8ea4aed7d6710022f608979581f7bd3633cb2a9568a6770"
+      "sha256": "c80237e02ec91478525b9cbc465581833ec9271426f30f238b98c29245a2bcad"
     },
     "files": 217,
     "bytes": 101008259
@@ -24,9 +24,9 @@
     "runtime_artifact": {
       "release": true,
       "source": "commit",
-      "source_commit": "d83fcd71925dbd7ed3981cfa5cf86b6edd2c8891",
+      "source_commit": "4a63cbe560983d4b6bd958cfc7cd18ba564d398e",
       "head_commit": null,
-      "content_hash_sha256": "4bf56d2bff09c42ef30c77ff71cafe25e26372e581abafcfee317878c86d0868"
+      "content_hash_sha256": "52d398ae1cb0dcae37323010c5280ba82af6b1ac1df045512f17f74b4fa1432f"
     },
     "python_runtime": {
       "version": "3.12.10",
@@ -36,13 +36,25 @@
       "source": "paquet NuGet officiel « python » (python.org, CPython 3.12.10 x64) ; SHA-512 identique à celui du catalogue NuGet (vérifié le 08/10/2026)"
     },
     "requirements_lock_sha256": "02f2bdba93cc45e441dd0b60fd87f1d522416a9f1cf5fc553ef45f26e036ff25",
-    "brain": {
-      "name": "experiment-002:v1",
-      "weights_sha256": "a411f4e3f06e56ec5e5cd18c476c51c9253076afa65ec74feef6c4b688ec162f",
-      "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
-      "parameters": 1918656
-    },
-    "files": 305
+    "brains": [
+      {
+        "name": "apex-brain-v2",
+        "weights_file": "model.q5.safetensors",
+        "quantization": "apex-q5/1",
+        "weights_sha256": "d48a52e85a386d737897732c86c7650c300acd56dac1c1104151e179ce3f4265",
+        "model_fingerprint": "sha256:578cd2b7f29841609d9b0d26655edc923539c722b376b8b37bfddb533244a393",
+        "parameters": 15736192
+      },
+      {
+        "name": "experiment-002:v1",
+        "weights_file": null,
+        "quantization": null,
+        "weights_sha256": "a411f4e3f06e56ec5e5cd18c476c51c9253076afa65ec74feef6c4b688ec162f",
+        "model_fingerprint": "sha256:be46e6589ba59cea5602f7f56b2c01f4b8ddef604511bf769d7d57a3634ad35e",
+        "parameters": 1918656
+      }
+    ],
+    "files": 313
   },
   "install": {
     "scope": "utilisateur courant, sans administrateur",
@@ -53,13 +65,13 @@
     ]
   },
   "build": {
-    "commit": "d83fcd71925dbd7ed3981cfa5cf86b6edd2c8891",
-    "commit_of_worktree": "d83fcd71925dbd7ed3981cfa5cf86b6edd2c8891",
+    "commit": "4a63cbe560983d4b6bd958cfc7cd18ba564d398e",
+    "commit_of_worktree": "4a63cbe560983d4b6bd958cfc7cd18ba564d398e",
     "uncommitted_changes": false,
     "dotnet_sdk": "8.0.131",
     "compiler": "Inno Setup 6.4.3 (NuGet Tools.InnoSetup, empreinte figée) sous wine-9.0 (Ubuntu 9.0~repack-4build3)",
     "host": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39",
-    "built_at": "2026-10-10T20:56:52.829939+00:00"
+    "built_at": "2026-10-11T19:53:21.883046+00:00"
   },
   "signed": false
 }
