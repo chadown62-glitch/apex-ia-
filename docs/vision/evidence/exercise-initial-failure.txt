@@ -1,0 +1,20 @@
+{
+  "extracted_text": "EXERCICE DE MATHEMATIQUES\nResoudre : 2x +3 =11\nDonner la valeur de x.",
+  "visual_elements": [
+    {
+      "kind": "text",
+      "label": "Equation",
+      "description_textual": "2x + 3 = 11"
+    }
+  ],
+  "analysis": "L'exercice demande de résoudre l'équation 2x + 3 = 11 pour trouver la valeur de x.",
+  "uncertainties": [
+    "La phrase \"Donner la valeur de x.\" est une instruction supplémentaire qui n'est pas nécessairement liée à la résolution de l'équation."
+  ],
+  "answer": "5",
+  "help_steps": [
+    "Saisir l'équation 2x + 3 = 11",
+    "Isoler x en soustrayant 3 de chaque côté de l'équation",
+    "Diviser par 2 pour isoler x"
+  ]
+}

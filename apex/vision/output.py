@@ -6,6 +6,8 @@ import json
 
 from apex.vision.contract import VisionError, VisualAnswer, VisualElement
 
+VISUAL_KINDS = ("text", "equation", "table", "chart", "diagram", "object")
+
 # Also used during decoding: step calculations precede the final answer.
 ANSWER_SCHEMA = {
     "type": "object",
@@ -17,7 +19,7 @@ ANSWER_SCHEMA = {
             "items": {
                 "type": "object",
                 "properties": {
-                    "kind": {"type": "string"},
+                    "kind": {"type": "string", "enum": list(VISUAL_KINDS)},
                     "label": {"type": "string"},
                     "description": {"type": "string"},
                 },
@@ -63,6 +65,7 @@ def parse_answer(text: str) -> VisualAnswer:
                 not isinstance(element, dict)
                 or set(element) != {"kind", "label", "description"}
                 or not all(isinstance(v, str) for v in element.values())
+                or element.get("kind") not in VISUAL_KINDS
             ):
                 raise ValueError("element")
         if not obj["analysis"].strip():

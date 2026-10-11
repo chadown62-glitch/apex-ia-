@@ -73,29 +73,67 @@ def test_pretrained_local_vlm_semantics(images, name, expected, monkeypatch):
     configured = os.environ.get("APEX_VISION_MODEL_DIR")
     if not configured or not (Path(configured) / MANIFEST).is_file():
         pytest.skip("BLOCKED: verified pretrained vision artifact absent; no inference/quality proof")
-    backend = LocalQwenVLBackend(BackendOptions(Path(configured)))
     cases = json.loads((images / "cases.json").read_text())
     question = next(c["question"] for c in cases if c["name"] == name)
-    from apex.vision import backend as backend_module
+    if name == "blank.png":
+        # Exercise the actual CLI as well as the Python delegation interface.
+        process = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "apex.vision",
+                "analyze",
+                str(images / name),
+                "--model-dir",
+                configured,
+                "--question",
+                question,
+                "--timeout",
+                "1200",
+                "--session-path",
+                str(images / "lock"),
+                "--artifact-dir",
+                str(images / "artifacts"),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=1350,
+        )
+        payload = json.loads(process.stdout)
+        assert process.returncode == 0, payload.get("error")
+        assert payload["facts"]["result_artifact"]
+    else:
+        backend = LocalQwenVLBackend(BackendOptions(Path(configured)))
+        from apex.vision import backend as backend_module
 
-    original_parser = backend_module.parse_answer
+        original_parser = backend_module.parse_answer
 
-    def record_and_parse(text):
-        # Observe the real generated text from our public synthetic fixture, without changing it.
-        (images / (name + ".model-output.txt")).write_text(text, encoding="utf-8")
-        return original_parser(text)
+        def record_and_parse(text):
+            # Observe actual generated text; neither generation nor validation is replaced.
+            (images / (name + ".model-output.txt")).write_text(text, encoding="utf-8")
+            return original_parser(text)
 
-    monkeypatch.setattr(backend_module, "parse_answer", record_and_parse)
-    result = VisionService(backend, session_path=images / "lock").analyze(
-        VisionRequest((images / name).read_bytes(), question=question, timeout_s=1200, max_new_tokens=768)
-    )
-    (images / (name + ".result.json")).write_text(
-        json.dumps(result.to_dict(), ensure_ascii=False, indent=2)
-    )
-    assert result.status is VisionStatus.COMPLETE, result.error
-    assert result.facts["completion_tokens"] > 0 and result.facts["backend"] == "local_qwen2_5_vl"
+        monkeypatch.setattr(backend_module, "parse_answer", record_and_parse)
+        result = VisionService(backend, session_path=images / "lock").analyze(
+            VisionRequest(
+                (images / name).read_bytes(), question=question, timeout_s=1200, max_new_tokens=768
+            )
+        )
+        payload = result.to_dict()
+    (images / (name + ".result.json")).write_text(json.dumps(payload, ensure_ascii=False, indent=2))
+    assert payload["status"] == "complete", payload["error"]
+    assert payload["facts"]["completion_tokens"] > 0
+    assert payload["facts"]["backend"] == "local_qwen2_5_vl"
+    elements = payload["output"]["visual_elements"]
+    assert all(e["label"].lower() not in ("nom", "type", "label") for e in elements)
+    if name == "document.png":
+        assert "table" in {e["kind"] for e in elements}
+    if name == "chart.png":
+        assert "chart" in {e["kind"] for e in elements}
     if expected is None:
-        assert result.output.answer is None and result.output.uncertainties
+        assert payload["output"]["answer"] is None and payload["output"]["uncertainties"]
+        assert payload["output"]["extracted_text"].strip() == "" and not elements
     else:
         # Minimal semantic check; extraction, units and visual grounding still need examination.
-        assert result.output.answer is not None and re.search(rf"\b{expected}\b", result.output.answer)
+        assert payload["output"]["answer"] is not None
+        assert re.search(rf"\b{expected}\b", payload["output"]["answer"])

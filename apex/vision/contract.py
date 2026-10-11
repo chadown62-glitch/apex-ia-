@@ -51,7 +51,7 @@ class VisionRequest:
     question: str = "Lis ce document et aide à résoudre l'exercice s'il y en a un."
     task: str = "exercise"
     context: MediaContext = field(default_factory=MediaContext)
-    timeout_s: float = 600.0
+    timeout_s: float = 1200.0
     max_new_tokens: int = 768
     cancel: Event | None = field(default=None, repr=False, compare=False)
     request_id: str = field(default_factory=lambda: str(uuid4()))

@@ -63,7 +63,7 @@ def main() -> int:
     analyze.add_argument(
         "--task", choices=("exercise", "document", "diagram", "transcribe"), default="exercise"
     )
-    analyze.add_argument("--timeout", type=float, default=600)
+    analyze.add_argument("--timeout", type=float, default=1200)
     analyze.add_argument("--max-tokens", type=int, default=768)
     analyze.add_argument("--precision", choices=("auto", "float32", "bfloat16"), default="auto")
     analyze.add_argument("--quantization", choices=("auto", "none", "nf4"), default="auto")
