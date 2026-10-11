@@ -15,7 +15,7 @@ import math
 from collections.abc import Sequence
 from contextlib import nullcontext
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 import torch
 from torch import nn
@@ -24,8 +24,9 @@ from apex.neural.config import OptimizerSpec, SchedulerSpec, TrainingConfig
 from apex.neural.model import ApexLM, shift_for_language_modeling
 
 
-def build_optimizer(model: nn.Module, spec: OptimizerSpec) -> torch.optim.Optimizer:
-    """Pas de weight decay sur les normes ni les vecteurs (convention standard)."""
+def build_optimizer(model: nn.Module, spec: OptimizerSpec, *, fused: bool = False) -> torch.optim.Optimizer:
+    """Pas de weight decay sur les normes ni les vecteurs (convention standard). `fused` : noyau AdamW
+    fusionné (GPU CUDA seulement — une seule passe sur les paramètres au lieu d'une par opération)."""
     unique = {id(p): p for p in model.parameters() if p.requires_grad}
     decay = [p for p in unique.values() if p.dim() >= 2]
     no_decay = [p for p in unique.values() if p.dim() < 2]
@@ -34,6 +35,8 @@ def build_optimizer(model: nn.Module, spec: OptimizerSpec) -> torch.optim.Optimi
         {"params": no_decay, "weight_decay": 0.0},
     ]
     if spec.name == "adamw":
+        if fused:
+            return torch.optim.AdamW(groups, lr=spec.lr, betas=spec.betas, fused=True)
         return torch.optim.AdamW(groups, lr=spec.lr, betas=spec.betas)
     if spec.name == "sgd":
         return torch.optim.SGD(groups, lr=spec.lr, momentum=spec.momentum)
@@ -48,6 +51,17 @@ def lr_multiplier(step: int, spec: SchedulerSpec, max_steps: int) -> float:
     span = max(1, max_steps - spec.warmup_steps)
     progress = min(1.0, (step - spec.warmup_steps) / span)
     return spec.min_lr_ratio + (1 - spec.min_lr_ratio) * 0.5 * (1 + math.cos(math.pi * progress))
+
+
+class Batcher(Protocol):
+    """Source de lots : `TokenBatcher` (flux en mémoire), `apex.neural.shards.ShardSampler` (corpus
+    tokenisé), `apex.neural.sft.ChatBatcher` (instruction : paires entrées/cibles masquées)."""
+
+    def next_batch(self) -> Any: ...
+
+    def state_dict(self) -> dict[str, Any]: ...
+
+    def load_state_dict(self, state: dict[str, Any]) -> None: ...
 
 
 class TokenBatcher:
@@ -89,14 +103,18 @@ class TrainingEngine:
         self.config = config
         self.pad_id = pad_id
         self.device = next(model.parameters()).device
-        self.optimizer = build_optimizer(model, config.optimizer)
+        self.optimizer = build_optimizer(model, config.optimizer, fused=self.device.type == "cuda")
         self.scheduler = torch.optim.lr_scheduler.LambdaLR(
             self.optimizer, lambda step: lr_multiplier(step, config.scheduler, config.max_steps)
         )
         self.step = 0
         self.tokens_seen = 0
         self.last_loss: float | None = None
-        amp_dtype = torch.float16 if self.device.type == "cuda" else torch.bfloat16
+        # bfloat16 partout où le matériel le calcule (CPU, GPU NVIDIA depuis Ampere — RTX 30/40) : même
+        # plage que float32, aucune mise à l'échelle de la perte. float16 + GradScaler seulement sur les GPU
+        # plus anciens.
+        bf16 = self.device.type != "cuda" or torch.cuda.is_bf16_supported()
+        amp_dtype = torch.bfloat16 if bf16 else torch.float16
         self._amp = config.mixed_precision
         self._amp_dtype = amp_dtype
         self._scaler = torch.amp.GradScaler(
@@ -108,8 +126,13 @@ class TrainingEngine:
             return nullcontext()
         return torch.autocast(device_type=self.device.type, dtype=self._amp_dtype)
 
-    def forward(self, batch: torch.Tensor) -> torch.Tensor:
-        inputs, targets = shift_for_language_modeling(batch.to(self.device), self.pad_id)
+    def forward(self, batch: torch.Tensor | tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
+        """`batch` : jetons (cible = jeton suivant), ou paire (entrées, cibles) déjà alignées —
+        instruction : les positions hors réponse de l'assistant valent `IGNORE_INDEX`."""
+        if isinstance(batch, tuple):
+            inputs, targets = batch[0].to(self.device), batch[1].to(self.device)
+        else:
+            inputs, targets = shift_for_language_modeling(batch.to(self.device), self.pad_id)
         with self._autocast():
             _, loss = self.model(inputs, targets)
         if loss is None:
@@ -138,7 +161,7 @@ class TrainingEngine:
     def zero_grad(self) -> None:
         self.optimizer.zero_grad(set_to_none=True)
 
-    def train_step(self, batcher: TokenBatcher) -> StepResult:
+    def train_step(self, batcher: Batcher) -> StepResult:
         self.model.train()
         lr = self.optimizer.param_groups[0]["lr"]
         total = 0.0
@@ -149,14 +172,14 @@ class TrainingEngine:
                 raise FloatingPointError(f"perte non finie à l'étape {self.step}")
             self.backward(loss)
             total += loss.item()
-            self.tokens_seen += batch[:, 1:].numel()
+            self.tokens_seen += batch[1].numel() if isinstance(batch, tuple) else batch[:, 1:].numel()
         grad_norm = self.optimizer_step()
         self.zero_grad()
         self.step += 1
         self.last_loss = total / self.config.grad_accumulation_steps
         return StepResult(step=self.step, loss=self.last_loss, grad_norm=grad_norm, lr=lr)
 
-    def fit(self, batcher: TokenBatcher, steps: int | None = None) -> list[StepResult]:
+    def fit(self, batcher: Batcher, steps: int | None = None) -> list[StepResult]:
         remaining = steps if steps is not None else self.config.max_steps - self.step
         return [self.train_step(batcher) for _ in range(max(0, remaining))]
 
