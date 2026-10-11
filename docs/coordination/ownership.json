@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "agent_logins": ["chadown62-glitch"],
+  "human_reviewers": [],
+  "tasks": {
+    "agent/codex/4-inference-diagnostics": {
+      "owner": "codex",
+      "issue": 4,
+      "write_set": [
+        "scripts/coordination_guard.py", "tests/test_coordination_guard.py",
+        "scripts/inference_diagnostics.py", "tests/test_inference_diagnostics_contract.py",
+        "tests/test_inference_local_smoke.py", "docs/coordination/GUARDS.md",
+        "docs/coordination/INFERENCE_DIAGNOSTICS.md"
+      ]
+    },
+    "agent/claude/3-q5-runtime": {
+      "owner": "claude",
+      "issue": 3,
+      "write_set": []
+    }
+  },
+  "zones": [
+    {"owner": "governance", "paths": ["AGENTS.md", "CLAUDE.md", ".github/", "docs/coordination/WORKFLOW.md", "docs/coordination/ownership.json", "scripts/coordination_guard.py", "tests/test_coordination_guard.py"]},
+    {"owner": "claude", "paths": ["apex/brain/", "apex/models/apex_brain.py", "apex/models/native.py"]},
+    {"owner": "shared", "paths": ["apex/errors.py", "apex/obs/", "apex/models/model.py", "apex/models/provider.py", "apex/models/backends.py", "apex/config/", "pyproject.toml"]},
+    {"owner": "codex", "paths": ["scripts/inference_diagnostics.py", "tests/test_inference_diagnostics_contract.py", "tests/test_inference_local_smoke.py", "docs/coordination/GUARDS.md", "docs/coordination/INFERENCE_DIAGNOSTICS.md"]}
+  ]
+}
