@@ -6,7 +6,9 @@
     "parameters": 3754622976,
     "device": "cpu",
     "dtype": "torch.bfloat16",
-    "quantization": "none"
+    "quantization": "none",
+    "torch_version": "2.14.1+cpu",
+    "transformers_version": "4.57.6"
   },
   "junit": {
     "resource-contracts-recheck": {
@@ -24,13 +26,39 @@
       "skipped": "0",
       "time": "970.106",
       "timestamp": "2026-10-11T22:08:51.906249+00:00"
+    },
+    "bounded-other": {
+      "tests": "3",
+      "failures": "2",
+      "errors": "0",
+      "skipped": "0",
+      "time": "1702.601",
+      "timestamp": "2026-10-11T22:36:05.340486+00:00"
     }
   },
   "cases": {
-    "document.png": {
+    "exercise": {
+      "raw_result": "exercise-bounded.json",
+      "minimal_test": "failed",
+      "manual_quality": "failed: final answer null despite correct steps; invented ambiguity and cut text",
+      "runtime_status": "complete",
+      "observed_answer": null,
+      "text_budget_hits": [
+        "analysis",
+        "uncertainties[0]"
+      ],
+      "elapsed_s": 562.280368972999,
+      "generation_s": 527.9744677350009,
+      "load_s": 30.709093724999548,
+      "completion_tokens": 444,
+      "prompt_tokens": 1462,
+      "rss_after_generation_bytes": 8957153280
+    },
+    "document": {
       "raw_result": "document-bounded.json",
-      "numeric_schema_check": "passed",
-      "manual_quality": "partial",
+      "minimal_test": "passed",
+      "manual_quality": "partial: correct cells/result/unit; degraded help and cut text",
+      "runtime_status": "complete",
       "observed_answer": "3 g/cm3",
       "text_budget_hits": [
         "analysis",
@@ -41,14 +69,64 @@
       "generation_s": 921.5783042740004,
       "load_s": 42.084272316999886,
       "completion_tokens": 608,
+      "prompt_tokens": 1592,
       "rss_after_generation_bytes": 9380171776
+    },
+    "chart": {
+      "raw_result": "chart-bounded.json",
+      "minimal_test": "failed",
+      "manual_quality": "failed: correct bar values and difference but final answer null; visible text omitted",
+      "runtime_status": "complete",
+      "observed_answer": null,
+      "text_budget_hits": [
+        "analysis",
+        "uncertainties[0]",
+        "visual_elements[0].description"
+      ],
+      "elapsed_s": 645.4129113920008,
+      "generation_s": 624.0213153889999,
+      "load_s": 15.898150650999014,
+      "completion_tokens": 522,
+      "prompt_tokens": 1552,
+      "rss_after_generation_bytes": 9222410240
+    },
+    "blank": {
+      "raw_result": "blank-bounded.json",
+      "minimal_test": "passed",
+      "manual_quality": "abstention passed: no invented text/elements/answer; generic help and cut text remain",
+      "runtime_status": "complete",
+      "observed_answer": null,
+      "text_budget_hits": [
+        "analysis",
+        "uncertainties[0]"
+      ],
+      "elapsed_s": 492.68980377200023,
+      "generation_s": 458.7930685309984,
+      "load_s": 31.80856964099985,
+      "completion_tokens": 332,
+      "prompt_tokens": 1440,
+      "rss_after_generation_bytes": 8825278464
     }
+  },
+  "cli_blank": {
+    "exit_code": 0,
+    "artifact_integrity_read_verified": true,
+    "result_artifact": "sha256:2dafc0de84de69ce8d7a86ef7ad6ef2f7fd01b2b44b69ba4425885e23b01fcbd"
+  },
+  "classification": {
+    "runtime_and_contract": "implemented/tested",
+    "model_output_quality": "unqualified",
+    "gpu_windows_nf4": "unverified",
+    "main_brain_handoff": "proposal pending Claude review",
+    "video_decode_sampling_synthesis": "planned",
+    "taskloop_baseline": "blocked by Docker PATH"
   },
   "limitations": [
     "synthetic images, not camera photos",
+    "two pretrained minimal checks passed and two failed",
     "numeric/schema checks do not prove all field contents",
     "GPU/Windows/NF4 unverified",
     "RSS snapshots, not process peaks",
-    "remaining current pretrained cases still running"
+    "cloud configuration saved as draft; publication and fresh-task restoration unverified"
   ]
 }

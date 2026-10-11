@@ -5,6 +5,13 @@ Travail Codex isolé sur `agent/codex/6-vision-specialist`, PR #7 vers
 Ce rapport distingue exécution réelle, tests avec doubles et qualification
 matérielle. Aucun entraînement de modèle APEX n'est revendiqué.
 
+Le prototype effectue une inférence image réellement locale. Les 46 contrôles
+contrat/OCR passent ; les quatre contrôles préentraînés donnent deux PASS
+minimaux et deux FAIL. La qualité pédagogique reste **NON QUALIFIÉE** et le
+raccordement central attend la revue du contrat avec Claude. L'installation,
+le frontend et l'API/SQLite sont vérifiés ; la configuration cloud est sauvée
+en brouillon, sans publication ni restauration indépendante revendiquées.
+
 ## Implémenté
 
 - Pipeline image local PNG/JPEG/WebP : limites 20 MiB/25 MP, EXIF, transparence,
@@ -56,63 +63,79 @@ lm-format-enforcer 0.11.3, Pillow 12.3.0 et Tesseract 5.5.0.
   accès sans token refusé par `401`. Instance arrêtée proprement avant le VLM.
   Cela ne prouve pas la génération du modèle principal, absent de cette setup.
 
-## Qualité préentraînée : validation en cours
+## Qualité préentraînée : prototype non qualifié
 
 Les images sont des fixtures synthétiques reproductibles : exercice imprimé
 JPEG légèrement déformé, tableau/schéma de mesures, graphique à barres et image
-vide. Elles ne sont pas des photographies prises par un utilisateur.
+vide. Elles ne sont pas des photographies prises par un utilisateur. Chaque
+appel utilise les pixels réels et les poids vérifiés, en CPU/BF16, sans
+service IA ; les réponses attendues ne sont jamais envoyées au modèle.
 
-La première inférence CPU/offline a correctement transcrit `2x + 3 = 11`, mais
-a répondu `5` et émis `description_textual` au lieu de `description`. Elle a
-échoué au contrôle de schéma après 419 secondes ; aucune réussite de calcul
-n'est attribuée à cette exécution. Les assertions et réponses attendues sont
-restées inchangées. Le décodage contraint JSON et une consigne de calculs et
-vérification avant réponse ont ensuite produit `4`, avec `2 × 4 + 3 = 11`
-explicitement vérifié : test réussi en 782 secondes, 363 tokens générés,
-8,15 GiB RSS après génération. Les éléments visuels reprenaient toutefois des
-libellés génériques de l'exemple du prompt. Celui-ci a été remplacé par une
-description du contrat sans exemples de valeurs ; les types visuels sont
-maintenant bornés et les tests exigent un tableau/graphe et l'absence de texte
-inventé sur une image vide. La série finale est en cours.
+### Dernière série avec décodage borné
 
-Les résultats de cette nouvelle série seront ajoutés avec temps, tokens,
-mesures mémoire et sorties réellement produites. À ce stade, le chargement
-préentraîné et l'inférence existent ; la qualité finale des quatre cas n'est
-pas encore déclarée validée. Les sorties intermédiaires réelles sont conservées
-dans `evidence/` pour exposer ces défauts, sans les présenter comme validation
-finale.
+| Cas | Contrôle minimal | Réponse observée | Temps total / génération | Tokens générés | RSS après génération |
+| --- | --- | --- | --- | --- | --- |
+| Équation `2x + 3 = 11` | **FAIL** | `null`, malgré `x = 4` dans les étapes | 562 / 528 s | 444 | 8,34 GiB |
+| Tableau masse/volume | PASS numérique/schéma, qualité **PARTIAL** | `3 g/cm3` | 969 / 922 s | 608 | 8,74 GiB |
+| Graphique A/B | **FAIL** | `null`, malgré différence `3` dans l'analyse/aide | 645 / 624 s | 522 | 8,59 GiB |
+| Image blanche via CLI | PASS abstention/schéma, texte **PARTIAL** | `null`, texte/éléments vides | 493 / 459 s | 332 | 8,22 GiB |
 
-Le tableau a ensuite été correctement transcrit (6 g, 2 cm3), mais la génération
-répétait sa description jusqu'au plafond de 768 tokens : JSON incomplet, erreur
-`invalid_output`, 1 002 secondes. Cette exécution ne fournit aucune réponse
-valide au calcul. Les sorties sont dans `evidence/document-length-failure.*`.
-Des bornes par champ sont maintenant imposées pendant le décodage et vérifiées
-après génération ; les saturations sont signalées sans réparer le contenu.
-Le budget de réponse est passé à 1 024 tokens et le délai à trente minutes.
-Le même tableau a été retesté : le contrôle numérique et de schéma passe,
-avec `3 g/cm3`, 608 tokens et 969 secondes. Le VLM a lu les cellules `6` et `2`
-que l'OCR n'avait pas extraites. Il décrit concrètement le tableau et le rectangle.
-RSS après génération : 8,74 GiB. La qualité pédagogique reste **PARTIAL** :
-l'analyse finit au milieu d'une phrase, deux incertitudes saturent leur limite,
-des entrées portent les noms `help_steps`/`answer` et quelques caractères
-inappropriés apparaissent. Ces champs ne sont ni corrigés ni masqués.
-L'assertion numérique minimale ne valide donc pas l'ensemble de la sortie.
-Le résultat réel est conservé dans `evidence/document-bounded.json`.
+Bilan des quatre contrôles préentraînés : **deux PASS minimaux, deux FAIL**.
+Ils s'ajoutent aux 46 contrôles de contrat/OCR réussis ; aucun bilan « tout vert »
+ni taux de qualité sur documents réels n'est revendiqué.
 
-Le décodage borné apporte une sortie JSON complète dans ce cas, mais ne résout
-pas à lui seul les dérives textuelles du modèle. Une qualification de qualité
-sur documents réels et sur la variante GPU reste nécessaire avant raccordement
-dans un parcours utilisateur. Le statut `complete` décrit la fin du pipeline ;
-les saturations sont explicitement remontées dans les faits et limitations.
+Les sorties complètes sont dans `evidence/`, accompagnées d'un résumé des
+JUnit. Les contrôles positifs vérifient identité de backend, tokens réellement
+générés, contrat, types visuels concrets et réponse attendue dans `answer`.
+Ils ne valident pas toutes les phrases ni la justesse universelle. La relecture
+ci-dessous est donc distincte du résultat minimal de pytest.
 
-L'équation, avec ce même décodage borné, a ensuite **échoué** au test sémantique :
-les étapes calculent `x = 4`, mais `answer` vaut `null`. L'analyse sature 600
-caractères et le modèle invente un manque d'informations dans les incertitudes.
-L'image et la transcription sont lisibles. Mesures : 562 secondes, 444 tokens,
-8,34 GiB RSS après génération. `evidence/exercise-bounded.*` conserve la sortie
-réelle. Les réussites intermédiaires précédentes ne valent donc pas validation
-de cette version. Aucun `null` n'est remplacé artificiellement par le calcul
-des étapes ; l'assertion `answer` contenant `4` reste inchangée.
+- **Équation** : transcription et éléments titre/équation corrects ; étapes
+  `2x = 11 - 3`, `2x = 8`, `x = 8 / 2`, `x = 4`. L'analyse atteint 600 caractères
+  et finit au milieu d'une phrase. Le modèle invente ensuite un manque
+  d'informations et renvoie `answer=null` : assertion sémantique échouée.
+  Aucun `null` n'est remplacé artificiellement par le calcul des étapes.
+- **Tableau/schéma** : le VLM lit `6 g` et `2 cm3`, que Tesseract n'avait pas
+  extraits, et calcule correctement `3 g/cm3`. Le tableau et le rectangle sont
+  décrits concrètement. Mais l'analyse est coupée, des incertitudes saturent
+  leur limite, les listes contiennent les noms `help_steps`/`answer` et quelques
+  caractères inappropriés. Le résultat numérique est correct ; l'aide complète
+  reste partielle et ne doit pas être présentée comme qualifiée.
+- **Graphique** : barres A=2 et B=5 reconnues, différence 3 explicitement écrite.
+  L'extraction textuelle est vide malgré le titre/les étiquettes visibles.
+  Des incertitudes de contexte inutiles conduisent à `answer=null`, donc échec.
+  Analyse, description et une incertitude saturent leurs bornes.
+- **Image blanche** : vraie exécution de la CLI avec code `0`, `answer=null`,
+  aucun texte ni élément visuel inventé, incertitude sur l'absence d'énoncé.
+  L'analyse et une incertitude sont coupées ; l'aide générique reste peu utile.
+  Le JSON est réellement persisté dans l'ArtifactStore existant et relu avec
+  vérification SHA-256 ; sa sortie correspond au résultat CLI.
+
+Un statut `complete` décrit la fin du pipeline et un contrat valide, pas la
+réussite de la tâche. `facts.text_budget_hits` et les limitations signalent
+les champs saturés. Les défauts observés sont conservés sans masquer ni
+réécrire la réponse du modèle. Ce prototype fournit une vraie lecture visuelle,
+mais sa sortie pédagogique doit encore être améliorée avant raccordement
+à un parcours utilisateur. Les assertions/valeurs attendues restent inchangées.
+
+### Échecs et corrections intermédiaires
+
+La première inférence a lu l'équation mais répondu `5`, avec une clé invalide
+`description_textual` : échec après 419 secondes. Le décodage JSON contraint et
+une consigne de calcul avant réponse ont ensuite donné `4` avec substitution
+vérifiée (782 secondes, 363 tokens, 8,15 GiB RSS), mais des libellés visuels
+recopiaient l'exemple du prompt. Celui-ci a été retiré et les types visuels
+bornés ; une autre exécution a donné `4` avec titre/équation concrets en 934
+secondes, 468 tokens et 8,29 GiB RSS, avec encore une ambiguïté d'unité injustifiée.
+Ces réussites intermédiaires ne valident pas la version bornée actuelle.
+
+Le tableau répétait sa description jusqu'à 768 tokens : JSON inachevé,
+`invalid_output`, 1 002 secondes ; aucune réponse valide au calcul. Des bornes
+par champ ont été ajoutées au décodage et à la validation stricte, avec remontée
+des saturations. Le budget est passé à 1 024 tokens et le délai à trente minutes.
+Le tableau produit alors un JSON complet et une réponse numérique correcte,
+mais les deux échecs actuels montrent que cette correction de format ne suffit
+pas à qualifier la qualité. Les preuves intermédiaires restent disponibles.
 
 ## Mesures et limites
 

@@ -20,7 +20,7 @@ def build_fixtures(output: Path) -> list[dict[str, str | None]]:
     draw.text((65, 65), "EXERCICE DE MATHEMATIQUES", font=font, fill="black")
     draw.text((65, 180), "Resoudre : 2x + 3 = 11", font=font, fill="black")
     draw.text((65, 265), "Donner la valeur de x.", font=font, fill="black")
-    # JPEG encoding and a slight perspective transform emulate acquisition, without claiming a real photo.
+    # JPEG encoding and a slight affine transform emulate acquisition, without claiming a real photo.
     image.transform(
         image.size,
         Image.Transform.AFFINE,

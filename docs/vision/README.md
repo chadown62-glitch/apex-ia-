@@ -197,7 +197,7 @@ py -3.12 -m venv .venv-vision
 # Le cœur principal doit être arrêté via son profil habituel avant la session vision.
 $env:APEX_HOME = "$PWD\apex-data\vision-home"
 .\.venv-vision\Scripts\python.exe -m apex.vision fetch --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --revision 66285546d2b821cf421d4f5eb2576359d3770cd3
-.\.venv-vision\Scripts\python.exe -m apex.vision analyze photo.jpg --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --quantization nf4 --timeout 1200
+.\.venv-vision\Scripts\python.exe -m apex.vision analyze photo.jpg --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --quantization nf4 --timeout 1800
 ```
 
 Tesseract doit être accessible dans `PATH` pour activer l'OCR ; sinon le VLM lit

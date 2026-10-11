@@ -20,6 +20,9 @@ réponse n'est reconstruite à partir d'une erreur.
 | `document-length-failure.*` | Répétitions jusqu'à 768 tokens, JSON inachevé ; `invalid_output`, aucun résultat accepté. |
 | `document-bounded.*` | Décodage borné : cellules et résultat `3 g/cm3` corrects, texte pédagogique dégradé ; qualité partielle. |
 | `exercise-bounded.*` | Étapes aboutissant à `x = 4`, mais réponse finale `null` et ambiguïté inventée ; assertion sémantique échouée. |
+| `chart-bounded.*` | Barres A=2/B=5 et différence 3 lues, mais réponse finale `null`, texte visible omis et ambiguïtés inventées ; échec. |
+| `blank-bounded.json` | CLI réelle, abstention correcte, texte/éléments vides ; phrases encore coupées, ArtifactStore relu avec intégrité vérifiée. |
+| `validation-summary.json` | Résumé des 46 contrôles contrat/OCR et quatre inférences réelles : deux PASS minimaux, deux FAIL ; relecture séparée. |
 
 Un statut `complete` et une assertion numérique réussie ne garantissent ni
 fidélité de chaque phrase, ni correction universelle. Les dérives, incertitudes
