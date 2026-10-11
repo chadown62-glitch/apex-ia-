@@ -233,6 +233,12 @@ class ApexBrainProvider(ModelProvider):
         path = brain_dir(self._endpoint)
         assert path is not None
         engine = engine_for(path)
+        expected = report.facts.get("model_fingerprint")
+        if engine.loaded and expected and engine.fingerprint != expected:
+            # Cerveau réinstallé pendant qu'APEX tourne (entraînement terminé sous WSL, par exemple) : les
+            # poids en mémoire ne sont plus ceux, vérifiés, du disque. Rechargés, jamais servis périmés.
+            with engine.lock:
+                engine.unload()
         try:
             just_loaded = engine.load()
         except Exception as exc:

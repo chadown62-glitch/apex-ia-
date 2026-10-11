@@ -286,6 +286,39 @@ def test_provider_serves_v2_as_a_structured_conversation(tiny_brain, monkeypatch
     assert result.tokens_completion.value <= 8
 
 
+def test_brain_reinstalled_while_apex_runs_is_reloaded(tiny_brain, tokenizer, monkeypatch) -> None:
+    """Cas de l'entraînement sur le GPU du PC : le script installe un nouveau Cerveau pendant qu'APEX
+    tourne. Les poids en mémoire (anciens) ne doivent plus être servis : rechargés du disque, vérifiés."""
+    import shutil
+
+    from apex.assistant import engines
+    from apex.brain.artifact import export
+    from apex.models.apex_brain import engine_for
+    from apex.models.model import GenerationRequest
+    from apex.models.provider import get_default_provider
+
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(tiny_brain.parent))
+    endpoint = engines.brain_candidate().endpoint
+
+    def ask() -> None:
+        request = GenerationRequest(
+            endpoint=endpoint, prompt="x", timeout_s=30, max_tokens=4, messages=(("user", "Bonjour"),)
+        )
+        get_default_provider(endpoint).generate(request)
+
+    ask()
+    old = engine_for(tiny_brain).fingerprint
+    staging = tiny_brain.parent / "nouveau"
+    torch.manual_seed(4)
+    new = export(
+        ApexLM(_tiny(tokenizer)).eval(), tokenizer, staging, {"name": "test"}, quantization="apex-q5"
+    )
+    shutil.rmtree(tiny_brain)
+    staging.rename(tiny_brain)
+    ask()
+    assert engine_for(tiny_brain).fingerprint == new["model_fingerprint"] != old
+
+
 # -------------------------------------------------------------------------------------------------- données
 
 
