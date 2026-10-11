@@ -60,10 +60,14 @@ def evaluate_tasks(
         max_new_tokens, engine.context_length // 2
     )  # la moitié du contexte reste à l'invite
     per_family: dict[str, dict[str, Any]] = {}
+    refused, ordinary = 0, 0  # refus abusifs : « je ne peux pas » à une question ordinaire
     started = time.perf_counter()
     for row in rows:
         result = engine.chat(_messages(row), SamplingSettings(max_new_tokens=max_new_tokens))
         passed = score(row["check"], result.text, row["messages"][-2]["content"])
+        if row["check"]["type"] != "refusal":
+            ordinary += 1
+            refused += int(score({"type": "refusal"}, result.text))
         family = per_family.setdefault(
             row["family"], {"passed": 0, "total": 0, "failures": [], "examples": []}
         )
@@ -87,6 +91,7 @@ def evaluate_tasks(
         "passed": passed,
         "total": total,
         "rate": round(passed / total, 4) if total else None,
+        "over_refusal_rate": round(refused / ordinary, 4) if ordinary else None,
         "elapsed_s": round(time.perf_counter() - started, 1),
     }
 
