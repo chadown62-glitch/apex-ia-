@@ -81,6 +81,19 @@ describe("HomeView", () => {
     expect(screen.getByText(/pas encore entraîné à\s+converser/)).toBeInTheDocument();
   });
 
+  it("presents a conversational APEX brain as built from scratch, with its measured description", async () => {
+    api.on("GET", "/assistant/settings", { ...SETTINGS, models: { ...SETTINGS.models, engine: "brain" } });
+    api.on("GET", "/assistant/engines", engines().map((e) => e.id !== "brain" ? e : {
+      ...e, experimental: false,
+      models: [{ id: "apex-brain:v2:apex-q5", runtime: "apex_brain", served_model: "apex-brain-v2", available: true,
+                 detail: "Cerveau APEX « apex-brain-v2 » — 15736192 paramètres", conversational: true }],
+    }));
+    renderAt("/", [{ path: "/", element: <HomeView /> }]);
+    expect(await screen.findByText("Cerveau APEX — construit de zéro par APEX")).toBeInTheDocument();
+    expect(screen.getByText(/15736192 paramètres\. C'est un petit modèle/)).toBeInTheDocument();
+    expect(screen.queryByText("Cerveau APEX — expérimental")).not.toBeInTheDocument();
+  });
+
   it("names the unavailable engine and what to do instead of a generic error", async () => {
     api.on("GET", "/assistant/settings", { ...SETTINGS, models: { ...SETTINGS.models, engine: "ollama" } });
     renderAt("/", [{ path: "/", element: <HomeView /> }]);

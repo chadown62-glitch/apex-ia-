@@ -68,8 +68,9 @@ export function EnginePicker() {
 }
 
 /**
- * Ce qu'il faut savoir AVANT d'envoyer, selon le moteur choisi : indisponible (et pourquoi, et quoi faire), ou
- * expérimental (le Cerveau APEX continue le texte, il ne sait pas encore converser). Rien si tout va bien.
+ * Ce qu'il faut savoir AVANT d'envoyer, selon le moteur choisi : indisponible (et pourquoi, et quoi faire),
+ * expérimental (le Cerveau APEX v1 continue le texte, il ne sait pas converser), ou Cerveau APEX v2 (construit de
+ * zéro par APEX : petit modèle, réponses à vérifier — description mesurée par le backend). Rien sinon.
  */
 export function EngineNotice() {
   const engines = useEngines();
@@ -122,6 +123,18 @@ export function EngineNotice() {
           Le réseau propre à APEX (1,9 M paramètres) est pré-entraîné sur des textes techniques mais pas encore entraîné à
           converser : il continue le texte de votre message, et sa réponse n'a souvent pas de sens. Choisissez « APEX
           intégré » ou Ollama pour une vraie réponse.
+        </span>
+      </div>
+    );
+  }
+  if (engine.id === "brain") {
+    const served = engine.models.find((m) => m.available);
+    return (
+      <div className="ax-banner ax-banner--info" role="status">
+        <strong>Cerveau APEX — construit de zéro par APEX</strong>
+        <span>
+          {served?.detail ?? engine.detail}. C'est un petit modèle qui tourne sur ce PC : il peut se tromper, vérifiez
+          ses réponses importantes.
         </span>
       </div>
     );

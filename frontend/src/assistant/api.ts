@@ -117,6 +117,8 @@ export interface ModelOption {
   served_model: string | null;
   available: boolean;
   detail: string | null;
+  /** Cerveau APEX : vrai pour un Cerveau instruit à converser (génération 2), mesuré dans ses fichiers. */
+  conversational?: boolean;
 }
 
 export type EngineId = "auto" | "ollama" | "integrated" | "brain";
