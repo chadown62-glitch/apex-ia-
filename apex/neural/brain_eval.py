@@ -55,6 +55,10 @@ def evaluate_tasks(
 ) -> dict[str, Any]:
     from apex.neural.tasks import score
 
+    engine.load()
+    max_new_tokens = min(
+        max_new_tokens, engine.context_length // 2
+    )  # la moitié du contexte reste à l'invite
     per_family: dict[str, dict[str, Any]] = {}
     started = time.perf_counter()
     for row in rows:
@@ -249,6 +253,73 @@ def layer_streaming_benchmark(
     }
 
 
+def long_conversation(engine: BrainEngine, *, turns: int = 40) -> dict[str, Any]:
+    """Conversation plus longue que le contexte : un fait donné au premier tour, puis `turns` échanges.
+    Mesure : les tours anciens sont retirés (combien), la génération aboutit, et ce que le modèle répond
+    quand le fait est sorti de son contexte (il ne peut plus le connaître : l'inventer serait une
+    erreur)."""
+    from apex.neural.tasks import score
+
+    engine.load()
+    messages = [
+        Message("user", "Je m'appelle Camille et je travaille sur un site de recettes."),
+        Message("assistant", "Enchanté, Camille ! Comment puis-je t'aider ?"),
+    ]
+    for index in range(turns):
+        messages += [
+            Message("user", f"Combien font {index} + {index + 1} ?"),
+            Message("assistant", f"{index} + {index + 1} = {2 * index + 1}."),
+        ]
+    question = Message("user", "Comment je m'appelle ?")
+    result = engine.chat([*messages, question], SamplingSettings(max_new_tokens=48))
+    prompt, dropped = engine.chat_prompt([*messages, question], 48)
+    in_context = "Camille" in engine.tokenizer.decode(prompt)
+    return {
+        "turns": len(messages) + 1,
+        "dropped_messages": result.stats.truncated_messages,
+        "prompt_tokens": result.stats.prompt_tokens,
+        "context_length": engine.context_length,
+        "fact_still_in_context": in_context,
+        "answer": result.text[:200],
+        "invented_name": (not in_context) and "Camille" in result.text,
+        "admits_not_knowing": score({"type": "refusal"}, result.text),
+        "time_to_first_token_s": result.stats.time_to_first_token_s,
+        "dropped_check": dropped,
+    }
+
+
+def memory_lifecycle(brain_dir: Path, *, cycles: int = 5) -> dict[str, Any]:
+    """Mémoire résidente du processus : avant chargement, chargé, après une génération, après déchargement —
+    puis `cycles` chargements/déchargements (une fuite se verrait comme une croissance régulière)."""
+    import gc
+
+    gc.collect()
+    baseline = _rss_bytes()
+    engine = BrainEngine(brain_dir, device="cpu")
+    engine.load()
+    loaded = _rss_bytes()
+    engine.chat([Message("user", "Bonjour")], SamplingSettings(max_new_tokens=32))
+    generated = _rss_bytes()
+    engine.unload()
+    gc.collect()
+    unloaded = _rss_bytes()
+    after_cycles = []
+    for _ in range(cycles):
+        engine.load()
+        engine.chat([Message("user", "Bonjour")], SamplingSettings(max_new_tokens=16))
+        engine.unload()
+        gc.collect()
+        after_cycles.append(_rss_bytes())
+    return {
+        "rss_baseline_bytes": baseline,
+        "rss_loaded_bytes": loaded,
+        "rss_after_generation_bytes": generated,
+        "rss_unloaded_bytes": unloaded,
+        "rss_after_each_cycle_bytes": after_cycles,
+        "weights_bytes": None if loaded is None or baseline is None else loaded - baseline,
+    }
+
+
 def full_report(
     brain_dir: Path,
     eval_rows: Sequence[dict[str, Any]],
@@ -265,9 +336,11 @@ def full_report(
     engine = BrainEngine(brain_dir, device="cpu")
     report["tasks"] = evaluate_tasks(engine, eval_rows)
     report["speed"] = benchmark_speed(engine)
+    report["long_conversation"] = long_conversation(engine)
     report["stability"] = stability(engine, eval_rows, count=stability_count)
     engine.unload()
     report["layer_streaming"] = layer_streaming_benchmark(brain_dir)
+    report["memory"] = memory_lifecycle(brain_dir)
     report["speed_cuda"] = None
     if torch.cuda.is_available():  # information : APEX.exe (Windows) exécute le Cerveau sur CPU
         gpu = BrainEngine(brain_dir, device="cuda")

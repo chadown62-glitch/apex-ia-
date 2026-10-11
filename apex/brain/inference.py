@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import gc
+import sys
 import threading
 import time
 from collections.abc import Callable, Sequence
@@ -176,11 +177,19 @@ class BrainEngine:
         return True
 
     def unload(self) -> None:
-        """Libère les poids et le cache de calcul (RAM, et VRAM si GPU)."""
+        """Libère les poids et le cache de calcul (RAM, et VRAM si GPU). Sous Linux, la mémoire libérée est
+        aussi RENDUE au système (`malloc_trim`) : sans cela l'allocateur la garde pour lui."""
         self.model = None
         gc.collect()
         if self.device.type == "cuda":
             torch.cuda.empty_cache()
+        if sys.platform.startswith("linux"):
+            try:
+                import ctypes
+
+                ctypes.CDLL("libc.so.6").malloc_trim(0)
+            except (OSError, AttributeError):
+                pass  # autre libc : la mémoire reste réutilisable par le processus
 
     def weight_bytes(self) -> int:
         if self.model is None:

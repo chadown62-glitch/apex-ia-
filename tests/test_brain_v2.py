@@ -478,3 +478,17 @@ def test_replay_mixes_corpus_windows_into_instruction_batches_reproducibly(token
     resumed.load_state_dict(state)
     again = resumed.next_batch()
     assert torch.equal(again[0], following[0]) and torch.equal(again[1], following[1])
+
+
+def test_the_status_counts_a_conversational_brain_as_a_model_that_can_answer(tiny_brain, monkeypatch) -> None:
+    """Panel (« Modèles ») : un Cerveau v2 intègre répond seul, sans Ollama ni autre modèle ; le v1 n'est pas
+    compté (il continue un texte)."""
+    from apex.obs import component_checks as cc
+
+    monkeypatch.setenv("APEX_MODELS_DIR", str(tiny_brain.parent / "aucun-modele"))
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(tiny_brain.parent))
+    status = cc.check_models()
+    assert status.state == cc.READY and "Cerveau APEX → apex-brain-v2" in status.detail
+    v1_only = Path(__file__).resolve().parents[1] / "brain"
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(v1_only))
+    assert "Cerveau APEX" not in cc.check_models().detail

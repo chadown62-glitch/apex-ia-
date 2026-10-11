@@ -390,9 +390,9 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--cache", default=str(REPO / ".apex" / "corpus-cache"))
     p.add_argument(
         "--profile",
-        choices=("validation", "gpu"),
+        choices=("validation", "gpu", "local"),
         default="validation",
-        help="gpu : ajoute les textes publics du Hub Hugging Face (grand entraînement)",
+        help="gpu : ajoute les textes publics du Hub Hugging Face (grand entraînement) ; local : fichiers du poste",
     )
     p.set_defaults(func=cmd_corpus)
     p = sub.add_parser("tokenizer")

@@ -15,7 +15,9 @@
 # Réglages (variables d'environnement) : APEX_BRAIN_WORK, APEX_BRAIN_PRESET (rtx4060ti-8gb),
 # APEX_BRAIN_PROFILE (gpu | validation), APEX_BRAIN_VOCAB (16384), APEX_BRAIN_TASKS (400000),
 # APEX_BRAIN_MAX_STEPS / APEX_BRAIN_SFT_STEPS (0 = préréglage), APEX_BRAIN_ALLOW_CPU=1 (essai sans GPU),
-# APEX_BRAIN_SKIP_INSTALL=1, APEX_BRAIN_PYTHON (python3).
+# APEX_BRAIN_SKIP_INSTALL=1, APEX_BRAIN_PYTHON (python3), APEX_BRAIN_VENV (environnement Python existant à
+# réutiliser), APEX_BRAIN_MIN_FREE_GB (40), APEX_BRAIN_EVAL_LIMIT (0 = tous les exercices d'évaluation),
+# APEX_BRAIN_STABILITY (100 générations).
 # =====================================================================================================
 set -euo pipefail
 
@@ -41,8 +43,9 @@ say "Cerveau APEX v2 — entraînement de zéro (dépôt : $REPO, travail : $WOR
 
 # ------------------------------------------------------------------------------------------ vérifications
 free_gb=$(df -BG --output=avail "$WORK" | tail -1 | tr -dc '0-9')
-if [[ "${free_gb:-0}" -lt 40 ]] && ! is_done corpus; then
-  fail "espace disque insuffisant dans $WORK : ${free_gb} Go libres, 40 Go nécessaires (données + points de reprise)"
+MIN_FREE_GB="${APEX_BRAIN_MIN_FREE_GB:-40}"
+if [[ "${free_gb:-0}" -lt "$MIN_FREE_GB" ]] && ! is_done corpus; then
+  fail "espace disque insuffisant dans $WORK : ${free_gb} Go libres, ${MIN_FREE_GB} Go nécessaires (données + points de reprise)"
 fi
 if [[ "${APEX_BRAIN_ALLOW_CPU:-0}" != "1" ]]; then
   command -v nvidia-smi >/dev/null || fail "nvidia-smi introuvable : le GPU NVIDIA n'est pas visible dans WSL (pilote NVIDIA Windows récent requis, puis « wsl --update »)"
@@ -51,8 +54,10 @@ fi
 "$PYTHON" -c 'import sys; assert sys.version_info >= (3, 10), sys.version' || fail "Python 3.10 ou plus récent requis ($PYTHON)"
 
 # ------------------------------------------------------------------------------- environnement Python
-VENV="$WORK/venv"
-if ! is_done venv; then
+VENV="${APEX_BRAIN_VENV:-$WORK/venv}"
+if [[ -n "${APEX_BRAIN_VENV:-}" ]]; then
+  [[ -x "$VENV/bin/python" ]] || fail "APEX_BRAIN_VENV=$VENV ne contient pas bin/python"
+elif ! is_done venv; then
   say "Environnement Python (PyTorch avec CUDA depuis PyPI, NumPy, safetensors, pyarrow) — plusieurs minutes…"
   "$PYTHON" -m venv "$VENV" || fail "création de l'environnement impossible (sudo apt install python3-venv)"
   "$VENV/bin/python" -m pip install --upgrade pip
@@ -135,7 +140,8 @@ fi
 if ! is_done evaluate; then
   say "Évaluation (exercices jamais vus, coût de la quantification, vitesse, stabilité)…"
   "${BUILD[@]}" evaluate --brain "$BRAIN" --tasks "$WORK/sft/eval.jsonl" --data "$WORK/data" \
-    --checkpoint "$WORK/runs/sft/checkpoint.pt" || fail "évaluation"
+    --checkpoint "$WORK/runs/sft/checkpoint.pt" --limit "${APEX_BRAIN_EVAL_LIMIT:-0}" \
+    --stability "${APEX_BRAIN_STABILITY:-100}" || fail "évaluation"
   done_mark evaluate
 fi
 if [[ "${APEX_BRAIN_SKIP_INSTALL:-0}" != "1" ]]; then

@@ -176,13 +176,16 @@ def check_models(config: Any = None) -> ComponentStatus:
                 report = future.result()
                 seen[key] = (report.is_available, report.detail)
     usable: list[str] = []
+    brain = _conversational_brain()
+    if brain is not None:
+        usable.append(brain)
     for candidate in generation:
         endpoint = candidate.endpoint
         assert endpoint is not None
         key = (endpoint.runtime, endpoint.url, endpoint.served_model)
         if seen[key][0]:
             usable.append(f"{candidate.role} → {endpoint.served_model} ({endpoint.runtime})")
-    if not seen:
+    if not seen and not usable:
         return ComponentStatus("models", OFFLINE,
                                "aucun endpoint de génération configuré (coder_main, fast)")
     if usable:
@@ -195,6 +198,22 @@ def check_models(config: Any = None) -> ComponentStatus:
         grouped.setdefault(f"{runtime} : {detail}", []).append(served)
     reasons = " ; ".join(f"{', '.join(names)} ({why})" for why, names in grouped.items())
     return ComponentStatus("models", OFFLINE, f"aucun modèle exécutable — {reasons}"[:600])
+
+
+def _conversational_brain() -> str | None:
+    """Le Cerveau APEX servi, s'il sait converser (génération 2) et que ses poids sont intègres : il répond
+    seul, sans Ollama ni autre modèle. Le Cerveau v1 (il continue un texte) n'est pas compté."""
+    try:
+        from apex.assistant.engines import brain_candidate
+        from apex.models.provider import get_default_provider
+
+        candidate = brain_candidate()
+        report = get_default_provider(candidate.endpoint).detect()
+    except Exception:  # un Cerveau illisible ne compte simplement pas
+        return None
+    if not (report.is_available and report.facts.get("conversational")):
+        return None
+    return f"Cerveau APEX → {candidate.endpoint.served_model} (apex_brain)"
 
 
 _sandbox_cache: tuple[float, ComponentStatus] | None = None
