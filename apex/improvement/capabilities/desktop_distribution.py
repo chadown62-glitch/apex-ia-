@@ -930,8 +930,19 @@ def _probe_installer_policy() -> ProbeOutcome:
         problems.append("élévation demandée")
     if 'level="asInvoker"' not in manifest:
         problems.append("APEX.exe demande l'élévation")
-    if "[UninstallDelete]" in iss or "[InstallDelete]" in iss:
-        problems.append("suppression hors fichiers installés")
+    # Suppressions autorisées : les fichiers installés ({app}) et le runtime re-téléchargeable préparé par
+    # le Panel (python, downloads) — jamais les données, le modèle, les Cerveaux ni les journaux.
+    allowed = ("{app}", "{localappdata}\\APEX\\python", "{localappdata}\\APEX\\downloads")
+    section = None
+    for line in iss.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            section = stripped
+            continue
+        if section in ("[InstallDelete]", "[UninstallDelete]") and "Name:" in stripped:
+            target = stripped.split("Name:", 1)[1].split(";", 1)[0].strip().strip('"')
+            if not any(target == prefix or target.startswith(prefix + "\\") for prefix in allowed):
+                problems.append(f"suppression hors fichiers installés : {target}")
     if '{autodesktop}\\APEX"' not in iss or "Tasks: desktopicon" in iss:
         problems.append("raccourci Bureau non automatique")
     return ProbeOutcome(
