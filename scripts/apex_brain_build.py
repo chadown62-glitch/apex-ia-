@@ -392,7 +392,7 @@ def main(argv: list[str] | None = None) -> None:
         "--profile",
         choices=("validation", "gpu", "local"),
         default="validation",
-        help="gpu : ajoute les textes publics du Hub Hugging Face (grand entraînement) ; local : fichiers du poste",
+        help="gpu : + textes publics du Hub Hugging Face (grand entraînement) ; local : fichiers du poste",
     )
     p.set_defaults(func=cmd_corpus)
     p = sub.add_parser("tokenizer")

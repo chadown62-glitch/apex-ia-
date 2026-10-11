@@ -481,8 +481,8 @@ def test_replay_mixes_corpus_windows_into_instruction_batches_reproducibly(token
 
 
 def test_the_status_counts_a_conversational_brain_as_a_model_that_can_answer(tiny_brain, monkeypatch) -> None:
-    """Panel (« Modèles ») : un Cerveau v2 intègre répond seul, sans Ollama ni autre modèle ; le v1 n'est pas
-    compté (il continue un texte)."""
+    """Panel (« Modèles ») : un Cerveau v2 intègre répond seul, sans Ollama ni autre modèle ; le v1 n'est
+    pas compté (il continue un texte)."""
     from apex.obs import component_checks as cc
 
     monkeypatch.setenv("APEX_MODELS_DIR", str(tiny_brain.parent / "aucun-modele"))
