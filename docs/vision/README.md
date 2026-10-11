@@ -29,6 +29,22 @@ porte pas d'image. Il réutilise les helpers publics de mesure mémoire/précisi
 du backend natif et l'ArtifactStore d'APEX. Aucun fournisseur textuel parallèle,
 route centrale ou registre partagé n'est ajouté.
 
+Chemin normal d'une requête VLM :
+
+```mermaid
+flowchart TD
+    A[Octets image et tâche] --> B[Préparation EXIF/RGB bornée]
+    B --> C[Contrôle du cœur et verrou spécialiste]
+    C --> D[Tesseract facultatif]
+    D --> E[Fin du processus OCR]
+    E --> F[Vérification des poids puis chargement Qwen-VL]
+    F --> G[Pixels réels et décodage JSON contraint]
+    G --> H[Validation stricte ou erreur]
+    H --> I[Libération du modèle]
+    I --> J[Libération du verrou]
+    J --> K[VisionResult et ArtifactStore facultatif]
+```
+
 ## Installation cloud/Linux
 
 À la racine du dépôt, Python 3.12 et Node.js 18+ :
@@ -140,6 +156,9 @@ Ce transfert et le branchement dans l'assistant ne sont **pas implémentés** da
 les fichiers partagés. Les annulations et délais sont coopératifs entre étapes
 et tokens ; le décodage, le hashing, le chargement et un kernel en cours ne
 peuvent pas être interrompus instantanément.
+Le mode actuel exige l'arrêt du processus cœur enregistré. Garder l'API active
+après libération de ses seuls poids nécessitera une preuve de transfert
+acceptée par les deux côtés ; cette exception au garde n'est pas implémentée.
 
 ## Mémoire et matériel cible
 
@@ -147,7 +166,7 @@ Le Hub indique 7 509 245 952 octets de poids BF16, environ 7,0 GiB, avant
 activations et caches. BF16 intégral n'est donc pas une configuration GPU
 prudente pour une RTX 4060 Ti de 8 Go.
 
-Sur CUDA, `auto` demande NF4 pour les couches textuelles et conserve le module
+Sur CUDA, `auto` demande NF4 pour les couches linéaires textuelles et conserve le module
 visuel hors quantification. Il faut `bitsandbytes>=0.48,<1` et accelerate avec
 une paire PyTorch/torchvision CUDA compatible ; le backend vérifie que le
 runtime confirme effectivement le chargement en 4 bits et refuse une VRAM libre
@@ -158,13 +177,14 @@ VRAM restent à valider ; cette variante n'est pas présentée comme qualifiée.
 Installation Windows proposée, **non testée dans ce cloud CPU** :
 
 ```powershell
-py -3.12 -m venv .venv
+py -3.12 -m venv .venv-vision
 # Paire officielle CUDA 12.8 ; nécessite un pilote NVIDIA compatible.
-.\.venv\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
-.\.venv\Scripts\python.exe -m pip install -e ".[native]" -r docs/vision/requirements.txt "bitsandbytes>=0.48,<1"
+.\.venv-vision\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+.\.venv-vision\Scripts\python.exe -m pip install -e ".[native]" -r docs/vision/requirements.txt "bitsandbytes>=0.48,<1"
+# Le cœur principal doit être arrêté via son profil habituel avant la session vision.
 $env:APEX_HOME = "$PWD\apex-data\vision-home"
-.\.venv\Scripts\python.exe -m apex.vision fetch --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --revision 66285546d2b821cf421d4f5eb2576359d3770cd3
-.\.venv\Scripts\python.exe -m apex.vision analyze photo.jpg --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --quantization nf4 --timeout 1200
+.\.venv-vision\Scripts\python.exe -m apex.vision fetch --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --revision 66285546d2b821cf421d4f5eb2576359d3770cd3
+.\.venv-vision\Scripts\python.exe -m apex.vision analyze photo.jpg --model-dir apex-data\vision-models\qwen2.5-vl-3b-instruct --quantization nf4 --timeout 1200
 ```
 
 Tesseract doit être accessible dans `PATH` pour activer l'OCR ; sinon le VLM lit
@@ -189,6 +209,11 @@ ni réussite sur toutes les matières n'est annoncée.
 soumettre des frames avec provenance temporelle. Extraction de frames,
 sous-échantillonnage, sélection d'images clés et synthèse séquentielle restent
 des extensions futures. Aucun résultat vidéo n'est simulé.
+L'extension prévue fournit un itérateur borné de frames avec identifiant et
+timestamp, puis réutilise le contrat image pour chacune. Les résultats gardent
+leur provenance ; la synthèse finale n'appelle le polyvalent qu'après
+libération du VLM et transfert accepté. La politique d'échantillonnage et une
+session réutilisant les mêmes poids entre frames restent à développer.
 
 ```bash
 .venv/bin/python scripts/vision/build_fixtures.py --output .apex/vision-fixtures

@@ -32,6 +32,7 @@ class ModelSession:
             self.path.parent / "runtime" / "backend.json",
             discovery_path(),
             paths().runtime_dir / "backend.json",
+            paths({}).runtime_dir / "backend.json",
         }
         for discovery in discoveries:
             if not discovery.exists():

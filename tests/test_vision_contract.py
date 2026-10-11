@@ -302,3 +302,20 @@ def test_custom_lease_cannot_bypass_public_core_discovery(tmp_path, monkeypatch)
     )
     assert result.status is VisionStatus.BLOCKED and result.error["code"] == "main_runtime_active"
     assert backend.calls == 0
+
+
+def test_custom_home_cannot_bypass_the_default_standalone_core(tmp_path, monkeypatch):
+    from apex import standalone
+
+    default = tmp_path / "default-home"
+    monkeypatch.setattr(standalone, "default_home", lambda: default)
+    monkeypatch.setenv("APEX_HOME", str(tmp_path / "specialist-home"))
+    runtime = default / ".apex" / "runtime"
+    runtime.mkdir(parents=True)
+    (runtime / "backend.json").write_text(json.dumps({"phase": "serving", "pid": os.getpid()}))
+    backend = TestDoubleBackend()
+    result = VisionService(backend, use_ocr=False, session_path=tmp_path / "lock").analyze(
+        VisionRequest(encoded_image())
+    )
+    assert result.status is VisionStatus.BLOCKED and result.error["code"] == "main_runtime_active"
+    assert backend.calls == 0

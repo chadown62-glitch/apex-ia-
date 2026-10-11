@@ -35,13 +35,17 @@ Cloud Linux CPU, 32 GiB RAM, quota quatre CPU ; aucun GPU/CUDA disponible.
 Python 3.12.14, PyTorch 2.14.1+cpu, torchvision 0.29.1+cpu, transformers 4.57.6,
 lm-format-enforcer 0.11.3, Pillow 12.3.0 et Tesseract 5.5.0.
 
-- 43 contrôles de contrat/OCR réussis, dont cinq avec le binaire Tesseract réel.
+- 44 contrôles de contrat/OCR réussis, dont cinq avec le binaire Tesseract réel.
   Les doubles des tests de contrat ne prouvent aucune qualité de modèle.
 - Ruff, formatage et mypy du namespace vision réussis.
 - CLI OCR seule : statut `partial`, réponse VLM absente, sortie `3`.
   Fichier corrompu : `invalid_image`, sortie `2`, aucun backend appelé.
 - Les deux shards de poids, environ 7,0 GiB, sont vérifiés contre les empreintes
   LFS du Hub ; configurations/tokenizers revérifiés dans le manifeste local.
+- Processeur multimodal réel vérifié sans charger un autre modèle : min/max
+  200 704/802 816 pixels, fusion 2 ; 897 tokens visuels pour l'équation,
+  1 008 pour le tableau et le graphique, 900 pour la page vide, sous le plafond
+  configuré de 1 024.
 - Installation réexécutée avec 70 contraintes de dépendances et reconstruction
   de l'interface ; fichiers centraux/lockfiles inchangés. 173 tests frontend
   réussis dans 27 fichiers.
