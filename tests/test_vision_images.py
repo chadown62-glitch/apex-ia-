@@ -89,7 +89,7 @@ def test_pretrained_local_vlm_semantics(images, name, expected, monkeypatch):
                 "--question",
                 question,
                 "--timeout",
-                "1200",
+                "1800",
                 "--session-path",
                 str(images / "lock"),
                 "--artifact-dir",
@@ -97,7 +97,7 @@ def test_pretrained_local_vlm_semantics(images, name, expected, monkeypatch):
             ],
             capture_output=True,
             text=True,
-            timeout=1350,
+            timeout=1950,
         )
         payload = json.loads(process.stdout)
         assert process.returncode == 0, payload.get("error")
@@ -116,7 +116,7 @@ def test_pretrained_local_vlm_semantics(images, name, expected, monkeypatch):
         monkeypatch.setattr(backend_module, "parse_answer", record_and_parse)
         result = VisionService(backend, session_path=images / "lock").analyze(
             VisionRequest(
-                (images / name).read_bytes(), question=question, timeout_s=1200, max_new_tokens=768
+                (images / name).read_bytes(), question=question, timeout_s=1800, max_new_tokens=1024
             )
         )
         payload = result.to_dict()

@@ -67,6 +67,12 @@ ce composant ne charge aucun modèle. La validation stricte du résultat reste
 active après décodage. Les étapes de calcul précèdent la réponse finale et la
 consigne demande une vérification par substitution ou unités. Cela améliore
 le format et la méthode, sans constituer un oracle de justesse.
+Les descriptions sont limitées à 360 caractères, l'analyse à 600, les étapes
+à six entrées de 320 et les incertitudes à six entrées de 240. L'extraction VLM
+est bornée à 4 000 caractères ; l'OCR séparé conserve son texte propre. Une
+saturation est signalée dans `facts.text_budget_hits` et les limites du résultat,
+sans réécriture du texte généré. Le budget par défaut est 1 024 nouveaux tokens
+et trente minutes, ajustables par l'appelant.
 
 Téléchargement explicite, révision immuable observée sur le Hub :
 

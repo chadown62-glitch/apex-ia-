@@ -17,7 +17,7 @@ from apex.vision import MediaContext, VisionRequest, VisionService, VisionStatus
 from apex.vision.backend import MANIFEST, BackendOptions, sha256_file, verify_artifact
 from apex.vision.contract import InferenceOutput, VisionError
 from apex.vision.image import ImageLimits, prepare_image
-from apex.vision.output import ANSWER_SCHEMA, parse_answer
+from apex.vision.output import ANSWER_SCHEMA, parse_answer, text_budget_hits
 from apex.vision.session import ModelSession
 
 
@@ -137,7 +137,7 @@ def test_valid_fenced_json_keeps_uncertainties():
     assert output.answer is None and output.uncertainties == ("Symbole illisible.",)
 
 
-def test_json_decoder_rejects_wrong_element_key_and_enforces_steps_before_answer():
+def test_json_decoder_enforces_keys_field_order_and_text_budgets():
     from lmformatenforcer import CharacterLevelParserConfig, JsonSchemaParser
 
     data = json.loads(answer_json())
@@ -158,6 +158,13 @@ def test_json_decoder_rejects_wrong_element_key_and_enforces_steps_before_answer
     assert accepted(valid)
     assert not accepted(valid.replace('"description"', '"description_textual"'))
     assert not accepted(answer_json())  # final answer comes before the calculation steps
+    ordered["visual_elements"][0]["description"] = "a" * 361
+    oversized = json.dumps(ordered)
+    assert not accepted(oversized)
+    with pytest.raises(VisionError):
+        parse_answer(oversized)
+    ordered["visual_elements"][0]["description"] = "a" * 360
+    assert text_budget_hits(parse_answer(json.dumps(ordered))) == ("visual_elements[0].description",)
 
 
 def test_rejected_generation_retains_execution_facts_without_returning_an_answer(tmp_path):

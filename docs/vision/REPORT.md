@@ -81,6 +81,15 @@ pas encore déclarée validée. Les sorties intermédiaires réelles sont conser
 dans `evidence/` pour exposer ces défauts, sans les présenter comme validation
 finale.
 
+Le tableau a ensuite été correctement transcrit (6 g, 2 cm3), mais la génération
+répétait sa description jusqu'au plafond de 768 tokens : JSON incomplet, erreur
+`invalid_output`, 1 002 secondes. Cette exécution ne fournit aucune réponse
+valide au calcul. Les sorties sont dans `evidence/document-length-failure.*`.
+Des bornes par champ sont maintenant imposées pendant le décodage et vérifiées
+après génération ; les saturations sont signalées sans réparer le contenu.
+Le budget de réponse est passé à 1 024 tokens et le délai à trente minutes.
+Le même tableau est retesté avant toute affirmation de réussite.
+
 ## Mesures et limites
 
 Les faits de chaque exécution rapportent identité/empreintes des poids,
@@ -91,7 +100,7 @@ PyTorch ; ils ne représentent pas toute la VRAM du système.
 
 Le budget CPU par défaut est 12 GiB, avec choix float32/BF16 selon la mémoire
 disponible et la limite cgroup. Le contexte est borné à 8 192 tokens, l'image à
-1 024 tokens visuels par défaut. Le délai par défaut est vingt minutes ; un
+1 024 tokens visuels par défaut. Le délai par défaut est trente minutes ; un
 kernel, le chargement ou le hashing en cours ne sont pas interrompus
 instantanément. La qualité est privilégiée à la latence.
 

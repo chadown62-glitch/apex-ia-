@@ -83,6 +83,11 @@ class VisionService:
                     limitations.append(
                         "Réponse du modèle non vérifiée par un oracle ; relire les incertitudes."
                     )
+                    if inference.facts.get("text_budget_hits"):
+                        limitations.append(
+                            "Certains champs atteignent leur limite de texte et peuvent être incomplets ; "
+                            "réduire la tâche ou recadrer l'image."
+                        )
                     result = VisionResult(
                         request.request_id,
                         VisionStatus.COMPLETE,

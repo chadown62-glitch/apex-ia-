@@ -1,0 +1,317 @@
+{
+  "request_id": "f4e5fbd9-4f37-4c4e-84f0-68c13c5ebb36",
+  "status": "error",
+  "context": {
+    "kind": "image",
+    "source_id": null,
+    "timestamp_s": null
+  },
+  "image": {
+    "sha256": "2f29b116c29daf8bc462c7256867c05165aebb856ddd10fc7487958bb07c62da",
+    "format": "PNG",
+    "original_width": 1100,
+    "original_height": 850,
+    "oriented_width": 1100,
+    "oriented_height": 850,
+    "width": 1100,
+    "height": 850,
+    "bytes": 38181,
+    "exif_orientation": 1,
+    "resized": false,
+    "coordinates": "prepared_image_pixels"
+  },
+  "ocr": {
+    "status": "done",
+    "text": "SCIENCES - MESURES\nMasse volumique = masse / volume\nObjet Masse (g) Volume (cm3)\nCalculer la masse volumique de A.\nSchema de I'echantillon A",
+    "words": [
+      {
+        "text": "SCIENCES",
+        "confidence": 93.299591,
+        "box": [
+          52,
+          53,
+          175,
+          26
+        ]
+      },
+      {
+        "text": "-",
+        "confidence": 91.385689,
+        "box": [
+          243,
+          68,
+          9,
+          3
+        ]
+      },
+      {
+        "text": "MESURES",
+        "confidence": 91.385689,
+        "box": [
+          269,
+          53,
+          168,
+          26
+        ]
+      },
+      {
+        "text": "Masse",
+        "confidence": 93.040848,
+        "box": [
+          54,
+          133,
+          107,
+          26
+        ]
+      },
+      {
+        "text": "volumique",
+        "confidence": 92.278694,
+        "box": [
+          175,
+          132,
+          186,
+          34
+        ]
+      },
+      {
+        "text": "=",
+        "confidence": 96.827713,
+        "box": [
+          379,
+          143,
+          22,
+          10
+        ]
+      },
+      {
+        "text": "masse",
+        "confidence": 93.021812,
+        "box": [
+          419,
+          139,
+          112,
+          20
+        ]
+      },
+      {
+        "text": "/",
+        "confidence": 91.212799,
+        "box": [
+          545,
+          133,
+          12,
+          30
+        ]
+      },
+      {
+        "text": "volume",
+        "confidence": 96.543343,
+        "box": [
+          569,
+          132,
+          130,
+          27
+        ]
+      },
+      {
+        "text": "Objet",
+        "confidence": 96.588242,
+        "box": [
+          77,
+          253,
+          94,
+          42
+        ]
+      },
+      {
+        "text": "Masse",
+        "confidence": 92.591583,
+        "box": [
+          459,
+          258,
+          107,
+          26
+        ]
+      },
+      {
+        "text": "(g)",
+        "confidence": 91.573479,
+        "box": [
+          582,
+          257,
+          45,
+          34
+        ]
+      },
+      {
+        "text": "Volume",
+        "confidence": 92.220596,
+        "box": [
+          780,
+          257,
+          132,
+          27
+        ]
+      },
+      {
+        "text": "(cm3)",
+        "confidence": 91.662659,
+        "box": [
+          928,
+          257,
+          100,
+          32
+        ]
+      },
+      {
+        "text": "Calculer",
+        "confidence": 94.945099,
+        "box": [
+          52,
+          507,
+          145,
+          27
+        ]
+      },
+      {
+        "text": "la",
+        "confidence": 94.945099,
+        "box": [
+          211,
+          507,
+          26,
+          27
+        ]
+      },
+      {
+        "text": "masse",
+        "confidence": 93.240547,
+        "box": [
+          255,
+          514,
+          111,
+          20
+        ]
+      },
+      {
+        "text": "volumique",
+        "confidence": 89.92057,
+        "box": [
+          381,
+          507,
+          186,
+          34
+        ]
+      },
+      {
+        "text": "de",
+        "confidence": 94.910629,
+        "box": [
+          582,
+          507,
+          41,
+          27
+        ]
+      },
+      {
+        "text": "A.",
+        "confidence": 94.744835,
+        "box": [
+          637,
+          508,
+          32,
+          26
+        ]
+      },
+      {
+        "text": "Schema",
+        "confidence": 96.399742,
+        "box": [
+          372,
+          702,
+          140,
+          27
+        ]
+      },
+      {
+        "text": "de",
+        "confidence": 93.134033,
+        "box": [
+          528,
+          702,
+          41,
+          27
+        ]
+      },
+      {
+        "text": "I'echantillon",
+        "confidence": 69.630806,
+        "box": [
+          586,
+          702,
+          212,
+          27
+        ]
+      },
+      {
+        "text": "A",
+        "confidence": 96.319107,
+        "box": [
+          813,
+          703,
+          24,
+          26
+        ]
+      }
+    ],
+    "languages": "eng",
+    "detail": "OCR anglais seulement ; données françaises absentes."
+  },
+  "output": null,
+  "error": {
+    "code": "invalid_output",
+    "detail": "Le modèle n'a pas produit le contrat JSON attendu."
+  },
+  "facts": {
+    "backend": "local_qwen2_5_vl",
+    "repo": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "commit": "66285546d2b821cf421d4f5eb2576359d3770cd3",
+    "artifact_sha256": {
+      "generation_config.json": "533f191cc257b7de37a4fccd0a7a1706d75e1aa660f93efaa54e5a2a9f9aace9",
+      "chat_template.json": "ad60d90252ed0b0705ba14e2d0ad0fec0beac1ea955642b54059b36052d8bc96",
+      "preprocessor_config.json": "f2058c716eef96ccaed1cc1e2d0c08306b62586d535b28d9d08e691b2fab7ca0",
+      "config.json": "7ed3eed5be6924cc800e8a5e53fc405c1aab1aaf36bad65c33403b36c56827f5",
+      "model-00001-of-00002.safetensors": "41a8895c164b4d32bae6b302f4603fcbc1797f32dafa45c7e9bcda23c6755df8",
+      "merges.txt": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+      "model.safetensors.index.json": "c7dd78a4c6bea60b51332f1baf37b8f8124ecab2c35395a29a29825bf2619768",
+      "tokenizer.json": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "tokenizer_config.json": "4abd3520120e266da84c0864fee064d1fb10806f02225911a47253dd38dc5f56",
+      "model-00002-of-00002.safetensors": "365531ff8752420e89dee707b79d021fb2d6e25abafe486f080555a4fe6972e4"
+    },
+    "device": "cpu",
+    "dtype": "torch.bfloat16",
+    "quantization": "none",
+    "parameters": 3754622976,
+    "load_s": 13.33859107600074,
+    "max_visual_tokens": 1024,
+    "memory_budget_gib": 12.0,
+    "rss_after_load_bytes": 1106591744,
+    "torch_version": "2.14.1+cpu",
+    "transformers_version": "4.57.6",
+    "execution_phase": "generated",
+    "prompt_tokens": 1509,
+    "completion_tokens": 768,
+    "generation_s": 981.909139241,
+    "finish_reason": "length",
+    "structured_decoding": "lm-format-enforcer",
+    "rss_after_generation_bytes": 9715900416,
+    "elapsed_s": 1001.7355561389995,
+    "evidence_scope": "local_inference_rejected"
+  },
+  "limitations": [
+    "OCR anglais seulement ; données françaises absentes."
+  ],
+  "schema_version": 1
+}

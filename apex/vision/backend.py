@@ -14,7 +14,7 @@ from typing import Any, Protocol
 from apex.vision.contract import InferenceOutput, OCRResult, VisionError, VisionRequest
 from apex.vision.image import PreparedImage
 from apex.vision.ocr import check_deadline
-from apex.vision.output import ANSWER_SCHEMA, parse_answer
+from apex.vision.output import ANSWER_SCHEMA, parse_answer, text_budget_hits
 
 MODEL_REPO = "Qwen/Qwen2.5-VL-3B-Instruct"
 MANIFEST = ".vision_manifest.json"
@@ -142,15 +142,19 @@ def compose_prompt(request: VisionRequest, ocr: OCRResult | None) -> str:
         "unités ou comparaison des valeurs visibles. "
         "Donne une aide pédagogique courte : une analyse de une à trois phrases, "
         "puis trois à six étapes courtes si un calcul est nécessaire. "
+        "Chaque entrée de help_steps porte un seul calcul ou une seule vérification. "
         "Pour une image vide ou insuffisante, answer doit être null ; "
         "uncertainties doit expliquer pourquoi. "
         "Renvoie UNIQUEMENT un objet JSON dans cet ordre : extracted_text (texte lu), "
         "visual_elements (liste d'objets avec les clés exactes kind, label, description), "
         "analysis (texte), uncertainties (liste de textes), help_steps (liste de textes), "
-        "answer (résultat final avec unité, ou valeur JSON null si insuffisant). "
+        "answer (résultat final avec unité si pertinente, ou valeur JSON null si insuffisant). "
+        "Une équation purement algébrique n'exige pas d'unité ; n'invente pas cette ambiguïté. "
         "Chaque élément visuel doit décrire une observation concrète de l'image : "
         "kind parmi text, equation, table, chart, diagram, object ; "
         "label est son nom réel et description donne les données visibles utiles. "
+        "Une description visuelle est une ou deux phrases courtes ; réserve les calculs à help_steps. "
+        "Ne répète pas la même observation ou la même phrase. "
         "Ne remplis jamais les champs avec des libellés génériques. "
         "Pas de Markdown autour du JSON. Reste concis.\n"
         + json.dumps(
@@ -365,6 +369,7 @@ class LocalQwenVLBackend:
         response = processor.tokenizer.decode(generated, skip_special_tokens=True)
         answer = parse_answer(response)
         self._facts["execution_phase"] = "parsed"
+        self._facts["text_budget_hits"] = text_budget_hits(answer)
         return InferenceOutput(answer, dict(self._facts))
 
     def close(self) -> None:
