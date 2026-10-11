@@ -98,7 +98,7 @@ if ! is_done tasks; then
   rm -rf "$WORK/sft"
   window=$("$PY" -c "import sys; sys.path.insert(0, '$REPO'); from scripts.apex_brain_build import PRESETS; print(PRESETS['$PRESET']['sft']['window'])" 2>/dev/null || echo 2048)
   "${BUILD[@]}" tasks --tokenizer "$WORK/tokenizer.json" --out "$WORK/sft" --train "$TASKS" --window "$window" \
-    || fail "exercices"
+    --corpus "$WORK/corpus" || fail "exercices"
   done_mark tasks
 fi
 

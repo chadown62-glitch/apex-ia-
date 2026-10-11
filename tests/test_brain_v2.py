@@ -460,8 +460,13 @@ def test_replay_mixes_corpus_windows_into_instruction_batches_reproducibly(token
     from apex.neural.shards import ShardSampler
 
     data = _shards(tokenizer, tmp_path)
-    rows = [{"family": "t", "messages": [{"role": "user", "content": f"Q{i}"},
-                                         {"role": "assistant", "content": f"R{i}"}]} for i in range(20)]
+    rows = [
+        {
+            "family": "t",
+            "messages": [{"role": "user", "content": f"Q{i}"}, {"role": "assistant", "content": f"R{i}"}],
+        }
+        for i in range(20)
+    ]
     prepare_sft({"train": rows, "validation": rows[:3]}, tokenizer, tmp_path / "sft", window=32)
 
     def batcher() -> ReplayBatcher:
@@ -511,3 +516,80 @@ def test_automatic_engine_puts_a_conversational_brain_first(tiny_brain, monkeypa
     assert auto[0].endpoint.runtime == "apex_brain" and len(auto) > 1
     monkeypatch.setenv("APEX_BRAIN_DIR", str(Path(__file__).resolve().parents[1] / "brain"))  # v1 seul
     assert all(c.endpoint.runtime != "apex_brain" for c in engines.candidates_for("auto", config))
+
+
+def test_overlap_scoring_counts_reference_words_and_ignores_long_dumps() -> None:
+    from apex.neural.tasks import overlap, score
+
+    check = {"type": "overlap", "answer": "Change file owner and group", "threshold": 0.6}
+    assert score(check, "`chown`: change the owner and the group of a file.")
+    assert not score(check, "It prints the date.")
+    dump = " ".join(["filler words here"] * 40) + " change file owner group"
+    assert overlap("Change file owner and group", dump) == 0.0  # la réponse utile doit venir en tête
+
+
+def test_knowledge_exercises_come_from_human_text_and_evaluation_is_never_trained(tmp_path) -> None:
+    from apex.neural.corpus import gzip_jsonl
+    from apex.neural.knowledge_tasks import knowledge_examples, translation_examples
+    from apex.neural.tasks import score
+
+    def row(text: str, path: str, lang: str, kind: str = "doc") -> dict:
+        return {
+            "text": text,
+            "source": "test",
+            "path": path,
+            "license": "GPL-2.0+",
+            "lang": lang,
+            "kind": kind,
+        }
+
+    gzip_jsonl(
+        tmp_path / "documents-manpages-fr.jsonl.gz",
+        [
+            row(
+                "NOM\n  chown - Modifier le propriétaire et le groupe d'un fichier\n\nSYNOPSIS\n  chown",
+                "usr/share/man/fr/man1/chown.1.gz",
+                "fr",
+            )
+        ],
+    )
+    gzip_jsonl(
+        tmp_path / "documents-linux-manpages.jsonl.gz",
+        [
+            row(
+                "NAME\n       sysinfo - return system information\n\nSYNOPSIS\n",
+                "usr/share/man/man2/sysinfo.2.gz",
+                "en",
+            )
+        ],
+    )
+    pairs = [
+        (f"Open the recent document number {i} now", f"Ouvrir maintenant le document récent numéro {i}")
+        for i in range(300)
+    ]
+    gzip_jsonl(
+        tmp_path / "documents-traductions-fr.jsonl.gz",
+        [
+            row(
+                "\n\n".join(f"{en}\n{fr}" for en, fr in pairs),
+                "usr/share/locale/fr/LC_MESSAGES/x.mo",
+                "fr",
+                "translation",
+            )
+        ],
+    )
+
+    train = knowledge_examples(tmp_path, split="train")
+    evaluation = knowledge_examples(tmp_path, split="eval", eval_per_family=1000)
+    commands = [e for e in train if e.family == "knowledge_command"]
+    assert {e.lang for e in commands} == {"fr", "en"} and len(commands) == 4  # deux formulations par page
+    chown = next(e for e in commands if e.meta["name"] == "chown")
+    assert "Modifier le propriétaire" in chown.assistant and score(chown.check, chown.assistant)
+    # Rappel : même connaissance, formulation jamais vue à l'entraînement.
+    trained_questions = {e.user for e in train}
+    assert all(e.user not in trained_questions for e in evaluation)
+    assert any(e.family == "knowledge_python" for e in train)  # documentation de la bibliothèque standard
+    # Traduction : les phrases d'évaluation ne figurent dans aucun exemple d'entraînement.
+    held_out = translation_examples(tmp_path, split="eval")
+    assert held_out and all(e.check["answer"] not in {t.assistant for t in train} for e in held_out)
+    assert all(score(e.check, e.assistant) for e in evaluation)

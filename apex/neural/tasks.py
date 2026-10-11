@@ -1933,6 +1933,26 @@ _CODE_FAMILIES = {"code_write": 2.5, "code_fix": 1.5, "code_explain": 0.8}
 _SCORED_FAMILIES = frozenset(_FAMILIES) - {"identity", "howto"} | {"code_write", "code_fix"}
 
 
+def with_system(example: TaskExample, rng: random.Random) -> TaskExample:
+    """Consignes système vues à l'usage (60 % des exemples) : celles du Cerveau, et celles du mode « Normal »
+    de l'assistant d'APEX (en français, y compris pour une question en anglais : « réponds dans la langue de
+    l'utilisateur »)."""
+    roll = rng.random()
+    if roll >= 0.6:
+        return example
+    system = (SYSTEM_FR if example.lang == "fr" else SYSTEM_EN) if roll < 0.3 else _assistant_instructions()
+    return TaskExample(
+        example.family,
+        example.lang,
+        example.user,
+        example.assistant,
+        example.check,
+        example.history,
+        system,
+        example.meta,
+    )
+
+
 def generate(
     count: int, *, seed: int, split: str = "train", exclude: frozenset[str] = frozenset()
 ) -> Iterator[TaskExample]:
@@ -1957,22 +1977,7 @@ def generate(
             example = _FAMILIES[family][0](rng, lang)
         if example is None:
             continue
-        roll = rng.random()
-        if roll < 0.6:
-            # Consignes système vues à l'usage : celles du Cerveau, et celles du mode « Normal » de
-            # l'assistant d'APEX (en français, y compris pour une question en anglais : « réponds dans la
-            # langue de l'utilisateur »).
-            system = (SYSTEM_FR if lang == "fr" else SYSTEM_EN) if roll < 0.3 else _assistant_instructions()
-            example = TaskExample(
-                example.family,
-                example.lang,
-                example.user,
-                example.assistant,
-                example.check,
-                example.history,
-                system,
-                example.meta,
-            )
+        example = with_system(example, rng)
         key = example.key()
         if key in exclude or (split == "eval" and key in seen):
             continue
@@ -2117,4 +2122,23 @@ def score(check: dict[str, Any], answer: str) -> bool:
     if kind == "refusal":
         lowered = answer.lower()
         return any(marker in lowered for marker in _REFUSAL_MARKERS)
+    if kind == "overlap":
+        return overlap(check["answer"], answer) >= float(check["threshold"])
     return False
+
+
+def _content_words(text: str) -> list[str]:
+    import re
+
+    return [word for word in re.findall(r"\w+", text.lower()) if len(word) > 3 or word.isdigit()]
+
+
+def overlap(reference: str, answer: str) -> float:
+    """Part des mots porteurs de sens de la référence présents dans la réponse. Seul le début de la réponse
+    compte (trois fois la longueur de la référence) : un long déversement de texte ne « couvre » rien."""
+    wanted = set(_content_words(reference))
+    if not wanted:
+        return 0.0
+    words = _content_words(answer)
+    found = set(words[: 3 * len(wanted) + 20])
+    return len(wanted & found) / len(wanted)
