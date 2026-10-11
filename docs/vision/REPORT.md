@@ -16,8 +16,10 @@ matérielle. Aucun entraînement de modèle APEX n'est revendiqué.
   distant. Révision `66285546d2b821cf421d4f5eb2576359d3770cd3`.
 - Contrat v1, JSON contraint pendant le décodage puis validé strictement ; erreurs
   et blocages explicites, délais/annulation coopératifs, libération du backend.
-- Verrou OS entre spécialistes et refus d'un cœur actif enregistré dans le même
-  profil ; persistance optionnelle dans l'ArtifactStore existant, logs de
+- Verrou OS entre spécialistes et refus d'un cœur actif annoncé via les chemins
+  publics de découverte ou du profil standalone ; un chemin de verrou
+  personnalisé ne contourne pas ces contrôles. Persistance optionnelle dans
+  l'ArtifactStore existant, logs de
   métadonnées uniquement. Les échecs de sortie conservent les faits d'exécution
   disponibles sans retourner une réponse inventée.
 - CLI `python -m apex.vision fetch/analyze` et API Python `VisionService`.
@@ -33,7 +35,7 @@ Cloud Linux CPU, 32 GiB RAM, quota quatre CPU ; aucun GPU/CUDA disponible.
 Python 3.12.14, PyTorch 2.14.1+cpu, torchvision 0.29.1+cpu, transformers 4.57.6,
 lm-format-enforcer 0.11.3, Pillow 12.3.0 et Tesseract 5.5.0.
 
-- 39 contrôles de contrat/OCR réussis, dont cinq avec le binaire Tesseract réel.
+- 43 contrôles de contrat/OCR réussis, dont cinq avec le binaire Tesseract réel.
   Les doubles des tests de contrat ne prouvent aucune qualité de modèle.
 - Ruff, formatage et mypy du namespace vision réussis.
 - CLI OCR seule : statut `partial`, réponse VLM absente, sortie `3`.
@@ -119,7 +121,8 @@ sont **PLANNED**. Seule la provenance temporelle d'une frame est implémentée.
 Les tests sur photographies de téléphone et documents scolaires réels restent
 à ajouter ; les fixtures présentes constituent une première preuve limitée.
 
-La configuration cloud réutilisable est préparée avec caches inscriptibles,
-installation figée, poids immuables et instructions de démarrage. Publication
-des paramètres et restauration dans une nouvelle tâche ne sont pas encore
-validées par cette session.
+Le script d'installation cloud et les instructions de démarrage sont
+enregistrés en brouillon, avec caches inscriptibles, installation figée,
+poids immuables et sept variables non secrètes. Aucun secret IA n'est requis.
+Publication des paramètres et restauration dans une nouvelle tâche ne sont
+pas validées par cette session.

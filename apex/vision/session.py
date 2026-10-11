@@ -23,13 +23,29 @@ class ModelSession:
     def __enter__(self) -> ModelSession:
         # Until Claude accepts a shared handoff, refuse an active registered core rather than loading
         # a specialist beside it. This is not a universal lock on unrelated inference processes.
-        discovery = self.path.parent / "runtime" / "backend.json"
-        if discovery.exists():
-            from apex.standalone.process import alive
+        from apex.discovery import PHASES, discovery_path
+        from apex.standalone import paths
+        from apex.standalone.process import alive
 
+        # A custom specialist lease must not bypass the core's public discovery paths.
+        discoveries = {
+            self.path.parent / "runtime" / "backend.json",
+            discovery_path(),
+            paths().runtime_dir / "backend.json",
+        }
+        for discovery in discoveries:
+            if not discovery.exists():
+                continue
             try:
                 record = json.loads(discovery.read_text(encoding="utf-8"))
-                if record.get("phase") in ("starting", "serving") and alive(int(record["pid"])):
+                if (
+                    not isinstance(record, dict)
+                    or record.get("phase") not in PHASES
+                    or type(record.get("pid")) is not int
+                    or record["pid"] <= 0
+                ):
+                    raise ValueError("unverified runtime record")
+                if record["phase"] in ("starting", "serving") and alive(record["pid"]):
                     raise VisionError(
                         "main_runtime_active", "Arrêter le cœur enregistré avant la session vision."
                     )

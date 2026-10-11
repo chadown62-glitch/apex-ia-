@@ -276,3 +276,29 @@ def test_no_available_extraction_is_blocked_not_a_partial_success(tmp_path):
         VisionRequest(encoded_image())
     )
     assert result.status is VisionStatus.BLOCKED and result.output is None
+
+
+@pytest.mark.parametrize("record", ["[]", "{", "{}"])
+def test_unverified_core_discovery_blocks_loading_instead_of_crashing(record, tmp_path):
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    (runtime / "backend.json").write_text(record)
+    backend = TestDoubleBackend()
+    result = VisionService(backend, use_ocr=False, session_path=tmp_path / "lock").analyze(
+        VisionRequest(encoded_image())
+    )
+    assert result.status is VisionStatus.BLOCKED
+    assert result.error["code"] == "main_runtime_unverified" and backend.calls == 0
+
+
+def test_custom_lease_cannot_bypass_public_core_discovery(tmp_path, monkeypatch):
+    runtime = tmp_path / "global-runtime"
+    runtime.mkdir()
+    monkeypatch.setenv("APEX_DISCOVERY_DIR", str(runtime))
+    (runtime / "backend.json").write_text(json.dumps({"phase": "serving", "pid": os.getpid()}))
+    backend = TestDoubleBackend()
+    result = VisionService(backend, use_ocr=False, session_path=tmp_path / "other" / "lock").analyze(
+        VisionRequest(encoded_image())
+    )
+    assert result.status is VisionStatus.BLOCKED and result.error["code"] == "main_runtime_active"
+    assert backend.calls == 0

@@ -91,9 +91,10 @@ export APEX_HOME=/workspace/apex-ia-/apex-data/cloud-home
 Une seule session vision prend le verrou OS `.apex/model-session.lock` sous
 `APEX_HOME` (ou le répertoire courant s'il est absent). Tous les spécialistes
 doivent utiliser le même chemin. Le modèle est libéré avant le verrou, y
-compris si la génération échoue. Un cœur actif enregistré dans le même profil
-fait refuser le chargement vision tant que le protocole de transfert n'est pas
-accepté. Ce verrou ne commande pas les processus d'inférence étrangers ni le
+compris si la génération échoue. Un cœur actif annoncé via les chemins publics
+de découverte, le profil standalone ou le profil du verrou fait refuser le
+chargement vision. Un état illisible est également refusé. Ce verrou ne
+commande pas les processus d'inférence étrangers ni le
 code de Claude qui ne l'utilise pas encore : ne pas lancer des modèles externes
 à côté et ne pas intégrer le spécialiste au cerveau sans transfert explicite.
 
@@ -129,6 +130,8 @@ OCR séparé, `output`, `error`, `facts` et `limitations`. `output` contient
 `extracted_text`, `visual_elements`, `analysis`, `uncertainties`, `answer` et
 `help_steps`. `answer=null` est permis pour une image inexploitable. Les erreurs
 exposent un code stable et un détail borné sans contenu du document.
+Les types visuels sont `text`, `equation`, `table`, `chart`, `diagram` et `object` ;
+les noms et descriptions doivent porter sur des observations concrètes.
 
 Protocole proposé à Claude sur #3/#6 : terminer/annuler la génération principale,
 libérer ses poids et confirmer la libération ; lancer la session vision seule ;
