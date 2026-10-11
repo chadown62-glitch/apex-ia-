@@ -1,0 +1,143 @@
+{
+  "request_id": "0c90511d-0592-4e41-9dbd-8169c0657b9c",
+  "status": "complete",
+  "context": {
+    "kind": "image",
+    "source_id": null,
+    "timestamp_s": null
+  },
+  "image": {
+    "sha256": "736bbbfc47e093b0e1dc2d1f31e9d8f68401dbc1a0282c7b8cfc6131d0283c3b",
+    "format": "PNG",
+    "original_width": 1100,
+    "original_height": 850,
+    "oriented_width": 1100,
+    "oriented_height": 850,
+    "width": 1100,
+    "height": 850,
+    "bytes": 16093,
+    "exif_orientation": 1,
+    "resized": false,
+    "coordinates": "prepared_image_pixels"
+  },
+  "ocr": {
+    "status": "done",
+    "text": "GRAPHIQUE - QUANTITES\n7",
+    "words": [
+      {
+        "text": "GRAPHIQUE",
+        "confidence": 92.50209,
+        "box": [
+          57,
+          48,
+          209,
+          31
+        ]
+      },
+      {
+        "text": "-",
+        "confidence": 92.901955,
+        "box": [
+          281,
+          63,
+          9,
+          3
+        ]
+      },
+      {
+        "text": "QUANTITES",
+        "confidence": 92.405807,
+        "box": [
+          306,
+          48,
+          202,
+          31
+        ]
+      },
+      {
+        "text": "7",
+        "confidence": 28.020271,
+        "box": [
+          93,
+          423,
+          60,
+          107
+        ]
+      }
+    ],
+    "languages": "eng",
+    "detail": "OCR anglais seulement ; données françaises absentes."
+  },
+  "output": {
+    "extracted_text": "",
+    "visual_elements": [
+      {
+        "kind": "chart",
+        "label": "GRAPHIQUE - QUANTITES",
+        "description": "Un graphique avec deux barres verticales. La barre A mesure 2 unités et la barre B mesure 5 unités. Il y a une légende indiquant que la barre A correspond à 2 et la barre B correspond à 5. L'échelle sur l'axe vertical va de 0 à 5, avec des intervalles de 1. L'axe horizontal est divisé en deux sections, A et B, correspondant aux valeurs de 2 et 5 respectives."
+      }
+    ],
+    "analysis": "Le graphique montre deux valeurs numériques, A et B, qui correspondent respectivement à 2 et 5. Ces valeurs doivent être utilisées pour effectuer la soustraction B moins A, ce qui donne 3 comme résultat final. Cela signifie que B est supérieur à A de 3 unités. Le graphique permet de visualiser ces différences de manière claire et directe, facilitant ainsi la compréhension de la différence entre les deux quantités représentées par les barres A et B. En outre, le graphique souligne l'importance de la comparaison entre les deux valeurs pour obtenir le résultat souhaité, c'est-à-dire la différence",
+    "uncertainties": [
+      "Il n'y a pas de texte visible dans l'image, donc aucune information supplémentaire n'est disponible pour aider à la résolution du problème. Les valeurs numériques A et B sont directement lisibles sur le graphique, mais il n'y a pas de texte",
+      "L'échelle du graphique est clairement indiquée, mais il n'y a pas de texte explicatif supplémentaire pour aider à comprendre les valeurs numériques",
+      "Le graphique ne fournit pas de contexte supplémentaire, ce qui peut rendre difficile d'interpréter les valeurs numériques sans plus de détails"
+    ],
+    "answer": null,
+    "help_steps": [
+      "Identifiez les valeurs numériques A et B sur le graphique",
+      "Calculez la différence entre B et A",
+      "Résultat final : B moins A = 3"
+    ]
+  },
+  "error": null,
+  "facts": {
+    "backend": "local_qwen2_5_vl",
+    "repo": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "commit": "66285546d2b821cf421d4f5eb2576359d3770cd3",
+    "artifact_sha256": {
+      "generation_config.json": "533f191cc257b7de37a4fccd0a7a1706d75e1aa660f93efaa54e5a2a9f9aace9",
+      "chat_template.json": "ad60d90252ed0b0705ba14e2d0ad0fec0beac1ea955642b54059b36052d8bc96",
+      "preprocessor_config.json": "f2058c716eef96ccaed1cc1e2d0c08306b62586d535b28d9d08e691b2fab7ca0",
+      "config.json": "7ed3eed5be6924cc800e8a5e53fc405c1aab1aaf36bad65c33403b36c56827f5",
+      "model-00001-of-00002.safetensors": "41a8895c164b4d32bae6b302f4603fcbc1797f32dafa45c7e9bcda23c6755df8",
+      "merges.txt": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+      "model.safetensors.index.json": "c7dd78a4c6bea60b51332f1baf37b8f8124ecab2c35395a29a29825bf2619768",
+      "tokenizer.json": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "tokenizer_config.json": "4abd3520120e266da84c0864fee064d1fb10806f02225911a47253dd38dc5f56",
+      "model-00002-of-00002.safetensors": "365531ff8752420e89dee707b79d021fb2d6e25abafe486f080555a4fe6972e4"
+    },
+    "device": "cpu",
+    "dtype": "torch.bfloat16",
+    "quantization": "none",
+    "parameters": 3754622976,
+    "load_s": 15.898150650999014,
+    "max_visual_tokens": 1024,
+    "memory_budget_gib": 12.0,
+    "rss_after_load_bytes": 1181540352,
+    "torch_version": "2.14.1+cpu",
+    "transformers_version": "4.57.6",
+    "execution_phase": "parsed",
+    "prompt_tokens": 1552,
+    "completion_tokens": 522,
+    "generation_s": 624.0213153889999,
+    "finish_reason": "stop",
+    "structured_decoding": "lm-format-enforcer",
+    "rss_after_generation_bytes": 9222410240,
+    "text_budget_hits": [
+      "analysis",
+      "uncertainties[0]",
+      "visual_elements[0].description"
+    ],
+    "elapsed_s": 645.4129113920008,
+    "evidence_scope": "local_inference"
+  },
+  "limitations": [
+    "OCR anglais seulement ; données françaises absentes.",
+    "Mots OCR de faible confiance ; scores Tesseract non calibrés.",
+    "Réponse du modèle non vérifiée par un oracle ; relire les incertitudes.",
+    "Certains champs atteignent leur limite de texte et peuvent être incomplets ; réduire la tâche ou recadrer l'image."
+  ],
+  "schema_version": 1
+}

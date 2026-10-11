@@ -1,0 +1,236 @@
+{
+  "request_id": "43b79772-1b79-4083-a420-3492f8f1654d",
+  "status": "complete",
+  "context": {
+    "kind": "image",
+    "source_id": null,
+    "timestamp_s": null
+  },
+  "image": {
+    "sha256": "a8249eadc0269af2a313266b648c7c23e3bb1930d67f29507b95e74c31981167",
+    "format": "JPEG",
+    "original_width": 1100,
+    "original_height": 650,
+    "oriented_width": 1100,
+    "oriented_height": 650,
+    "width": 1100,
+    "height": 650,
+    "bytes": 31438,
+    "exif_orientation": 1,
+    "resized": false,
+    "coordinates": "prepared_image_pixels"
+  },
+  "ocr": {
+    "status": "done",
+    "text": "EXERCICE DE MATHEMATIQUES\nResoudre : 2x +3 =11\nDonner la valeur de x.",
+    "words": [
+      {
+        "text": "EXERCICE",
+        "confidence": 92.524979,
+        "box": [
+          77,
+          78,
+          171,
+          28
+        ]
+      },
+      {
+        "text": "DE",
+        "confidence": 92.961266,
+        "box": [
+          265,
+          77,
+          45,
+          27
+        ]
+      },
+      {
+        "text": "MATHEMATIQUES",
+        "confidence": 91.221565,
+        "box": [
+          327,
+          73,
+          306,
+          32
+        ]
+      },
+      {
+        "text": "Resoudre",
+        "confidence": 89.469719,
+        "box": [
+          73,
+          193,
+          163,
+          28
+        ]
+      },
+      {
+        "text": ":",
+        "confidence": 87.121902,
+        "box": [
+          253,
+          200,
+          5,
+          19
+        ]
+      },
+      {
+        "text": "2x",
+        "confidence": 88.486145,
+        "box": [
+          275,
+          193,
+          40,
+          26
+        ]
+      },
+      {
+        "text": "+3",
+        "confidence": 68.580063,
+        "box": [
+          372,
+          191,
+          18,
+          26
+        ]
+      },
+      {
+        "text": "=11",
+        "confidence": 68.580063,
+        "box": [
+          408,
+          190,
+          80,
+          27
+        ]
+      },
+      {
+        "text": "Donner",
+        "confidence": 95.939697,
+        "box": [
+          70,
+          280,
+          130,
+          26
+        ]
+      },
+      {
+        "text": "la",
+        "confidence": 95.714592,
+        "box": [
+          214,
+          277,
+          26,
+          28
+        ]
+      },
+      {
+        "text": "valeur",
+        "confidence": 96.400993,
+        "box": [
+          255,
+          276,
+          113,
+          28
+        ]
+      },
+      {
+        "text": "de",
+        "confidence": 95.662407,
+        "box": [
+          381,
+          275,
+          41,
+          27
+        ]
+      },
+      {
+        "text": "x.",
+        "confidence": 95.662407,
+        "box": [
+          436,
+          281,
+          28,
+          21
+        ]
+      }
+    ],
+    "languages": "eng",
+    "detail": "OCR anglais seulement ; données françaises absentes."
+  },
+  "output": {
+    "extracted_text": "EXERCICE DE MATHEMATIQUES\nResoudre : 2x +3 =11\nDonner la valeur de x.\n",
+    "visual_elements": [
+      {
+        "kind": "text",
+        "label": "Exercice de mathématiques",
+        "description": "Titre de l'exercice"
+      },
+      {
+        "kind": "equation",
+        "label": "Équation à résoudre",
+        "description": "2x + 3 = 11"
+      }
+    ],
+    "analysis": "L'exercice demande de résoudre une équation algébrique pour trouver la valeur de x. L'équation donnée est 2x + 3 = 11, où x est une variable à résoudre. La question demande spécifiquement de donner la valeur de x après avoir résolu l'équation. Cette équation est une équation linéaire de premier degré, ce qui signifie qu'elle peut être résolue en utilisant des opérations simples d'addition et de soustraction pour isoler la variable x sur un côté de l'égalité. La résolution de cette équation implique d'abord d'isoler la variable x en soustrayant 3 de chaque côté de l'égalité, puis en divisant le",
+    "uncertainties": [
+      "La description de l'équation n'est pas complète car elle manque les opérations nécessaires pour résoudre l'équation. Il faudrait plus d'informations pour comprendre comment résoudre l'équation correctement et donner la valeur de x avec préc"
+    ],
+    "answer": null,
+    "help_steps": [
+      "2x + 3 = 11",
+      "2x = 11 - 3",
+      "2x = 8",
+      "x = 8 / 2",
+      "x = 4"
+    ]
+  },
+  "error": null,
+  "facts": {
+    "backend": "local_qwen2_5_vl",
+    "repo": "Qwen/Qwen2.5-VL-3B-Instruct",
+    "commit": "66285546d2b821cf421d4f5eb2576359d3770cd3",
+    "artifact_sha256": {
+      "generation_config.json": "533f191cc257b7de37a4fccd0a7a1706d75e1aa660f93efaa54e5a2a9f9aace9",
+      "chat_template.json": "ad60d90252ed0b0705ba14e2d0ad0fec0beac1ea955642b54059b36052d8bc96",
+      "preprocessor_config.json": "f2058c716eef96ccaed1cc1e2d0c08306b62586d535b28d9d08e691b2fab7ca0",
+      "config.json": "7ed3eed5be6924cc800e8a5e53fc405c1aab1aaf36bad65c33403b36c56827f5",
+      "model-00001-of-00002.safetensors": "41a8895c164b4d32bae6b302f4603fcbc1797f32dafa45c7e9bcda23c6755df8",
+      "merges.txt": "599bab54075088774b1733fde865d5bd747cbcc7a547c5bc12610e874e26f5e3",
+      "model.safetensors.index.json": "c7dd78a4c6bea60b51332f1baf37b8f8124ecab2c35395a29a29825bf2619768",
+      "tokenizer.json": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+      "vocab.json": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+      "tokenizer_config.json": "4abd3520120e266da84c0864fee064d1fb10806f02225911a47253dd38dc5f56",
+      "model-00002-of-00002.safetensors": "365531ff8752420e89dee707b79d021fb2d6e25abafe486f080555a4fe6972e4"
+    },
+    "device": "cpu",
+    "dtype": "torch.bfloat16",
+    "quantization": "none",
+    "parameters": 3754622976,
+    "load_s": 30.709093724999548,
+    "max_visual_tokens": 1024,
+    "memory_budget_gib": 12.0,
+    "rss_after_load_bytes": 520384512,
+    "torch_version": "2.14.1+cpu",
+    "transformers_version": "4.57.6",
+    "execution_phase": "parsed",
+    "prompt_tokens": 1462,
+    "completion_tokens": 444,
+    "generation_s": 527.9744677350009,
+    "finish_reason": "stop",
+    "structured_decoding": "lm-format-enforcer",
+    "rss_after_generation_bytes": 8957153280,
+    "text_budget_hits": [
+      "analysis",
+      "uncertainties[0]"
+    ],
+    "elapsed_s": 562.280368972999,
+    "evidence_scope": "local_inference"
+  },
+  "limitations": [
+    "OCR anglais seulement ; données françaises absentes.",
+    "Réponse du modèle non vérifiée par un oracle ; relire les incertitudes.",
+    "Certains champs atteignent leur limite de texte et peuvent être incomplets ; réduire la tâche ou recadrer l'image."
+  ],
+  "schema_version": 1
+}

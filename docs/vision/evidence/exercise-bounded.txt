@@ -1,0 +1,25 @@
+{
+  "extracted_text": "EXERCICE DE MATHEMATIQUES\nResoudre : 2x +3 =11\nDonner la valeur de x.\n",
+  "visual_elements": [
+    {
+      "kind": "text",
+      "label": "Exercice de mathématiques",
+      "description": "Titre de l'exercice"
+    },
+    {
+      "kind": "equation",
+      "label": "Équation à résoudre",
+      "description": "2x + 3 = 11"
+    }
+  ],
+  "analysis": "L'exercice demande de résoudre une équation algébrique pour trouver la valeur de x. L'équation donnée est 2x + 3 = 11, où x est une variable à résoudre. La question demande spécifiquement de donner la valeur de x après avoir résolu l'équation. Cette équation est une équation linéaire de premier degré, ce qui signifie qu'elle peut être résolue en utilisant des opérations simples d'addition et de soustraction pour isoler la variable x sur un côté de l'égalité. La résolution de cette équation implique d'abord d'isoler la variable x en soustrayant 3 de chaque côté de l'égalité, puis en divisant le", "uncertainties": [
+    "La description de l'équation n'est pas complète car elle manque les opérations nécessaires pour résoudre l'équation. Il faudrait plus d'informations pour comprendre comment résoudre l'équation correctement et donner la valeur de x avec préc" ],
+  "help_steps": [
+    "2x + 3 = 11",
+    "2x = 11 - 3",
+    "2x = 8",
+    "x = 8 / 2",
+    "x = 4"
+  ],
+  "answer":  null
+}
