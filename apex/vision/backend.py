@@ -294,15 +294,15 @@ class LocalQwenVLBackend:
         try:
             return self._infer(image, request, ocr, deadline)
         except VisionError as exc:
-            exc.facts = dict(self._facts)
-            raise
+            code, detail = exc.code, exc.detail
         except Exception as exc:
             # No image, question, model output or library traceback in operational errors.
             name = type(exc).__name__
             code = "memory_insufficient" if name == "OutOfMemoryError" else "inference_failed"
-            raise VisionError(
-                code, f"Échec du backend vision local ({name}).", facts=dict(self._facts)
-            ) from exc
+            detail = f"Échec du backend vision local ({name})."
+        # Raise after leaving the handler: a chained traceback can retain layer/tensor
+        # references during close(), delaying release until AFTER the lease is unlocked.
+        raise VisionError(code, detail, facts=dict(self._facts)) from None
 
     def _infer(
         self, image: PreparedImage, request: VisionRequest, ocr: OCRResult | None, deadline: float

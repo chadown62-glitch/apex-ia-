@@ -7,6 +7,7 @@ import json
 import os
 import threading
 import time
+import weakref
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,7 @@ from PIL import Image
 
 from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
 from apex.vision import MediaContext, VisionRequest, VisionService, VisionStatus
-from apex.vision.backend import MANIFEST, BackendOptions, sha256_file, verify_artifact
+from apex.vision.backend import MANIFEST, BackendOptions, LocalQwenVLBackend, sha256_file, verify_artifact
 from apex.vision.contract import InferenceOutput, VisionError
 from apex.vision.image import ImageLimits, prepare_image
 from apex.vision.output import ANSWER_SCHEMA, parse_answer, text_budget_hits
@@ -194,6 +195,40 @@ def test_backend_errors_release_model_and_retain_honest_status(code, status, tmp
     result = service.analyze(VisionRequest(encoded_image()))
     assert result.status is status and result.output is None and result.error["code"] == code
     assert backend.closed == 1
+
+
+@pytest.mark.parametrize("error_type", [RuntimeError, VisionError])
+def test_backend_tracebacks_do_not_retain_layers_after_close(error_type, tmp_path):
+    # Resource-lifetime regression, not a model-quality test. A failing native frame
+    # retains a layer through its local variables if its traceback escapes infer().
+    class Layer:
+        pass
+
+    class FailingBackend(LocalQwenVLBackend):
+        def __init__(self):
+            super().__init__(BackendOptions(tmp_path))
+            self._model = Layer()
+            self.reference = weakref.ref(self._model)
+
+        def _infer(self, image, request, ocr, deadline):
+            layer = self._model
+            assert layer is not None
+            self._facts = {"execution_phase": "generating"}
+            if error_type is VisionError:
+                raise VisionError("timeout", "Safe detail.")
+            raise RuntimeError("private detail")
+
+    backend = FailingBackend()
+    prepared = prepare_image(encoded_image())
+    try:
+        with pytest.raises(VisionError) as captured:
+            backend.infer(prepared, VisionRequest(encoded_image()), None, time.monotonic() + 2)
+        assert captured.value.facts["execution_phase"] == "generating"
+        assert captured.value.__context__ is None and captured.value.__cause__ is None
+        backend.close()
+        assert backend.reference() is None
+    finally:
+        prepared.pixels.close()
 
 
 def test_precancellation_never_loads_a_model(tmp_path):

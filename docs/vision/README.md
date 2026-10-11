@@ -119,6 +119,8 @@ chargement vision. Un état illisible est également refusé. Ce verrou ne
 commande pas les processus d'inférence étrangers ni le
 code de Claude qui ne l'utilise pas encore : ne pas lancer des modèles externes
 à côté et ne pas intégrer le spécialiste au cerveau sans transfert explicite.
+Les exceptions natives sont remplacées hors de leur gestionnaire afin que leur
+traceback ne conserve pas de couches ou tenseurs pendant la libération du verrou.
 
 Extraction seule, sans prétendre résoudre un exercice :
 
