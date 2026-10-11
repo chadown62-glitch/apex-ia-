@@ -480,7 +480,7 @@ def test_replay_mixes_corpus_windows_into_instruction_batches_reproducibly(token
     assert torch.equal(again[0], following[0]) and torch.equal(again[1], following[1])
 
 
-def test_the_status_counts_a_conversational_brain_as_a_model_that_can_answer(tiny_brain, monkeypatch) -> None:
+def test_status_counts_a_conversational_brain_as_a_usable_model(tiny_brain, monkeypatch) -> None:
     """Panel (« Modèles ») : un Cerveau v2 intègre répond seul, sans Ollama ni autre modèle ; le v1 n'est
     pas compté (il continue un texte)."""
     from apex.obs import component_checks as cc
