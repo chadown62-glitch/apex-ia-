@@ -383,6 +383,7 @@ WORDS_EN = (
 def list_ops(rng: random.Random, lang: str) -> TaskExample:
     numbers = [rng.randint(-20, 99) for _ in range(rng.randint(3, 8))]
     shown = ", ".join(map(str, numbers))
+    listed = f"[{shown}]"  # la liste telle que le modèle l'écrit pour la calculatrice
     kind = rng.choice(("sort", "sort_desc", "max", "min", "sum", "count", "even"))
     if kind == "sort":
         result = ", ".join(map(str, sorted(numbers)))
@@ -391,7 +392,7 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Sort these numbers in ascending order: {shown}"
         )
-        answer = result
+        answer = _c(f"sorted({listed})")
     elif kind == "sort_desc":
         result = ", ".join(map(str, sorted(numbers, reverse=True)))
         user = (
@@ -399,7 +400,7 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Sort these numbers in descending order: {shown}"
         )
-        answer = result
+        answer = _c(f"sorted_desc({listed})")
     elif kind == "max":
         result = str(max(numbers))
         user = (
@@ -407,7 +408,8 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What is the largest number among: {shown}?"
         )
-        answer = f"Le plus grand est {result}." if lang == "fr" else f"The largest is {result}."
+        found = _c(f"max({listed})")
+        answer = f"Le plus grand est {found}." if lang == "fr" else f"The largest is {found}."
     elif kind == "min":
         result = str(min(numbers))
         user = (
@@ -415,12 +417,13 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What is the smallest number among: {shown}?"
         )
-        answer = f"Le plus petit est {result}." if lang == "fr" else f"The smallest is {result}."
+        found = _c(f"min({listed})")
+        answer = f"Le plus petit est {found}." if lang == "fr" else f"The smallest is {found}."
     elif kind == "sum":
         result = str(sum(numbers))
-        expression = "+".join(f"({n})" if n < 0 else str(n) for n in numbers)
         user = f"Additionne ces nombres : {shown}" if lang == "fr" else f"Add up these numbers: {shown}"
-        answer = f"Le total est {_c(expression)}." if lang == "fr" else f"The total is {_c(expression)}."
+        total = _c(f"sum({listed})")
+        answer = f"Le total est {total}." if lang == "fr" else f"The total is {total}."
     elif kind == "count":
         result = str(len(numbers))
         user = (
@@ -428,7 +431,8 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"How many numbers are in this list: {shown}?"
         )
-        answer = f"Il y a {result} nombres." if lang == "fr" else f"There are {result} numbers."
+        count = _c(f"len({listed})")
+        answer = f"Il y a {count} nombres." if lang == "fr" else f"There are {count} numbers."
     else:
         evens = [n for n in numbers if n % 2 == 0]
         result = ", ".join(map(str, evens)) if evens else ("aucun" if lang == "fr" else "no even numbers")
@@ -437,11 +441,8 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Which numbers are even in: {shown}?"
         )
-        answer = (
-            (f"Les nombres pairs sont : {result}." if lang == "fr" else f"The even numbers are: {result}.")
-            if evens
-            else ("Il n'y a aucun nombre pair." if lang == "fr" else "There are no even numbers.")
-        )
+        found = _c(f'evens({listed}, "{lang}")')
+        answer = f"Nombres pairs : {found}." if lang == "fr" else f"Even numbers: {found}."
     return TaskExample("list_ops", lang, user, answer, {"type": "exact", "answer": result})
 
 
@@ -455,11 +456,8 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'Write the word "{word}" backwards.'
         )
-        answer = (
-            f"{' '.join(word)} → à l'envers : {result}"
-            if lang == "fr"
-            else f"{' '.join(word)} → backwards: {result}"
-        )
+        found = _c(f'reverse("{word}")')
+        answer = f"« {word} » à l'envers : {found}" if lang == "fr" else f'"{word}" backwards: {found}'
     elif kind == "length":
         result = str(len(word))
         user = (
@@ -467,10 +465,11 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'How many letters are in the word "{word}"?'
         )
+        found = _c(f'len("{word}")')
         answer = (
-            f"{' '.join(word)} : le mot « {word} » contient {result} lettres."
+            f"Le mot « {word} » contient {found} lettres."
             if lang == "fr"
-            else f'{" ".join(word)}: the word "{word}" has {result} letters.'
+            else f'The word "{word}" has {found} letters.'
         )
     elif kind == "upper":
         result = word.upper()
@@ -479,7 +478,7 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Convert this word to uppercase: {word}"
         )
-        answer = result
+        answer = _c(f'upper("{word}")')
     elif kind == "first":
         result = word[0]
         user = (
@@ -487,8 +486,9 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'What is the first letter of "{word}"?'
         )
+        found = _c(f'first("{word}")')
         answer = (
-            f"La première lettre est « {result} »." if lang == "fr" else f'The first letter is "{result}".'
+            f"La première lettre est « {found} »." if lang == "fr" else f'The first letter is "{found}".'
         )
     elif kind == "last":
         result = word[-1]
@@ -497,8 +497,9 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'What is the last letter of "{word}"?'
         )
+        found = _c(f'last("{word}")')
         answer = (
-            f"La dernière lettre est « {result} »." if lang == "fr" else f'The last letter is "{result}".'
+            f"La dernière lettre est « {found} »." if lang == "fr" else f'The last letter is "{found}".'
         )
     else:
         result = "-".join(word)
@@ -507,7 +508,7 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'Spell "{word}" with dashes between letters.'
         )
-        answer = result
+        answer = _c(f'spell("{word}")')
     return TaskExample("text_ops", lang, user, answer, {"type": "exact", "answer": result})
 
 
@@ -605,9 +606,8 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What day of the week was {show(start)}?"
         )
-        answer = (
-            f"Le {show(start)} était un {result}." if lang == "fr" else f"{show(start)} was a {result}."
-        )
+        found = _c(f'weekday("{show(start)}")')
+        answer = f"Le {show(start)} était un {found}." if lang == "fr" else f"{show(start)} was a {found}."
     elif kind == "add_days":
         days = rng.randint(1, 120)
         end = start + dt.timedelta(days=days)
@@ -617,10 +617,11 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What date is {days} days after {show(start)}?"
         )
+        found = _c(f'add_days("{show(start)}", {days})')
         answer = (
-            f"{days} jours après le {show(start)}, nous serons le {result}."
+            f"{days} jours après le {show(start)}, nous serons le {found}."
             if lang == "fr"
-            else f"{days} days after {show(start)} is {result}."
+            else f"{days} days after {show(start)} is {found}."
         )
     elif kind == "between":
         end = start + dt.timedelta(days=rng.randint(1, 400))
@@ -630,7 +631,8 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"How many days are there between {show(start)} and {show(end)}?"
         )
-        answer = f"Il y a {result} jours." if lang == "fr" else f"There are {result} days."
+        found = _c(f'days_between("{show(start)}", "{show(end)}")')
+        answer = f"Il y a {found} jours." if lang == "fr" else f"There are {found} days."
     else:
         year = rng.randint(1890, 2100)
         leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
@@ -641,11 +643,13 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             else "divisible by 4, and not by 100 unless divisible by 400"
         )
         user = f"L'année {year} est-elle bissextile ?" if lang == "fr" else f"Is {year} a leap year?"
+        found = _c(f'is_leap({year}, "{lang}")')
+        # Le résultat d'abord : la suite de la réponse en dépend (le modèle ne le devine pas).
         answer = (
-            f"{'Oui' if leap else 'Non'} : une année est bissextile si elle est {rule}. {year} "
+            f"{year} bissextile : {found}. Une année est bissextile si elle est {rule} ; {year} "
             f"{'remplit' if leap else 'ne remplit pas'} cette règle."
             if lang == "fr"
-            else f"{'Yes' if leap else 'No'}: a year is a leap year if it is {rule}. {year} "
+            else f"{year} leap year: {found}. A year is a leap year if it is {rule}; {year} "
             f"{'meets' if leap else 'does not meet'} this rule."
         )
     return TaskExample("dates", lang, user, answer, {"type": "exact", "answer": result})

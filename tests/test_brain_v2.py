@@ -758,14 +758,32 @@ def test_calculator_is_exact_and_never_executes_code() -> None:
     assert run("974*89") == "86686" and run("1138//8") == "142" and run("1138%8") == "2"
     assert run("48/12") == "4" and run("7/2") == "3.5" and run("0.1+0.2") == "0.3" and run("-5+3") == "-2"
     assert run("974 × 89") == "86686"  # signes typographiques acceptés
+    # Fonctions pures (listes, texte, calendrier) : le modèle recopie l'énoncé, la calculatrice calcule.
+    assert run("sorted([23, -5, 88, 7])") == "-5, 7, 23, 88" and run("max([3, -1, 9])") == "9"
+    assert run('evens([1, 3], "en")') == "no even numbers" and run("evens([2, 3, 4])") == "2, 4"
+    assert (
+        run('reverse("réseau")') == "uaesér"
+        and run('len("été")') == "3"
+        and run('spell("chat")') == "c-h-a-t"
+    )
+    assert run('weekday("16 avril 2020")') == "jeudi" and run('weekday("April 16, 2020")') == "Thursday"
+    assert run('add_days("16 avril 2020", 90)') == "15 juillet 2020"
+    assert (
+        run('days_between("1 janvier 2020", "1 mars 2020")') == "60" and run('is_leap(1900, "fr")') == "non"
+    )
     for refused in (
         '__import__("os").system("x")',
         "open('f')",
+        "upper.__class__",
         "a+1",
-        "[1, 2]",
+        '"a" * 1000',
+        "[1] * 100",
         "9**99",
         "1/0",
-        "x" * 300,
+        "max([])",
+        'add_days("31 févr 2020", 1)',
+        "sorted(x=[1])",
+        "x" * 400,
     ):
         assert run(refused).startswith("erreur : "), refused
 
