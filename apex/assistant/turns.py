@@ -519,10 +519,15 @@ class TurnManager:
             candidates = chosen
         if engine == "brain":
             return candidates, ""  # choix explicite d'un modèle unique : rien à router
-        decision = select_model(candidates, RoutingRequest())
+        # Automatique : le Cerveau APEX (s'il sait converser) d'abord, les modèles déclarés routés en repli.
+        brain = [c for c in candidates if c.endpoint is not None and c.endpoint.runtime == "apex_brain"]
+        others = [c for c in candidates if c not in brain]
+        if not others:
+            return brain, ""
+        decision = select_model(others, RoutingRequest())
         if decision.selected is None:
-            return [], decision.reason
-        return [sc.candidate for sc in decision.ranked_candidates if sc.score > 0.0], ""
+            return (brain, "") if brain else ([], decision.reason)
+        return brain + [sc.candidate for sc in decision.ranked_candidates if sc.score > 0.0], ""
 
     def _sandbox(self) -> Any:
         """Sélection RÉELLE de la sandbox (sondée), gardée 5 minutes : la sonde lance des processus."""

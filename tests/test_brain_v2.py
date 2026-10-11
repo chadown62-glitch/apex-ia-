@@ -492,3 +492,21 @@ def test_status_counts_a_conversational_brain_as_a_usable_model(tiny_brain, monk
     v1_only = Path(__file__).resolve().parents[1] / "brain"
     monkeypatch.setenv("APEX_BRAIN_DIR", str(v1_only))
     assert "Cerveau APEX" not in cc.check_models().detail
+
+
+def test_automatic_engine_puts_a_conversational_brain_first(tiny_brain, monkeypatch) -> None:
+    """Demande de l'utilisateur (10/10/2026) : le modèle construit de zéro par APEX est le cerveau
+    principal. En automatique, un Cerveau v2 intègre passe en premier ; les modèles déclarés restent en
+    repli. Le v1 (il continue un texte) n'est jamais pris en automatique."""
+    import copy
+
+    from apex.assistant import engines
+    from apex.config.loader import parse_config
+    from tests.test_conversations_service import BASE_CONFIG
+
+    config = parse_config(copy.deepcopy(BASE_CONFIG))
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(tiny_brain.parent))
+    auto = engines.candidates_for("auto", config)
+    assert auto[0].endpoint.runtime == "apex_brain" and len(auto) > 1
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(Path(__file__).resolve().parents[1] / "brain"))  # v1 seul
+    assert all(c.endpoint.runtime != "apex_brain" for c in engines.candidates_for("auto", config))

@@ -1,7 +1,8 @@
 """Moteurs de réponse de l'assistant — le choix de l'utilisateur, jamais deviné.
 
-- `auto`       : APEX choisit parmi les modèles conversationnels déclarés (Ollama, puis moteur intégré),
-                 avec repli ; JAMAIS le Cerveau APEX (expérimental, il ne sait pas converser).
+- `auto`       : le Cerveau APEX d'abord, s'il sait converser (génération 2, construit de zéro par APEX : le
+                 cerveau principal voulu), puis les modèles déclarés (Ollama, moteur intégré) en repli ;
+                 JAMAIS le Cerveau v1 (il continue un texte, il ne sait pas converser).
 - `ollama`     : seulement les modèles servis par Ollama sur ce poste.
 - `integrated` : seulement le moteur intégré (`transformers`, Qwen2.5-Coder 1.5B exécuté par APEX
                  lui-même, sans Ollama).
@@ -36,8 +37,8 @@ class EngineInfo:
 
 INFO = {
     "auto": EngineInfo("auto", "Automatique",
-                       "APEX choisit parmi les modèles disponibles (Ollama, puis le moteur intégré), avec "
-                       "repli. Jamais le Cerveau APEX."),
+                       "Le Cerveau APEX (construit de zéro par APEX) s'il sait converser, puis les autres "
+                       "modèles disponibles (Ollama, moteur intégré) en repli."),
     "ollama": EngineInfo("ollama", "Ollama",
                          "Les modèles servis par Ollama sur ce poste (serveur Ollama démarré)."),
     "integrated": EngineInfo("integrated", "APEX intégré",
@@ -87,12 +88,26 @@ def generation_candidates(config: Any) -> list[Any]:
             if c.role in GENERATION_ROLES and c.endpoint is not None and c.endpoint.enabled]
 
 
+def conversational_brain() -> Any | None:
+    """Le Cerveau servi s'il sait converser (génération 2) et que ses poids sont intègres ; sinon `None`.
+    L'inspection des poids est mise en cache par le fournisseur (taille et date du fichier)."""
+    from apex.models.apex_brain import brain_dir, is_conversational
+    from apex.models.provider import get_default_provider
+
+    candidate = brain_candidate()
+    path = brain_dir(candidate.endpoint)
+    if path is None or not is_conversational(path):
+        return None
+    return candidate if get_default_provider(candidate.endpoint).detect().is_available else None
+
+
 def candidates_for(engine: str, config: Any) -> list[Any]:
     if engine == "brain":
         return [brain_candidate()]
     candidates = generation_candidates(config)
     if engine == "auto":
-        return candidates
+        brain = conversational_brain()
+        return ([brain] if brain is not None else []) + candidates
     return [c for c in candidates if RUNTIME_ENGINE.get(c.endpoint.runtime) == engine]
 
 
@@ -114,7 +129,8 @@ def describe(config: Any, *, detect: Any = None) -> list[dict[str, Any]]:
     for engine in ENGINES:
         info = INFO[engine]
         if engine == "auto":
-            models = [m for e in ("ollama", "integrated") for m in _models(per_engine[e], reports)]
+            brain = [m for m in _models(per_engine["brain"], reports) if m["conversational"]]
+            models = brain + [m for e in ("ollama", "integrated") for m in _models(per_engine[e], reports)]
         else:
             models = _models(per_engine[engine], reports)
         available = [m for m in models if m["available"]]
