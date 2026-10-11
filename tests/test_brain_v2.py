@@ -447,6 +447,34 @@ def test_training_resumes_exactly_where_it_stopped(tokenizer, tmp_path) -> None:
         Run(tmp_path / "a", RunConfig(**{**config.__dict__, "lr": 5e-4}), log=lambda _: None)
 
 
+def test_gpu_memory_shortage_is_not_mistaken_for_a_compilation_failure(tokenizer) -> None:
+    """Un manque de mémoire GPU pendant l'ajustement du lot ne doit pas désactiver la compilation pour tout
+    l'entraînement ; un vrai échec de la version compilée bascule, lui, vers le calcul non compilé."""
+    from apex.neural.pretrain import RunConfig
+    from apex.neural.training import TrainingEngine
+
+    config = RunConfig(
+        model=_tiny(tokenizer, context_length=16).to_dict(), data_dir="", window=16, batch_size=2
+    )
+    engine = TrainingEngine(ApexLM(_tiny(tokenizer, context_length=16)), config.training_config())
+    tokens = torch.randint(0, tokenizer.vocab_size, (2, 17))
+
+    def out_of_memory(*_args, **_kwargs):
+        raise torch.cuda.OutOfMemoryError("simulé")
+
+    engine._forward_model = out_of_memory
+    with pytest.raises(torch.cuda.OutOfMemoryError):
+        engine.forward(tokens)
+    assert engine._forward_model is out_of_memory and engine.compile_error is None
+
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("compilation impossible")
+
+    engine._forward_model = broken
+    assert torch.isfinite(engine.forward(tokens))
+    assert engine._forward_model is engine.model and "compilation impossible" in engine.compile_error
+
+
 def test_brain_inference_code_never_imports_training_code() -> None:
     root = Path(__file__).resolve().parents[1] / "apex" / "brain"
     for module in root.glob("*.py"):

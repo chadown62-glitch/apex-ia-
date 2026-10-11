@@ -98,8 +98,14 @@ class StepResult:
 
 
 class TrainingEngine:
-    def __init__(self, model: ApexLM, config: TrainingConfig, *, pad_id: int | None = None,
-                 compile_model: bool = False) -> None:
+    def __init__(
+        self,
+        model: ApexLM,
+        config: TrainingConfig,
+        *,
+        pad_id: int | None = None,
+        compile_model: bool = False,
+    ) -> None:
         self.model = model
         self.config = config
         self.pad_id = pad_id
@@ -143,6 +149,10 @@ class TrainingEngine:
         with self._autocast():
             try:
                 _, loss = self._forward_model(inputs, targets)
+            except torch.cuda.OutOfMemoryError:
+                # Mémoire insuffisante, pas un échec de compilation : l'ajustement du lot au GPU
+                # (`Run.fit_memory`) s'en charge, la version compilée est gardée.
+                raise
             except Exception as exc:
                 if self._forward_model is self.model:
                     raise
