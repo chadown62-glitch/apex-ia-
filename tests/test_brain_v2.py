@@ -475,6 +475,47 @@ def test_gpu_memory_shortage_is_not_mistaken_for_a_compilation_failure(tokenizer
     assert engine._forward_model is engine.model and "compilation impossible" in engine.compile_error
 
 
+def test_gpu_batch_fit_uses_the_memory_actually_free(tokenizer, tmp_path, monkeypatch) -> None:
+    """Logique de l'ajustement du lot au GPU, sur CPU avec des quantités de mémoire SIMULÉES (aucun GPU
+    ici) : le budget est la mémoire libre (+ ce que le processus détient), pas la VRAM totale ; le lot est
+    divisé et l'accumulation doublée (mêmes jetons par étape) jusqu'à tenir."""
+    from apex.neural.pretrain import Run, RunConfig
+
+    gb = 1024**3
+    config = RunConfig(
+        model=_tiny(tokenizer, context_length=32).to_dict(),
+        data_dir=str(_shards(tokenizer, tmp_path)),
+        window=32,
+        batch_size=8,
+        grad_accumulation_steps=1,
+        compile=False,
+    )
+    run = Run(tmp_path / "run", config, log=lambda _: None)
+    real_forward, batches = run.engine.forward, []
+
+    def recording(batch):
+        batches.append(batch.shape[0])
+        return real_forward(batch)
+
+    monkeypatch.setattr(run.engine, "forward", recording)
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: None)
+    monkeypatch.setattr(torch.cuda, "reset_peak_memory_stats", lambda device=None: None)
+    monkeypatch.setattr(
+        torch.cuda, "mem_get_info", lambda device=None: (4 * gb, 8 * gb)
+    )  # 4 Go libres sur 8
+    monkeypatch.setattr(torch.cuda, "memory_allocated", lambda device=None: gb // 2)
+    monkeypatch.setattr(torch.cuda, "max_memory_allocated", lambda device=None: gb + batches[-1] * gb)
+    resolved = run.fit_memory()
+    assert batches == [8, 4, 2]  # 9 Go puis 5 Go : au-delà de 90 % de 4,5 Go ; 3 Go : tient
+    assert (resolved["batch_size"], resolved["grad_accumulation_steps"]) == (2, 4)
+    assert resolved["vram_available_gb"] == 4.5 and not resolved["activation_checkpointing"]
+    assert json.loads((tmp_path / "run" / "resolved.json").read_text())["batch_size"] == 2
+    monkeypatch.setattr(torch.cuda, "max_memory_allocated", lambda device=None: 100 * gb)
+    (tmp_path / "run" / "resolved.json").unlink()
+    with pytest.raises(RuntimeError, match="ne tient pas"):
+        run.fit_memory()
+
+
 def test_brain_inference_code_never_imports_training_code() -> None:
     root = Path(__file__).resolve().parents[1] / "apex" / "brain"
     for module in root.glob("*.py"):

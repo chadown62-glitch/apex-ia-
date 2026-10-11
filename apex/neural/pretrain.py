@@ -199,7 +199,12 @@ class Run:
         batch = self.engine.config.batch_size
         accumulation = self.engine.config.grad_accumulation_steps
         checkpointing = self.model.activation_checkpointing
-        total = torch.cuda.get_device_properties(self.device).total_memory
+        torch.cuda.empty_cache()
+        # Budget = ce que ce processus détient déjà (le modèle) + la mémoire LIBRE, pas la VRAM totale :
+        # sous Windows, l'affichage et les autres programmes en occupent une partie, et le pilote déborde
+        # alors en mémoire système (beaucoup plus lent) au lieu de signaler le manque.
+        free, total = torch.cuda.mem_get_info(self.device)
+        available = torch.cuda.memory_allocated(self.device) + free
         params = sum(p.numel() * p.element_size() for p in self.model.parameters())
         while True:
             self.model.activation_checkpointing = checkpointing
@@ -213,7 +218,7 @@ class Run:
                 self.engine.zero_grad()
                 peak = torch.cuda.max_memory_allocated(self.device)
                 needed = peak + 2 * params  # états d'Adam (deux moments en float32), alloués au premier pas
-                if needed > 0.92 * total:
+                if needed > 0.9 * available:
                     raise torch.cuda.OutOfMemoryError(f"{needed / 1024**3:.2f} Go nécessaires")
                 break
             except torch.cuda.OutOfMemoryError as exc:
@@ -236,13 +241,15 @@ class Run:
             "peak_memory_gb": round(peak / 1024**3, 3),
             "optimizer_state_gb": round(2 * params / 1024**3, 3),
             "vram_gb": round(total / 1024**3, 3),
+            "vram_available_gb": round(available / 1024**3, 3),
         }
         self.resolved_file.write_text(json.dumps(resolved, indent=1) + "\n", encoding="utf-8")
         self._apply(resolved)
         self.log(
             f"mémoire GPU : lot {batch}, accumulation {accumulation}, recalcul des activations "
             f"{'oui' if checkpointing else 'non'}, pic mesuré {resolved['peak_memory_gb']} Go "
-            f"(+ {resolved['optimizer_state_gb']} Go d'optimiseur) sur {resolved['vram_gb']} Go"
+            f"(+ {resolved['optimizer_state_gb']} Go d'optimiseur) ; {resolved['vram_available_gb']} Go "
+            f"disponibles sur {resolved['vram_gb']} Go"
         )
         return resolved
 
