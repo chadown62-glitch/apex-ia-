@@ -71,6 +71,13 @@ manquante demandée), **mémoire de conversation**, identité, procédures de d�
 consignes système incluent celles de l'assistant d'APEX. Jeu d'évaluation fixe, jamais vu à l'entraînement ;
 **10 fonctions ne sont jamais montrées à l'entraînement** (mesure de généralisation, pas de mémoire).
 
+**Exercices de connaissance** (`apex/neural/knowledge_tasks.py`) — tirés de textes **écrits par des humains** :
+la ligne NOM/NAME des pages de manuel françaises et anglaises du corpus (« À quoi sert la commande `chown` ? »),
+la première phrase de la documentation de la bibliothèque standard Python, et les traductions humaines anglais ↔
+français des logiciels. L'évaluation pose la **même connaissance avec une formulation jamais vue** (rappel), et
+garde **3 % des phrases à traduire hors de l'entraînement** (généralisation). Notation par recouvrement des mots
+de la référence au début de la réponse (`overlap`) : un long déversement de texte ne compte pas.
+
 ## 5. Entraînement (`apex/neural/pretrain.py`, `scripts/apex_brain_build.py`)
 
 `corpus → tokenizer → tokenize → tasks → train (pretrain) → train (sft) → export → evaluate → install`, chaque
