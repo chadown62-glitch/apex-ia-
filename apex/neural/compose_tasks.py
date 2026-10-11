@@ -305,12 +305,18 @@ def _example(rng: random.Random, lang: str, function: _Composed, family: str) ->
     )
 
 
+#: Énoncés au plus par fonction à l'entraînement (formulations, langue, consignes et tests différents).
+MAX_PER_FUNCTION = 4
+
+
 def compose_examples(
     count: int, *, seed: int, split: str, exclude: frozenset[str] = frozenset()
 ) -> list[TaskExample]:
-    """`split="train"` : `count` exercices, jamais une combinaison réservée. `split="eval"` : `count`
+    """`split="train"` : jusqu'à `count` exercices (au plus `MAX_PER_FUNCTION` par fonction : il n'existe
+    qu'environ six mille fonctions distinctes), jamais une combinaison réservée. `split="eval"` : `count`
     exercices de combinaisons vues (`code_compose`) puis `count` de combinaisons réservées
-    (`code_compose_heldout`). `exclude` : codes à ne jamais produire (ceux de l'évaluation)."""
+    (`code_compose_heldout`), une fonction chacun. `exclude` : codes à ne jamais produire (l'évaluation).
+    S'arrête quand plus rien de neuf ne sort (jamais de boucle sans fin)."""
     rng = random.Random(f"compose:{split}:{seed}")
     makers: tuple[Callable[[random.Random], _Composed], ...] = (
         _number_function,
@@ -322,19 +328,23 @@ def compose_examples(
         if split == "train"
         else {"code_compose": count, "code_compose_heldout": count}
     )
+    limit = MAX_PER_FUNCTION if split == "train" else 1
     out: list[TaskExample] = []
-    seen: set[str] = set()
-    while any(wanted.values()):
+    uses: dict[str, int] = {}
+    misses = 0
+    while any(wanted.values()) and misses < 20_000:
         function = rng.choice(makers)(rng)
         family = "code_compose_heldout" if function.heldout else "code_compose"
         if (
             (split == "train" and function.heldout)
             or wanted.get(family, 0) <= 0
-            or function.code in seen
+            or uses.get(function.code, 0) >= limit
             or function.code in exclude
         ):
+            misses += 1
             continue
-        seen.add(function.code)
+        misses = 0
+        uses[function.code] = uses.get(function.code, 0) + 1
         wanted[family] -= 1
         out.append(with_system(_example(rng, rng.choice(("fr", "en")), function, family), rng))
     return out
