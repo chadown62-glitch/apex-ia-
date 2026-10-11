@@ -847,3 +847,16 @@ def test_the_engine_runs_the_calculation_the_model_asks_for(tiny_brain) -> None:
     assert result.text == "Résultat : 86686." and result.stats.finish_reason == "stop"
     assert result.stats.tool_calls == [{"expression": "974*89", "result": "86686"}]
     assert tokenizer.encode("86686")[0] in fed  # le résultat est entré dans le contexte du modèle
+
+
+def test_composed_functions_are_correct_and_unseen_combinations_never_train() -> None:
+    from apex.neural.compose_tasks import compose_examples
+    from apex.neural.tasks import score
+
+    evaluation = compose_examples(10, seed=5, split="eval")
+    assert {e.family for e in evaluation} == {"code_compose", "code_compose_heldout"}
+    assert all(score(e.check, e.assistant) for e in evaluation)  # tests obtenus en exécutant la référence
+    codes = frozenset(e.assistant for e in evaluation)
+    train = compose_examples(400, seed=5, split="train", exclude=frozenset(c[10:-3] for c in codes))
+    assert not any(e.meta["heldout"] for e in train) and not {e.assistant for e in train} & codes
+    assert len({e.meta["function"] for e in train}) > 300  # des centaines de fonctions différentes

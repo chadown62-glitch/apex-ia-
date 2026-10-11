@@ -209,12 +209,23 @@ def cmd_tasks(args: argparse.Namespace) -> None:
 
         evaluation += knowledge_examples(Path(args.corpus), split="eval", seed=args.seed)
         knowledge = knowledge_examples(Path(args.corpus), split="train", seed=args.seed)
+    compose: list = []
+    if args.compose:
+        # Fonctions composées (filtre, transformation, agrégat) : des milliers de fonctions différentes,
+        # et des combinaisons jamais montrées pour mesurer la généralisation (`apex.neural.compose_tasks`).
+        from apex.neural.compose_tasks import compose_examples
+
+        held = compose_examples(args.compose_eval, seed=args.seed, split="eval")
+        evaluation += held
+        codes = frozenset(e.assistant.split("```python\n", 1)[1].split("```", 1)[0] for e in held)
+        compose = compose_examples(args.compose, seed=args.seed, split="train", exclude=codes)
     keys = frozenset(e.key() for e in evaluation)
     with (out / "eval.jsonl").open("w", encoding="utf-8") as handle:
         for example in evaluation:
             handle.write(json.dumps(example.to_row(), ensure_ascii=False) + "\n")
     train = [e.to_row() for e in generate(args.train, seed=args.seed, exclude=keys)]
     train += [e.to_row() for e in knowledge if e.key() not in keys]
+    train += [e.to_row() for e in compose if e.key() not in keys]
     validation = [e.to_row() for e in generate(args.validation, seed=args.seed + 1, exclude=keys)]
     manifest = prepare_sft({"train": train, "validation": validation}, tokenizer, out, window=args.window)
     print(
@@ -470,6 +481,12 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--seed", type=int, default=1)
     p.add_argument(
         "--corpus", help="corpus construit : ajoute les exercices de connaissance (manuels, traductions)"
+    )
+    p.add_argument(
+        "--compose", type=int, default=30_000, help="fonctions composées à l'entraînement (0 : aucune)"
+    )
+    p.add_argument(
+        "--compose-eval", type=int, default=40, help="par famille (vues, jamais vues) à l'évaluation"
     )
     p.set_defaults(func=cmd_tasks)
     p = sub.add_parser("train")
