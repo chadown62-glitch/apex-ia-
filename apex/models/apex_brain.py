@@ -324,7 +324,8 @@ class ApexBrainProvider(ModelProvider):
             facts={
                 "backend": BACKEND,
                 "device": stats.device,
-                "dtype": str(next(engine.model.parameters()).dtype),
+                # Moteur partagé peut-être déchargé entre-temps (Cerveau réinstallé) : pas de plantage.
+                "dtype": str(next(engine.model.parameters()).dtype) if engine.model is not None else None,
                 "experimental": not conversational,
                 "conversational": conversational,
                 "weights": stats.weights,
