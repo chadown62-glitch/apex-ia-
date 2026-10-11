@@ -319,6 +319,20 @@ def test_brain_reinstalled_while_apex_runs_is_reloaded(tiny_brain, tokenizer, mo
     assert engine_for(tiny_brain).fingerprint == new["model_fingerprint"] != old
 
 
+def test_the_brain_shows_its_measured_quality_never_an_assumed_one(tiny_brain, monkeypatch) -> None:
+    from apex.assistant import engines
+    from apex.models.provider import get_default_provider
+
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(tiny_brain.parent))
+    endpoint = engines.brain_candidate().endpoint
+    assert "qualité non évaluée" in get_default_provider(endpoint).detect().detail
+    provenance = json.loads((tiny_brain / "provenance.json").read_text(encoding="utf-8"))
+    provenance["evaluation"] = {"measured_at": "2026-10-11T17:00:00+0000", "tasks_rate": 0.2345}
+    (tiny_brain / "provenance.json").write_text(json.dumps(provenance), encoding="utf-8")
+    detail = get_default_provider(endpoint).detect().detail
+    assert "évalué le 2026-10-11 : 23 % d'exercices jamais vus réussis" in detail
+
+
 # -------------------------------------------------------------------------------------------------- données
 
 

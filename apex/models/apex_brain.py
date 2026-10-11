@@ -41,7 +41,7 @@ _NEW_MESSAGE = "Nouveau message de l'utilisateur :\n"
 
 _lock = threading.Lock()
 _engines: dict[str, Any] = {}
-_inspected: dict[tuple[str, int, float], Any] = {}
+_inspected: dict[tuple[str, int, int, int, int], Any] = {}
 _reaper: threading.Thread | None = None
 
 
@@ -78,6 +78,16 @@ def is_conversational(path: Path) -> bool:
     except (OSError, ValueError):
         return False
     return "<|assistant|>" in (data.get("special_tokens") or [])
+
+
+def measured_quality(evaluation: Any) -> str:
+    """La qualité MESURÉE du Cerveau (résumé d'évaluation écrit dans sa provenance), en clair ; jamais
+    supposée : sans évaluation, c'est dit."""
+    if not isinstance(evaluation, dict) or evaluation.get("tasks_rate") is None:
+        return "qualité non évaluée"
+    when = str(evaluation.get("measured_at") or "")[:10]
+    rate = f"{evaluation['tasks_rate'] * 100:.0f} %"
+    return f"évalué{f' le {when}' if when else ''} : {rate} d'exercices jamais vus réussis"
 
 
 def _idle_limit() -> float:
@@ -145,7 +155,9 @@ class ApexBrainProvider(ModelProvider):
         try:
             provenance = json.loads((path / "provenance.json").read_text(encoding="utf-8"))
             stat = (path / weights_file(provenance)).stat()
-            key = (str(path), stat.st_size, stat.st_mtime)
+            # La provenance compte aussi : une évaluation ajoutée après l'export est vue sans redémarrer.
+            described = (path / "provenance.json").stat()
+            key = (str(path), stat.st_size, stat.st_mtime_ns, described.st_size, described.st_mtime_ns)
         except (OSError, ValueError):
             return inspect(path)
         with _lock:
@@ -187,6 +199,7 @@ class ApexBrainProvider(ModelProvider):
                 f"Cerveau APEX « {provenance.get('name', path.name)} » — {parameters} paramètres, "
                 f"construit et "
                 f"entraîné de zéro par APEX, instruit à converser ; poids {quantization}"
+                f" ; {measured_quality(provenance.get('evaluation'))}"
             )
         else:
             detail = (
