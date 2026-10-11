@@ -92,6 +92,9 @@ bootstrap. The bootstrap requires an explicit human review and integration
 decision. CI adversarial tests run via `pull_request` with read-only permissions,
 no secrets, no cache, no persisted credentials. A green test run alone is not an
 ownership/merge authorization: head code can alter its own tests.
+Tests and trusted guard use separate workflows and check names. The test workflow
+never creates a skipped `coordination-guard` check: GitHub can count skipped jobs
+as satisfied checks, so sharing that job name would weaken a required gate.
 
 The trusted guard workflow uses `pull_request_target` or manual dispatch, checks
 out only integration and fetches PR objects as data without executing PR code.
@@ -113,8 +116,10 @@ Activation requires an authorized administrator, after reviewing the concrete PR
 3. Protect integration with required PR, independent reviews, stale-approval
    dismissal, most-recent-push review, strict up-to-date checks, no force push or
    deletion and no admin/actor bypass. Require relevant runtime tests as well.
-4. Require the unique trusted coordination guard check bound to its expected
-   GitHub App/source. Verify its status attaches to the reviewed PR head, including
+4. Require a trusted workflow through a ruleset where supported, or a check from
+   a separately secured GitHub App/status publisher. Name plus the general
+   GitHub Actions App is not sufficient: an editable head workflow can impersonate
+   the same job name. Verify its status attaches to the reviewed PR head, including
    manual-dispatch runs; if it does not, an authorized trusted status publisher or
    required-workflow ruleset is needed. Do not treat a dispatch-only run as a gate.
 5. Inspect PR checks/check runs for actual failure/success and billing/permission
