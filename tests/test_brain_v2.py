@@ -429,6 +429,7 @@ def test_training_resumes_exactly_where_it_stopped(tokenizer, tmp_path) -> None:
         eval_tokens=500,
         log_every=1,
         mixed_precision=False,
+        compile=False,  # reprise au bit près : le calcul compilé ne l'est pas d'un processus à l'autre
     )
     straight = Run(tmp_path / "a", config, log=lambda _: None)
     straight.train()

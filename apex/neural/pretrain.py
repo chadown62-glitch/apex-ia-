@@ -21,6 +21,7 @@ import json
 import math
 import os
 import signal
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
@@ -67,6 +68,9 @@ class RunConfig:
     #: recalcul des activations est activé — décidé une fois, gardé dans `resolved.json` pour les reprises.
     activation_checkpointing: bool = False
     auto_batch: bool = True
+    #: `torch.compile` pour l'entraînement : `None` = automatique (Linux/WSL oui ; Windows non, faute de
+    #: compilateur C++ et de Triton).
+    compile: bool | None = None
     #: Instruction : part des lignes de chaque lot prises dans le corpus de pré-entraînement
     #: (`replay_data_dir`) pour ne pas oublier la langue générale en apprenant à converser.
     replay_data_dir: str | None = None
@@ -163,7 +167,8 @@ class Run:
         self.model.activation_checkpointing = config.activation_checkpointing
         if config.init_from:
             self._initialize_from(Path(config.init_from))
-        self.engine = TrainingEngine(self.model, config.training_config())
+        compile_model = config.compile if config.compile is not None else sys.platform.startswith("linux")
+        self.engine = TrainingEngine(self.model, config.training_config(), compile_model=compile_model)
         factory = batcher_factory or default_batcher
         self.batcher = factory(config, "train")
         self.resolved_file = run_dir / "resolved.json"
@@ -295,6 +300,7 @@ class Run:
         if self.device.type == "cuda" and self.config.auto_batch and not self.resolved_file.is_file():
             self.fit_memory()
         facts = hardware_facts(self.device)
+        facts["compiled"] = self.engine._forward_model is not self.model
         self._metric(
             {
                 "event": "start",
@@ -325,6 +331,16 @@ class Run:
                 before = self.engine.tokens_seen
                 result = self.engine.train_step(self.batcher)
                 steps_done += 1
+                if self.engine.compile_error and not getattr(self, "_compile_reported", False):
+                    self._compile_reported = True
+                    self._metric(
+                        {
+                            "event": "compile_fallback",
+                            "step": result.step,
+                            "error": self.engine.compile_error,
+                        }
+                    )
+                    self.log(f"torch.compile indisponible, calcul normal : {self.engine.compile_error}")
                 tokens_window += self.engine.tokens_seen - before
                 if result.step % self.config.log_every == 0:
                     elapsed = time.perf_counter() - time_window
