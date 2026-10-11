@@ -156,3 +156,4 @@ if [[ "${APEX_BRAIN_SKIP_INSTALL:-0}" != "1" ]]; then
   fi
 fi
 say "Rapport d'évaluation : $BRAIN/evaluation.json"
+say "Converser avec lui dans ce terminal : $PY $REPO/scripts/apex_brain_build.py chat --brain $BRAIN"

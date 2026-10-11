@@ -361,6 +361,49 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
     print(json.dumps(summary, indent=1, ensure_ascii=False))
 
 
+def cmd_chat(args: argparse.Namespace) -> None:
+    """Converser avec un Cerveau v2 dans le terminal, avant de l'installer dans APEX. `--prompt`
+    (répétable) : questions posées à la suite, dans la même conversation ; sinon conversation interactive
+    (ligne vide ou Ctrl+D pour finir)."""
+    from apex.brain.chat import Message
+    from apex.brain.inference import BrainEngine, SamplingSettings
+
+    engine = BrainEngine(Path(args.brain), device=args.device, weights=args.weights, threads=args.threads)
+    settings = SamplingSettings(
+        max_new_tokens=args.max_tokens,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        repetition_penalty=args.repetition_penalty,
+        seed=args.seed,
+    )
+    messages = [Message("system", args.system)] if args.system else []
+
+    def answer(question: str) -> None:
+        messages.append(Message("user", question))
+        print("APEX : ", end="", flush=True)
+        result = engine.chat(messages, settings, on_text=lambda piece: print(piece, end="", flush=True))
+        stats = result.stats
+        print(
+            f"\n  [{stats.generated_tokens} jetons, {stats.tokens_per_s or 0:.1f} jetons/s, premier jeton "
+            f"{(stats.time_to_first_token_s or 0) * 1000:.0f} ms]\n"
+        )
+        messages.append(Message("assistant", result.text))
+
+    if args.prompt:
+        for question in args.prompt:
+            print(f"Vous : {question}")
+            answer(question)
+        return
+    while True:
+        try:
+            question = input("Vous : ").strip()
+        except EOFError:
+            break
+        if not question:
+            break
+        answer(question)
+
+
 def cmd_install(args: argparse.Namespace) -> None:
     """Copie un Cerveau vérifié dans un dossier de Cerveaux d'APEX (ex. `%LOCALAPPDATA%\\APEX\\brain`) ;
     l'ancien est conservé sous `<nom>.previous` (retour arrière possible)."""
@@ -458,6 +501,21 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--stability", type=int, default=100)
     p.set_defaults(func=cmd_evaluate)
+    p = sub.add_parser("chat", help="converser avec un Cerveau v2 dans le terminal")
+    p.add_argument("--brain", required=True)
+    p.add_argument(
+        "--prompt", action="append", help="question (répétable) ; sans : conversation interactive"
+    )
+    p.add_argument("--system", help="consignes système")
+    p.add_argument("--max-tokens", type=int, default=256)
+    p.add_argument("--temperature", type=float, default=0.0)
+    p.add_argument("--top-p", type=float, default=1.0)
+    p.add_argument("--repetition-penalty", type=float, default=1.1)
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--weights", choices=("dequantized", "q5_resident"), default="dequantized")
+    p.add_argument("--threads", type=int, default=0)
+    p.set_defaults(func=cmd_chat)
     p = sub.add_parser("install")
     p.add_argument("--brain", required=True)
     p.add_argument("--to", required=True, help="dossier des Cerveaux d'APEX")

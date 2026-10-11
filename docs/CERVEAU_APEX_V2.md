@@ -131,4 +131,9 @@ cd ~/apex && git pull && bash scripts/wsl/apex-brain-train.sh
 Le script vérifie le GPU, installe PyTorch avec CUDA, construit le corpus, entraîne, évalue, puis installe le
 Cerveau dans `%LOCALAPPDATA%\APEX\brain\apex-brain-v2`. Il peut être interrompu et relancé : il reprend où il en
 était. Prévoir 40 Go de disque et **une à deux journées** de calcul (estimation à confirmer par le débit mesuré
-au démarrage).
+au démarrage). Le lot est ajusté à la mémoire GPU **réellement libre** (l'affichage de Windows en occupe une
+partie). À la fin, pour converser avec le Cerveau dans le terminal avant de l'utiliser dans APEX :
+
+```bash
+~/apex-brain/venv/bin/python scripts/apex_brain_build.py chat --brain ~/apex-brain/brain/apex-brain-v2
+```
