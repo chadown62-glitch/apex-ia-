@@ -1,0 +1,56 @@
+{
+  "status": "blocked",
+  "editor": null,
+  "engine_root": null,
+  "version": null,
+  "checks": {
+    "build": {
+      "path": null,
+      "exists": false
+    },
+    "uat": {
+      "path": null,
+      "exists": false
+    },
+    "chaos": {
+      "path": null,
+      "exists": false
+    },
+    "python": {
+      "path": null,
+      "exists": false
+    }
+  },
+  "path_lookups": {
+    "UnrealEditor": null,
+    "UnrealEditor-Cmd": null,
+    "RunUAT.sh": null,
+    "clang++": null,
+    "g++": "/usr/bin/g++",
+    "dotnet": null
+  },
+  "searched_roots": [
+    {
+      "root": "/opt/UnrealEngine",
+      "exists": false
+    },
+    {
+      "root": "/opt/unreal-engine",
+      "exists": false
+    },
+    {
+      "root": "/workspace/UnrealEngine",
+      "exists": false
+    },
+    {
+      "root": "/usr/local/UnrealEngine",
+      "exists": false
+    }
+  ],
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "ram_total_bytes": 35743784960,
+  "execution_performed": false,
+  "qualification": "compilation/import/driving still require actual engine runs",
+  "windows_machine_accessible": false
+}
