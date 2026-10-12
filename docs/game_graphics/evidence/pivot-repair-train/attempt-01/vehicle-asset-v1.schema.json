@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apex:VehicleAssetContract:1",
+  "title": "VehicleAssetContract v1",
+  "type": "object",
+  "required": ["schema_version", "contract", "producer", "geometry_method", "spec", "units", "blender_axes", "glb_axes", "unreal_target", "wheels", "files", "rig", "lods", "texture_maps"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "contract": {"const": "VehicleAssetContract"},
+    "units": {"const": "m"},
+    "producer": {"type": "string"},
+    "geometry_method": {"type": "string"},
+    "spec": {"type": "object", "required": ["length_m", "width_m", "height_m", "wheelbase_m", "wheel_radius_m", "wheel_width_m", "mass_kg", "body_color", "paint_metallic", "paint_roughness"]},
+    "blender_axes": {"type": "object", "properties": {"forward": {"const": "+X"}, "up": {"const": "+Z"}, "handedness": {"const": "right"}}, "required": ["forward", "up", "handedness"]},
+    "glb_axes": {"type": "object", "properties": {"up": {"const": "+Y"}, "handedness": {"const": "right"}, "exporter_converted": {"const": true}}, "required": ["up", "handedness", "exporter_converted"]},
+    "unreal_target": {"type": "object", "properties": {"units": {"const": "cm"}, "up": {"const": "+Z"}, "forward": {"const": "+X"}, "scale_conversion": {"const": 100}, "import_tested": {"type": "boolean"}}, "required": ["units", "up", "forward", "scale_conversion", "import_tested"]},
+    "wheels": {"type": "array", "minItems": 4, "maxItems": 4, "items": {"type": "object", "required": ["object", "center_m", "radius_m", "spin_axis_local", "spin_axis_blender_world"], "properties": {"object": {"enum": ["wheel_front_left", "wheel_front_right", "wheel_rear_left", "wheel_rear_right"]}, "center_m": {"$ref": "#/$defs/vector"}, "radius_m": {"type": "number", "exclusiveMinimum": 0}, "spin_axis_local": {"const": [0, 0, 1]}, "spin_axis_blender_world": {"const": [0, 1, 0]}}}},
+    "files": {"type": "array", "minItems": 8, "items": {"type": "object", "required": ["path", "role", "sha256", "bytes"], "properties": {"path": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}, "role": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "bytes": {"type": "integer", "minimum": 1}}}},
+    "rig": {"type": "object", "required": ["kind", "skeletal_rig", "physics_asset"], "properties": {"kind": {"type": "string"}, "skeletal_rig": {"type": "boolean"}, "physics_asset": {"type": "boolean"}}},
+    "lods": {"type": "array"},
+    "texture_maps": {"type": "array"}
+  },
+  "$defs": {"vector": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"type": "number"}}}
+}

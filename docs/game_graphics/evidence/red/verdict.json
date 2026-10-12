@@ -1,0 +1,140 @@
+{
+  "verdict": "pass",
+  "detail": "{\"defects\": [], \"unavailable\": [], \"facts\": {\"blend\": {\"triangles\": 14096, \"dimensions\": [4.506500005722046, 1.899999976158142, 1.3540000104505374], \"objects\": 38}, \"glb\": {\"triangles\": 14096, \"dimensions\": [4.506500005722046, 1.9000000953674316, 1.3540000467275632], \"objects\": 38}, \"lod1\": {\"triangles\": 10120, \"dimensions\": [4.505974292755127, 1.9000000953674316, 1.353433564183618], \"objects\": 38}}, \"criteria\": {\"level\": \"jouable\", \"max_triangles\": 60000, \"dimension_tolerance_m\": 0.04, \"pivot_tolerance_m\": 0.002, \"max_distinct_defect_attempts\": 3, \"minimum_views\": 4, \"required_lods\": 1, \"required_texture_size\": 0, \"require_calibrated_visual_reference\": false}, \"limits\": [\"objective geometry and pixel checks do not certify aesthetic quality\", \"engine import/performance not measured\"]}",
+  "judge": {
+    "tier": "tier_0",
+    "oracle_result": {
+      "verdict": "pass",
+      "detail": "{\"defects\": [], \"unavailable\": [], \"facts\": {\"blend\": {\"triangles\": 14096, \"dimensions\": [4.506500005722046, 1.899999976158142, 1.3540000104505374], \"objects\": 38}, \"glb\": {\"triangles\": 14096, \"dimensions\": [4.506500005722046, 1.9000000953674316, 1.3540000467275632], \"objects\": 38}, \"lod1\": {\"triangles\": 10120, \"dimensions\": [4.505974292755127, 1.9000000953674316, 1.353433564183618], \"objects\": 38}}, \"criteria\": {\"level\": \"jouable\", \"max_triangles\": 60000, \"dimension_tolerance_m\": 0.04, \"pivot_tolerance_m\": 0.002, \"max_distinct_defect_attempts\": 3, \"minimum_views\": 4, \"required_lods\": 1, \"required_texture_size\": 0, \"require_calibrated_visual_reference\": false}, \"limits\": [\"objective geometry and pixel checks do not certify aesthetic quality\", \"engine import/performance not measured\"]}"
+    },
+    "notes": "Tier 0: BlenderGeometryOracle; aesthetic reference assessment unavailable"
+  },
+  "inspection_runs": [
+    {
+      "mission_id": "game-graphics",
+      "clone_id": "trusted-blender-tool",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.2931799319994752,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": null,
+        "status": "unknown"
+      },
+      "memory_peak_mb": {
+        "value": null,
+        "status": "unknown"
+      },
+      "pids_peak": {
+        "value": null,
+        "status": "unknown"
+      },
+      "stdout": "APEX_INSPECTION={\"objects\": 38, \"triangles\": 14096}\nBlender 4.3.2\nRead blend: \"/workspace/apex-game-graphics/docs/game_graphics/evidence/red/vehicle.blend\"\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "tool": "blender",
+        "execution": "trusted_local_script",
+        "model_code_executed": false,
+        "script_sha256": "d19f64881be598c92771c116aa9741e21ee69d6fd0f0da255ce7764b9a86f2ea",
+        "timeout_s": 120
+      }
+    },
+    {
+      "mission_id": "game-graphics",
+      "clone_id": "trusted-blender-tool",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.4477239589996316,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": null,
+        "status": "unknown"
+      },
+      "memory_peak_mb": {
+        "value": null,
+        "status": "unknown"
+      },
+      "pids_peak": {
+        "value": null,
+        "status": "unknown"
+      },
+      "stdout": "17:16:55 | INFO: Data are loaded, start creating Blender stuff\n17:16:55 | INFO: Blender create Mesh node chassis\n17:16:55 | INFO: Blender create Mesh node Torus\n17:16:55 | INFO: Blender create Mesh node Cylinder.001\n17:16:55 | INFO: Blender create Mesh node Cube.001\n17:16:55 | INFO: Blender create Mesh node Cube.002\n17:16:55 | INFO: Blender create Mesh node Cube.003\n17:16:55 | INFO: Blender create Mesh node Cube.004\n17:16:55 | INFO: Blender create Mesh node Cube.005\n17:16:55 | INFO: Blender create Mesh node Torus.001\n17:16:55 | INFO: Blender create Mesh node Cylinder.003\n17:16:55 | INFO: Blender create Mesh node Cube.006\n17:16:55 | INFO: Blender create Mesh node Cube.007\n17:16:55 | INFO: Blender create Mesh node Cube.008\n17:16:55 | INFO: Blender create Mesh node Cube.009\n17:16:55 | INFO: Blender create Mesh node Cube.010\n17:16:55 | INFO: Blender create Mesh node Torus.002\n17:16:55 | INFO: Blender create Mesh node Cylinder.005\n17:16:55 | INFO: Blender create Mesh node Cube.011\n17:16:55 | INFO: Blender create Mesh node Cube.012\n17:16:55 | INFO: Blender create Mesh node Cube.013\n17:16:55 | INFO: Blender create Mesh node Cube.014\n17:16:55 | INFO: Blender create Mesh node Cube.015\n17:16:55 | INFO: Blender create Mesh node Torus.003\n17:16:55 | INFO: Blender create Mesh node Cylinder.007\n17:16:55 | INFO: Blender create Mesh node Cube.016\n17:16:55 | INFO: Blender create Mesh node Cube.017\n17:16:55 | INFO: Blender create Mesh node Cube.018\n17:16:55 | INFO: Blender create Mesh node Cube.019\n17:16:55 | INFO: Blender create Mesh node Cube.020\n17:16:55 | INFO: Blender create Mesh node cabin_glass\n17:16:55 | INFO: Blender create Mesh node Cube.021\n17:16:55 | INFO: Blender create Mesh node Cube.022\n17:16:55 | INFO: Blender create Mesh node Cube.023\n17:16:55 | INFO: Blender create Mesh node Cube.024\n17:16:55 | INFO: Blender create Mesh node Cube.025\n17:16:55 | INFO: Blender create Mesh node Cube.026\n17:16:55 | INFO: Blender create Mesh node Cube.027\n17:16:55 | INFO: Blender create Mesh node Cube.028\n17:16:55 | INFO: glTF import finished in 0.05s\nAPEX_INSPECTION={\"objects\": 38, \"triangles\": 14096}\nBlender 4.3.2\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "tool": "blender",
+        "execution": "trusted_local_script",
+        "model_code_executed": false,
+        "script_sha256": "d19f64881be598c92771c116aa9741e21ee69d6fd0f0da255ce7764b9a86f2ea",
+        "timeout_s": 120
+      }
+    },
+    {
+      "mission_id": "game-graphics",
+      "clone_id": "trusted-blender-tool",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.3369393909997598,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": null,
+        "status": "unknown"
+      },
+      "memory_peak_mb": {
+        "value": null,
+        "status": "unknown"
+      },
+      "pids_peak": {
+        "value": null,
+        "status": "unknown"
+      },
+      "stdout": "17:16:56 | INFO: Data are loaded, start creating Blender stuff\n17:16:56 | INFO: Blender create Mesh node chassis.001\n17:16:56 | INFO: Blender create Mesh node Torus.004\n17:16:56 | INFO: Blender create Mesh node Cylinder.008\n17:16:56 | INFO: Blender create Mesh node Cube.029\n17:16:56 | INFO: Blender create Mesh node Cube.030\n17:16:56 | INFO: Blender create Mesh node Cube.031\n17:16:56 | INFO: Blender create Mesh node Cube.032\n17:16:56 | INFO: Blender create Mesh node Cube.033\n17:16:56 | INFO: Blender create Mesh node Torus.005\n17:16:56 | INFO: Blender create Mesh node Cylinder.009\n17:16:56 | INFO: Blender create Mesh node Cube.034\n17:16:56 | INFO: Blender create Mesh node Cube.035\n17:16:56 | INFO: Blender create Mesh node Cube.036\n17:16:56 | INFO: Blender create Mesh node Cube.037\n17:16:56 | INFO: Blender create Mesh node Cube.038\n17:16:56 | INFO: Blender create Mesh node Torus.006\n17:16:56 | INFO: Blender create Mesh node Cylinder.010\n17:16:56 | INFO: Blender create Mesh node Cube.039\n17:16:56 | INFO: Blender create Mesh node Cube.040\n17:16:56 | INFO: Blender create Mesh node Cube.041\n17:16:56 | INFO: Blender create Mesh node Cube.042\n17:16:56 | INFO: Blender create Mesh node Cube.043\n17:16:56 | INFO: Blender create Mesh node Torus.007\n17:16:56 | INFO: Blender create Mesh node Cylinder.011\n17:16:56 | INFO: Blender create Mesh node Cube.044\n17:16:56 | INFO: Blender create Mesh node Cube.045\n17:16:56 | INFO: Blender create Mesh node Cube.046\n17:16:56 | INFO: Blender create Mesh node Cube.047\n17:16:56 | INFO: Blender create Mesh node Cube.048\n17:16:56 | INFO: Blender create Mesh node cabin_glass.001\n17:16:56 | INFO: Blender create Mesh node Cube.049\n17:16:56 | INFO: Blender create Mesh node Cube.050\n17:16:56 | INFO: Blender create Mesh node Cube.051\n17:16:56 | INFO: Blender create Mesh node Cube.052\n17:16:56 | INFO: Blender create Mesh node Cube.053\n17:16:56 | INFO: Blender create Mesh node Cube.054\n17:16:56 | INFO: Blender create Mesh node Cube.055\n17:16:56 | INFO: Blender create Mesh node Cube.056\n17:16:56 | INFO: glTF import finished in 0.04s\nAPEX_INSPECTION={\"objects\": 38, \"triangles\": 10120}\nBlender 4.3.2\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "tool": "blender",
+        "execution": "trusted_local_script",
+        "model_code_executed": false,
+        "script_sha256": "d19f64881be598c92771c116aa9741e21ee69d6fd0f0da255ce7764b9a86f2ea",
+        "timeout_s": 120
+      }
+    }
+  ]
+}

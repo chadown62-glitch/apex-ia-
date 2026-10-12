@@ -1,0 +1,13 @@
+{
+  "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+  "commit": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+  "sha256": "586844eac4d6d6321689f0192c8aa8e69cd8625974a5cc2d925b1a03366e4d16",
+  "quantization": "Q5_K_M",
+  "device": "cpu",
+  "load_s": 1.2230309759997908,
+  "pid": 14317,
+  "rss_after_load_bytes": 6044876800,
+  "rss_after_generation_bytes": 6764589056,
+  "process_stopped_verified": true,
+  "returncode": -15
+}

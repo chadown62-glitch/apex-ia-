@@ -1,0 +1,247 @@
+ERROR Draco mesh compression is not available because library could not be found at /usr/bin/4.3/python/lib/python3.13/site-packages/libextern_draco.so
+16:51:09 | INFO: Starting glTF 2.0 export
+16:51:09 | INFO: Extracting primitive: chassis
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.001
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.001
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.002
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.003
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.004
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.005
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus.001
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.003
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.006
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.007
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.008
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.009
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.010
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus.002
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.005
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.011
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.012
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.013
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.014
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.015
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus.003
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.007
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.016
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.017
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.018
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.019
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.020
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: cabin_glass
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.021
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.022
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.023
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.024
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.025
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.026
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.027
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.028
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Finished glTF 2.0 export in 0.06568264961242676 s
+
+16:51:09 | INFO: Data are loaded, start creating Blender stuff
+16:51:09 | INFO: Blender create Mesh node chassis
+16:51:09 | INFO: Blender create Mesh node Torus
+16:51:09 | INFO: Blender create Mesh node Cylinder.001
+16:51:09 | INFO: Blender create Mesh node Cube.001
+16:51:09 | INFO: Blender create Mesh node Cube.002
+16:51:09 | INFO: Blender create Mesh node Cube.003
+16:51:09 | INFO: Blender create Mesh node Cube.004
+16:51:09 | INFO: Blender create Mesh node Cube.005
+16:51:09 | INFO: Blender create Mesh node Torus.001
+16:51:09 | INFO: Blender create Mesh node Cylinder.003
+16:51:09 | INFO: Blender create Mesh node Cube.006
+16:51:09 | INFO: Blender create Mesh node Cube.007
+16:51:09 | INFO: Blender create Mesh node Cube.008
+16:51:09 | INFO: Blender create Mesh node Cube.009
+16:51:09 | INFO: Blender create Mesh node Cube.010
+16:51:09 | INFO: Blender create Mesh node Torus.002
+16:51:09 | INFO: Blender create Mesh node Cylinder.005
+16:51:09 | INFO: Blender create Mesh node Cube.011
+16:51:09 | INFO: Blender create Mesh node Cube.012
+16:51:09 | INFO: Blender create Mesh node Cube.013
+16:51:09 | INFO: Blender create Mesh node Cube.014
+16:51:09 | INFO: Blender create Mesh node Cube.015
+16:51:09 | INFO: Blender create Mesh node Torus.003
+16:51:09 | INFO: Blender create Mesh node Cylinder.007
+16:51:09 | INFO: Blender create Mesh node Cube.016
+16:51:09 | INFO: Blender create Mesh node Cube.017
+16:51:09 | INFO: Blender create Mesh node Cube.018
+16:51:09 | INFO: Blender create Mesh node Cube.019
+16:51:09 | INFO: Blender create Mesh node Cube.020
+16:51:09 | INFO: Blender create Mesh node cabin_glass
+16:51:09 | INFO: Blender create Mesh node Cube.021
+16:51:09 | INFO: Blender create Mesh node Cube.022
+16:51:09 | INFO: Blender create Mesh node Cube.023
+16:51:09 | INFO: Blender create Mesh node Cube.024
+16:51:09 | INFO: Blender create Mesh node Cube.025
+16:51:09 | INFO: Blender create Mesh node Cube.026
+16:51:09 | INFO: Blender create Mesh node Cube.027
+16:51:09 | INFO: Blender create Mesh node Cube.028
+16:51:09 | INFO: glTF import finished in 0.04s
+RESULT BEAUTY 0 690 1376
+16:51:09 | INFO: Starting glTF 2.0 export
+16:51:09 | WARNING: Mesh chassis is not valid, and may be exported wrongly
+16:51:09 | INFO: Extracting primitive: chassis
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.001
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.001
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.002
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.003
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.004
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.005
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus.001
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.003
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.006
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.007
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.008
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.009
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.010
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus.002
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.005
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.011
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.012
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.013
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.014
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.015
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Torus.003
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cylinder.007
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.016
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.017
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.018
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.019
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.020
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: cabin_glass
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.021
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.022
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.023
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.024
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.025
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.026
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.027
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Extracting primitive: Cube.028
+16:51:09 | INFO: Primitives created: 1
+16:51:09 | INFO: Finished glTF 2.0 export in 0.06132078170776367 s
+
+16:51:09 | INFO: Data are loaded, start creating Blender stuff
+16:51:09 | INFO: Blender create Mesh node chassis
+16:51:09 | INFO: Blender create Mesh node Torus
+16:51:09 | INFO: Blender create Mesh node Cylinder.001
+16:51:09 | INFO: Blender create Mesh node Cube.001
+16:51:09 | INFO: Blender create Mesh node Cube.002
+16:51:09 | INFO: Blender create Mesh node Cube.003
+16:51:09 | INFO: Blender create Mesh node Cube.004
+16:51:09 | INFO: Blender create Mesh node Cube.005
+16:51:09 | INFO: Blender create Mesh node Torus.001
+16:51:09 | INFO: Blender create Mesh node Cylinder.003
+16:51:09 | INFO: Blender create Mesh node Cube.006
+16:51:09 | INFO: Blender create Mesh node Cube.007
+16:51:09 | INFO: Blender create Mesh node Cube.008
+16:51:09 | INFO: Blender create Mesh node Cube.009
+16:51:09 | INFO: Blender create Mesh node Cube.010
+16:51:09 | INFO: Blender create Mesh node Torus.002
+16:51:09 | INFO: Blender create Mesh node Cylinder.005
+16:51:09 | INFO: Blender create Mesh node Cube.011
+16:51:09 | INFO: Blender create Mesh node Cube.012
+16:51:09 | INFO: Blender create Mesh node Cube.013
+16:51:09 | INFO: Blender create Mesh node Cube.014
+16:51:09 | INFO: Blender create Mesh node Cube.015
+16:51:09 | INFO: Blender create Mesh node Torus.003
+16:51:09 | INFO: Blender create Mesh node Cylinder.007
+16:51:09 | INFO: Blender create Mesh node Cube.016
+16:51:09 | INFO: Blender create Mesh node Cube.017
+16:51:09 | INFO: Blender create Mesh node Cube.018
+16:51:09 | INFO: Blender create Mesh node Cube.019
+16:51:09 | INFO: Blender create Mesh node Cube.020
+16:51:09 | INFO: Blender create Mesh node cabin_glass
+16:51:09 | INFO: Blender create Mesh node Cube.021
+16:51:09 | INFO: Blender create Mesh node Cube.022
+16:51:09 | INFO: Blender create Mesh node Cube.023
+16:51:09 | INFO: Blender create Mesh node Cube.024
+16:51:09 | INFO: Blender create Mesh node Cube.025
+16:51:09 | INFO: Blender create Mesh node Cube.026
+16:51:09 | INFO: Blender create Mesh node Cube.027
+16:51:09 | INFO: Blender create Mesh node Cube.028
+16:51:09 | INFO: glTF import finished in 0.05s
+RESULT EAR_CLIP 12 690 1372
+Blender 4.3.2
+Read blend: "/workspace/game-studio-output/graphics-prototype/vehicle.blend"
+Read blend: "/workspace/game-studio-output/graphics-prototype/vehicle.blend"
+
+Blender quit
