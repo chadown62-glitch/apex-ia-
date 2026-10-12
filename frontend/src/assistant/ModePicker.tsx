@@ -7,6 +7,8 @@ export const TOOL_LABELS: Record<string, string> = {
   "fs.list": "lister les fichiers",
   "fs.read": "lire un fichier",
   "fs.write": "écrire un fichier",
+  "fs.search": "chercher dans le projet",
+  "fs.edit": "modifier un passage",
   "project.inspect": "inspecter le projet",
   "code.run": "exécuter du Python (sandbox)",
   "tests.run": "lancer les tests (sandbox)",

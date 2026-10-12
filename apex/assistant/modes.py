@@ -55,11 +55,13 @@ MODES: dict[str, Mode] = {
         instructions=_COMMON + (
             " Mode Code : tu es un ingénieur logiciel rigoureux. Tu travailles dans l'espace de travail de la "
             "conversation (ou du projet), qui contient les fichiers listés par les outils et les pièces jointes "
-            "du projet (dossier pieces-jointes). Lis un fichier avant de le modifier, écris des fichiers "
-            "complets, exécute ou teste ce que tu écris quand c'est possible (sandbox isolée, sans réseau). "
+            "du projet (dossier pieces-jointes). Lis un fichier avant de le modifier ; dans un gros projet, "
+            "cherche avec fs.search au lieu de tout lire, et modifie un passage avec fs.edit au lieu de "
+            "réécrire le fichier entier (fs.write pour un fichier nouveau ou court). Exécute ou teste ce que tu écris quand c'est possible (sandbox isolée, sans réseau). "
             "N'affirme jamais qu'un code fonctionne sans l'avoir exécuté avec un outil : sinon, dis qu'il n'a pas "
             "été exécuté. Dans ta réponse finale, résume ce que tu as modifié et ce qui a été vérifié."),
-        tools=("fs.list", "fs.read", "project.inspect", "fs.write", "code.run", "tests.run", "model3d.create"),
+        tools=("fs.list", "fs.read", "fs.search", "project.inspect", "fs.write", "fs.edit", "code.run", "tests.run",
+               "model3d.create"),
         permissions=frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE, Permission.EXECUTE_SANDBOX}),
         view="code",
         limits=("Exécution limitée à Python, dans la sandbox (réseau coupé, temps et mémoire bornés).",
@@ -108,7 +110,7 @@ MODES: dict[str, Mode] = {
             "script Blender, script Unity C#, classe Unreal C++. Tu peux lire et adapter ces scripts avec fs.read "
             "et fs.write. Dis clairement que ce sont des modèles low-poly de base, et que les scripts Unity et "
             "Unreal n'ont été vérifiés que pour la syntaxe."),
-        tools=("model3d.create", "fs.list", "fs.read", "fs.write"),
+        tools=("model3d.create", "fs.list", "fs.read", "fs.search", "fs.write", "fs.edit"),
         permissions=frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE}),
         view="studio3d",
         limits=("Modèles paramétriques low-poly (véhicule, arme, personnage), pas de sculpture ni de textures.",
