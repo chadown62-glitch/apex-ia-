@@ -1,0 +1,19 @@
+{
+  "status": "unqualified_candidate",
+  "training_eligible": false,
+  "compile_execution": false,
+  "driving_execution": false,
+  "static_review_findings": [
+    {
+      "id": "static_root_in_chaos_pawn",
+      "observed": "creates UStaticMeshComponent VehicleMesh and replaces RootComponent; requested skeletal/Chaos mesh is not used",
+      "qualification": "design mismatch visible in text, not an observed Unreal compile error"
+    },
+    {
+      "id": "headers_and_api_unverified",
+      "observed": "component types have no explicit declarations/includes; movement accessor and ChaosVehicle module naming require actual SDK validation",
+      "qualification": "review risk only, no false compiler result"
+    }
+  ],
+  "correction_blocker": "no actual SDK/compiler feedback or driving scenario available"
+}
