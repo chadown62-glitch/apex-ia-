@@ -719,3 +719,24 @@ def test_api_serves_exact_bytes_of_a_3d_preview(env, monkeypatch, tmp_path) -> N
     assert raw.startswith(b"\x89PNG") and len(raw) == png["size"]
     assert (Path(listing["root"]) / "modeles3d" / "personnage.png").read_bytes() == raw
     assert client.get(url, params={"path": "modeles3d/personnage.png", "encoding": "hex"}, headers=h).status_code == 422
+
+
+def test_long_turns_keep_every_earlier_step_in_view(env) -> None:
+    """Gros projet : jusqu'à 40 étapes d'outils par réponse (réglage) ; au-delà des 6 résultats détaillés, chaque
+    étape plus ancienne reste résumée pour le modèle (outil, fichier, réussite)."""
+    from apex.assistant.settings import SettingsService
+    from apex.assistant.workspace import conversation_workspace
+
+    _no_memory(env)
+    SettingsService(env).update({"tools": {"max_tool_steps": 40}})
+    conversation = _conversation(env, mode="code")
+    writes = [json.dumps({"tool": "fs.write", "arguments": {"path": f"src/m{i}.py", "content": f"X = {i}\n"}})
+              for i in range(9)]
+    manager, provider = _manager(env, [*writes, "Projet écrit : 9 modules."])
+    _, turn = manager.submit(conversation.id, "Écris les 9 modules du projet")
+    assert turn.status == "done" and len(turn.steps) == 9
+    assert len(conversation_workspace(conversation.id, None).files()) == 9
+    last = provider.requests[-1].prompt
+    assert "Étapes précédentes de ce tour (résumé) :" in last
+    assert "1. fs.write src/m0.py -> réussi" in last and "3. fs.write src/m2.py -> réussi" in last
+    assert last.count("[fs.write]") == 6  # les 6 plus récentes en détail

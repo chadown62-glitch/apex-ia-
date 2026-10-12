@@ -156,6 +156,18 @@ def parse_tool_call(text: str) -> tuple[str, dict[str, Any]] | None:
     return value["tool"], arguments
 
 
+#: Résultats d'outils rendus en entier au modèle pendant un tour (les plus récents) ; les plus anciens sont
+#: résumés en une ligne chacun (`_step_line`).
+_DETAILED_OBSERVATIONS = 6
+
+
+def _step_line(step: dict[str, Any]) -> str:
+    arguments = step.get("arguments") or {}
+    target = next((str(arguments[k]) for k in ("path", "start_dir", "expression", "kind") if k in arguments), "")
+    outcome = "réussi" if step.get("ok") else "échec"
+    return f"{step.get('step')}. {step.get('tool')} {target[:80]} -> {outcome}".replace("  ", " ")
+
+
 def _clip(value: Any, limit: int) -> str:
     text = json.dumps(value, ensure_ascii=False, default=str)
     return text if len(text) <= limit else text[:limit] + f"… [{len(text) - limit} caractères omis]"
@@ -424,8 +436,14 @@ class TurnManager:
             step_prompt = prompt
             step_user = last_user
             if observations:
-                suffix = ("\n\nOutils déjà utilisés pendant ce tour (résultats réels) :\n"
-                          + "\n".join(observations[-6:]))
+                suffix = ""
+                if len(steps) > _DETAILED_OBSERVATIONS:
+                    # Long tour (gros projet) : chaque étape plus ancienne reste connue du modèle, en une ligne
+                    # (outil, fichier visé, réussite) — il n'oublie pas ce qu'il a déjà écrit ou testé.
+                    suffix = ("\n\nÉtapes précédentes de ce tour (résumé) :\n"
+                              + "\n".join(_step_line(s) for s in steps[:-_DETAILED_OBSERVATIONS]))
+                suffix += ("\n\nOutils déjà utilisés pendant ce tour (résultats réels) :\n"
+                           + "\n".join(observations[-_DETAILED_OBSERVATIONS:]))
                 suffix += ("\n\nLimite d'outils atteinte : réponds maintenant à l'utilisateur, sans outil."
                            if last_call else
                            "\n\nContinue : appelle un autre outil si nécessaire, sinon réponds à l'utilisateur.")

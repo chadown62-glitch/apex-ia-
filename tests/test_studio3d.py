@@ -341,3 +341,87 @@ def test_3d_requests_teach_the_call_and_unseen_phrasings_never_train() -> None:
     assert all(starts) and not any(e.user.startswith(starts) for e in train)
     assert all(e.user.startswith(starts) for e in evaluation if e.family == "model3d_heldout")
     assert {e.meta["call"].split("(")[0] for e in train} == {"vehicle", "weapon", "character"}
+
+
+_ADDON_CHECK = """
+import json, math, sys
+import bpy
+bpy.ops.preferences.addon_install(filepath=sys.argv[sys.argv.index("--") + 1])
+bpy.ops.preferences.addon_enable(module="apex_atelier3d")
+for obj in list(bpy.data.objects):
+    bpy.data.objects.remove(obj)
+p = bpy.context.scene.apex_atelier3d
+built = []
+KINDS = (("vehicle", "tank"), ("weapon", "sword"), ("character", "humanoid"), ("character", "humanoid"))
+for generator, kind in KINDS:
+    p.generator, p.kind = generator, kind
+    p.use_length = generator != "character"
+    p.length = 7.0 if kind == "tank" else 1.2
+    before = {o.name for o in bpy.data.objects if o.parent is None}
+    result = bpy.ops.apex.build_model()
+    (root,) = [o for o in bpy.data.objects if o.parent is None and o.name not in before]
+    meshes = [o for o in root.children if o.type == "MESH"]
+    rigs = [o for o in root.children if o.type == "ARMATURE"]
+    built.append({"result": sorted(result), "parts": len(meshes),
+                  "triangles": sum(len(f.vertices) - 2 for o in meshes for f in o.data.polygons),
+                  "bones": len(rigs[0].data.bones) if rigs else 0,
+                  "own_rig": all(any(m.type == "ARMATURE" and m.object == rigs[0] for m in o.modifiers)
+                                 for o in meshes) if rigs else None})
+rig = next(c for c in root.children if c.type == "ARMATURE")
+hand = next(c for c in root.children if c.type == "MESH" and c.data.name.startswith("main_G"))
+def center(obj):
+    evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    mesh = evaluated.to_mesh()
+    count = len(mesh.vertices)
+    point = [sum((obj.matrix_world @ v.co)[i] for v in mesh.vertices) / count for i in range(3)]
+    evaluated.to_mesh_clear()
+    return point
+start = center(hand)
+rig.pose.bones["bras_G"].rotation_mode = "XYZ"
+rig.pose.bones["bras_G"].rotation_euler = (0, 0, math.radians(90))
+bpy.context.view_layer.update()
+print("APEX_ADDON " + json.dumps({"built": built, "moved": math.dist(start, center(hand))}))
+"""
+
+
+def test_blender_addon_installs_and_builds_each_kind_with_its_own_rig(tmp_path) -> None:
+    """L'extension « APEX Atelier 3D », installée dans le VRAI Blender : chaque construction donne les
+    pièces, triangles et os des générateurs d'APEX ; un second personnage dans la même scène est lié à SON
+    squelette (le défaut d'une recherche par nom), qui déplace bien sa main."""
+    from apex.brain.blender_addon import addon_zip
+
+    if shutil.which("blender") is None:
+        pytest.skip("Blender absent de cet environnement")
+    archive, check = tmp_path / "apex_atelier3d.zip", tmp_path / "check.py"
+    archive.write_bytes(addon_zip())
+    check.write_text(_ADDON_CHECK, encoding="utf-8")
+    report = _tagged(_blender("--python", str(check), "--", str(archive)), "APEX_ADDON")
+    expected = [
+        m3.vehicle("tank", length=7.0).stats(),
+        m3.weapon("sword", length=1.2).stats(),
+        m3.character().stats(),
+        m3.character().stats(),
+    ]
+    for built, stats in zip(report["built"], expected, strict=True):
+        assert built["result"] == ["FINISHED"]
+        assert (built["parts"], built["triangles"], built["bones"]) == (
+            stats["parts"],
+            stats["triangles"],
+            stats["bones"],
+        )
+    assert report["built"][2]["own_rig"] is True and report["built"][3]["own_rig"] is True
+    assert report["moved"] > 0.5
+
+
+def test_published_blender_addon_is_the_current_one() -> None:
+    """`releases/blender/apex_atelier3d.zip` est exactement l'extension produite par le code actuel (archive
+    reproductible) : jamais une version périmée publiée."""
+    import hashlib
+
+    from apex.brain.blender_addon import addon_zip
+
+    published = Path(__file__).parents[1] / "releases" / "blender" / "apex_atelier3d.zip"
+    current = addon_zip()
+    assert published.read_bytes() == current, "régénérer : voir docs/ATELIER_3D.md (extension Blender)"
+    digest = (published.parent / "apex_atelier3d.zip.sha256").read_text(encoding="utf-8").split()[0]
+    assert digest == hashlib.sha256(current).hexdigest()

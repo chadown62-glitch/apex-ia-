@@ -342,8 +342,8 @@ export function SettingsView() {
           <Row label="Exécuter du code" hint="Python dans la sandbox d'APEX, réseau coupé ; proposé seulement si la sandbox est vérifiée.">
             <Switch label="Exécution" checked={t.code_execution} onChange={(v) => toolsSection.update({ code_execution: v })} />
           </Row>
-          <Row label="Étapes d'outils par réponse" hint="1 à 12.">
-            <NumberField label="Étapes maximum" value={t.max_tool_steps} min={1} max={12} onChange={(n) => toolsSection.update({ max_tool_steps: n })} />
+          <Row label="Étapes d'outils par réponse" hint="1 à 40 : davantage pour un gros projet (lire, écrire, tester, corriger), au prix d'une réponse plus longue.">
+            <NumberField label="Étapes maximum" value={t.max_tool_steps} min={1} max={40} onChange={(n) => toolsSection.update({ max_tool_steps: n })} />
           </Row>
           <SaveBar section={toolsSection} />
         </Section>

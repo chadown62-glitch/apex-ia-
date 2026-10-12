@@ -820,12 +820,65 @@ def to_obj(model: Model, mtl_name: str | None = None) -> tuple[str, str]:
     return "\n".join(lines) + "\n", "\n".join(mtl)
 
 
-def to_blender_script(model: Model) -> str:
-    """Script Blender (bpy) qui reconstruit le modèle : matériaux, un objet par pièce sous un objet racine,
-    squelette (Armature) pour un personnage, chaque pièce liée à son os (groupe de sommets + modificateur
-    Armature). Lancement : onglet Scripting, ou `blender -b --python modele.py -- sortie.glb` (ou `.fbx`,
-    pour Unity) : exporte alors le résultat."""
-    data = {
+#: Construction dans Blender (bpy), commune au script autonome et à l'extension « APEX Atelier 3D » : objets
+#: tenus par RÉFÉRENCE (jamais retrouvés par leur nom : une scène peut déjà contenir une « roue »).
+BLENDER_BUILD = """
+def build_scene(DATA, collection=None):
+    \"\"\"Construit le modèle décrit par DATA ; rend (objet racine, squelette ou None).\"\"\"
+    collection = collection or bpy.context.scene.collection
+    root = bpy.data.objects.new(DATA["name"], None)
+    collection.objects.link(root)
+    materials = {}
+    for spec in DATA["materials"]:
+        material = bpy.data.materials.new(spec["name"])
+        material.use_nodes = True
+        shader = material.node_tree.nodes.get("Principled BSDF")
+        if shader is not None:
+            shader.inputs["Base Color"].default_value = (*spec["color"], 1.0)
+            shader.inputs["Metallic"].default_value = spec["metallic"]
+            shader.inputs["Roughness"].default_value = spec["roughness"]
+        material.diffuse_color = (*spec["color"], 1.0)
+        materials[spec["name"]] = material
+    parts = {}
+    for spec in DATA["parts"]:
+        mesh = bpy.data.meshes.new(spec["name"])
+        mesh.from_pydata([tuple(v) for v in spec["vertices"]], [], [tuple(f) for f in spec["faces"]])
+        mesh.validate()
+        mesh.update()
+        mesh.materials.append(materials[spec["material"]])
+        obj = bpy.data.objects.new(spec["name"], mesh)
+        obj.parent = root
+        collection.objects.link(obj)
+        parts[spec["name"]] = obj
+    rig = None
+    if DATA["bones"]:
+        armature = bpy.data.armatures.new(DATA["name"] + "_squelette")
+        rig = bpy.data.objects.new(DATA["name"] + "_squelette", armature)
+        rig.parent = root
+        collection.objects.link(rig)
+        bpy.context.view_layer.objects.active = rig
+        bpy.ops.object.mode_set(mode="EDIT")
+        for spec in DATA["bones"]:
+            bone = armature.edit_bones.new(spec["name"])
+            bone.head, bone.tail = spec["head"], spec["tail"]
+        for spec in DATA["bones"]:
+            if spec["parent"]:
+                armature.edit_bones[spec["name"]].parent = armature.edit_bones[spec["parent"]]
+        bpy.ops.object.mode_set(mode="OBJECT")
+    # Peau rigide : chaque pièce suit son os (poids 1) ; poser le squelette déplace les pièces.
+    for part_name, bone_name in DATA["skin"].items():
+        obj = parts[part_name]
+        group = obj.vertex_groups.new(name=bone_name)
+        group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+        modifier = obj.modifiers.new("Armature", "ARMATURE")
+        modifier.object = rig
+    return root, rig
+"""
+
+
+def blender_data(model: Model) -> dict[str, Any]:
+    """Description du modèle lue par `build_scene` (script Blender, extension)."""
+    return {
         "name": model.name,
         "materials": [
             {"name": m.name, "color": list(m.color), "metallic": m.metallic, "roughness": m.roughness}
@@ -846,6 +899,14 @@ def to_blender_script(model: Model) -> str:
         ],
         "skin": model.skin,
     }
+
+
+def to_blender_script(model: Model) -> str:
+    """Script Blender (bpy) qui reconstruit le modèle : matériaux, un objet par pièce sous un objet racine,
+    squelette (Armature) pour un personnage, chaque pièce liée à son os (groupe de sommets + modificateur
+    Armature). Lancement : onglet Scripting, ou `blender -b --python modele.py -- sortie.glb` (ou `.fbx`,
+    pour Unity) : exporte alors le résultat."""
+    data = blender_data(model)
     return f'''"""Modèle « {model.name} » généré par APEX (mesh3d) — {model.stats()["parts"]} pièces, {model.stats()["triangles"]} triangles.
 Blender : onglet Scripting > Ouvrir > Exécuter. Ligne de commande : blender -b --python ce_fichier.py -- sortie.glb
 (ou sortie.fbx pour Unity)."""
@@ -855,51 +916,9 @@ import sys
 import bpy
 
 DATA = json.loads({json.dumps(data, ensure_ascii=False, separators=(",", ":"))!r})
+{BLENDER_BUILD}
 
-root = bpy.data.objects.new(DATA["name"], None)
-bpy.context.scene.collection.objects.link(root)
-materials = {{}}
-for spec in DATA["materials"]:
-    material = bpy.data.materials.new(spec["name"])
-    material.use_nodes = True
-    shader = material.node_tree.nodes.get("Principled BSDF")
-    if shader is not None:
-        shader.inputs["Base Color"].default_value = (*spec["color"], 1.0)
-        shader.inputs["Metallic"].default_value = spec["metallic"]
-        shader.inputs["Roughness"].default_value = spec["roughness"]
-    material.diffuse_color = (*spec["color"], 1.0)
-    materials[spec["name"]] = material
-for spec in DATA["parts"]:
-    mesh = bpy.data.meshes.new(spec["name"])
-    mesh.from_pydata([tuple(v) for v in spec["vertices"]], [], [tuple(f) for f in spec["faces"]])
-    mesh.validate()
-    mesh.update()
-    mesh.materials.append(materials[spec["material"]])
-    obj = bpy.data.objects.new(spec["name"], mesh)
-    obj.parent = root
-    bpy.context.scene.collection.objects.link(obj)
-rig = None
-if DATA["bones"]:
-    armature = bpy.data.armatures.new(DATA["name"] + "_squelette")
-    rig = bpy.data.objects.new(DATA["name"] + "_squelette", armature)
-    rig.parent = root
-    bpy.context.scene.collection.objects.link(rig)
-    bpy.context.view_layer.objects.active = rig
-    bpy.ops.object.mode_set(mode="EDIT")
-    for spec in DATA["bones"]:
-        bone = armature.edit_bones.new(spec["name"])
-        bone.head, bone.tail = spec["head"], spec["tail"]
-    for spec in DATA["bones"]:
-        if spec["parent"]:
-            armature.edit_bones[spec["name"]].parent = armature.edit_bones[spec["parent"]]
-    bpy.ops.object.mode_set(mode="OBJECT")
-# Peau rigide : chaque pièce suit son os (poids 1) ; poser le squelette déplace les pièces.
-for part_name, bone_name in DATA["skin"].items():
-    obj = bpy.data.objects[part_name]
-    group = obj.vertex_groups.new(name=bone_name)
-    group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
-    modifier = obj.modifiers.new("Armature", "ARMATURE")
-    modifier.object = rig
+root, rig = build_scene(DATA)
 # Relevé fait par Blender lui-même : pièces, triangles, dimensions (comparés au modèle d'APEX).
 parts = [o for o in root.children if o.type == "MESH"]
 corners = [o.matrix_world @ v.co for o in parts for v in o.data.vertices]
@@ -907,14 +926,14 @@ stats = {{
     "parts": len(parts),
     "triangles": sum(len(p.vertices) - 2 for o in parts for p in o.data.polygons),
     "size_m": [round(max(c[i] for c in corners) - min(c[i] for c in corners), 3) for i in range(3)],
-    "bones": len(bpy.data.armatures[0].bones) if bpy.data.armatures else 0,
+    "bones": len(rig.data.bones) if rig is not None else 0,
 }}
 print("APEX_BLENDER_STATS " + json.dumps(stats))
 if "--" in sys.argv:
     output = sys.argv[sys.argv.index("--") + 1]
     # Seul le modèle est exporté (jamais le reste de la scène, comme le cube de départ de Blender).
     for obj in bpy.context.view_layer.objects:
-        obj.select_set(obj == root or root in obj.children_recursive or obj in root.children_recursive)
+        obj.select_set(obj == root or obj in root.children_recursive)
     if output.lower().endswith(".fbx"):
         bpy.ops.export_scene.fbx(filepath=output, use_selection=True, add_leaf_bones=False)
     else:

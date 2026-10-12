@@ -49,7 +49,7 @@ class Behavior(_Section):
 class ToolSettings(_Section):
     workspace_write: bool = True
     code_execution: bool = True
-    max_tool_steps: int = Field(default=6, ge=1, le=12)
+    max_tool_steps: int = Field(default=6, ge=1, le=40)
 
 
 class Privacy(_Section):
