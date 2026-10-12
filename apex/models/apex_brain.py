@@ -354,6 +354,8 @@ class ApexBrainProvider(ModelProvider):
                 "seed": request.seed,
                 "max_new_tokens": settings.max_new_tokens,
                 "model_fingerprint": engine.fingerprint,
+                # Calculs exacts demandés par le Cerveau (expression, résultat de la calculatrice).
+                "tool_calls": list(stats.tool_calls),
                 "prompt_used": prompt_used,
             },
         )

@@ -69,7 +69,7 @@
       "steps": 1500,
       "max_steps": 1500,
       "tokens_seen": 24576000,
-      "training_time_s": 6239.7,
+      "training_time_s": 5925.2,
       "sessions": 1,
       "hardware": {
         "device": "cpu",
@@ -78,12 +78,12 @@
         "torch": "2.14.0+cu130",
         "threads": 4
       },
-      "median_tokens_per_s": 4904.8,
-      "final_loss": 1.3399949073791504,
+      "median_tokens_per_s": 4835.8,
+      "final_loss": 1.2026268243789673,
       "last_validation": {
         "step": 1500,
-        "sft_validation_loss": 0.08814,
-        "tokens": 58992
+        "sft_validation_loss": 0.01515,
+        "tokens": 65287
       },
       "config": {
         "window": 1024,
@@ -114,54 +114,56 @@
     "parameters_full": 7552,
     "bytes_q5": 11826688,
     "bytes_float32": 62944768,
-    "max_relative_rmse": 0.037014,
-    "mean_relative_rmse": 0.035375
+    "max_relative_rmse": 0.037013,
+    "mean_relative_rmse": 0.035372
   },
-  "weights_sha256": "d48a52e85a386d737897732c86c7650c300acd56dac1c1104151e179ce3f4265",
-  "model_fingerprint": "sha256:578cd2b7f29841609d9b0d26655edc923539c722b376b8b37bfddb533244a393",
+  "weights_sha256": "eead3b8f6157a99decd4eacb2cefa1d3b1efa7f6e6a01a077247a049d55944a2",
+  "model_fingerprint": "sha256:de356df4bf8f2fd0c198720e97479d955fd83393a93f219bc09ce579edeb79c2",
   "parameters": 15736192,
   "evaluation": {
-    "measured_at": "2026-10-11T16:38:36+0000",
-    "tasks_rate": 0.4788,
+    "measured_at": "2026-10-11T22:50:20+0000",
+    "tasks_rate": 0.7351,
     "tasks": {
-      "arithmetic": 0.075,
-      "logic": 0.85,
-      "text_ops": 0.175,
+      "arithmetic": 1.0,
+      "logic": 0.825,
+      "text_ops": 0.975,
       "code_fix": 0.775,
       "json": 1.0,
-      "list_ops": 0.45,
-      "dates": 0.3,
-      "honesty": 0.825,
-      "code_write": 0.625,
-      "program_output": 0.25,
+      "list_ops": 1.0,
+      "dates": 1.0,
+      "honesty": 0.8,
+      "code_write": 0.575,
+      "program_output": 0.35,
       "conversation_memory": 1.0,
-      "word_problem": 0.525,
-      "conversion": 0.6,
+      "word_problem": 1.0,
+      "conversion": 1.0,
       "code_write_heldout": 0.0,
-      "knowledge_command": 0.025,
-      "knowledge_python": 0.05,
-      "translation": 0.375
+      "knowledge_command": 0.05,
+      "knowledge_python": 0.1,
+      "translation": 0.375,
+      "code_compose": 0.95,
+      "code_compose_heldout": 0.825
     },
-    "over_refusal_rate": 0.0,
+    "over_refusal_rate": 0.0014,
     "decode_tokens_per_s_cpu": [
-      202.98,
-      157.06,
-      204.57
+      225.79,
+      260.91,
+      209.73
     ],
     "time_to_first_token_s_cpu": [
-      0.0147,
-      0.056,
-      0.0962
+      0.0114,
+      0.0336,
+      0.0882
     ],
     "stability_errors": 0,
     "bpb_served": {
-      "loss": 2.35833,
-      "bpb": 0.98688,
+      "loss": 2.35785,
+      "bpb": 0.98668,
       "tokens": 772096
     },
     "bpb_float32": {
-      "loss": 2.35478,
-      "bpb": 0.9854,
+      "loss": 2.35292,
+      "bpb": 0.98462,
       "tokens": 772096
     }
   }

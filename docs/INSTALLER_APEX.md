@@ -79,9 +79,10 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.5.exe -Algorithm SHA256` (même
   - **Cerveau APEX** : ApexLM, le modèle de langage propre à APEX — architecture, tokenizer, données,
     entraînement et quantification APEX-Q5 écrits dans ce dépôt, aucun poids externe. Livré en 0.5.0 : le
     **Cerveau v2** (15,7 M paramètres, poids APEX-Q5 de 11,8 Mo, entraîné à converser ; poids vérifiés à chaque
-    chargement). **Qualité mesurée : 48 % d'exercices jamais vus réussis** — bon sur les formats (JSON, rappel
-    d'un fait de la conversation, limites), faible en calcul, en connaissances et sur du code jamais vu ; détail
-    dans [`docs/CERVEAU_APEX_V2.md` §9](CERVEAU_APEX_V2.md). C'est un modèle de validation entraîné sans GPU : le
+    chargement). **0.5.1 : calcul exact** — le Cerveau écrit l'opération, APEX la calcule (arithmétique,
+    listes, texte, dates) : **72 % d'exercices jamais vus réussis** (48 % en 0.5.0), 100 % en calcul, dates et
+    listes ; faible en connaissances et sur du code qui ne ressemble pas à ce qu'il a appris ; détail dans
+    [`docs/CERVEAU_APEX_V2.md` §9 bis](CERVEAU_APEX_V2.md). C'est un modèle de validation entraîné sans GPU : le
     vrai Cerveau (≈ 113 M paramètres) s'entraîne sur le GPU du PC (§10 du même document) et remplace celui-ci
     automatiquement dès son installation, même APEX ouvert.
   Le moteur choisi répond, ou la réponse échoue avec la raison — jamais un autre moteur à sa place. Chaque réponse
@@ -170,7 +171,7 @@ puis rouvrir APEX.
 |---|---|
 | « Aucun modèle disponible » | Panel : **Installer le modèle**, puis **Arrêter APEX** / **Démarrer APEX** |
 | « Moteur « Ollama » indisponible » | démarrez Ollama sur ce PC, ou choisissez **APEX intégré** dans la liste **Moteur** |
-| Réponse fausse du **Cerveau APEX** (calcul, code jamais vu, connaissances) | limite mesurée du Cerveau livré (48 %, voir sa qualité dans la liste **Moteur**) : choisissez **APEX intégré** ou Ollama pour ces questions, ou entraînez le vrai Cerveau sur le GPU du PC ([`CERVEAU_APEX_V2.md` §10](CERVEAU_APEX_V2.md)) |
+| Réponse fausse du **Cerveau APEX** (code jamais vu, connaissances) | limite mesurée du Cerveau livré (voir sa qualité dans la liste **Moteur**) : choisissez **APEX intégré** ou Ollama pour ces questions, ou entraînez le vrai Cerveau sur le GPU du PC ([`CERVEAU_APEX_V2.md` §10](CERVEAU_APEX_V2.md)) |
 | Page **Assistant** : « ne peut pas s'afficher dans cette fenêtre » | composant absent : installez « Microsoft Edge WebView2 Runtime » (https://go.microsoft.com/fwlink/p/?LinkId=2124703), puis **Réessayer dans la fenêtre** ; en attendant, **Ouvrir dans le navigateur** |
 | « La réponse a échoué — … mémoire insuffisante pour charger le modèle : … Go disponibles, … Go nécessaires » | fermer des applications, ou **Paramètres → Ressources → Précision : bfloat16**, puis **Réessayer** |
 | « La réponse a échoué — délai dépassé » | **Paramètres → Runtime** : allonger le délai (jusqu'à 3600 s), ou réduire **Modèles → Longueur maximale** |

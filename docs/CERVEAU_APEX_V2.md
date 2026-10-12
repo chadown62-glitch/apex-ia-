@@ -118,7 +118,7 @@ lieu d'être supposée : **10 fois plus lent** sur le modèle livré. La bibliot
 architectures Hugging Face (Llama…), pas ApexLM. Décision : non intégrée au chemin principal, faute de bénéfice
 mesuré.
 
-## 9. Mesures — modèle de validation livré (`brain/apex-brain-v2`, 11/10/2026)
+## 9. Mesures — première version du modèle de validation (11/10/2026, 0.5.0)
 
 Tout est mesuré sur le Cerveau **réellement servi** (`brain/apex-brain-v2/evaluation.json`, même répertoire et
 même moteur d'inférence que l'application). Environnement : 4 cœurs CPU (AVX-512), aucun GPU, torch 2.14.
@@ -185,6 +185,48 @@ question sur un fait sorti du contexte qui le met en échec.
 pas accès à Internet ni à des informations en temps réel… » (juste) ; « Combien font 37 × 24 ? » → « 37 × 24 =
 37 × 20 + 37 × 4 = 1960 + 37 / 37 × 24 = 2856. » (faux : 888) ; « Qui es-tu ? » → la même phrase sur l'accès à
 Internet (hors sujet).
+
+## 9 bis. Calcul exact et fonctions composées (12/10/2026, 0.5.1) — Cerveau livré
+
+Objectif de l'utilisateur : une IA « extrêmement bonne en code, maths, calculs ». Un modèle de 15,7 M
+paramètres ne calcule pas de tête (7,5 % mesuré) : il **délègue**. Deux leviers, mesurés sur le **même**
+pré-entraînement et les **mêmes 660 exercices** que §9 (questions et vérifications identiques, 540/540 vérifié) :
+
+1. **Calculatrice exacte** (`apex/brain/calc.py`) : le modèle écrit l'opération (`<|tool_call|> 974*89
+   <|tool_result|>`), le moteur la calcule et place le résultat dans la réponse (et dans le contexte du
+   modèle). Arithmétique, et fonctions PURES pour les listes (`sorted`, `max`, `sum`, `evens`…), le texte
+   (`reverse`, `len`, `upper`, `spell`…) et le calendrier (`weekday`, `add_days`, `days_between`,
+   `is_leap`) : le modèle recopie l'énoncé, la calculatrice fait le reste. Rien d'autre ne s'exécute (pas de
+   nom, d'attribut ni d'appel hors de la liste ; tailles bornées ; testé). Le résultat n'est jamais appris : le
+   modèle apprend à écrire l'appel, pas à deviner le résultat.
+2. **Fonctions composées** (`apex/neural/compose_tasks.py`) : filtre × transformation × agrégat, ≈ 6 000
+   fonctions distinctes (23 648 exercices), tests obtenus en exécutant la référence ; ≈ 15 % des combinaisons
+   jamais montrées à l'entraînement.
+
+| Famille (exercices jamais vus) | 0.5.0 | **0.5.1** |
+|---|---|---|
+| arithmétique | 7,5 % | **100 %** |
+| problèmes en mots | 52,5 % | **100 %** |
+| conversions | 60 % | **100 %** |
+| dates (jour de la semaine, ajout de jours, écart, bissextile) | 30 % | **100 %** |
+| listes (tri, max, somme, pairs…) | 45 % | **100 %** |
+| opérations sur du texte | 17,5 % | **97,5 %** |
+| sortie de programme | 25 % | 35 % |
+| correction de bug / fonction vue / logique / honnêteté / mémoire / JSON | 77,5 / 62,5 / 85 / 82,5 / 100 / 100 % | 77,5 / 57,5 / 82,5 / 80 / 100 / 100 % |
+| traduction / connaissances (commandes, Python) | 37,5 / 2,5 / 5 % | 37,5 / 5 / 10 % |
+| fonction écrite à la main jamais montrée | 0 % | 0 % |
+| **ensemble des 660 exercices** | **47,9 %** | **71,7 %** |
+| fonctions composées, combinaisons vues (nouvelles constantes) | — | 95 % |
+| fonctions composées, **combinaisons jamais montrées** | — | **82,5 %** |
+
+Inchangé ou mieux : refus abusif 0,14 % (1 sur 700), bits par octet servis 0,9867 (0,9869 avant), 100
+générations sans erreur, 210 à 261 jetons/s sur 4 cœurs. Essais réels (`chat`) : « 37 × 24 » → 888 ;
+« quel jour était le 14 juillet 1789 » → mardi ; « jours entre le 1 janvier et le 12 octobre 2026 » → 284 ;
+dans APEX, « 1234 × 5678 » → 7006652, l'appel `1234*5678` figurant dans les faits de la réponse.
+
+**Limites mesurées** : le code n'est réussi que si la demande ressemble aux gabarits appris — « somme des
+carrés des nombres impairs » formulée librement donne une fonction fausse ; une fonction écrite à la main jamais
+montrée : 0/20. Prochain levier : formulations variées des exercices, et vérification du code par exécution.
 
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 
