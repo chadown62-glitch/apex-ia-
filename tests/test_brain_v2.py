@@ -903,3 +903,69 @@ def test_polyglot_evaluation_functions_are_never_trained() -> None:
     train = polyglot_examples(200, seed=4, split="train", languages=("python", "csharp"), exclude=names)
     assert not any(e.meta["heldout"] for e in train) and not {e.meta["function"] for e in train} & names
     assert "Solution" in next(e.assistant for e in train if e.meta["language"] == "csharp")
+
+
+def _all_models():
+    from apex.brain import mesh3d as m3
+
+    return [
+        *(m3.vehicle(k) for k in ("car", "truck", "tank", "motorbike")),
+        *(m3.weapon(k) for k in ("sword", "axe", "rifle", "pistol")),
+        *(m3.character(build=b) for b in ("slim", "normal", "strong")),
+    ]
+
+
+def test_3d_models_are_closed_oriented_and_sized_as_asked() -> None:
+    import struct
+
+    from apex.brain import mesh3d as m3
+    from apex.brain.preview3d import render
+
+    for model in _all_models():
+        assert m3.check(model) == [], model.kind
+        glb = m3.to_glb(model)
+        magic, version, length = struct.unpack("<4sII", glb[:12])
+        assert (magic, version, length) == (b"glTF", 2, len(glb))
+        chunk_length, kind = struct.unpack("<I4s", glb[12:20])
+        document = json.loads(glb[20 : 20 + chunk_length])
+        assert kind == b"JSON" and len(document["meshes"]) == len(model.parts)
+        assert render(model, size=64).startswith(b"\x89PNG")
+    car = m3.vehicle("car", length=5.0, width=2.0, height=1.5, wheels=6)
+    size = car.size()
+    assert abs(size[1] - 2.0) < 0.05 and abs(size[2] - 1.5) < 0.01 and abs(size[0] - 5.0) < 0.1
+    assert sum(p.name.startswith("roue") for p in car.parts) == 6
+    hero = m3.character(height=2.0)
+    assert abs(hero.size()[2] - 2.0) < 0.01 and len(hero.bones) == 20
+    with pytest.raises(ValueError):
+        m3.vehicle("sous-marin")
+
+
+def test_blender_rebuilds_the_same_models_when_blender_is_installed(tmp_path) -> None:
+    """Le script Blender produit par APEX, exécuté par le VRAI Blender (sans écran) : mêmes pièces, mêmes
+    triangles, mêmes dimensions (au millimètre), squelette, et export glTF réussi."""
+    import shutil
+    import subprocess
+
+    from apex.brain import mesh3d as m3
+
+    if shutil.which("blender") is None:
+        pytest.skip("Blender absent de cet environnement")
+    for model in (m3.vehicle("tank"), m3.weapon("rifle"), m3.character(build="strong")):
+        script, output = tmp_path / "modele.py", tmp_path / "modele.glb"
+        script.write_text(m3.to_blender_script(model), encoding="utf-8")
+        done = subprocess.run(
+            ["blender", "-b", "--factory-startup", "--python", str(script), "--", str(output)],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        line = next(x for x in done.stdout.splitlines() if x.startswith("APEX_BLENDER_STATS "))
+        measured, expected = json.loads(line.split(" ", 1)[1]), model.stats()
+        assert (measured["parts"], measured["triangles"], measured["bones"]) == (
+            expected["parts"],
+            expected["triangles"],
+            expected["bones"],
+        )
+        assert all(abs(a - b) <= 0.002 for a, b in zip(measured["size_m"], expected["size_m"], strict=True))
+        assert output.stat().st_size > 1000 and "Traceback" not in done.stdout + done.stderr
