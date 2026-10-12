@@ -678,3 +678,18 @@ Conception, entraînement et mesures : [`docs/CERVEAU_APEX_V2.md`](CERVEAU_APEX_
   développement ; la logique d'ajustement du lot à la mémoire est testée avec des quantités simulées, le chemin
   CUDA lui-même ne l'est pas. Les chemins des jeux de données Hugging Face ne sont pas joignables d'ici (un échec
   de source est rapporté sans arrêter la construction du corpus).
+
+## 16. APEX.exe 0.5.1 — le Cerveau APEX calcule juste
+
+Panel inchangé. L'application livre le Cerveau v2 réinstruit (même pré-entraînement) pour déléguer chaque calcul à
+la calculatrice exacte d'APEX (`apex/brain/calc.py`) et entraîné sur des fonctions composées : **71,7 %** sur les
+mêmes 660 exercices jamais vus (47,9 % en 0.5.0), détail dans [`docs/CERVEAU_APEX_V2.md` §9 bis](CERVEAU_APEX_V2.md).
+
+| Niveau | Résultat |
+|---|---|
+| Tests Python des fichiers concernés (cerveau, assistant, moteurs, statut, API, conversations, distribution) | **151 réussis**, 21 ignorés, 0 échec, avec le nouveau Cerveau dans `brain/` |
+| Cerveau dans l'application (fournisseur d'APEX) | intègre ; « 1234 × 5678 » → « 1234 × 5678 = 7006652. », appel `1234*5678` dans les faits de la réponse |
+| Installateur 0.5.1 (SHA-256 `45d35a80…1c832187`, commit `e0725a5`) | construit depuis le commit (artefact « release ») |
+| WINE — **Windows simulé, pas Windows** | cycle de vie **17/17** ; mise à jour **0.5.0 → 0.5.1** **18/18** ; robustesse **10/10** |
+
+Non vérifié ici : le Cerveau sous Windows réel (Wine n'exécute pas torch) ; l'entraînement GPU (§15.2).
