@@ -1,0 +1,51 @@
+{
+  "project_id": "47aff463-8b04-46fd-a072-03871f6e6f57",
+  "steps": {
+    "graphics": {
+      "run_id": "49c1397a-d036-492b-bbaa-e2f581f875f0",
+      "status": "completed",
+      "attempts": [
+        {
+          "attempt_number": 1,
+          "provider_name": "qwen2.5-coder:7b-instruct:q5_k_m",
+          "sandbox_level": "containerized",
+          "category": null,
+          "reason": "succès",
+          "strategy": null,
+          "judge_result": "pass",
+          "started_at": "2026-10-12T17:07:42.249785+00:00",
+          "duration_s": 13.817,
+          "reassigned": false,
+          "decision": null
+        }
+      ],
+      "feedback": "success",
+      "artifact": "sha256:b7fbc73257754f968237eaae944f9bb4494d070ca5784e0c11c8caa2e414fe7e"
+    },
+    "engineer": {
+      "run_id": "925af6c2-d0f5-49b3-8750-59ae98e7a3a5",
+      "status": "completed",
+      "attempts": [
+        {
+          "attempt_number": 1,
+          "provider_name": "qwen2.5-coder:7b-instruct:q5_k_m",
+          "sandbox_level": "containerized",
+          "category": null,
+          "reason": "succès",
+          "strategy": null,
+          "judge_result": "pass",
+          "started_at": "2026-10-12T17:07:56.152737+00:00",
+          "duration_s": 12.09,
+          "reassigned": false,
+          "decision": null
+        }
+      ],
+      "feedback": "success",
+      "artifact": "sha256:deb4ca8d3793b766f5571f4450de039df4be03f24ded816707304a2501cb3595"
+    }
+  },
+  "status": "completed",
+  "reason": null,
+  "mission_state": "review",
+  "review_required": true
+}

@@ -1,0 +1,16 @@
+{
+  "length_m": 4.2,
+  "width_m": 1.8,
+  "height_m": 1.25,
+  "wheelbase_m": 2.5,
+  "wheel_radius_m": 0.31,
+  "wheel_width_m": 0.2,
+  "mass_kg": 1200,
+  "body_color": [
+    0.01,
+    0.08,
+    0.65
+  ],
+  "paint_metallic": 0.7,
+  "paint_roughness": 0.15
+}

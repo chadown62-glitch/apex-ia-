@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "contract": "VehicleAssetContract",
+  "producer": "apex.game_graphics",
+  "geometry_method": "procedural_blender",
+  "spec": {
+    "length_m": 4.5,
+    "width_m": 1.9,
+    "height_m": 1.35,
+    "wheelbase_m": 2.65,
+    "wheel_radius_m": 0.34,
+    "wheel_width_m": 0.22,
+    "mass_kg": 1350,
+    "body_color": [
+      0.62,
+      0.015,
+      0.008
+    ],
+    "paint_metallic": 0.65,
+    "paint_roughness": 0.18
+  },
+  "units": "m",
+  "blender_axes": {
+    "forward": "+X",
+    "up": "+Z",
+    "handedness": "right"
+  },
+  "glb_axes": {
+    "up": "+Y",
+    "handedness": "right",
+    "exporter_converted": true
+  },
+  "unreal_target": {
+    "units": "cm",
+    "up": "+Z",
+    "forward": "+X",
+    "scale_conversion": 100,
+    "import_tested": false
+  },
+  "wheels": [
+    {
+      "object": "wheel_front_left",
+      "center_m": [
+        1.325,
+        -0.84,
+        0.34
+      ],
+      "radius_m": 0.34,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "object": "wheel_front_right",
+      "center_m": [
+        1.325,
+        0.84,
+        0.34
+      ],
+      "radius_m": 0.34,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "object": "wheel_rear_left",
+      "center_m": [
+        -1.325,
+        -0.84,
+        0.34
+      ],
+      "radius_m": 0.34,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "object": "wheel_rear_right",
+      "center_m": [
+        -1.325,
+        0.84,
+        0.34
+      ],
+      "radius_m": 0.34,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "vehicle.blend",
+      "role": "blender_project",
+      "sha256": "75850f05475410a5386430fa6f77fb3c28a421a517fd65dbc136cec5433a06aa",
+      "bytes": 1875420
+    },
+    {
+      "path": "vehicle.glb",
+      "role": "unreal_exchange",
+      "sha256": "9c1e9ae26ce46ed4d343bff411cc934eb62bbaf8b20034ec9b48918c0032b129",
+      "bytes": 410248
+    },
+    {
+      "path": "vehicle-lod1.glb",
+      "role": "lod",
+      "sha256": "1701cc5102fcace7a46329ff6a50d3da3f7bb3a503b271d76ed417edd1350bff",
+      "bytes": 315936
+    },
+    {
+      "path": "vehicle-asset-v1.schema.json",
+      "role": "schema",
+      "sha256": "1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51",
+      "bytes": 2637
+    },
+    {
+      "path": "front_three_quarter.png",
+      "role": "view",
+      "sha256": "91e86c7c2f787cbbb8c55dcc3024cbb80d41b0861a3e892125651352768e9d64",
+      "bytes": 456007
+    },
+    {
+      "path": "rear_three_quarter.png",
+      "role": "view",
+      "sha256": "d4f178c0f3ed85d74953ad120c768adc51b80ac96b8249789d72d1ce52c27bb0",
+      "bytes": 479645
+    },
+    {
+      "path": "side.png",
+      "role": "view",
+      "sha256": "cb443b352bbfaeb312031d7b50902cef5189d06ca605d4071a83f26d76556dfb",
+      "bytes": 439638
+    },
+    {
+      "path": "front.png",
+      "role": "view",
+      "sha256": "052f4f1fb67eb4bfc727a23cb01ebddaca7c781a04720197a74af5714d772b30",
+      "bytes": 398170
+    },
+    {
+      "path": "spec.json",
+      "role": "spec",
+      "sha256": "5d6b8d5089bb19e181c68948ec86cc448b86de00017a6ff81f77a2be30850911",
+      "bytes": 259
+    }
+  ],
+  "controller": {
+    "text": "```json\n{\n  \"length_m\": 4.5,\n  \"width_m\": 1.9,\n  \"height_m\": 1.35,\n  \"wheelbase_m\": 2.65,\n  \"wheel_radius_m\": 0.34,\n  \"wheel_width_m\": 0.22,\n  \"mass_kg\": 1350,\n  \"body_color\": [0.62, 0.015, 0.008],\n  \"paint_metallic\": 0.65,\n  \"paint_roughness\": 0.18\n}\n```",
+    "model_used": "qwen2.5-coder-7b-instruct-q5",
+    "tokens_prompt": {
+      "value": 338,
+      "status": "real"
+    },
+    "tokens_completion": {
+      "value": 136,
+      "status": "real"
+    },
+    "finish_reason": "stop",
+    "elapsed_s": 37.408,
+    "facts": {
+      "id": "chatcmpl-8b6346f1-b2ab-4384-8ff7-83458d2443fc",
+      "created": 1791823307
+    },
+    "prompt": "Cr\u00e9e un prototype de coup\u00e9 sportif rouge. Longueur 4.5, largeur 1.9, hauteur 1.35, empattement 2.65, rayon de roue 0.34, largeur de roue 0.22, masse 1350. Couleur RGB [0.62,0.015,0.008], metallic 0.65, roughness 0.18.",
+    "spec": {
+      "length_m": 4.5,
+      "width_m": 1.9,
+      "height_m": 1.35,
+      "wheelbase_m": 2.65,
+      "wheel_radius_m": 0.34,
+      "wheel_width_m": 0.22,
+      "mass_kg": 1350,
+      "body_color": [
+        0.62,
+        0.015,
+        0.008
+      ],
+      "paint_metallic": 0.65,
+      "paint_roughness": 0.18
+    },
+    "lifecycle": {
+      "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+      "commit": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+      "sha256": "586844eac4d6d6321689f0192c8aa8e69cd8625974a5cc2d925b1a03366e4d16",
+      "quantization": "Q5_K_M",
+      "device": "cpu",
+      "load_s": 2.038746173999243,
+      "pid": 12211,
+      "rss_after_load_bytes": 6045405184,
+      "rss_after_generation_bytes": 6765445120,
+      "process_stopped_verified": true,
+      "returncode": -15
+    }
+  },
+  "rig": {
+    "kind": "separate_static_meshes",
+    "skeletal_rig": false,
+    "physics_asset": false
+  },
+  "lods": [
+    {
+      "level": 1,
+      "path": "vehicle-lod1.glb",
+      "method": "Blender decimate 0.5"
+    }
+  ],
+  "texture_maps": [],
+  "scene_materials": "Principled PBR",
+  "uv_present": true,
+  "visual_judge_calibrated": false
+}
