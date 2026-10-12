@@ -1,0 +1,24 @@
+{
+  "review_date": "2026-10-12",
+  "weights_downloaded_after_review": [
+    "Qwen official Q5_K_M"
+  ],
+  "documents": [
+    {
+      "file": "qwen-gguf-license.txt",
+      "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e"
+    },
+    {
+      "file": "qwen-license.txt",
+      "sha256": "832dd9e00a68dd83b3c3fb9f5588dad7dcf337a0db50f7d9483f310cd292e92e"
+    },
+    {
+      "file": "triposr-code-license.txt",
+      "sha256": "ade0a66629bdd7e01e46b3296b3851cff0fd27989bca53da470ad6e96ed620fb"
+    },
+    {
+      "file": "hunyuan-license.txt",
+      "sha256": "eca02cc10abaf520d85c3c523aef0b88f36b935b85635f1e34370688e93da3dd"
+    }
+  ]
+}

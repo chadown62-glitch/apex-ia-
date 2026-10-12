@@ -1,0 +1,76 @@
+{
+  "defects": [
+    {
+      "id": "invalid_geometry",
+      "object": "cabin_glass",
+      "format": "blend",
+      "degenerate_faces": 0,
+      "invalid_normals": 0,
+      "signed_volume": -0.8411385395848481,
+      "correction": "remove zero-area faces and recalculate normals"
+    },
+    {
+      "id": "invalid_geometry",
+      "object": "cabin_glass",
+      "format": "glb",
+      "degenerate_faces": 0,
+      "invalid_normals": 0,
+      "signed_volume": -0.8411385395848481,
+      "correction": "remove zero-area faces and recalculate normals"
+    },
+    {
+      "id": "invalid_geometry",
+      "object": "cabin_glass_LOD1",
+      "format": "lod1",
+      "degenerate_faces": 0,
+      "invalid_normals": 0,
+      "signed_volume": -0.7856425208205828,
+      "correction": "remove zero-area faces and recalculate normals"
+    }
+  ],
+  "unavailable": [],
+  "facts": {
+    "blend": {
+      "triangles": 13596,
+      "dimensions": [
+        4.506500005722046,
+        1.899999976158142,
+        1.3500000619489505
+      ],
+      "objects": 38
+    },
+    "glb": {
+      "triangles": 13596,
+      "dimensions": [
+        4.506500005722046,
+        1.9000000953674316,
+        1.3500000982259763
+      ],
+      "objects": 38
+    },
+    "lod1": {
+      "triangles": 9870,
+      "dimensions": [
+        4.505974292755127,
+        1.9000000953674316,
+        1.3500000982259763
+      ],
+      "objects": 38
+    }
+  },
+  "criteria": {
+    "level": "jouable",
+    "max_triangles": 60000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 1,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "limits": [
+    "objective geometry and pixel checks do not certify aesthetic quality",
+    "engine import/performance not measured"
+  ]
+}

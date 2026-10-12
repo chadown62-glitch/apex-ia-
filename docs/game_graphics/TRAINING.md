@@ -1,0 +1,17 @@
+# Baseline et adaptation des poids
+
+Aucune LoRA, QLoRA ni modification des poids n’a été exécutée. Le spécialiste emploie le vrai Qwen Coder Q5 officiel comme contrôleur de paramètres d’un coupé procédural. Cela établit une baseline concrète, pas une IA propriétaire de géométrie ni une supériorité générale sur Blender.
+
+Le dataset JSONL vérifie les empreintes avant enregistrement : demande, identité du script, manifestes de `.blend`/GLB/rendus, rapport indépendant, défaut observé, réparation et verdict. Les fichiers avant/après sont conservés. Seuls les exemples TRAIN passant le juge sont éligibles à une future sélection d’entraînement. Les échecs restent utiles comme contexte de correction. Toute version dérivée d’une famille heldout doit rester heldout ; une séparation par couleur seulement ne suffit pas à évaluer une généralisation à d’autres formes de véhicules. Les deux nouvelles demandes et leur version défectueuse sont toutes hors entraînement. Aucune donnée tierce ni licence attribuée sans droit.
+
+Le faible nombre de familles, leur géométrie commune et les contrôles esthétiques absents interdisent d’affirmer une amélioration ou de lancer un entraînement lourd utile maintenant. Aucune comparaison avant/après fine-tuning n’existe. Les comparaisons présentes concernent une correction Blender déterministe et la baseline originale sur deux demandes inédites.
+
+## Étude de faisabilité, à mesurer sur le PC cible
+
+Une LoRA standard sur le 7B en BF16 exige environ 14–15 Go pour les seuls poids, sans activations/gradients/optimiseur : incompatible avec 8 Go de VRAM entièrement disponibles. Pour QLoRA, les seuls poids 4 bits représentent environ 3,5–4 Go ; ce n’est pas le pic total. Activations, quantification, adaptateurs, contexte et optimiseur peuvent dépasser les 8 Go. La RAM 16 Go limite aussi l’offload et les checkpoints.
+
+Le GGUF Q5 utilisé pour l’inférence n’est pas une base de fine-tuning PEFT. Une expérience distincte demanderait les poids originaux autorisés, un runtime CUDA/bitsandbytes validé sous WSL2, une longueur de contexte courte mesurée, batch 1, petit rang initial et gradient accumulation. GPU réservé exclusivement, Blender/UE arrêtés, mesure des pics VRAM/RAM et essai OOM/cancellation/reload avant toute campagne. Ces opérations n’ont pas été réalisées sur ce cloud CPU. Aucun téléchargement des poids originaux effectué.
+
+Avant adaptation : constituer un corpus diversifié et suffisant de tâches Blender réelles, toutes exécutées, jugées, dédupliquées et avec provenance. Préassigner les familles, géométries et types de défauts inédits en heldout avant sélection. Mesurer réussite des commandes, exactitude des dimensions, artefacts utilisables, réparations et qualité visuelle avec références légales et évaluation humaine/calibrée. Comparer base et adaptateur sur les mêmes cas inédits, sans entraînement sur les corrections de ces cas. Conserver base SHA, dataset SHA, version de l’adaptateur, budgets et rapports. L’adaptateur n’est promu qu’après gain démontré sans régression ; revenir à la base immuable reste possible.
+
+La spécialisation d’un générateur neuronal 3D est un chantier séparé. Ni mémoire d’entraînement, ni calcul, ni qualité ou légalité d’un grand dataset 3D n’ont été qualifiés. Ne pas extrapoler la taille VRAM d’inférence TripoSR à son entraînement. Routes, terrains, bâtiments, villes et mondes ouverts restent non implémentés/non évalués.
