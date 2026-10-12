@@ -1,0 +1,82 @@
+[
+  {
+    "class": "StaticMeshEditorSubsystem",
+    "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/StaticMeshEditorSubsystem?application_version=5.6",
+    "http_status": 200,
+    "response_sha256": "fe14d83340f90dd0dfc6f43c9fa1e1b448faca5593a3c4866656215b7b0a107e",
+    "members": [
+      {
+        "name": "get_number_verts",
+        "present": true,
+        "signature": null
+      },
+      {
+        "name": "get_number_triangles",
+        "present": false,
+        "signature": null
+      }
+    ]
+  },
+  {
+    "class": "MaterialEditingLibrary",
+    "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/MaterialEditingLibrary?application_version=5.6",
+    "http_status": 200,
+    "response_sha256": "bd0900329c288d0d8cd56ca22580bd1d44600974604cb29485e8dcf831c381c6",
+    "members": [
+      {
+        "name": "get_material_property_input_node",
+        "present": true,
+        "signature": null
+      },
+      {
+        "name": "get_material_default_scalar_parameter_value",
+        "present": true,
+        "signature": null
+      },
+      {
+        "name": "get_material_default_vector_parameter_value",
+        "present": true,
+        "signature": null
+      }
+    ]
+  },
+  {
+    "class": "EditorAssetLibrary",
+    "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/EditorAssetLibrary?application_version=5.6",
+    "http_status": 200,
+    "response_sha256": "4649f64265073af3344e18c265b4128e2224643994350ed5bef6c4f966ea8dea",
+    "members": [
+      {
+        "name": "duplicate_asset",
+        "present": true,
+        "signature": null
+      }
+    ]
+  },
+  {
+    "class": "AutomationLibrary",
+    "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/AutomationLibrary?application_version=5.6",
+    "http_status": 200,
+    "response_sha256": "3c89a1118112d2cd05c29796875bbdb932aec1df3a53189ddc43488954c7ed5e",
+    "members": [
+      {
+        "name": "take_high_res_screenshot",
+        "present": true,
+        "signature": null
+      }
+    ]
+  },
+  {
+    "class": "SystemLibrary",
+    "url": "https://dev.epicgames.com/documentation/en-us/unreal-engine/python-api/class/SystemLibrary?application_version=5.6",
+    "http_status": 200,
+    "response_sha256": "3dc7fb15816383990a85039ae961bd5100d6beef6c63fa51630d942e3e6e5b28",
+    "members": [
+      {
+        "name": "quit_editor",
+        "present": true,
+        "signature": null
+      }
+    ]
+  }
+]

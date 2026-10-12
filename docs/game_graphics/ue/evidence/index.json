@@ -1,0 +1,90 @@
+{
+  "kind": "actual-local-neural-plan/control-plane; UE rendering BLOCKED",
+  "files": [
+    {
+      "path": "controller.json",
+      "bytes": 10778,
+      "sha256": "8604727e3df1a34c9837ad887d528792df46e512c874564c5c146b8f7bbdf096"
+    },
+    {
+      "path": "environment-probe.json",
+      "bytes": 2192,
+      "sha256": "12a8f92c031df7b8543d1312ee36c9fd138c6520ad57b24119cf5d033b728e06"
+    },
+    {
+      "path": "integration-report.json",
+      "bytes": 4313,
+      "sha256": "1821e0d401409f6ee5f29a090297803b375d73e933d10e59dfd22e94819cd821"
+    },
+    {
+      "path": "llama-server.log",
+      "bytes": 200932,
+      "sha256": "c5550861e02dda78b2e24ddc25921bd6e67aa1a9c29368869cc3c2002b812fa1"
+    },
+    {
+      "path": "official-api-review.json",
+      "bytes": 2496,
+      "sha256": "bfc3b6e1fb3da70b5c9cab4f3663dadb416cd629691c16d754987c12f218c8c1"
+    },
+    {
+      "path": "prepared-neural-scene/project/.apex-graphics-project.json",
+      "bytes": 213,
+      "sha256": "3a5a910d770fcdbc81dd2c40235a277676f4788959d50d914cca82136974f836"
+    },
+    {
+      "path": "prepared-neural-scene/project/ApexGraphics.uproject",
+      "bytes": 225,
+      "sha256": "9abbd675dfae51fef9401d2b43f7593dab1b1c7cb0869db83035405ee6afa417"
+    },
+    {
+      "path": "prepared-neural-scene/project/Config/DefaultEngine.ini",
+      "bytes": 91,
+      "sha256": "dbe95091cf07251d2174ed4b0adc6b8f792b5914991b25c52145736bbe4f613d"
+    },
+    {
+      "path": "prepared-neural-scene/project/Requests/build-job.json",
+      "bytes": 629,
+      "sha256": "accebf88c26c6acd8fe2e08bcf9252ea30d2a74dde260bd8d077daeb3f4e671a"
+    },
+    {
+      "path": "prepared-neural-scene/project/Requests/inspect-job.json",
+      "bytes": 633,
+      "sha256": "62e2c1973b418eaa54d40dae6f8ab79b1b2cb2abd68795fffcd4206f75d3ecd8"
+    },
+    {
+      "path": "prepared-neural-scene/project/Requests/scene-plan.json",
+      "bytes": 3169,
+      "sha256": "be4351ccc4eaaee085e27b8a72c6f7160afe61988eb45d23bd23b3cb42c378d6"
+    },
+    {
+      "path": "prepared-neural-scene/project/Tools/scene_contract.py",
+      "bytes": 11528,
+      "sha256": "f3ef2fc52c933c8ed5c43a646a10fd7052c6d09313863218450ecdb1618b0112"
+    },
+    {
+      "path": "prepared-neural-scene/project/Tools/ue_build_scene.py",
+      "bytes": 7192,
+      "sha256": "321c2a4f788c8b376a9ec666169fd2aa4a0869b7b16ce2ccb485b040d46f6f78"
+    },
+    {
+      "path": "prepared-neural-scene/project/Tools/ue_inspect_scene.py",
+      "bytes": 9268,
+      "sha256": "f1c6801a143c53bdbc9811a04c15b720c1da0053ee447652a8e2018f72228b3c"
+    },
+    {
+      "path": "prepared-neural-scene/scene-contract.json",
+      "bytes": 1687,
+      "sha256": "02068a312d0767a5fbbf8849e256f6d0822d34cddc4abaf84bf601480e829e72"
+    },
+    {
+      "path": "ue-graphics-final.junit.xml",
+      "bytes": 7085,
+      "sha256": "78dd4fcc6d4618f87e598a9ea573090d228fd5017be16d60b2a1156e3a17029f"
+    },
+    {
+      "path": "ue-graphics-final.log",
+      "bytes": 99,
+      "sha256": "5fde499b2556a15ce8393514fba58b08d1a060716f9594d0ba6027dfe2b162ca"
+    }
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "request": {
+    "endpoint": {
+      "pool_id": "local",
+      "runtime": "openai_compatible",
+      "url": "http://127.0.0.1:8082/v1",
+      "served_model": "qwen2.5-coder-7b-instruct-q5",
+      "max_context": 8192,
+      "vram_gb": null,
+      "measured": null,
+      "secret_key": null,
+      "enabled": true
+    },
+    "prompt": "Make a restricted UE5 scene: one road, one building, a few props and lighting. Use exactly this JSON schema/keys, allowed mesh shapes cube/sphere/cylinder, owner graphics. kind mesh/directional_light/point_light only. Keep scene_id urban_demo, revision 1, parent null, protected_engineer_ids empty. Locations/dimensions in cm; rotation [pitch,yaw,roll] degrees. Use at most 8 actors and 3 materials. Preserve level prototype. Output only JSON. Example: {\"schema_version\": 1, \"scene_id\": \"urban_demo\", \"revision\": 1, \"parent_manifest_sha256\": null, \"level\": \"prototype\", \"materials\": [{\"id\": \"asphalt\", \"base_color\": [0.035, 0.04, 0.045], \"roughness\": 0.8, \"metallic\": 0}, {\"id\": \"concrete\", \"base_color\": [0.5, 0.45, 0.36], \"roughness\": 0.65, \"metallic\": 0}, {\"id\": \"metal\", \"base_color\": [0.25, 0.27, 0.3], \"roughness\": 0.3, \"metallic\": 0.8}], \"actors\": [{\"id\": \"road\", \"owner\": \"graphics\", \"kind\": \"mesh\", \"shape\": \"cube\", \"material_id\": \"asphalt\", \"location_cm\": [0, 0, -10], \"rotation_deg\": [0, 0, 0], \"dimensions_cm\": [2400, 600, 20], \"intensity\": null}, {\"id\": \"building\", \"owner\": \"graphics\", \"kind\": \"mesh\", \"shape\": \"cube\", \"material_id\": \"concrete\", \"location_cm\": [300, 700, 300], \"rotation_deg\": [0, 0, 0], \"dimensions_cm\": [600, 500, 600], \"intensity\": null}, {\"id\": \"bollard_a\", \"owner\": \"graphics\", \"kind\": \"mesh\", \"shape\": \"cylinder\", \"material_id\": \"metal\", \"location_cm\": [-500, 390, 40], \"rotation_deg\": [0, 0, 0], \"dimensions_cm\": [30, 30, 80], \"intensity\": null}, {\"id\": \"bollard_b\", \"owner\": \"graphics\", \"kind\": \"mesh\", \"shape\": \"cylinder\", \"material_id\": \"metal\", \"location_cm\": [0, 390, 40], \"rotation_deg\": [0, 0, 0], \"dimensions_cm\": [30, 30, 80], \"intensity\": null}, {\"id\": \"decor_planter\", \"owner\": \"graphics\", \"kind\": \"mesh\", \"shape\": \"cube\", \"material_id\": \"concrete\", \"location_cm\": [-600, 750, 30], \"rotation_deg\": [0, 0, 0], \"dimensions_cm\": [160, 100, 60], \"intensity\": null}, {\"id\": \"sun\", \"owner\": \"graphics\", \"kind\": \"directional_light\", \"shape\": null, \"material_id\": null, \"location_cm\": [0, 0, 800], \"rotation_deg\": [-40, -25, 0], \"dimensions_cm\": null, \"intensity\": 45000}, {\"id\": \"fill\", \"owner\": \"graphics\", \"kind\": \"point_light\", \"shape\": null, \"material_id\": null, \"location_cm\": [-500, 600, 400], \"rotation_deg\": [0, 0, 0], \"dimensions_cm\": null, \"intensity\": 2000}], \"protected_engineer_ids\": []} User request: Une sc\u00e8ne urbaine restreinte : une route, un b\u00e2timent, deux potelets, un bac de d\u00e9cor, une lumi\u00e8re principale et une lumi\u00e8re de remplissage. Conserver les ids road et building. Cr\u00e9ation enti\u00e8rement dans UE5 avec des meshes simples.",
+    "max_tokens": 2048,
+    "temperature": 0,
+    "timeout_s": 600,
+    "cancel_event": null,
+    "seed": 42,
+    "system": "APEX artistic specialist: JSON graphic operations only. No code, gameplay or commands.",
+    "messages": null
+  },
+  "generation": {
+    "text": "```json\n{\n  \"schema_version\": 1,\n  \"scene_id\": \"urban_demo\",\n  \"revision\": 1,\n  \"parent_manifest_sha256\": null,\n  \"level\": \"prototype\",\n  \"materials\": [\n    {\n      \"id\": \"asphalt\",\n      \"base_color\": [0.035, 0.04, 0.045],\n      \"roughness\": 0.8,\n      \"metallic\": 0\n    },\n    {\n      \"id\": \"concrete\",\n      \"base_color\": [0.5, 0.45, 0.36],\n      \"roughness\": 0.65,\n      \"metallic\": 0\n    },\n    {\n      \"id\": \"metal\",\n      \"base_color\": [0.25, 0.27, 0.3],\n      \"roughness\": 0.3,\n      \"metallic\": 0.8\n    }\n  ],\n  \"actors\": [\n    {\n      \"id\": \"road\",\n      \"owner\": \"graphics\",\n      \"kind\": \"mesh\",\n      \"shape\": \"cube\",\n      \"material_id\": \"asphalt\",\n      \"location_cm\": [0, 0, -10],\n      \"rotation_deg\": [0, 0, 0],\n      \"dimensions_cm\": [2400, 600, 20],\n      \"intensity\": null\n    },\n    {\n      \"id\": \"building\",\n      \"owner\": \"graphics\",\n      \"kind\": \"mesh\",\n      \"shape\": \"cube\",\n      \"material_id\": \"concrete\",\n      \"location_cm\": [300, 700, 300],\n      \"rotation_deg\": [0, 0, 0],\n      \"dimensions_cm\": [600, 500, 600],\n      \"intensity\": null\n    },\n    {\n      \"id\": \"bollard_a\",\n      \"owner\": \"graphics\",\n      \"kind\": \"mesh\",\n      \"shape\": \"cylinder\",\n      \"material_id\": \"metal\",\n      \"location_cm\": [-500, 390, 40],\n      \"rotation_deg\": [0, 0, 0],\n      \"dimensions_cm\": [30, 30, 80],\n      \"intensity\": null\n    },\n    {\n      \"id\": \"bollard_b\",\n      \"owner\": \"graphics\",\n      \"kind\": \"mesh\",\n      \"shape\": \"cylinder\",\n      \"material_id\": \"metal\",\n      \"location_cm\": [0, 390, 40],\n      \"rotation_deg\": [0, 0, 0],\n      \"dimensions_cm\": [30, 30, 80],\n      \"intensity\": null\n    },\n    {\n      \"id\": \"decor_planter\",\n      \"owner\": \"graphics\",\n      \"kind\": \"mesh\",\n      \"shape\": \"cube\",\n      \"material_id\": \"concrete\",\n      \"location_cm\": [-600, 750, 30],\n      \"rotation_deg\": [0, 0, 0],\n      \"dimensions_cm\": [160, 100, 60],\n      \"intensity\": null\n    },\n    {\n      \"id\": \"sun\",\n      \"owner\": \"graphics\",\n      \"kind\": \"directional_light\",\n      \"shape\": null,\n      \"material_id\": null,\n      \"location_cm\": [0, 0, 800],\n      \"rotation_deg\": [-40, -25, 0],\n      \"dimensions_cm\": null,\n      \"intensity\": 45000\n    },\n    {\n      \"id\": \"fill\",\n      \"owner\": \"graphics\",\n      \"kind\": \"point_light\",\n      \"shape\": null,\n      \"material_id\": null,\n      \"location_cm\": [-500, 600, 400],\n      \"rotation_deg\": [0, 0, 0],\n      \"dimensions_cm\": null,\n      \"intensity\": 2000\n    }\n  ],\n  \"protected_engineer_ids\": []\n}\n```",
+    "model_used": "qwen2.5-coder-7b-instruct-q5",
+    "tokens_prompt": {
+      "value": 975,
+      "status": "real"
+    },
+    "tokens_completion": {
+      "value": 914,
+      "status": "real"
+    },
+    "finish_reason": "stop",
+    "elapsed_s": 182.679,
+    "facts": {
+      "id": "chatcmpl-12e9d1ab-b5bb-4513-ac86-475a81753ae5",
+      "created": 1791837367
+    }
+  },
+  "engine_execution": "unverified",
+  "model_generated_code_executed": false,
+  "plan": {
+    "schema_version": 1,
+    "scene_id": "urban_demo",
+    "revision": 1,
+    "parent_manifest_sha256": null,
+    "level": "prototype",
+    "materials": [
+      {
+        "id": "asphalt",
+        "base_color": [
+          0.035,
+          0.04,
+          0.045
+        ],
+        "roughness": 0.8,
+        "metallic": 0
+      },
+      {
+        "id": "concrete",
+        "base_color": [
+          0.5,
+          0.45,
+          0.36
+        ],
+        "roughness": 0.65,
+        "metallic": 0
+      },
+      {
+        "id": "metal",
+        "base_color": [
+          0.25,
+          0.27,
+          0.3
+        ],
+        "roughness": 0.3,
+        "metallic": 0.8
+      }
+    ],
+    "actors": [
+      {
+        "id": "road",
+        "owner": "graphics",
+        "kind": "mesh",
+        "shape": "cube",
+        "material_id": "asphalt",
+        "location_cm": [
+          0,
+          0,
+          -10
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "dimensions_cm": [
+          2400,
+          600,
+          20
+        ],
+        "intensity": null
+      },
+      {
+        "id": "building",
+        "owner": "graphics",
+        "kind": "mesh",
+        "shape": "cube",
+        "material_id": "concrete",
+        "location_cm": [
+          300,
+          700,
+          300
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "dimensions_cm": [
+          600,
+          500,
+          600
+        ],
+        "intensity": null
+      },
+      {
+        "id": "bollard_a",
+        "owner": "graphics",
+        "kind": "mesh",
+        "shape": "cylinder",
+        "material_id": "metal",
+        "location_cm": [
+          -500,
+          390,
+          40
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "dimensions_cm": [
+          30,
+          30,
+          80
+        ],
+        "intensity": null
+      },
+      {
+        "id": "bollard_b",
+        "owner": "graphics",
+        "kind": "mesh",
+        "shape": "cylinder",
+        "material_id": "metal",
+        "location_cm": [
+          0,
+          390,
+          40
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "dimensions_cm": [
+          30,
+          30,
+          80
+        ],
+        "intensity": null
+      },
+      {
+        "id": "decor_planter",
+        "owner": "graphics",
+        "kind": "mesh",
+        "shape": "cube",
+        "material_id": "concrete",
+        "location_cm": [
+          -600,
+          750,
+          30
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "dimensions_cm": [
+          160,
+          100,
+          60
+        ],
+        "intensity": null
+      },
+      {
+        "id": "sun",
+        "owner": "graphics",
+        "kind": "directional_light",
+        "shape": null,
+        "material_id": null,
+        "location_cm": [
+          0,
+          0,
+          800
+        ],
+        "rotation_deg": [
+          -40,
+          -25,
+          0
+        ],
+        "dimensions_cm": null,
+        "intensity": 45000
+      },
+      {
+        "id": "fill",
+        "owner": "graphics",
+        "kind": "point_light",
+        "shape": null,
+        "material_id": null,
+        "location_cm": [
+          -500,
+          600,
+          400
+        ],
+        "rotation_deg": [
+          0,
+          0,
+          0
+        ],
+        "dimensions_cm": null,
+        "intensity": 2000
+      }
+    ],
+    "protected_engineer_ids": []
+  },
+  "lifecycle": {
+    "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+    "commit": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+    "sha256": "586844eac4d6d6321689f0192c8aa8e69cd8625974a5cc2d925b1a03366e4d16",
+    "quantization": "Q5_K_M",
+    "device": "cpu",
+    "load_s": 1.8271180210031162,
+    "pid": 25521,
+    "rss_after_load_bytes": 6045216768,
+    "rss_after_generation_bytes": 7856226304,
+    "process_stopped_verified": true,
+    "returncode": -15
+  }
+}
