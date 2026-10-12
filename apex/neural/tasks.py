@@ -2135,6 +2135,15 @@ def score(check: dict[str, Any], answer: str, question: str | None = None) -> bo
     if kind == "code":
         passed, _ = run_function_tests(extract_code(answer), check["function"], check["tests"])
         return passed
+    if kind == "polyglot":
+        # Compilé et exécuté par le vrai compilateur du langage (`apex.neural.polyglot`) ; un langage dont le
+        # compilateur manque n'est pas notable ici (voir `brain_eval`, qui l'écarte au lieu de le compter faux).
+        from apex.neural.polyglot import run_tests
+
+        match = re.search(r"```[\w+#-]*\n(.*?)```", answer, re.S)
+        code = match.group(1) if match else answer
+        passed, _ = run_tests(check["language"], code, check["function"], check["tests"])
+        return bool(passed)
     if kind == "json":
         for candidate in re.findall(r"\{.*?\}", answer, re.S):
             try:

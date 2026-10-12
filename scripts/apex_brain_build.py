@@ -219,6 +219,26 @@ def cmd_tasks(args: argparse.Namespace) -> None:
         evaluation += held
         codes = frozenset(e.assistant.split("```python\n", 1)[1].split("```", 1)[0] for e in held)
         compose = compose_examples(args.compose, seed=args.seed, split="train", exclude=codes)
+    polyglot: list = []
+    if args.polyglot:
+        # Plusieurs langages (C# pour Unity, C++ pour Unreal, Python pour Blender…) : chaque référence de
+        # l'évaluation est compilée et exécutée par le vrai compilateur avant d'être gardée.
+        from apex.neural.polyglot import LANGUAGES, available, polyglot_examples, verify_reference
+
+        languages = tuple(lang for lang in LANGUAGES if available(lang))
+        missing = sorted(set(LANGUAGES) - set(languages))
+        if missing:
+            print(f"compilateurs absents, langages non évalués ici : {', '.join(missing)}")
+        held = polyglot_examples(
+            args.polyglot_eval,
+            seed=args.seed,
+            split="eval",
+            languages=languages,
+            check=lambda lang, c: bool(verify_reference(lang, c)[0]),
+        )
+        evaluation += held
+        names = frozenset(e.meta["function"] for e in held)
+        polyglot = polyglot_examples(args.polyglot, seed=args.seed, split="train", exclude=names)
     keys = frozenset(e.key() for e in evaluation)
     with (out / "eval.jsonl").open("w", encoding="utf-8") as handle:
         for example in evaluation:
@@ -226,6 +246,7 @@ def cmd_tasks(args: argparse.Namespace) -> None:
     train = [e.to_row() for e in generate(args.train, seed=args.seed, exclude=keys)]
     train += [e.to_row() for e in knowledge if e.key() not in keys]
     train += [e.to_row() for e in compose if e.key() not in keys]
+    train += [e.to_row() for e in polyglot if e.key() not in keys]
     validation = [e.to_row() for e in generate(args.validation, seed=args.seed + 1, exclude=keys)]
     manifest = prepare_sft({"train": train, "validation": validation}, tokenizer, out, window=args.window)
     print(
@@ -487,6 +508,12 @@ def main(argv: list[str] | None = None) -> None:
     )
     p.add_argument(
         "--compose-eval", type=int, default=40, help="par famille (vues, jamais vues) à l'évaluation"
+    )
+    p.add_argument(
+        "--polyglot", type=int, default=2500, help="exercices par langage (10 langages) ; 0 : aucun"
+    )
+    p.add_argument(
+        "--polyglot-eval", type=int, default=20, help="par langage : vues et jamais vues, chacune"
     )
     p.set_defaults(func=cmd_tasks)
     p = sub.add_parser("train")

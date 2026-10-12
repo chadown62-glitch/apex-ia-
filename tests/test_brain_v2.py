@@ -860,3 +860,46 @@ def test_composed_functions_are_correct_and_unseen_combinations_never_train() ->
     train = compose_examples(400, seed=5, split="train", exclude=frozenset(c[10:-3] for c in codes))
     assert not any(e.meta["heldout"] for e in train) and not {e.assistant for e in train} & codes
     assert len({e.meta["function"] for e in train}) > 300  # des centaines de fonctions différentes
+
+
+def test_every_language_reference_compiles_runs_and_matches_python() -> None:
+    """La même fonction en 10 langages : chaque référence passe par le VRAI compilateur (C# pour Unity, C++
+    pour Unreal, Python pour Blender…) et donne les résultats de la référence Python ; une réponse fausse
+    est refusée ; un compilateur absent rend « non vérifiable », jamais « réussi »."""
+    from apex.neural.polyglot import LANGUAGES, available, compose, reference, run_tests, tests_of
+    from apex.neural.tasks import score
+
+    rng = random.Random(3)
+    compositions = [compose(rng) for _ in range(2)]
+    tested = 0
+    for language in LANGUAGES:
+        if not available(language):
+            assert run_tests(language, "", "f", [[[[1]], 1]])[0] is None
+            continue
+        for c in compositions:
+            ok, detail = run_tests(language, reference(language, c), c.name, tests_of(c))
+            assert ok, (language, c.name, detail)
+        tested += 1
+    assert tested >= 2  # au moins Python et un autre langage dans tout environnement de test
+    c = compositions[0]
+    answer = f"```python\n{reference('python', c)}```"
+    check = {"type": "polyglot", "language": "python", "function": c.name, "tests": tests_of(c)}
+    assert score(check, answer)
+    wrong = f"```python\ndef {c.name}(nombres):\n    return 123456\n```"
+    assert not score(check, wrong)
+
+
+def test_polyglot_evaluation_functions_are_never_trained() -> None:
+    from apex.neural.polyglot import polyglot_examples
+
+    evaluation = polyglot_examples(3, seed=4, split="eval", languages=("python", "csharp"))
+    assert {e.family for e in evaluation} == {
+        "code_python",
+        "code_python_heldout",
+        "code_csharp",
+        "code_csharp_heldout",
+    }
+    names = frozenset(e.meta["function"] for e in evaluation)
+    train = polyglot_examples(200, seed=4, split="train", languages=("python", "csharp"), exclude=names)
+    assert not any(e.meta["heldout"] for e in train) and not {e.meta["function"] for e in train} & names
+    assert "Solution" in next(e.assistant for e in train if e.meta["language"] == "csharp")

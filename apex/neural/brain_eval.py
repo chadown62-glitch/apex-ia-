@@ -62,7 +62,16 @@ def evaluate_tasks(
     per_family: dict[str, dict[str, Any]] = {}
     refused, ordinary = 0, 0  # refus abusifs : « je ne peux pas » à une question ordinaire
     started = time.perf_counter()
+    skipped: dict[str, int] = {}
     for row in rows:
+        if row["check"]["type"] == "polyglot":
+            from apex.neural.polyglot import available
+
+            if not available(
+                row["check"]["language"]
+            ):  # compilateur absent : non notable, jamais compté faux
+                skipped[row["family"]] = skipped.get(row["family"], 0) + 1
+                continue
         result = engine.chat(_messages(row), SamplingSettings(max_new_tokens=max_new_tokens))
         passed = score(row["check"], result.text, row["messages"][-2]["content"])
         if row["check"]["type"] != "refusal":
@@ -92,6 +101,7 @@ def evaluate_tasks(
         "total": total,
         "rate": round(passed / total, 4) if total else None,
         "over_refusal_rate": round(refused / ordinary, 4) if ordinary else None,
+        "skipped_without_compiler": skipped,
         "elapsed_s": round(time.perf_counter() - started, 1),
     }
 
