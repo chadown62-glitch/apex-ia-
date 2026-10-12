@@ -525,6 +525,27 @@ def test_gpu_memory_shortage_is_not_mistaken_for_a_compilation_failure(tokenizer
     assert engine._forward_model is engine.model and "compilation impossible" in engine.compile_error
 
 
+def test_cpu_precision_keeps_bfloat16_only_when_clearly_faster(tokenizer, monkeypatch) -> None:
+    """Sur CPU, la précision est CHOISIE par mesure : float32 si le bfloat16 n'est pas au moins 10 % plus
+    rapide (deux mesures proches sous charge ne prouvent rien), bfloat16 sinon ; le choix et les mesures
+    sont dits."""
+    from apex.neural import training
+    from apex.neural.pretrain import RunConfig
+
+    config = RunConfig(
+        model=_tiny(tokenizer, context_length=16).to_dict(), data_dir="", window=16, batch_size=2
+    )
+    measure = training.cpu_bf16_timings
+    for timings, expected in (((0.246, 0.241), False), ((0.083, 0.196), False), ((0.2, 0.1), True)):
+        monkeypatch.setattr(training, "cpu_bf16_timings", lambda timings=timings: timings)
+        model = ApexLM(_tiny(tokenizer, context_length=16))
+        engine = training.TrainingEngine(model, config.training_config())
+        assert engine._amp is expected, timings
+        assert engine.precision_note.startswith("bfloat16" if expected else "float32")
+    fp32, bf16 = measure(width=32, rows=64, repeats=1, rounds=2)  # mesure réelle, petite
+    assert fp32 > 0 and bf16 > 0
+
+
 def test_gpu_batch_fit_uses_the_memory_actually_free(tokenizer, tmp_path, monkeypatch) -> None:
     """Logique de l'ajustement du lot au GPU, sur CPU avec des quantités de mémoire SIMULÉES (aucun GPU
     ici) : le budget est la mémoire libre (+ ce que le processus détient), pas la VRAM totale ; le lot est
