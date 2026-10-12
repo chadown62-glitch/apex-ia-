@@ -405,12 +405,18 @@ def workspace_files(conversation_id: str) -> DataEnvelope[dict[str, Any]]:
         raise HTTPException(status_code=404, detail=f"conversation « {conversation_id} » introuvable")
     workspace = conversation_workspace(conversation.id, conversation.project_id)
     files = [{"path": path, "size": size} for path, size in workspace.files()]
+    # Dossier RÉEL sur ce PC (l'utilisateur y ouvre les modèles 3D avec Blender, Unity, Unreal).
     return DataEnvelope(status="real", data={"scope": "project" if conversation.project_id else "conversation",
-                                             "files": files})
+                                             "root": str(workspace.root), "files": files})
+
+
+_BASE64_LIMIT = 4_000_000
 
 
 @router.get("/assistant/conversations/{conversation_id}/workspace/file", response_model=DataEnvelope[dict[str, Any]])
-def workspace_file(conversation_id: str, path: str) -> DataEnvelope[dict[str, Any]]:
+def workspace_file(conversation_id: str, path: str, encoding: str = "text") -> DataEnvelope[dict[str, Any]]:
+    """Contenu d'un fichier : texte (tronqué à 400 000 octets pour l'affichage) ou, avec `encoding=base64`, octets
+    exacts (aperçus PNG, modèles .glb à télécharger ; refusé au-delà de 4 Mo, jamais tronqué)."""
     from apex.assistant.workspace import conversation_workspace
     from apex.conversations.service import ConversationService
     from apex.tools.model import ToolFailure
@@ -423,6 +429,15 @@ def workspace_file(conversation_id: str, path: str) -> DataEnvelope[dict[str, An
         raw = workspace.read_bytes(path)
     except ToolFailure as exc:
         raise HTTPException(status_code=404 if exc.code.value == "not_found" else 422, detail=exc.message) from exc
+    if encoding == "base64":
+        if len(raw) > _BASE64_LIMIT:
+            raise HTTPException(status_code=422, detail=f"fichier trop gros pour être transmis ({len(raw)} octets)")
+        import base64
+
+        return DataEnvelope(status="real", data={"path": path, "size": len(raw), "truncated": False,
+                                                 "content_base64": base64.b64encode(raw).decode("ascii")})
+    if encoding != "text":
+        raise HTTPException(status_code=422, detail="encodage attendu : text ou base64")
     text = raw[:400_000].decode("utf-8", errors="replace")
     return DataEnvelope(status="real", data={"path": path, "size": len(raw), "truncated": len(raw) > 400_000,
                                              "content": text})

@@ -55,10 +55,13 @@ def supports_tools(tokenizer: ByteBPETokenizer) -> bool:
 
 
 def calc_markup(expression: str) -> str:
-    """Un appel de calcul noté pour les données d'entraînement, avec son résultat EXACT (calculé ici)."""
-    from apex.brain.calc import run
+    """Un appel noté pour les données d'entraînement, avec son résultat EXACT (calculé ici, par le même
+    outil que le moteur d'inférence : la calculatrice, ou l'atelier 3D pour `vehicle(…)`, `weapon(…)`,
+    `character(…)`)."""
+    from apex.brain import calc, studio3d
 
-    return f"{CALL}{expression}{RESULT}{run(expression)}{CALL_END}"
+    tool = studio3d if studio3d.is_call(expression) else calc
+    return f"{CALL}{expression}{RESULT}{tool.run(expression)}{CALL_END}"
 
 
 def tool_segments(content: str) -> list[tuple[str, str]]:

@@ -1,4 +1,4 @@
-"""Les quatre modes de travail de l'assistant. Un mode change RÉELLEMENT le comportement : les consignes
+"""Les cinq modes de travail de l'assistant. Un mode change RÉELLEMENT le comportement : les consignes
 données au modèle (rôle `system`), les outils qui lui sont offerts (et donc les permissions accordées au moteur
 d'outils) et la vue que l'interface ajoute à la conversation. `limits` dit ce que le mode ne fait pas : l'interface
 l'affiche, et rien n'est jamais présenté comme disponible sans l'être."""
@@ -29,7 +29,8 @@ class Mode:
     #: Permissions demandées par ce mode ; les paramètres peuvent en retirer, jamais en ajouter.
     permissions: frozenset[Permission] = field(default_factory=frozenset)
     #: Vue ajoutée par l'interface : `chat` (aucune), `code` (explorateur de l'espace de travail),
-    #: `design` (palettes et contrastes de la réponse), `finance` (tableaux de projection des outils).
+    #: `design` (palettes et contrastes de la réponse), `finance` (tableaux de projection des outils),
+    #: `studio3d` (aperçus et fichiers des modèles 3D).
     view: str = "chat"
     limits: tuple[str, ...] = ()
 
@@ -58,7 +59,7 @@ MODES: dict[str, Mode] = {
             "complets, exécute ou teste ce que tu écris quand c'est possible (sandbox isolée, sans réseau). "
             "N'affirme jamais qu'un code fonctionne sans l'avoir exécuté avec un outil : sinon, dis qu'il n'a pas "
             "été exécuté. Dans ta réponse finale, résume ce que tu as modifié et ce qui a été vérifié."),
-        tools=("fs.list", "fs.read", "project.inspect", "fs.write", "code.run", "tests.run"),
+        tools=("fs.list", "fs.read", "project.inspect", "fs.write", "code.run", "tests.run", "model3d.create"),
         permissions=frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE, Permission.EXECUTE_SANDBOX}),
         view="code",
         limits=("Exécution limitée à Python, dans la sandbox (réseau coupé, temps et mémoire bornés).",
@@ -93,6 +94,26 @@ MODES: dict[str, Mode] = {
         view="finance",
         limits=("Pas d'accès aux comptes bancaires ni aux cours en temps réel.",
                 "Projections déterministes à taux constant : ce sont des scénarios, pas des prévisions."),
+    ),
+    "3d": Mode(
+        id="3d", label="3D",
+        summary="Modélisation 3D : véhicules, armes, personnages ; fichiers pour Blender, Unity et Unreal.",
+        instructions=_COMMON + (
+            " Mode 3D : tu conçois des modèles 3D pour le jeu vidéo et la visualisation. Pour CHAQUE modèle demandé, "
+            "appelle l'outil model3d.create (generator : vehicle, weapon ou character ; kind : car, truck, tank, "
+            "motorbike, sword, axe, rifle, pistol ou humanoid ; dimensions en mètres ; build : slim, normal ou "
+            "strong ; color : un nom ou #RRGGBB) : il construit une géométrie exacte et écrit les fichiers. Ne décris "
+            "jamais une géométrie que l'outil n'a pas construite. Dans ta réponse, reprends le résumé de l'outil "
+            "(dimensions, pièces, triangles) et cite les fichiers produits : .glb (Blender, Unreal), .obj (Unity), "
+            "script Blender, script Unity C#, classe Unreal C++. Tu peux lire et adapter ces scripts avec fs.read "
+            "et fs.write. Dis clairement que ce sont des modèles low-poly de base, et que les scripts Unity et "
+            "Unreal n'ont été vérifiés que pour la syntaxe."),
+        tools=("model3d.create", "fs.list", "fs.read", "fs.write"),
+        permissions=frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE}),
+        view="studio3d",
+        limits=("Modèles paramétriques low-poly (véhicule, arme, personnage), pas de sculpture ni de textures.",
+                "Scripts Unity et Unreal de départ : syntaxe vérifiée, non exécutés dans les moteurs.",
+                "Accès limité à l'espace de travail de la conversation ou du projet."),
     ),
 }
 

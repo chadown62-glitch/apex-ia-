@@ -23,6 +23,7 @@ from __future__ import annotations
 import json
 import math
 import struct
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -80,6 +81,9 @@ class Model:
     parts: list[Part] = field(default_factory=list)
     bones: list[Bone] = field(default_factory=list)
     parameters: dict[str, Any] = field(default_factory=dict)
+    #: Peau rigide : pièce -> os qui la porte (poids 1). Exportée en glTF (skin) et dans le script Blender
+    #: (groupes de sommets + modificateur Armature) : poser le squelette déplace les pièces.
+    skin: dict[str, str] = field(default_factory=dict)
 
     def material(
         self, name: str, color: tuple[float, float, float], metallic: float = 0.0, roughness: float = 0.6
@@ -625,10 +629,13 @@ def character(
             Bone(f"pied_{tag}", (0, y_leg, u * 0.25), (u * 0.7, y_leg, 0.0), f"jambe_{tag}"),
         ]
     m.bones = bones
+    # Chaque pièce suit l'os du même nom ; le torse suit la colonne.
+    names = {b.name for b in bones}
+    m.skin = {p.name: (p.name if p.name in names else "colonne") for p in m.parts}
     return m
 
 
-GENERATORS = {"vehicle": vehicle, "weapon": weapon, "character": character}
+GENERATORS: dict[str, Callable[..., Model]] = {"vehicle": vehicle, "weapon": weapon, "character": character}
 
 
 # ------------------------------------------------------------------------------------------------- exports
@@ -640,12 +647,26 @@ def _gltf_vec(v: Vec) -> Vec:
 
 
 def to_glb(model: Model) -> bytes:
-    """glTF 2.0 binaire, un nœud nommé par pièce (sous un nœud racine), normales plates, matériaux PBR."""
+    """glTF 2.0 binaire, un nœud nommé par pièce (sous un nœud racine), normales plates, matériaux PBR.
+    Avec un squelette et une peau : un nœud par os (hiérarchie, positions de repos) et un `skin` ; chaque
+    pièce est liée à son os (poids 1) — Blender, Unity et Unreal l'importent comme un maillage animable."""
     binary = bytearray()
     buffer_views: list[dict[str, Any]] = []
     accessors: list[dict[str, Any]] = []
     meshes: list[dict[str, Any]] = []
     material_names = list(model.materials)
+    joints = [b.name for b in model.bones] if model.skin else []
+
+    def blob(data: bytes, target: int | None) -> int:
+        while len(binary) % 4:
+            binary.append(0)
+        view: dict[str, Any] = {"buffer": 0, "byteOffset": len(binary), "byteLength": len(data)}
+        if target is not None:
+            view["target"] = target
+        binary.extend(data)
+        buffer_views.append(view)
+        return len(buffer_views) - 1
+
     for part in model.parts:
         positions: list[Vec] = []
         normals: list[Vec] = []
@@ -658,17 +679,11 @@ def to_glb(model: Model) -> bytes:
             n = (n[0] / size, n[1] / size, n[2] / size)
             positions += [pa, pb, pc]
             normals += [n, n, n]
+        attributes: dict[str, int] = {}
         for values, kind in ((positions, "POSITION"), (normals, "NORMAL")):
-            while len(binary) % 4:
-                binary.append(0)
-            offset = len(binary)
-            for x, y, z in values:
-                binary += struct.pack("<3f", x, y, z)
-            buffer_views.append(
-                {"buffer": 0, "byteOffset": offset, "byteLength": len(values) * 12, "target": 34962}
-            )
+            view = blob(b"".join(struct.pack("<3f", *p) for p in values), 34962)
             accessor: dict[str, Any] = {
-                "bufferView": len(buffer_views) - 1,
+                "bufferView": view,
                 "componentType": 5126,
                 "count": len(values),
                 "type": "VEC3",
@@ -677,23 +692,79 @@ def to_glb(model: Model) -> bytes:
                 accessor["min"] = [min(p[i] for p in values) for i in range(3)]
                 accessor["max"] = [max(p[i] for p in values) for i in range(3)]
             accessors.append(accessor)
+            attributes[kind] = len(accessors) - 1
+        if joints:
+            joint = joints.index(model.skin[part.name])
+            count = len(positions)
+            accessors.append(
+                {
+                    "bufferView": blob(struct.pack("<4H", joint, 0, 0, 0) * count, 34962),
+                    "componentType": 5123,
+                    "count": count,
+                    "type": "VEC4",
+                }
+            )
+            attributes["JOINTS_0"] = len(accessors) - 1
+            accessors.append(
+                {
+                    "bufferView": blob(struct.pack("<4f", 1.0, 0.0, 0.0, 0.0) * count, 34962),
+                    "componentType": 5126,
+                    "count": count,
+                    "type": "VEC4",
+                }
+            )
+            attributes["WEIGHTS_0"] = len(accessors) - 1
         meshes.append(
             {
                 "name": part.name,
-                "primitives": [
-                    {
-                        "attributes": {"POSITION": len(accessors) - 2, "NORMAL": len(accessors) - 1},
-                        "material": material_names.index(part.material),
-                    }
-                ],
+                "primitives": [{"attributes": attributes, "material": material_names.index(part.material)}],
             }
         )
-    nodes = [{"name": part.name, "mesh": i} for i, part in enumerate(model.parts)]
-    nodes.append({"name": model.name, "children": list(range(len(model.parts)))})
-    document = {
+    nodes: list[dict[str, Any]] = [{"name": part.name, "mesh": i} for i, part in enumerate(model.parts)]
+    children = list(range(len(model.parts)))
+    scene_roots: list[int] = []
+    skins: list[dict[str, Any]] = []
+    if joints:
+        first = len(nodes)
+        heads = {b.name: _gltf_vec(b.head) for b in model.bones}
+        for bone in model.bones:
+            head = heads[bone.name]
+            origin = heads[bone.parent] if bone.parent else (0.0, 0.0, 0.0)
+            node: dict[str, Any] = {
+                "name": bone.name,
+                "translation": [head[i] - origin[i] for i in range(3)],
+            }
+            kids = [first + j for j, b in enumerate(model.bones) if b.parent == bone.name]
+            if kids:
+                node["children"] = kids
+            nodes.append(node)
+        roots = [first + j for j, b in enumerate(model.bones) if not b.parent]
+        # Un maillage avec peau est une racine de la scène (glTF : la position de son nœud est ignorée) ;
+        # le nœud du modèle porte le squelette.
+        scene_roots, children = children, roots
+        for i in range(len(model.parts)):
+            nodes[i]["skin"] = 0
+        # Matrices inverses de liaison (colonne par colonne) : os sans rotation, translation opposée.
+        inverse = b"".join(
+            struct.pack("<16f", 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -h[0], -h[1], -h[2], 1)
+            for h in (heads[name] for name in joints)
+        )
+        accessors.append(
+            {"bufferView": blob(inverse, None), "componentType": 5126, "count": len(joints), "type": "MAT4"}
+        )
+        skins.append(
+            {
+                "name": f"{model.name}_squelette",
+                "joints": list(range(first, first + len(joints))),
+                "skeleton": roots[0],
+                "inverseBindMatrices": len(accessors) - 1,
+            }
+        )
+    nodes.append({"name": model.name, "children": children})
+    document: dict[str, Any] = {
         "asset": {"version": "2.0", "generator": "APEX mesh3d"},
         "scene": 0,
-        "scenes": [{"name": model.name, "nodes": [len(nodes) - 1]}],
+        "scenes": [{"name": model.name, "nodes": [len(nodes) - 1, *scene_roots]}],
         "nodes": nodes,
         "meshes": meshes,
         "materials": [
@@ -712,6 +783,8 @@ def to_glb(model: Model) -> bytes:
         "buffers": [{"byteLength": len(binary)}],
         "extras": {"apex": model.stats(), "parameters": model.parameters},
     }
+    if skins:
+        document["skins"] = skins
     chunk = json.dumps(document, separators=(",", ":")).encode("utf-8")
     chunk += b" " * (-len(chunk) % 4)
     binary += b"\0" * (-len(binary) % 4)
@@ -725,13 +798,14 @@ def to_glb(model: Model) -> bytes:
     )
 
 
-def to_obj(model: Model) -> tuple[str, str]:
-    """(fichier .obj, fichier .mtl) ; Z vers le haut comme Blender."""
-    lines = [f"# APEX mesh3d — {model.name}", f"mtllib {model.name}.mtl"]
+def to_obj(model: Model, mtl_name: str | None = None) -> tuple[str, str]:
+    """(fichier .obj, fichier .mtl) ; Y vers le haut, la convention des fichiers OBJ (Blender, Unity et Unreal
+    l'importent debout). `mtl_name` : nom du fichier .mtl référencé (défaut : `<nom du modèle>.mtl`)."""
+    lines = [f"# APEX mesh3d — {model.name}", f"mtllib {mtl_name or model.name + '.mtl'}"]
     base = 1
     for part in model.parts:
         lines += [f"o {part.name}", f"usemtl {part.material}"]
-        lines += [f"v {x:.6f} {y:.6f} {z:.6f}" for x, y, z in part.vertices]
+        lines += [f"v {x:.6f} {y:.6f} {z:.6f}" for x, y, z in map(_gltf_vec, part.vertices)]
         lines += [f"f {a + base} {b + base} {c + base}" for a, b, c in part.faces]
         base += len(part.vertices)
     mtl = []
@@ -748,8 +822,9 @@ def to_obj(model: Model) -> tuple[str, str]:
 
 def to_blender_script(model: Model) -> str:
     """Script Blender (bpy) qui reconstruit le modèle : matériaux, un objet par pièce sous un objet racine,
-    squelette (Armature) pour un personnage. Lancement : onglet Scripting, ou
-    `blender -b --python modele.py -- sortie.glb` (exporte alors le résultat en glTF)."""
+    squelette (Armature) pour un personnage, chaque pièce liée à son os (groupe de sommets + modificateur
+    Armature). Lancement : onglet Scripting, ou `blender -b --python modele.py -- sortie.glb` (ou `.fbx`,
+    pour Unity) : exporte alors le résultat."""
     data = {
         "name": model.name,
         "materials": [
@@ -769,9 +844,11 @@ def to_blender_script(model: Model) -> str:
             {"name": b.name, "head": list(b.head), "tail": list(b.tail), "parent": b.parent}
             for b in model.bones
         ],
+        "skin": model.skin,
     }
     return f'''"""Modèle « {model.name} » généré par APEX (mesh3d) — {model.stats()["parts"]} pièces, {model.stats()["triangles"]} triangles.
-Blender : onglet Scripting > Ouvrir > Exécuter. Ligne de commande : blender -b --python ce_fichier.py -- sortie.glb"""
+Blender : onglet Scripting > Ouvrir > Exécuter. Ligne de commande : blender -b --python ce_fichier.py -- sortie.glb
+(ou sortie.fbx pour Unity)."""
 import json
 import sys
 
@@ -801,6 +878,7 @@ for spec in DATA["parts"]:
     obj = bpy.data.objects.new(spec["name"], mesh)
     obj.parent = root
     bpy.context.scene.collection.objects.link(obj)
+rig = None
 if DATA["bones"]:
     armature = bpy.data.armatures.new(DATA["name"] + "_squelette")
     rig = bpy.data.objects.new(DATA["name"] + "_squelette", armature)
@@ -815,6 +893,13 @@ if DATA["bones"]:
         if spec["parent"]:
             armature.edit_bones[spec["name"]].parent = armature.edit_bones[spec["parent"]]
     bpy.ops.object.mode_set(mode="OBJECT")
+# Peau rigide : chaque pièce suit son os (poids 1) ; poser le squelette déplace les pièces.
+for part_name, bone_name in DATA["skin"].items():
+    obj = bpy.data.objects[part_name]
+    group = obj.vertex_groups.new(name=bone_name)
+    group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+    modifier = obj.modifiers.new("Armature", "ARMATURE")
+    modifier.object = rig
 # Relevé fait par Blender lui-même : pièces, triangles, dimensions (comparés au modèle d'APEX).
 parts = [o for o in root.children if o.type == "MESH"]
 corners = [o.matrix_world @ v.co for o in parts for v in o.data.vertices]
@@ -827,5 +912,11 @@ stats = {{
 print("APEX_BLENDER_STATS " + json.dumps(stats))
 if "--" in sys.argv:
     output = sys.argv[sys.argv.index("--") + 1]
-    bpy.ops.export_scene.gltf(filepath=output, export_format="GLB")
+    # Seul le modèle est exporté (jamais le reste de la scène, comme le cube de départ de Blender).
+    for obj in bpy.context.view_layer.objects:
+        obj.select_set(obj == root or root in obj.children_recursive or obj in root.children_recursive)
+    if output.lower().endswith(".fbx"):
+        bpy.ops.export_scene.fbx(filepath=output, use_selection=True, add_leaf_bones=False)
+    else:
+        bpy.ops.export_scene.gltf(filepath=output, export_format="GLB", use_selection=True)
 '''

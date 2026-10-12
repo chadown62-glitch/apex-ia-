@@ -174,7 +174,8 @@ def test_modes_change_instructions_tools_and_view() -> None:
     assert "fs.write" in MODES["code"].tools and MODES["code"].view == "code"
     assert MODES["finance"].tools == ("calc.evaluate", "finance.projection", "finance.loan")
     assert MODES["design"].tools == ("color.contrast",) and "images" in " ".join(MODES["design"].limits)
-    assert len({m.instructions for m in MODES.values()}) == 4
+    assert MODES["3d"].tools[0] == "model3d.create" and MODES["3d"].view == "studio3d"
+    assert len({m.instructions for m in MODES.values()}) == len(MODES) == 5
 
 
 # -- tours ------------------------------------------------------------------------------------------------------
@@ -625,3 +626,96 @@ def test_conversational_models_receive_the_conversation_as_structured_turns(env)
     assert second.messages == (("user", "Je m'appelle Léa."), ("assistant", "Enchanté, Léa."),
                                ("user", "Comment je m'appelle ?"))
     assert "Comment je m'appelle ?" in second.prompt and second.system
+
+
+# -- mode 3D ----------------------------------------------------------------------------------------------------
+
+
+def test_3d_mode_builds_the_model_and_writes_its_files_never_overwriting_one(env) -> None:
+    from apex.assistant.workspace import conversation_workspace
+
+    _no_memory(env)
+    conversation = _conversation(env, mode="3d")
+    call = json.dumps({"tool": "model3d.create", "arguments": {"generator": "vehicle", "kind": "tank", "length": 7,
+                                                                "color": "kaki"}})
+    manager, provider = _manager(env, [call, "Char prêt.", call, "Second char prêt."])
+    _, turn = manager.submit(conversation.id, "Un char de 7 m kaki")
+    assert turn.status == "done" and "model3d.create" in provider.requests[0].system
+    output = turn.steps[0]["observation"]["output"]
+    assert output["summary"].startswith("char 7 × 3,4 × 2,4 m, 10 galets") and output["name"] == "char"
+    workspace = conversation_workspace(conversation.id, None)
+    names = {path for path, _ in workspace.files()}
+    assert {"modeles3d/char.glb", "modeles3d/char.obj", "modeles3d/char.mtl", "modeles3d/char_blender.py",
+            "modeles3d/char.png", "modeles3d/ApexCharController.cs", "modeles3d/ApexCharPawn.h",
+            "modeles3d/ApexCharPawn.cpp", "modeles3d/char_LISEZ-MOI.txt"} <= names
+    assert workspace.read_bytes("modeles3d/char.glb")[:4] == b"glTF"
+    _, second = manager.submit(conversation.id, "Encore un")
+    assert second.steps[0]["observation"]["output"]["name"] == "char-2"  # rien n'est écrasé
+    assert "modeles3d/ApexChar2Controller.cs" in {path for path, _ in workspace.files()}
+    refused = json.dumps({"tool": "model3d.create", "arguments": {"generator": "vehicle", "kind": "sword"}})
+    manager, _ = _manager(env, [refused, "Impossible."])
+    _, third = manager.submit(conversation.id, "Une épée-véhicule")
+    assert third.steps[0]["ok"] is False and "véhicule inconnu" in third.steps[0]["observation"]["error"]["message"]
+
+
+class _BrainLikeProvider(_ScriptedProvider):
+    """Comme le Cerveau APEX : sa réponse porte, dans ses mesures, les modèles 3D construits pendant la génération."""
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        result = super().generate(request)
+        calls = [{"tool": "3d", "expression": 'weapon("sword", length=1.2)', "result": "épée 1,2 m — 5 pièces"},
+                 {"tool": "3d", "expression": 'vehicle("sous-marin")', "result": "erreur : véhicule inconnu"},
+                 {"tool": "calc", "expression": "2*3", "result": "6"}]
+        return GenerationResult(text=result.text, model_used=result.model_used, tokens_prompt=result.tokens_prompt,
+                                tokens_completion=result.tokens_completion, finish_reason="stop", elapsed_s=0.01,
+                                facts={"backend": "apex_brain", "tool_calls": calls})
+
+
+@pytest.mark.parametrize("mode", ["3d", "normal"])
+def test_models_built_by_the_brain_are_written_only_when_the_turn_may_write(env, mode) -> None:
+    from apex.assistant.workspace import conversation_workspace
+
+    _no_memory(env)
+    conversation = _conversation(env, mode=mode)
+    provider = _BrainLikeProvider(["Voici l'épée."])
+    manager = TurnManager(env, provider_factory=lambda _candidate: provider,
+                          config=parse_config(copy.deepcopy(BASE_CONFIG)),
+                          sandbox_selection=lambda: _Selection(False), synchronous=True)
+    _, turn = manager.submit(conversation.id, "Une épée de 1,2 m")
+    assert turn.status == "done"
+    files = {path for path, _ in conversation_workspace(conversation.id, None).files()}
+    answer = _messages(env, conversation.id)[-1]
+    if mode == "3d":
+        assert [s["tool"] for s in turn.steps] == ["model3d.create"]  # l'erreur et le calcul ne s'écrivent pas
+        assert turn.steps[0]["source"] == "cerveau" and "modeles3d/epee.glb" in files
+    else:
+        assert turn.steps == [] and not files  # mode sans écriture : rien d'écrit…
+        assert any("pas été écrits" in note for note in answer.meta["tools_notes"])  # … et c'est dit
+
+
+def test_api_serves_exact_bytes_of_a_3d_preview(env, monkeypatch, tmp_path) -> None:
+    from fastapi.testclient import TestClient
+
+    import apex.api.dependencies as dependencies
+    from apex.api.app import create_app
+    from apex.api.auth import get_or_create_api_token
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(dependencies, "get_session_factory", lambda: env)
+    _no_memory(env)
+    call = json.dumps({"tool": "model3d.create", "arguments": {"generator": "character", "build": "strong"}})
+    manager, _ = _manager(env, [call, "Personnage prêt."])
+    monkeypatch.setattr(dependencies, "_turn_manager", manager)
+    client = TestClient(create_app())
+    h = {"Authorization": f"Bearer {get_or_create_api_token()}"}
+    conversation = client.post("/api/v1/assistant/conversations", headers=h,
+                               json={"title": "Héros", "mode": "3d"}).json()["data"]
+    client.post(f"/api/v1/assistant/conversations/{conversation['id']}/turns", headers=h, json={"content": "Un héros"})
+    listing = client.get(f"/api/v1/assistant/conversations/{conversation['id']}/workspace", headers=h).json()["data"]
+    assert Path(listing["root"]).is_dir()
+    url = f"/api/v1/assistant/conversations/{conversation['id']}/workspace/file"
+    png = client.get(url, params={"path": "modeles3d/personnage.png", "encoding": "base64"}, headers=h).json()["data"]
+    raw = base64.b64decode(png["content_base64"])
+    assert raw.startswith(b"\x89PNG") and len(raw) == png["size"]
+    assert (Path(listing["root"]) / "modeles3d" / "personnage.png").read_bytes() == raw
+    assert client.get(url, params={"path": "modeles3d/personnage.png", "encoding": "hex"}, headers=h).status_code == 422

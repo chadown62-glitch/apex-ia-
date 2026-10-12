@@ -239,6 +239,18 @@ def cmd_tasks(args: argparse.Namespace) -> None:
         evaluation += held
         names = frozenset(e.meta["function"] for e in held)
         polyglot = polyglot_examples(args.polyglot, seed=args.seed, split="train", exclude=names)
+    model3d: list = []
+    if args.model3d:
+        # Demandes de modélisation 3D en langage courant -> appel de l'atelier 3D
+        # (`apex.neural.model3d_tasks`) ;
+        # formulations jamais vues à l'évaluation.
+        from apex.neural.model3d_tasks import model3d_examples
+
+        held = model3d_examples(args.model3d_eval, seed=args.seed, split="eval")
+        evaluation += held
+        model3d = model3d_examples(
+            args.model3d, seed=args.seed, split="train", exclude=frozenset(e.user for e in held)
+        )
     keys = frozenset(e.key() for e in evaluation)
     with (out / "eval.jsonl").open("w", encoding="utf-8") as handle:
         for example in evaluation:
@@ -247,6 +259,7 @@ def cmd_tasks(args: argparse.Namespace) -> None:
     train += [e.to_row() for e in knowledge if e.key() not in keys]
     train += [e.to_row() for e in compose if e.key() not in keys]
     train += [e.to_row() for e in polyglot if e.key() not in keys]
+    train += [e.to_row() for e in model3d if e.key() not in keys]
     validation = [e.to_row() for e in generate(args.validation, seed=args.seed + 1, exclude=keys)]
     manifest = prepare_sft({"train": train, "validation": validation}, tokenizer, out, window=args.window)
     print(
@@ -514,6 +527,15 @@ def main(argv: list[str] | None = None) -> None:
     )
     p.add_argument(
         "--polyglot-eval", type=int, default=20, help="par langage : vues et jamais vues, chacune"
+    )
+    p.add_argument(
+        "--model3d",
+        type=int,
+        default=8000,
+        help="demandes de modélisation 3D à l'entraînement (0 : aucune)",
+    )
+    p.add_argument(
+        "--model3d-eval", type=int, default=40, help="par famille (formulations vues, jamais vues)"
     )
     p.set_defaults(func=cmd_tasks)
     p = sub.add_parser("train")

@@ -14,9 +14,10 @@ export const TOOL_LABELS: Record<string, string> = {
   "calc.evaluate": "calculatrice exacte",
   "finance.projection": "projection d'épargne",
   "finance.loan": "mensualités de prêt",
+  "model3d.create": "modèles 3D (Blender, Unity, Unreal)",
 };
 
-const GLYPHS: Record<ModeId, string> = { normal: "◌", code: "</>", design: "◐", finance: "∑" };
+const GLYPHS: Record<ModeId, string> = { normal: "◌", code: "</>", design: "◐", finance: "∑", "3d": "◇" };
 
 export function ModePicker({
   modes,

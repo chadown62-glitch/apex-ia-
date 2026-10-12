@@ -7,14 +7,14 @@
 
 import { ApiError, fetchEnvelope } from "../api/client";
 
-export type ModeId = "normal" | "code" | "design" | "finance";
+export type ModeId = "normal" | "code" | "design" | "finance" | "3d";
 
 export interface ModeInfo {
   id: ModeId;
   label: string;
   summary: string;
   tools: string[];
-  view: "chat" | "code" | "design" | "finance";
+  view: "chat" | "code" | "design" | "finance" | "studio3d";
   limits: string[];
 }
 
@@ -136,6 +136,8 @@ export interface EngineInfo {
 
 export interface WorkspaceListing {
   scope: "project" | "conversation";
+  /** Dossier réel de l'espace de travail sur ce PC. */
+  root?: string;
   files: { path: string; size: number }[];
 }
 
@@ -195,6 +197,10 @@ export const assistantApi = {
   workspaceFile: (conversationId: string, path: string) =>
     data<{ path: string; size: number; truncated: boolean; content: string }>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/workspace/file?path=${encodeURIComponent(path)}`),
+  /** Octets exacts d'un fichier (aperçu PNG, modèle .glb à télécharger), en base64. */
+  workspaceFileBase64: (conversationId: string, path: string) =>
+    data<{ path: string; size: number; content_base64: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/workspace/file?path=${encodeURIComponent(path)}&encoding=base64`),
 };
 
 /** Fichier local -> base64 (pièces jointes) ; la taille est vérifiée par le backend après décodage. */

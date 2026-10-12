@@ -358,3 +358,148 @@ export function FinancePanel({ messages, liveSteps }: { messages: Message[]; liv
     </div>
   );
 }
+
+/** Un modèle 3D de l'espace de travail : ses fichiers `modeles3d/<nom>.*` et `modeles3d/Apex*.{cs,h,cpp}`. */
+interface Model3D {
+  name: string;
+  preview: string | null;
+  files: { path: string; size: number }[];
+  summary: string | null;
+}
+
+const MODELS_DIR = "modeles3d/";
+
+function models3d(files: { path: string; size: number }[], steps: ToolStep[]): Model3D[] {
+  const inDir = files.filter((f) => f.path.startsWith(MODELS_DIR));
+  const summaries = new Map<string, { summary: string; files: string[] }>();
+  for (const step of steps) {
+    const output = step.tool === "model3d.create" && step.ok ? step.observation.output : null;
+    if (output && typeof output.name === "string" && typeof output.summary === "string") {
+      const written = Array.isArray(output.files) ? (output.files as { path: string }[]).map((f) => f.path) : [];
+      summaries.set(output.name, { summary: output.summary, files: written });
+    }
+  }
+  return inDir
+    .filter((f) => f.path.endsWith(".glb"))
+    .map((glb) => {
+      const name = glb.path.slice(MODELS_DIR.length, -".glb".length);
+      const known = summaries.get(name);
+      const own = inDir.filter(
+        (f) => f.path.slice(MODELS_DIR.length).startsWith(`${name}.`) || f.path.slice(MODELS_DIR.length).startsWith(`${name}_`) ||
+          (known?.files.includes(f.path) ?? false),
+      );
+      const preview = own.find((f) => f.path === `${MODELS_DIR}${name}.png`)?.path ?? null;
+      return { name, preview, files: own, summary: known?.summary ?? null };
+    });
+}
+
+function PreviewImage({ conversationId, path, alt }: { conversationId: string; path: string; alt: string }) {
+  const image = useQuery({
+    queryKey: ["assistant", "workspace", conversationId, "base64", path],
+    queryFn: () => assistantApi.workspaceFileBase64(conversationId, path),
+    staleTime: Infinity,
+  });
+  if (image.isLoading) return <div className="ax-model3d__preview ax-model3d__preview--loading" aria-label="Chargement de l'aperçu" />;
+  if (image.isError || !image.data) return <p className="ax-inline-error">{errorMessage(image.error)}</p>;
+  return <img className="ax-model3d__preview" src={`data:image/png;base64,${image.data.content_base64}`} alt={alt} />;
+}
+
+async function download(conversationId: string, path: string): Promise<void> {
+  const file = await assistantApi.workspaceFileBase64(conversationId, path);
+  const bytes = Uint8Array.from(atob(file.content_base64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = path.slice(path.lastIndexOf("/") + 1);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function Studio3DPanel({ conversationId, messages, liveSteps, notes }: {
+  conversationId: string; messages: Message[]; liveSteps: ToolStep[]; notes: string[];
+}) {
+  const workspace = useQuery({ queryKey: keys.workspace(conversationId), queryFn: () => assistantApi.workspace(conversationId) });
+  const steps = useMemo(() => stepsOf(messages, liveSteps), [messages, liveSteps]);
+  const models = useMemo(() => models3d(workspace.data?.files ?? [], steps), [workspace.data, steps]);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="ax-panel">
+      <div className="ax-panel__head">
+        <h2>Atelier 3D</h2>
+        <button type="button" className="ax-icon-btn ax-icon-btn--sm" onClick={() => workspace.refetch()} aria-label="Actualiser les modèles" title="Actualiser">
+          <IconRefresh size={15} />
+        </button>
+      </div>
+      {notes.length > 0 && (
+        <ul className="ax-panel__notes">
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {error && (
+        <p className="ax-inline-error" role="alert">
+          {error}
+        </p>
+      )}
+      {workspace.isLoading ? (
+        <p className="ax-muted">Lecture de l'espace de travail…</p>
+      ) : workspace.isError ? (
+        <p className="ax-inline-error" role="alert">
+          {errorMessage(workspace.error)}
+        </p>
+      ) : models.length === 0 ? (
+        <p className="ax-muted">
+          Aucun modèle pour l'instant. Demandez par exemple « un char de 7 m kaki » ou « une épée de 1,2 m » : APEX construit le
+          modèle et écrit ses fichiers pour Blender, Unity et Unreal.
+        </p>
+      ) : (
+        <>
+          {workspace.data?.root && (
+            <p className="ax-muted ax-model3d__root">
+              Dossier sur ce PC :{" "}
+              <code>{`${workspace.data.root}${workspace.data.root.includes("\\") ? "\\" : "/"}${MODELS_DIR.slice(0, -1)}`}</code>
+            </p>
+          )}
+          <ul className="ax-model3d-list">
+            {models.map((model) => (
+              <li key={model.name} className="ax-model3d">
+                {model.preview && <PreviewImage conversationId={conversationId} path={model.preview} alt={`Aperçu de ${model.name}`} />}
+                <div className="ax-model3d__body">
+                  <h3>{model.name}</h3>
+                  {model.summary && <p className="ax-model3d__summary">{model.summary}</p>}
+                  <ul className="ax-files">
+                    {model.files.map((f) => (
+                      <li key={f.path}>
+                        <button
+                          type="button"
+                          className="ax-file"
+                          title="Télécharger"
+                          onClick={() => {
+                            setError(null);
+                            download(conversationId, f.path).catch((e) => setError(errorMessage(e)));
+                          }}
+                        >
+                          <IconFile size={14} />
+                          <span className="ax-file__path">{f.path.slice(MODELS_DIR.length)}</span>
+                          <span className="ax-file__size">{formatSize(f.size)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="ax-muted">
+            .glb : Blender, Unreal (et Unity avec glTFast) · .obj : Unity · _blender.py : reconstruit le modèle dans Blender · .cs : Unity ·
+            .h/.cpp : Unreal. Scripts Unity et Unreal vérifiés pour la syntaxe seulement.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}

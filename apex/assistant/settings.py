@@ -41,7 +41,7 @@ class RuntimeSettings(_Section):
 
 
 class Behavior(_Section):
-    default_mode: Literal["normal", "code", "design", "finance"] = "normal"
+    default_mode: Literal["normal", "code", "design", "finance", "3d"] = "normal"
     use_memory: bool = True
     history_chars: int = Field(default=6000, ge=1000, le=24000)
 

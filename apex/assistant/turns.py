@@ -51,6 +51,8 @@ TOOL_GUIDE: dict[str, tuple[str, dict[str, Any]]] = {
                            {"initial": 1000, "monthly_contribution": 200, "annual_rate_percent": 4, "years": 10}),
     "finance.loan": ("mensualité et coût d'un prêt", {"principal": 150000, "annual_rate_percent": 3.5, "years": 20}),
     "color.contrast": ("contraste WCAG texte/fond", {"foreground": "#1F1A14", "background": "#F4EDE1"}),
+    "model3d.create": ("construire un modèle 3D et écrire ses fichiers (Blender, Unity, Unreal)",
+                       {"generator": "vehicle", "kind": "tank", "length": 7, "color": "kaki"}),
 }
 
 
@@ -399,6 +401,9 @@ class TurnManager:
 
         steps: list[dict[str, Any]] = []
         observations: list[str] = []
+        #: Modèles 3D construits par le Cerveau APEX PENDANT sa génération (outil interne, `apex.brain.studio3d`) :
+        #: leurs fichiers sont écrits après, par l'outil `model3d.create`, avec les permissions de ce tour.
+        brain_models: list[dict[str, Any]] = []
         final_text: str | None = None
         served = None
         last_result: Any = None
@@ -445,6 +450,8 @@ class TurnManager:
             served = outcome.succeeded_with
             ranked = [served]  # le même modèle pour tout le tour
             last_result = outcome.result
+            brain_models.extend(c for c in (getattr(outcome.result, "facts", None) or {}).get("tool_calls", [])
+                                if c.get("tool") == "3d" and not str(c.get("result", "")).startswith("erreur"))
             for key, attr in (("prompt", "tokens_prompt"), ("completion", "tokens_completion")):
                 measured = getattr(outcome.result, attr, None)
                 if measured is not None and getattr(measured.status, "value", "") == "real":
@@ -462,6 +469,8 @@ class TurnManager:
             observations.append(f"[{name}] {_clip(arguments, 400)} -> {_clip(step['observation'], _OBSERVATION_CHARS)}")
             self._update(turn_id, steps=steps)
 
+        if brain_models and final_text and not cancel.is_set():
+            self._write_brain_models(tools, brain_models, steps, meta, turn_id)
         facts = getattr(last_result, "facts", None) or {}
         meta.update({
             "steps": steps, "tokens_prompt": tokens["prompt"] or None, "tokens_completion": tokens["completion"] or None,
@@ -597,6 +606,27 @@ class TurnManager:
                               pool=execution_pool(config), base_limits=ResourceLimits.from_config(config.sandbox),
                               requested_by=Subject.CORE, clone_subject=Subject.RESEARCH,
                               label=f"assistant:{turn_id}")
+
+    def _write_brain_models(self, tools: dict[str, Any] | None, calls: list[dict[str, Any]],
+                            steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str) -> None:
+        """Écrit les fichiers des modèles 3D que le Cerveau a construits — seulement si ce tour offre l'outil
+        `model3d.create` (permission d'écriture) ; sinon c'est dit, jamais fait en silence."""
+        from apex.brain import studio3d
+
+        if not tools or "model3d.create" not in tools["offered"]:
+            meta["tools_notes"] = [*meta.get("tools_notes", []), (
+                f"Le Cerveau APEX a construit {len(calls)} modèle(s) 3D, mais leurs fichiers n'ont pas été écrits : "
+                "passez la conversation en mode 3D (ou Code) pour les obtenir.")]
+            return
+        for call in calls[:4]:
+            try:
+                arguments = studio3d.parse(call["expression"]).arguments()
+            except studio3d.Error3D:
+                continue
+            step = self._run_tool(tools, "model3d.create", arguments, len(steps) + 1, turn_id)
+            step["source"] = "cerveau"
+            steps.append(step)
+        self._update(turn_id, steps=steps)
 
     @staticmethod
     def _run_tool(tools: dict[str, Any] | None, name: str, arguments: dict[str, Any], number: int,

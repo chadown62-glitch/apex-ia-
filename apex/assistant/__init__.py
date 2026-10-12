@@ -1,4 +1,4 @@
-"""Assistant APEX (0.4.0) — ce que l'application montre à l'utilisateur : projets, conversations, quatre modes de
+"""Assistant APEX (0.4.0) — ce que l'application montre à l'utilisateur : projets, conversations, cinq modes de
 travail, paramètres. Rien n'est réimplémenté ici : chaque tour passe par les composants existants d'APEX —
 routage et génération (`apex.routing`, `apex.models`, runtime natif compris), mémoire (`apex.memory`), moteur
 d'outils (`apex.tools`, permissions explicites) et sandbox (`apex.tools.sandbox_runner` -> `AgentRuntime`,

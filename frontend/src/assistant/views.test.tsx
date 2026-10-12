@@ -131,6 +131,31 @@ describe("ConversationView", () => {
     await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path === "/assistant/turns/t1/cancel")).toBe(true));
   });
 
+  it("shows the 3D workshop: real files of each model, the tool's summary and the preview", async () => {
+    api.on("GET", "/assistant/conversations/c1", conversation({ mode: "3d" }));
+    const step = {
+      step: 1, tool: "model3d.create", arguments: { generator: "vehicle", kind: "tank" }, ok: true, duration_s: 0.2,
+      observation: { ok: true, output: { name: "char", summary: "char 7 × 3,4 × 2,4 m, 10 galets — 16 pièces, 816 triangles",
+        files: [{ path: "modeles3d/char.glb", size: 67384 }, { path: "modeles3d/ApexCharController.cs", size: 4148 }] } },
+    };
+    api.on("GET", "/assistant/conversations/c1/messages", [
+      message(), message({ id: "m2", role: "assistant", content: "Voici le char.", meta: { mode: "3d", steps: [step] } }),
+    ]);
+    api.on("GET", "/assistant/conversations/c1/turns", []);
+    api.on("GET", "/assistant/conversations/c1/workspace", {
+      scope: "conversation", root: "C:\\Users\\moi\\APEX\\conversation-c1",
+      files: [{ path: "modeles3d/char.glb", size: 67384 }, { path: "modeles3d/char.png", size: 3576 },
+        { path: "modeles3d/ApexCharController.cs", size: 4148 }, { path: "notes.txt", size: 5 }],
+    });
+    api.on("GET", "/assistant/conversations/c1/workspace/file", { path: "modeles3d/char.png", size: 3, content_base64: "iVBO" });
+    renderAt("/c/c1", [{ path: "/c/:conversationId", element: <ConversationView /> }]);
+    expect(await screen.findByText("ApexCharController.cs")).toBeInTheDocument();
+    expect(screen.getByText("char 7 × 3,4 × 2,4 m, 10 galets — 16 pièces, 816 triangles", { selector: "p" })).toBeInTheDocument();
+    expect(screen.queryByText("notes.txt")).not.toBeInTheDocument();
+    expect(screen.getByText("C:\\Users\\moi\\APEX\\conversation-c1\\modeles3d")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Aperçu de char" })).toHaveAttribute("src", "data:image/png;base64,iVBO");
+  });
+
   it("renders a failed answer as an explicit error with a retry that resends the user's message", async () => {
     api.on("GET", "/assistant/conversations/c1", conversation());
     api.on("GET", "/assistant/conversations/c1/messages", [

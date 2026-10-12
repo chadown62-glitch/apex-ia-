@@ -845,8 +845,48 @@ def test_the_engine_runs_the_calculation_the_model_asks_for(tiny_brain) -> None:
     engine.model = Scripted()
     result = engine.chat([Message("user", "974 × 89 ?")], SamplingSettings(max_new_tokens=40))
     assert result.text == "Résultat : 86686." and result.stats.finish_reason == "stop"
-    assert result.stats.tool_calls == [{"expression": "974*89", "result": "86686"}]
+    assert result.stats.tool_calls == [{"tool": "calc", "expression": "974*89", "result": "86686"}]
     assert tokenizer.encode("86686")[0] in fed  # le résultat est entré dans le contexte du modèle
+
+
+def test_the_engine_builds_the_3d_model_the_brain_asks_for(tiny_brain) -> None:
+    """Modèle SCRIPTÉ : un appel `vehicle(…)` est construit par l'atelier 3D ; le modèle lit (et
+    l'utilisateur voit) le résumé du modèle RÉELLEMENT construit ; l'appel est tracé comme outil « 3d »."""
+    from apex.brain import studio3d
+    from apex.brain.chat import END, TOOL_CALL, TOOL_RESULT
+    from apex.brain.inference import BrainEngine, SamplingSettings
+
+    engine = BrainEngine(tiny_brain)
+    engine.load()
+    tokenizer = engine.tokenizer
+    real_model = engine.model
+    expression = 'vehicle("tank", length=7)'
+    script = [
+        tokenizer.special_id(TOOL_CALL),
+        *tokenizer.encode(expression),
+        tokenizer.special_id(TOOL_RESULT),
+        tokenizer.special_id(END),
+    ]
+
+    class Scripted(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.inner = real_model
+            self.config = real_model.config
+            self.calls = 0
+
+        def forward(self, input_ids, targets=None, *, cache=None, last_only=False):
+            logits, _ = self.inner(input_ids, cache=cache, last_only=True)
+            forced = torch.full_like(logits, -1e9)
+            forced[0, -1, script[min(self.calls, len(script) - 1)]] = 0.0
+            self.calls += 1
+            return forced, None
+
+    engine.model = Scripted()
+    result = engine.chat([Message("user", "Char 7 m")], SamplingSettings(max_new_tokens=104))
+    expected = studio3d.run(expression)
+    assert expected.startswith("char 7 × 3,4 × 2,4 m") and result.text == expected
+    assert result.stats.tool_calls == [{"tool": "3d", "expression": expression, "result": expected}]
 
 
 def test_composed_functions_are_correct_and_unseen_combinations_never_train() -> None:

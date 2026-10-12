@@ -16,7 +16,7 @@ import { isActive, keys, useModes, useProjects, useTurns } from "./hooks";
 import { IconEdit, IconFolder, IconTrash } from "./Icons";
 import { MessageItem, TurnProgress } from "./MessageItem";
 import { EngineNotice, EnginePicker } from "./EnginePicker";
-import { CodePanel, DesignPanel, FinancePanel } from "./ModePanels";
+import { CodePanel, DesignPanel, FinancePanel, Studio3DPanel } from "./ModePanels";
 
 interface LocationState {
   draft?: string;
@@ -240,7 +240,7 @@ export function ConversationView() {
             </label>
             {hasPanel && (
               <button type="button" className="ax-chip-btn ax-panel-toggle" onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen}>
-                {{ code: "Fichiers", design: "Nuancier", finance: "Calculs", normal: "" }[mode]}
+                {{ code: "Fichiers", design: "Nuancier", finance: "Calculs", "3d": "Atelier 3D", normal: "" }[mode]}
               </button>
             )}
             <button type="button" className="ax-icon-btn" aria-label="Supprimer la conversation" title="Supprimer" onClick={() => setConfirmDelete(true)}>
@@ -310,6 +310,10 @@ export function ConversationView() {
           {mode === "code" && <CodePanel conversationId={conversationId} notes={lastAssistant?.meta?.tools_notes ?? []} />}
           {mode === "design" && <DesignPanel messages={messages.data ?? []} liveSteps={liveSteps} />}
           {mode === "finance" && <FinancePanel messages={messages.data ?? []} liveSteps={liveSteps} />}
+          {mode === "3d" && (
+            <Studio3DPanel conversationId={conversationId} messages={messages.data ?? []} liveSteps={liveSteps}
+              notes={lastAssistant?.meta?.tools_notes ?? []} />
+          )}
         </aside>
       )}
 

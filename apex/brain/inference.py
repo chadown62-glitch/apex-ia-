@@ -15,6 +15,9 @@
 - **Calcul exact** : quand le modèle écrit `<|tool_call|> expression <|tool_result|>`, l'expression est
   évaluée par `apex.brain.calc` et le résultat est placé dans la réponse (et dans le contexte du modèle) ;
   le texte rendu montre le résultat, pas l'expression. Chaque appel figure dans les mesures (`tool_calls`).
+- **Atelier 3D** : un appel `vehicle(…)`, `weapon(…)` ou `character(…)` est construit par
+  `apex.brain.studio3d` ; le modèle lit le résumé du modèle 3D RÉELLEMENT construit (dimensions, pièces). Le
+  moteur n'écrit aucun fichier : l'assistant le fait ensuite, avec ses permissions (outil `model3d.create`).
 """
 
 from __future__ import annotations
@@ -30,7 +33,7 @@ from typing import Any
 
 import torch
 
-from apex.brain import calc
+from apex.brain import calc, studio3d
 from apex.brain.chat import (
     TOOL_CALL,
     TOOL_RESULT,
@@ -329,11 +332,14 @@ class BrainEngine:
                     continue
                 if use_tools and token == result_id and call_start is not None:
                     expression = tokenizer.decode(produced[call_start:])
-                    answer = calc.run(expression)
+                    tool = "3d" if studio3d.is_call(expression) else "calc"
+                    answer = studio3d.run(expression) if tool == "3d" else calc.run(expression)
                     answer_ids = tokenizer.encode(answer)
                     if len(produced) + 1 + len(answer_ids) >= max_new:
                         break  # plus de place pour le résultat : arrêt sur la longueur
-                    stats.tool_calls.append({"expression": expression.strip(), "result": answer})
+                    stats.tool_calls.append(
+                        {"tool": tool, "expression": expression.strip(), "result": answer}
+                    )
                     produced += [token, *answer_ids]
                     call_start = None
                     emit(answer)

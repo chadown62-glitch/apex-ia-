@@ -67,6 +67,7 @@ export const MODES = [
   { id: "code", label: "Code", summary: "Programmation.", tools: ["fs.read", "code.run"], view: "code", limits: [] },
   { id: "design", label: "Design", summary: "Interfaces.", tools: ["color.contrast"], view: "design", limits: ["Pas de génération d'images."] },
   { id: "finance", label: "Finance", summary: "Budgets.", tools: ["finance.loan"], view: "finance", limits: [] },
+  { id: "3d", label: "3D", summary: "Modélisation 3D.", tools: ["model3d.create"], view: "studio3d", limits: [] },
 ];
 
 export const SETTINGS = {

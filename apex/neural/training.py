@@ -97,6 +97,28 @@ class StepResult:
     lr: float
 
 
+def cpu_bf16_timings(width: int = 384, rows: int = 2048, repeats: int = 8) -> tuple[float, float]:
+    """(secondes en float32, secondes en bfloat16) pour un même calcul avant/arrière d'une couche linéaire,
+    MESURÉS sur ce processeur. Sans instructions bfloat16 natives (AVX512-BF16, AMX), le bfloat16 est
+    émulé :
+    mesuré 3,4 fois plus lent que le float32 le 12/10/2026 (Xeon avec AVX-512 sans BF16)."""
+    import time
+
+    layer = nn.Linear(width, width * 2)
+    x = torch.randn(rows, width)
+    timings = []
+    for amp in (False, True):
+        context = torch.autocast("cpu", dtype=torch.bfloat16) if amp else nullcontext()
+        with context:
+            layer(x).sum().backward()  # préchauffage (choix des noyaux)
+        started = time.perf_counter()
+        for _ in range(repeats):
+            with torch.autocast("cpu", dtype=torch.bfloat16) if amp else nullcontext():
+                layer(x).sum().backward()
+        timings.append(time.perf_counter() - started)
+    return timings[0], timings[1]
+
+
 class TrainingEngine:
     def __init__(
         self,
@@ -130,6 +152,16 @@ class TrainingEngine:
         amp_dtype = torch.bfloat16 if bf16 else torch.float16
         self._amp = config.mixed_precision
         self._amp_dtype = amp_dtype
+        #: Choix de précision sur CPU, mesuré (jamais supposé) : le bfloat16 n'est gardé que s'il est plus
+        #: rapide.
+        self.precision_note: str | None = None
+        if self._amp and self.device.type == "cpu":
+            fp32_s, bf16_s = cpu_bf16_timings()
+            self._amp = bf16_s < fp32_s
+            self.precision_note = (
+                f"{'bfloat16' if self._amp else 'float32'} sur ce processeur (mesuré : float32 "
+                f"{fp32_s * 1000:.0f} ms, bfloat16 {bf16_s * 1000:.0f} ms)"
+            )
         self._scaler = torch.amp.GradScaler(
             self.device.type, enabled=self._amp and amp_dtype is torch.float16
         )

@@ -308,6 +308,9 @@ class Run:
             self.fit_memory()
         facts = hardware_facts(self.device)
         facts["compiled"] = self.engine._forward_model is not self.model
+        facts["mixed_precision"] = self.engine._amp
+        if self.engine.precision_note:
+            facts["precision"] = self.engine.precision_note
         self._metric(
             {
                 "event": "start",

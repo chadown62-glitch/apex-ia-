@@ -2157,6 +2157,10 @@ def score(check: dict[str, Any], answer: str, question: str | None = None) -> bo
         return any(marker in lowered for marker in _REFUSAL_MARKERS)
     if kind == "overlap":
         return overlap(check["answer"], answer, question) >= float(check["threshold"])
+    if kind == "model3d":
+        # Résumé rendu par l'atelier 3D pour l'appel attendu (sorte, dimensions, pièces, triangles) : présent
+        # seulement si le modèle a appelé l'atelier avec les bons paramètres (`apex.neural.model3d_tasks`).
+        return str(check["summary"]) in answer
     return False
 
 
