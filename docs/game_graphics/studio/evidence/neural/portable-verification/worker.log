@@ -1,0 +1,5 @@
+imports_hash_preprocess {"seconds": 2.7903429830039386, "self_peak_rss_bytes": 291315712}
+model_load {"seconds": 5.326722867997887, "self_peak_rss_bytes": 3746082816}
+neural_forward {"seconds": 14.495408132999728, "self_peak_rss_bytes": 3746082816}
+neural_mesh_extraction {"seconds": 3.925470989997848, "self_peak_rss_bytes": 3746082816}
+export {"seconds": 0.0039733029989292845, "self_peak_rss_bytes": 3746082816}

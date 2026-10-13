@@ -1,0 +1,27 @@
+{
+  "cases": [
+    {
+      "id": "aligned",
+      "offset_m": 0.0,
+      "expected_misaligned": false
+    },
+    {
+      "id": "subthreshold",
+      "offset_m": 0.004,
+      "expected_misaligned": false
+    },
+    {
+      "id": "raised",
+      "offset_m": 0.03,
+      "expected_misaligned": true
+    },
+    {
+      "id": "lowered",
+      "offset_m": -0.12,
+      "expected_misaligned": true
+    }
+  ],
+  "threshold_pixels": 4,
+  "min_pixels": 12,
+  "family": "calibration_parallel_curved_beams"
+}

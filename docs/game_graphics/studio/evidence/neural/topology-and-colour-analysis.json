@@ -1,0 +1,260 @@
+{
+  "measurement": "Read-only source PLY, independent diagnostic copies only; no new Blender/model process",
+  "results": {
+    "64": {
+      "raw": {
+        "vertices": 2375,
+        "faces": 4716,
+        "boundary_edges": 68,
+        "nonmanifold_edges_more_than_two_faces": 0,
+        "connected_components_by_vertex_edges": 3,
+        "degenerate_area_below_1e-12": 0,
+        "degenerate_area_below_1e-10": 0,
+        "watertight": false
+      },
+      "temporary_welded_diagnostic": {
+        "vertices": 2358,
+        "faces": 4716,
+        "boundary_edges": 0,
+        "nonmanifold_edges_more_than_two_faces": 0,
+        "connected_components_by_vertex_edges": 3,
+        "degenerate_area_below_1e-12": 0,
+        "degenerate_area_below_1e-10": 0,
+        "watertight": true
+      },
+      "weld_method": {
+        "tolerance": 1e-06,
+        "algorithm": "Euclidean cKDTree radius pairs + union-find; representative coordinates retained; collapsed-index faces excluded only in temporary diagnostic mesh",
+        "coincident_pairs": 17,
+        "welded_vertex_count": 2358,
+        "collapsed_index_faces_excluded": 0,
+        "source_files_written": false
+      },
+      "actual_pr12_blender_inspection": {
+        "blender": "4.3.2",
+        "source_format": ".blend",
+        "objects": {
+          "geometry_0": {
+            "vertices": 2375,
+            "triangles": 4716,
+            "degenerate_faces": 0,
+            "nonmanifold_edges": 0,
+            "invalid_normals": 0,
+            "signed_volume": 0.04788681189211483,
+            "dimensions": [
+              1.5658289790153503,
+              1.5809499621391296,
+              1.8000006824867114
+            ],
+            "geometry_center": [
+              2.9802322387695312e-08,
+              2.9802322387695312e-08,
+              0.9000000879100867
+            ],
+            "pivot": [
+              -0.061702076345682144,
+              0.00040895806159824133,
+              0.788987934589386
+            ],
+            "spin_axis_world": [
+              0.0,
+              0.9999999403953552,
+              -4.7153369564512104e-07
+            ],
+            "materials": [
+              "TripoSR_predicted_vertex_colours"
+            ],
+            "uv_layers": 0,
+            "uv_finite": true,
+            "parent": "world"
+          }
+        },
+        "dimensions": [
+          1.5658289790153503,
+          1.5809499621391296,
+          1.8000006824867114
+        ],
+        "triangles": 4716,
+        "scene_unit_scale": 1.0
+      },
+      "vertex_color_stats_uint8": {
+        "min_rgb": [
+          3,
+          4,
+          2
+        ],
+        "max_rgb": [
+          222,
+          198,
+          194
+        ],
+        "mean_rgb": [
+          130.32589473684212,
+          102.68084210526315,
+          84.9301052631579
+        ],
+        "median_rgb": [
+          138.0,
+          112.0,
+          87.0
+        ],
+        "p05_rgb": [
+          40.7,
+          33.0,
+          26.0
+        ],
+        "p95_rgb": [
+          190.0,
+          155.0,
+          137.0
+        ],
+        "white_fraction_all_channels_at_least230": 0.0,
+        "white_fraction_all_channels_at_least200": 0.0,
+        "mean_if_interpreted_linear_0_1": [
+          0.5110819401444819,
+          0.4026699690402495,
+          0.33305923632611156
+        ],
+        "mean_after_srgb_to_linear_decode": [
+          0.2621246210845672,
+          0.15792775915149257,
+          0.1090024712906917
+        ]
+      }
+    },
+    "128": {
+      "raw": {
+        "vertices": 9711,
+        "faces": 19360,
+        "boundary_edges": 148,
+        "nonmanifold_edges_more_than_two_faces": 4,
+        "connected_components_by_vertex_edges": 1,
+        "degenerate_area_below_1e-12": 5,
+        "degenerate_area_below_1e-10": 6,
+        "watertight": false
+      },
+      "temporary_welded_diagnostic": {
+        "vertices": 9673,
+        "faces": 19354,
+        "boundary_edges": 0,
+        "nonmanifold_edges_more_than_two_faces": 0,
+        "connected_components_by_vertex_edges": 1,
+        "degenerate_area_below_1e-12": 0,
+        "degenerate_area_below_1e-10": 1,
+        "watertight": true
+      },
+      "weld_method": {
+        "tolerance": 1e-06,
+        "algorithm": "Euclidean cKDTree radius pairs + union-find; representative coordinates retained; collapsed-index faces excluded only in temporary diagnostic mesh",
+        "coincident_pairs": 38,
+        "welded_vertex_count": 9673,
+        "collapsed_index_faces_excluded": 6,
+        "source_files_written": false
+      },
+      "actual_pr12_blender_inspection": {
+        "blender": "4.3.2",
+        "source_format": ".blend",
+        "objects": {
+          "geometry_0": {
+            "vertices": 9711,
+            "triangles": 19356,
+            "degenerate_faces": 1,
+            "nonmanifold_edges": 0,
+            "invalid_normals": 0,
+            "signed_volume": 0.04370790898130635,
+            "dimensions": [
+              1.5390465259552002,
+              1.5605721473693848,
+              1.80952931009233
+            ],
+            "geometry_center": [
+              -0.00866931676864624,
+              -0.00860440731048584,
+              0.8954088659957051
+            ],
+            "pivot": [
+              -0.061702076345682144,
+              0.00040895806159824133,
+              0.7889876961708069
+            ],
+            "spin_axis_world": [
+              0.0,
+              0.9999999403953552,
+              -4.7153369564512104e-07
+            ],
+            "materials": [
+              "TripoSR_predicted_vertex_colours"
+            ],
+            "uv_layers": 0,
+            "uv_finite": true,
+            "parent": "world"
+          }
+        },
+        "dimensions": [
+          1.5390465259552002,
+          1.5605721473693848,
+          1.80952931009233
+        ],
+        "triangles": 19356,
+        "scene_unit_scale": 1.0
+      },
+      "vertex_color_stats_uint8": {
+        "min_rgb": [
+          3,
+          2,
+          2
+        ],
+        "max_rgb": [
+          225,
+          218,
+          192
+        ],
+        "mean_rgb": [
+          133.20327463700957,
+          97.57810730099887,
+          76.90866028215426
+        ],
+        "median_rgb": [
+          153.0,
+          107.0,
+          79.0
+        ],
+        "p05_rgb": [
+          38.0,
+          29.0,
+          23.0
+        ],
+        "p95_rgb": [
+          189.0,
+          150.0,
+          131.0
+        ],
+        "white_fraction_all_channels_at_least230": 0.0,
+        "white_fraction_all_channels_at_least200": 0.0,
+        "mean_if_interpreted_linear_0_1": [
+          0.5223657828902469,
+          0.3826592443176458,
+          0.3016025893417909
+        ],
+        "mean_after_srgb_to_linear_decode": [
+          0.27580824259460557,
+          0.1432744007637306,
+          0.09011266031916548
+        ]
+      }
+    }
+  },
+  "caveats": [
+    "Temporary Python welding uses Euclidean radius union-find, not BMesh; compare with actual PR12 numbers separately",
+    "PR12 inspector evaluates BMesh remove_doubles(1e-6), after native glTF import validation",
+    "Blender128 has19356 faces versus raw19360; native import excludes four collapsed-index faces. One small degenerate face remains in PR12 inspection.",
+    "Raw original neural outputs are unchanged and retained"
+  ],
+  "color_analysis": {
+    "observed": "No vertex is near-white by all-channels>=200 criterion; raw means are brown, so majority-white neural output is disproved.",
+    "source_pipeline": "TripoSR decoder sigmoid colors are scaled directly into uint8 by Trimesh. Trimesh exporter writes these bytes as glTF normalized COLOR_0; Blender imports accessor values directly into linear color attributes.",
+    "hypothesis": "Predicted display RGB may be interpreted as linear RGB in the glTF/material path, brightening it; strong lighting/AgX are additional confounders. This is not yet a calibrated diagnosis.",
+    "next_experiment": "Freeze128 geometry and cameras. Render controlled unlit/emission RGB using direct vs exact sRGB-to-linear transfer with Standard view/exposure0. Compare known color swatches and projected vertex values first. Only then choose a display correction. No new weights or neural forward is required.",
+    "geometry_improvement_claim": false
+  }
+}

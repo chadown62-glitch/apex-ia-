@@ -1,0 +1,1322 @@
+{
+  "timber_back": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.8600000143051147,
+      0.4398316740989685,
+      0.801655650138855
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 1394,
+    "geometry_sha256": "2f7c91208b774c70c206863fced397e9b4fd11745b205debc9cb98cec91f9914"
+  },
+  "timber_seat": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.8600000143051147,
+      0.7699999809265137,
+      0.17308339476585388
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 1394,
+    "geometry_sha256": "590db23767c70c8521c00450dfd8380f68d0e909f9b105e2de7ac539a0962ea1"
+  },
+  "seat_cushion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.06499999761581421,
+      0.47600001096725464
+    ],
+    "dimensions_m": [
+      0.800000011920929,
+      0.7599999904632568,
+      0.17000000178813934
+    ],
+    "materials": [
+      "chair_saddle_leather"
+    ],
+    "pbr": {
+      "chair_saddle_leather": {
+        "Base Color": {
+          "value": [
+            0.20999999344348907,
+            0.06599999964237213,
+            0.027000000700354576,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5600000023841858,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 530,
+    "geometry_sha256": "83b2e72175ac47ccb02cca3e050eb6bad329c567991761800c780785e883a2b0"
+  },
+  "back_cushion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.3700000047683716,
+      0.8349999785423279
+    ],
+    "dimensions_m": [
+      0.7649999856948853,
+      0.7149999737739563,
+      0.1550000011920929
+    ],
+    "materials": [
+      "chair_saddle_leather"
+    ],
+    "pbr": {
+      "chair_saddle_leather": {
+        "Base Color": {
+          "value": [
+            0.20999999344348907,
+            0.06599999964237213,
+            0.027000000700354576,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5600000023841858,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 530,
+    "geometry_sha256": "43b8dea29881184c6bfa41a2286fd10c490caf9a51d335fd3d42a68404391b6d"
+  },
+  "seat_cushion_piping": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.06499999761581421,
+      0.47600001096725464
+    ],
+    "dimensions_m": [
+      0.803600013256073,
+      0.763759970664978,
+      0.006800003349781036
+    ],
+    "materials": [
+      "chair_stitched_edges"
+    ],
+    "pbr": {
+      "chair_stitched_edges": {
+        "Base Color": {
+          "value": [
+            0.0949999988079071,
+            0.02800000086426735,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5699999928474426,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 768,
+    "geometry_sha256": "d0c4d32cc20316a238df8180879723d65a0e83e08b27e0d816dd0f9f9e11c907"
+  },
+  "back_cushion_piping": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.3700000047683716,
+      0.8349999785423279
+    ],
+    "dimensions_m": [
+      0.7687399983406067,
+      0.718940019607544,
+      0.006800001487135887
+    ],
+    "materials": [
+      "chair_stitched_edges"
+    ],
+    "pbr": {
+      "chair_stitched_edges": {
+        "Base Color": {
+          "value": [
+            0.0949999988079071,
+            0.02800000086426735,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5699999928474426,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 768,
+    "geometry_sha256": "f6c31e44af7409f1f9c727bf4a8ddeffbc11f13986917d328277d7c63cb459b3"
+  },
+  "arm_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.11999999731779099
+    ],
+    "dimensions_m": [
+      0.10494333505630493,
+      0.8329811692237854,
+      0.07371610403060913
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 400,
+    "geometry_sha256": "d421b0ff323fab70a36cd0f0b01e17dbd663cd952dceeecb7d1740be9fdc938c"
+  },
+  "arm_support_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4424999952316284,
+      -0.30000001192092896,
+      0.559499979019165
+    ],
+    "dimensions_m": [
+      0.026000000536441803,
+      0.025999998673796654,
+      0.3301302194595337
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "ffba81c11f471899eee026116c3656354dfd2f9464b970a4d9ef28637f9b9c71"
+  },
+  "arm_joint_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.46700000762939453,
+      -0.30000001192092896,
+      0.718999981880188
+    ],
+    "dimensions_m": [
+      0.04600000008940697,
+      0.04600000008940697,
+      0.02799999713897705
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "1726e19f970c69f005d12ddfe357f62c3c8c622e7512b1f74be9dce5d094a084"
+  },
+  "arm_support_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4424999952316284,
+      0.2800000011920929,
+      0.559499979019165
+    ],
+    "dimensions_m": [
+      0.026000000536441803,
+      0.025999998673796654,
+      0.3301302194595337
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "ffba81c11f471899eee026116c3656354dfd2f9464b970a4d9ef28637f9b9c71"
+  },
+  "arm_joint_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.46700000762939453,
+      0.2800000011920929,
+      0.718999981880188
+    ],
+    "dimensions_m": [
+      0.04600000008940697,
+      0.04600000008940697,
+      0.02799999713897705
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "1726e19f970c69f005d12ddfe357f62c3c8c622e7512b1f74be9dce5d094a084"
+  },
+  "leg_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4000000059604645,
+      -0.3630000054836273,
+      0.22550000250339508
+    ],
+    "dimensions_m": [
+      0.0756818875670433,
+      0.07568188011646271,
+      0.4020659029483795
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "f18d7ec0b0eb93b9a97cfc4c1dda1a3295746697a28e0db17e8b4f5c6f4727d1"
+  },
+  "leg_collar_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.33984994888305664,
+      -0.30470073223114014,
+      0.3916066884994507
+    ],
+    "dimensions_m": [
+      0.07800000160932541,
+      0.07800000160932541,
+      0.05399998649954796
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "6c7fb69e8a266e3c80c0b5d48def9df4de2430dca6029f027296d973a5c5d528"
+  },
+  "foot_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4650000035762787,
+      -0.4259999990463257,
+      0.026500001549720764
+    ],
+    "dimensions_m": [
+      0.04800000041723251,
+      0.04800000041723251,
+      0.03700000047683716
+    ],
+    "materials": [
+      "chair_floor_glides"
+    ],
+    "pbr": {
+      "chair_floor_glides": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.012000000104308128,
+            0.010999999940395355,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "9ff8dedf9b01d9d18a9007812340f6e7c9b50adb86d378e9754c7a96ffbdf67f"
+  },
+  "leg_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4000000059604645,
+      0.3630000054836273,
+      0.22550000250339508
+    ],
+    "dimensions_m": [
+      0.0756818875670433,
+      0.0756818875670433,
+      0.4020659029483795
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "f18d7ec0b0eb93b9a97cfc4c1dda1a3295746697a28e0db17e8b4f5c6f4727d1"
+  },
+  "leg_collar_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.33984994888305664,
+      0.30470073223114014,
+      0.3916066884994507
+    ],
+    "dimensions_m": [
+      0.07800000160932541,
+      0.07800000160932541,
+      0.05399998649954796
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "6c7fb69e8a266e3c80c0b5d48def9df4de2430dca6029f027296d973a5c5d528"
+  },
+  "foot_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4650000035762787,
+      0.4259999990463257,
+      0.026500001549720764
+    ],
+    "dimensions_m": [
+      0.04800000041723251,
+      0.04800000041723251,
+      0.03700000047683716
+    ],
+    "materials": [
+      "chair_floor_glides"
+    ],
+    "pbr": {
+      "chair_floor_glides": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.012000000104308128,
+            0.010999999940395355,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "9ff8dedf9b01d9d18a9007812340f6e7c9b50adb86d378e9754c7a96ffbdf67f"
+  },
+  "underframe_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.33500000834465027,
+      0.015000000596046448,
+      0.37700000405311584
+    ],
+    "dimensions_m": [
+      0.0560000017285347,
+      0.0560000017285347,
+      0.6799999475479126
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "d9972241a80eed9454469f4cdabce0e3b7adbd4c47ccd7b105e15ee7c3b84ee4"
+  },
+  "arm_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.10494333505630493,
+      0.8329811692237854,
+      0.07371610403060913
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 400,
+    "geometry_sha256": "d9808bfac62010eccdee6aff9cc6770a28ad2a6efeefd81030a2c9c47ecef924"
+  },
+  "arm_support_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4424999952316284,
+      -0.30000001192092896,
+      0.559499979019165
+    ],
+    "dimensions_m": [
+      0.026000000536441803,
+      0.025999998673796654,
+      0.3301302194595337
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "ffba81c11f471899eee026116c3656354dfd2f9464b970a4d9ef28637f9b9c71"
+  },
+  "arm_joint_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.46700000762939453,
+      -0.30000001192092896,
+      0.718999981880188
+    ],
+    "dimensions_m": [
+      0.04600000008940697,
+      0.04600000008940697,
+      0.02799999713897705
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "1726e19f970c69f005d12ddfe357f62c3c8c622e7512b1f74be9dce5d094a084"
+  },
+  "arm_support_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4424999952316284,
+      0.2800000011920929,
+      0.559499979019165
+    ],
+    "dimensions_m": [
+      0.026000000536441803,
+      0.025999998673796654,
+      0.3301302194595337
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "ffba81c11f471899eee026116c3656354dfd2f9464b970a4d9ef28637f9b9c71"
+  },
+  "arm_joint_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.46700000762939453,
+      0.2800000011920929,
+      0.718999981880188
+    ],
+    "dimensions_m": [
+      0.04600000008940697,
+      0.04600000008940697,
+      0.02799999713897705
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "1726e19f970c69f005d12ddfe357f62c3c8c622e7512b1f74be9dce5d094a084"
+  },
+  "leg_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4000000059604645,
+      -0.3630000054836273,
+      0.22550000250339508
+    ],
+    "dimensions_m": [
+      0.0756818875670433,
+      0.07568188011646271,
+      0.4020659029483795
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "f18d7ec0b0eb93b9a97cfc4c1dda1a3295746697a28e0db17e8b4f5c6f4727d1"
+  },
+  "leg_collar_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.33984994888305664,
+      -0.30470073223114014,
+      0.3916066884994507
+    ],
+    "dimensions_m": [
+      0.07800000160932541,
+      0.07800000160932541,
+      0.05399998649954796
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "6c7fb69e8a266e3c80c0b5d48def9df4de2430dca6029f027296d973a5c5d528"
+  },
+  "foot_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4650000035762787,
+      -0.4259999990463257,
+      0.026500001549720764
+    ],
+    "dimensions_m": [
+      0.04800000041723251,
+      0.04800000041723251,
+      0.03700000047683716
+    ],
+    "materials": [
+      "chair_floor_glides"
+    ],
+    "pbr": {
+      "chair_floor_glides": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.012000000104308128,
+            0.010999999940395355,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "9ff8dedf9b01d9d18a9007812340f6e7c9b50adb86d378e9754c7a96ffbdf67f"
+  },
+  "leg_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4000000059604645,
+      0.3630000054836273,
+      0.22550000250339508
+    ],
+    "dimensions_m": [
+      0.0756818875670433,
+      0.0756818875670433,
+      0.4020659029483795
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "f18d7ec0b0eb93b9a97cfc4c1dda1a3295746697a28e0db17e8b4f5c6f4727d1"
+  },
+  "leg_collar_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.33984994888305664,
+      0.30470073223114014,
+      0.3916066884994507
+    ],
+    "dimensions_m": [
+      0.07800000160932541,
+      0.07800000160932541,
+      0.05399998649954796
+    ],
+    "materials": [
+      "chair_brushed_brass"
+    ],
+    "pbr": {
+      "chair_brushed_brass": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.2549999952316284,
+            0.08500000089406967,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.8299999833106995,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "6c7fb69e8a266e3c80c0b5d48def9df4de2430dca6029f027296d973a5c5d528"
+  },
+  "foot_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4650000035762787,
+      0.4259999990463257,
+      0.026500001549720764
+    ],
+    "dimensions_m": [
+      0.04800000041723251,
+      0.04800000041723251,
+      0.03700000047683716
+    ],
+    "materials": [
+      "chair_floor_glides"
+    ],
+    "pbr": {
+      "chair_floor_glides": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.012000000104308128,
+            0.010999999940395355,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "9ff8dedf9b01d9d18a9007812340f6e7c9b50adb86d378e9754c7a96ffbdf67f"
+  },
+  "underframe_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.33500000834465027,
+      0.015000000596046448,
+      0.37700000405311584
+    ],
+    "dimensions_m": [
+      0.0560000017285347,
+      0.0560000017285347,
+      0.6799999475479126
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "d9972241a80eed9454469f4cdabce0e3b7adbd4c47ccd7b105e15ee7c3b84ee4"
+  },
+  "cross_brace_front": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.27000001072883606,
+      0.35600000619888306
+    ],
+    "dimensions_m": [
+      0.04600000008940697,
+      0.04600000008940697,
+      0.75
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "b5dff8dd2d490e2ad41572fc7dc15ed480257a5a6a74eaf648c1c9a940231c43"
+  },
+  "cross_brace_rear": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.2800000011920929,
+      0.35600000619888306
+    ],
+    "dimensions_m": [
+      0.04600000008940697,
+      0.04600000008940697,
+      0.75
+    ],
+    "materials": [
+      "chair_walnut"
+    ],
+    "pbr": {
+      "chair_walnut": {
+        "Base Color": {
+          "value": [
+            0.1599999964237213,
+            0.05400000140070915,
+            0.023000000044703484,
+            1.0
+          ],
+          "linked": true
+        },
+        "Roughness": {
+          "value": 0.33000001311302185,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 120,
+    "geometry_sha256": "b5dff8dd2d490e2ad41572fc7dc15ed480257a5a6a74eaf648c1c9a940231c43"
+  },
+  "lumbar_cushion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.019999999552965164,
+      0.6600000262260437
+    ],
+    "dimensions_m": [
+      0.6499999761581421,
+      0.25,
+      0.20000000298023224
+    ],
+    "materials": [
+      "chair_saddle_leather"
+    ],
+    "pbr": {
+      "chair_saddle_leather": {
+        "Base Color": {
+          "value": [
+            0.20999999344348907,
+            0.06599999964237213,
+            0.027000000700354576,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5600000023841858,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "74618e0b3b3e703b696bebaa7180e2f09eeda4e7e483de8182d0685cec7fdd06"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "fixed_before_execution": true,
+  "quality": {"level": "prototype", "max_triangles": 100000, "minimum_views": 4, "max_distinct_defect_attempts": 3},
+  "render": {"engine": "CYCLES", "device": "CPU", "width": 960, "height": 720, "samples": 64, "seed": 14, "denoising": false},
+  "geometry": {"max_nonmanifold_edges": 0, "max_degenerate_faces": 0, "positive_volume": true, "finite_uvs": true, "require_blend_and_glb_reopen": true},
+  "images": {"minimum_channel_stddev": 8, "minimum_distinct_views": 4, "minimum_subject_fraction": 0.05, "maximum_subject_fraction": 0.85},
+  "visual_alignment": {"views": ["front", "rear"], "max_centroid_y_difference_pixels": 4, "minimum_visible_pixels_per_component": 12, "decisive_only_after_calibration": true, "scope": "paired component alignment in native ID renders only, not general aesthetics"},
+  "cases": [
+    {"id":"sports_car", "family":"vehicle", "split":"train", "reference":"original-sports-coupe-v1", "required_objects":["chassis","windshield","roof","mirror_left","mirror_right","headlamp_left","headlamp_right","driver_seat","steering_wheel"], "minimum_materials":6, "bounds_min_m":[4.4,1.8,1.0], "bounds_max_m":[5.1,2.5,1.6]},
+    {"id":"street_building", "family":"building", "split":"validation", "reference":"original-street-atelier-v1", "required_objects":["facade","shop_window","entry_door","balcony_floor","cornice","window_left","window_right"], "minimum_materials":5, "bounds_min_m":[4.0,2.5,5.0], "bounds_max_m":[5.8,4.5,7.8]},
+    {"id":"lounge_chair", "family":"chair", "split":"heldout", "reference":"original-lounge-chair-v1", "required_objects":["seat_cushion","back_cushion","timber_back","arm_left","arm_right","leg_front_left","leg_front_right"], "minimum_materials":4, "bounds_min_m":[0.8,0.8,0.9], "bounds_max_m":[1.5,1.5,1.8]}
+  ],
+  "limits": {"blender_timeout_s":600, "sampled_rss_limit_mib":12000, "threads":4, "neural_first_timeout_s":720, "neural_sampled_rss_limit_gib":20},
+  "training": {"executed":false,"minimum_accepted_training_examples_before_lora":100,"minimum_task_families_before_lora":10,"minimum_independent_validation_examples":30,"minimum_independent_heldout_examples":30}
+}

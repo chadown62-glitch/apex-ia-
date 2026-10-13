@@ -1,0 +1,79 @@
+[
+  {
+    "operation": {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  },
+  {
+    "operation": {
+      "op": "add_component",
+      "target": "scene",
+      "params": {
+        "component": "lumbar_cushion"
+      }
+    },
+    "changed_objects": [
+      "lumbar_cushion"
+    ],
+    "before": {
+      "lumbar_cushion": null
+    },
+    "after": {
+      "lumbar_cushion": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.019999999552965164,
+          0.6600000262260437
+        ],
+        "dimensions_m": [
+          0.6499999761581421,
+          0.25,
+          0.20000000298023224
+        ],
+        "materials": [
+          "chair_saddle_leather"
+        ],
+        "pbr": {
+          "chair_saddle_leather": {
+            "Base Color": {
+              "value": [
+                0.20999999344348907,
+                0.06599999964237213,
+                0.027000000700354576,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.5600000023841858,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 96,
+        "geometry_sha256": "74618e0b3b3e703b696bebaa7180e2f09eeda4e7e483de8182d0685cec7fdd06"
+      }
+    }
+  },
+  {
+    "operation": {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  }
+]

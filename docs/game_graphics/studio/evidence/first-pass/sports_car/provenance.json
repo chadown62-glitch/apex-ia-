@@ -1,0 +1,13 @@
+{
+  "family": "vehicle",
+  "method": "trusted_procedural_blender",
+  "neural_geometry": false,
+  "parent_sha256": null,
+  "plan_sha256": null,
+  "source_scripts": {
+    "inspect_asset.py": "e30e6e16dcb81e4811e943ceb6d3a19f1ae40028063ee69828990e304e7ef8ce",
+    "build_assets.py": "01136f25e1573f3dd91e3f854bf7c61667b5424f5cc0cfeb128e63ed56600db5",
+    "render_asset.py": "e18798d7cf96833ebcdba77055d4a9c86f583eab155be098bf414c14c59f7f92",
+    "blender_ops.py": "ad8316fd4bda2979ebdd1e526c455ab9d4c0d83b3635f2f872eefd6ed7cead1b"
+  }
+}

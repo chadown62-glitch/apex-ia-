@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "family": "chair",
+  "case_id": "lounge_chair",
+  "units": "m",
+  "files": [
+    {
+      "path": "asset.blend",
+      "sha256": "7cb4a986d5f3aece831dfefef382e4489d4f7401765270dd9a50dd5676a408e1",
+      "bytes": 2211440,
+      "role": "blender_project"
+    },
+    {
+      "path": "asset.glb",
+      "sha256": "fe1b4f2ed2589c07995ef05228402cc07b97ca97f9fb9af5aece3ff2a9cc395a",
+      "bytes": 510252,
+      "role": "exchange"
+    },
+    {
+      "path": "blend-inspection.json",
+      "sha256": "3ae6154378a252b82685cbe70b6918a04f1590ae55b26949623a5f5147584d56",
+      "bytes": 25866,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.log",
+      "sha256": "35f0357e6e97c6d5e9df8aed1ef3f6647ff3a7e4b43291a43869a8da0621ca97",
+      "bytes": 124,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.resources.json",
+      "sha256": "d31d1c8f3b7e5161c62be38636cd444c2fc1dfcb8f8c838dc8a1f6aff5778d35",
+      "bytes": 2698,
+      "role": "evidence"
+    },
+    {
+      "path": "build.log",
+      "sha256": "dea0790d484b0cfb773dfb3de180a51c70bf2c5ad53b78121bf1e6d7800a77b5",
+      "bytes": 79968,
+      "role": "evidence"
+    },
+    {
+      "path": "build.resources.json",
+      "sha256": "96d8d3eeaa7d53f7f6619fb45d038933983c1cd2a3b224a7c5fcca5aa50ae848",
+      "bytes": 94547,
+      "role": "evidence"
+    },
+    {
+      "path": "calibration.json",
+      "sha256": "c48f561de4fc6f8d15450730f281fe24812ff414bd948237aa232e9c1656c4db",
+      "bytes": 91575,
+      "role": "calibration"
+    },
+    {
+      "path": "controller.json",
+      "sha256": "051685040d92f56518a00ceea1d888bac495fbae955481677f60a9f96e505d98",
+      "bytes": 7695,
+      "role": "evidence"
+    },
+    {
+      "path": "execution.json",
+      "sha256": "5f6bc1348b0227f47ef1ab389f0a91f6a91d29fd059fe4d7d439529445be0198",
+      "bytes": 68355,
+      "role": "evidence"
+    },
+    {
+      "path": "front.png",
+      "sha256": "0b29514d83f24f8739523c8f4e05ec965cecc32bb251890389b9b5df9a24999e",
+      "bytes": 787219,
+      "view": "front",
+      "role": "view"
+    },
+    {
+      "path": "front_three_quarter.png",
+      "sha256": "7b795d8745047d434174746adf7221386f843b1c3cf787e25c631384b2af9209",
+      "bytes": 1056573,
+      "view": "front_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "glb-inspection.json",
+      "sha256": "fcd217d022be6f2c268a4d6ddd59cbd2a98694d0726e8a787af8e372b0cd95e7",
+      "bytes": 25842,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.log",
+      "sha256": "1039d28b9d40a5d716e334a5e55cddca3901782e4faadf311f04536d053227ab",
+      "bytes": 1850,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.resources.json",
+      "sha256": "e7f9928d24d163046b6383a089e5fa1876612590445eac404eb834282b6f567f",
+      "bytes": 4525,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy-before.json",
+      "sha256": "1568e16da141c82d04561236bd55565b28538436a0e4611eb0953d90c1f67ea1",
+      "bytes": 29343,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy.json",
+      "sha256": "b0631e4f096a1fa1588e210a7d77d9c7bf6c51e0d4303ac75ab08e341dc85d00",
+      "bytes": 29344,
+      "role": "evidence"
+    },
+    {
+      "path": "id_front.png",
+      "sha256": "565bc7fa0f4a9d74881183de047d6bb000cd369d3074c1998c576725d0b0a179",
+      "bytes": 344568,
+      "role": "evidence"
+    },
+    {
+      "path": "id_rear.png",
+      "sha256": "2137f1dd6f65b2e9e172f3b3df100e9cab00cc8757614bcfb453a176efd2ac15",
+      "bytes": 344610,
+      "role": "evidence"
+    },
+    {
+      "path": "judge-report-original-run.json",
+      "sha256": "cd2f539f05518ed885d5d8a4034b8201f6f2441477de83db75cf9e0ef2f0be00",
+      "bytes": 13380,
+      "role": "evidence"
+    },
+    {
+      "path": "manifest-original-run.json",
+      "sha256": "7734154eb14490a8150a781af18589538f2ca4cd3dc1d98cd55f74b4514135f8",
+      "bytes": 5936,
+      "role": "evidence"
+    },
+    {
+      "path": "operation-trace.json",
+      "sha256": "6c7ef9610515b4df48c044cb5e8a1a64b61b1adf6d92a4e580f98f7bb52c150d",
+      "bytes": 2650,
+      "role": "evidence"
+    },
+    {
+      "path": "plan/plan.json",
+      "sha256": "26912a1dec847b5b3bedfee0e59faf4cd9966c855187f102a9d3ef25fa14edfe",
+      "bytes": 403,
+      "role": "evidence"
+    },
+    {
+      "path": "plan/tool-result.json",
+      "sha256": "38867cd2e66f658aced39962343d12079dd399831709000bcb0ea79db4a4eb11",
+      "bytes": 378,
+      "role": "evidence"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "40e135ec4788a9d012cd45eba9276373771140095b6baf35ff563da05240aa78",
+      "bytes": 744,
+      "role": "evidence"
+    },
+    {
+      "path": "rear_three_quarter.png",
+      "sha256": "211138dd8c9524247b5bd560f2794975ac63da92217e0e1f2d86e5e363450b58",
+      "bytes": 1022051,
+      "view": "rear_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "render-settings.json",
+      "sha256": "473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4",
+      "bytes": 4845,
+      "role": "evidence"
+    },
+    {
+      "path": "side.png",
+      "sha256": "add73bcad893416171e3d4bee06268b1a9a923c740ef36975a15d04a5bb4e2da",
+      "bytes": 985405,
+      "view": "side",
+      "role": "view"
+    },
+    {
+      "path": "silhouette_front.png",
+      "sha256": "09e6b53d63cce14dab1f523c9ca23872dba9eeb1f1ad7cbe2c4a1e713955d0a4",
+      "bytes": 290829,
+      "view": "front",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_front_three_quarter.png",
+      "sha256": "6c2bdc741584faad833b3d2be229825193e5955f350b8fc4955b0ecb7a0b39f8",
+      "bytes": 275547,
+      "view": "front_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_rear_three_quarter.png",
+      "sha256": "4d64340477a8f43c7991f69d8be7f081101608a1a88e18f8615ef1dd7c337006",
+      "bytes": 299101,
+      "view": "rear_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_side.png",
+      "sha256": "c7665461d8ed4d0e8e6da289349cfa39485c692d633f0addb1c2410150a716d7",
+      "bytes": 307999,
+      "view": "side",
+      "role": "silhouette"
+    },
+    {
+      "path": "verdict-original-run.json",
+      "sha256": "e68427952d46dbda4fdaa7dc92f1e6039b5c79b3453e3ae22db5072c87fc730c",
+      "bytes": 21523,
+      "role": "evidence"
+    },
+    {
+      "path": "visual-alignment.json",
+      "sha256": "449d83971c506443f43fa9fb4e3f3d662582cc1b9f6ffbc4c2db20269d3ddf75",
+      "bytes": 8218,
+      "role": "evidence"
+    }
+  ],
+  "geometry_method": "procedural_blender",
+  "pbr_texture_baking": false,
+  "limits": [
+    "procedural shaders are not baked into GLB",
+    "Unreal import not executed"
+  ]
+}

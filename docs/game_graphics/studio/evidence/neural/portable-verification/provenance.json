@@ -1,0 +1,30 @@
+{
+  "code_revision": "107cefdc244c39106fa830359024f6a2f1c78871",
+  "code_source": "https://github.com/VAST-AI-Research/TripoSR",
+  "weights_repository": "stabilityai/TripoSR",
+  "weights_revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+  "weights_sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+  "config_sha256": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+  "dino_config_sha256": "b87c0270b97db085fd82cf114a761fd0f62ae7914fbd407c752a2260646b689c",
+  "license": "MIT",
+  "source_files": {
+    "tsr/bake_texture.py": "931d066c25d5943dc7b71469b63c308df3f37b8e7f6df558ee5e348d7936d5b7",
+    "tsr/models/isosurface.py": "94c9a2ec27f8fe3c2fb57558ef28be253eb77074d2c171d49a41cf73d95d6f5e",
+    "tsr/models/nerf_renderer.py": "afe8c12c964078b2c6bb3922d2e30969aa59f7edbacb8cb73d2c3df839dc785f",
+    "tsr/models/network_utils.py": "b3d48e86be9ca3f3abc1bfd774f640fd350e4365843d804e2a3145e7692e1419",
+    "tsr/models/tokenizers/image.py": "0ca9b3a1f86a80a8c83d9236468e6e5f4e57e7861fb6733f8290277879843f09",
+    "tsr/models/tokenizers/triplane.py": "44811fbd53013d6f49e229ecfd0717f89dd8ebeb71608aeb1f8e5ed1d5e8e378",
+    "tsr/models/transformer/attention.py": "347c1a707257cb4eb664ebe9ecd16db7b6006131e74925c049245d2c0101ba7e",
+    "tsr/models/transformer/basic_transformer_block.py": "ced8ce4c5c5bbc13368130bc15dee1717cc6bc7f35699f64d03aeec185b1198e",
+    "tsr/models/transformer/transformer_1d.py": "fd83a71d59d04ef0a45dbadcc63f9d56d354ebc011a40f5589eb1786a1dd15f4",
+    "tsr/system.py": "a82d7cc65b2d7867c322fe3e54cfa92ed23fc5d2706189f00a86395b8dbe5957",
+    "tsr/utils.py": "ea8c04ed09c9306cd95c05db227900ad2c940f3f9721a9b23ebcd42ca002dc86"
+  },
+  "patches": [
+    "Optional rembg import; authored RGBA input needs no segmentation model",
+    "ViT configuration loaded from the pinned local DINO JSON",
+    "torch.load explicitly weights_only=True"
+  ],
+  "input_sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+  "worker_sha256": "d0642bbc7f98ddbb791cf0d7d1f7b8eff2ab4f4677eee347eaa7054442426032"
+}

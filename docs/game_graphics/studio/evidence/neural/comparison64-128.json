@@ -1,0 +1,174 @@
+{
+  "status": "REAL_GEOMETRIC_IMPROVEMENT_OBSERVED_QUALITY_UNQUALIFIED",
+  "method": "Same actual neural scene code extracted at64^3 then128^3; no geometry repair or procedural substitution.",
+  "renderer": "Same native Blender4.3.2 Cycles CPU64samples seed14, no denoising, same light definitions and cameras",
+  "input_sha256_equal": true,
+  "scene_codes_sha256_equal": true,
+  "scene_codes_sha256": "90f74496bd267b79722de140b1c5fae9fef3f64e7c4a6cb3fcd297776a1819e1",
+  "camera_metadata_equal": true,
+  "geometry_metrics": {
+    "64": {
+      "vertices": 2375,
+      "triangles": 4716,
+      "raw_watertight": false,
+      "raw_boundary_edges": 68,
+      "raw_nonmanifold_edges": 0,
+      "raw_connected_bodies": 3,
+      "winding_consistent": true,
+      "degenerate_faces_area_below_1e-12": 0,
+      "bounds": [
+        [
+          -0.3638817071914673,
+          -0.39903363585472107,
+          -0.3980771601200104
+        ],
+        [
+          0.42614424228668213,
+          0.39862096309661865,
+          0.5100976228713989
+        ]
+      ]
+    },
+    "128": {
+      "vertices": 9711,
+      "triangles": 19360,
+      "raw_watertight": false,
+      "raw_boundary_edges": 148,
+      "raw_nonmanifold_edges": 4,
+      "raw_connected_bodies": 1,
+      "winding_consistent": true,
+      "degenerate_faces_area_below_1e-12": 5,
+      "bounds": [
+        [
+          -0.3614993095397949,
+          -0.39823421835899353,
+          -0.40279731154441833
+        ],
+        [
+          0.41501379013061523,
+          0.38913893699645996,
+          0.5101851224899292
+        ]
+      ]
+    }
+  },
+  "visual_review": {
+    "reviewer": "Codex direct inspection, not calibrated automatic oracle",
+    "improvements": [
+      "Detached foot tip visible in64 view090 is now connected in128 view090.",
+      "Discontinuous arm rails/supports in64 view270 are connected in128 view270.",
+      "Cushion silhouette and back-panel outer contours use finer geometric facets."
+    ],
+    "remaining_defects": [
+      "Strong corrugations/vertical striations on the inferred rear surface",
+      "Still faceted and irregular cushions/rails; no production topology qualification",
+      "Colours washed under neutral display material; PBR/UV not predicted and lighting not calibrated to reference",
+      "A single image cannot validate hidden surfaces"
+    ],
+    "claims_not_made": [
+      "No weights trained or improved",
+      "No aesthetic score calibrated",
+      "No light-only change counted as geometry improvement",
+      "No pipeline generalized to all classes by two runs of one chair"
+    ]
+  },
+  "inference_measurements": {
+    "64": {
+      "imports_hash_preprocess": {
+        "seconds": 2.5672249400013243,
+        "self_peak_rss_bytes_linux": 286728192
+      },
+      "model_load": {
+        "seconds": 5.0103415259945905,
+        "self_peak_rss_bytes_linux": 3741462528
+      },
+      "neural_forward": {
+        "seconds": 13.141092866004328,
+        "self_peak_rss_bytes_linux": 3741462528
+      },
+      "neural_mesh_extraction": {
+        "seconds": 0.5890006049958174,
+        "self_peak_rss_bytes_linux": 3741462528
+      },
+      "export": {
+        "seconds": 0.0014751370035810396,
+        "self_peak_rss_bytes_linux": 3741462528
+      }
+    },
+    "128": {
+      "imports_hash_preprocess": {
+        "seconds": 2.6131714359944453,
+        "self_peak_rss_bytes_linux": 286109696
+      },
+      "model_load": {
+        "seconds": 4.775954061995435,
+        "self_peak_rss_bytes_linux": 3740823552
+      },
+      "neural_forward": {
+        "seconds": 13.521413399001176,
+        "self_peak_rss_bytes_linux": 3740823552
+      },
+      "neural_mesh_extraction": {
+        "seconds": 3.5788592960016103,
+        "self_peak_rss_bytes_linux": 3740823552
+      },
+      "export": {
+        "seconds": 0.0035598239992395975,
+        "self_peak_rss_bytes_linux": 3740823552
+      }
+    }
+  },
+  "resources": {
+    "64": {
+      "inference": {
+        "timeout_seconds": 720,
+        "rss_limit_bytes": 21474836480,
+        "poll_seconds": 0.25,
+        "method": "actual child process tree psutil sample",
+        "inference_requested": true,
+        "pid": 51312,
+        "elapsed_seconds": 22.650993424998887,
+        "return_code": 0,
+        "stop_reason": null,
+        "owned_process_stopped": true,
+        "sampled_peak_rss_bytes": 3741827072,
+        "native_mesh_created": true
+      },
+      "blender_render": {
+        "pid": 52344,
+        "return_code": 0,
+        "elapsed_seconds": 88.59227528599877,
+        "sampled_peak_rss_bytes": 315252736,
+        "stop_reason": null,
+        "owned_process_stopped": true
+      }
+    },
+    "128": {
+      "inference": {
+        "timeout_seconds": 720,
+        "rss_limit_bytes": 21474836480,
+        "poll_seconds": 0.25,
+        "method": "actual child process tree psutil sample",
+        "inference_requested": true,
+        "pid": 53474,
+        "elapsed_seconds": 25.66152102900378,
+        "return_code": 0,
+        "stop_reason": null,
+        "owned_process_stopped": true,
+        "sampled_peak_rss_bytes": 3729080320,
+        "native_mesh_created": true
+      },
+      "blender_render": {
+        "pid": 53580,
+        "return_code": 0,
+        "elapsed_seconds": 90.62930150899774,
+        "sampled_peak_rss_bytes": 314769408,
+        "stop_reason": null,
+        "owned_process_stopped": true
+      }
+    }
+  },
+  "next_useful_experiment": "First diagnose color transfer with frozen128 mesh/cameras, known RGB swatches, unlit direct versus exact sRGB-to-linear display; no new weights/forward. Then a heldout family with fixed128 criteria.",
+  "raw_topology_caveat": "PR12 inspector performs remove_doubles(1e-6) only on temporary BMesh, so its manifold count differs from raw PLY; both evidence files retained.",
+  "topology_quality_regression": "128 raw output contains4 nonmanifold edges and5 near-zero-area faces; native Blender import drops4 collapsed-index triangles, PR12 still finds1 degenerate face after diagnostic weld. Visual continuity improves, production topology acceptance does not."
+}

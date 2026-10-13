@@ -1,0 +1,6 @@
+{
+  "torch_version": "2.14.1+cpu",
+  "cuda_available": false,
+  "cuda_device_count": 0,
+  "vram_measurement": null
+}

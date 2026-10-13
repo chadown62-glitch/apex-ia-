@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "family": "vehicle",
+  "case_id": "sports_car",
+  "units": "m",
+  "files": [
+    {
+      "path": "asset.blend",
+      "sha256": "c8b8afb87d544a4ffd79747ed33c573552d09f9561bce5cb02fd4252f53e01da",
+      "bytes": 4052008,
+      "role": "blender_project"
+    },
+    {
+      "path": "asset.glb",
+      "sha256": "713bda6a28ba8c76536ab76aacea5c5c680788c782299ab3b43e19aca1a6ceec",
+      "bytes": 1203312,
+      "role": "exchange"
+    },
+    {
+      "path": "blend-inspection.json",
+      "sha256": "7223f750a727dc0ceed3ab5265e210af14dc52a906f34cbba8e6de1001b58431",
+      "bytes": 102180,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.log",
+      "sha256": "812881a2a25eb7b38e47c9a73692e55573108d8fa08a84ee2250ce022b34f28f",
+      "bytes": 113,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.resources.json",
+      "sha256": "da62f920e9366a386eb84874a5b2baaaa5a03ea6d3a70299d6d3b302d87a8f3b",
+      "bytes": 2736,
+      "role": "evidence"
+    },
+    {
+      "path": "build.log",
+      "sha256": "164baa3ef9ee730ecc5db344351418272478935c4ba87413cd66fc4a75d4edc5",
+      "bytes": 170741,
+      "role": "evidence"
+    },
+    {
+      "path": "build.resources.json",
+      "sha256": "c660e639519a77ef4e321535f308c596cc58152e41a51af30254e87d24bab46c",
+      "bytes": 90418,
+      "role": "evidence"
+    },
+    {
+      "path": "execution.json",
+      "sha256": "78b0fa747d6bb80bc300f1ef697708bcc30bda0c75577a2583eee598e98d772c",
+      "bytes": 68304,
+      "role": "evidence"
+    },
+    {
+      "path": "front.png",
+      "sha256": "61ede0313bf9cfbf2876aae659229c78612ebe23bef6ff2842a2189b8e8a8f8f",
+      "bytes": 725547,
+      "view": "front",
+      "role": "view"
+    },
+    {
+      "path": "front_three_quarter.png",
+      "sha256": "0a66e9f9f8a7f96dc20079bf804e32e85f72d32f411ceddf8751d7bf23f56d95",
+      "bytes": 976746,
+      "view": "front_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "glb-inspection.json",
+      "sha256": "75ca153c5681996d263d5d287dd44cace99f9f0dcb03cabe584f108a0301d84f",
+      "bytes": 102276,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.log",
+      "sha256": "e35f25d55e9acfe07c09d0ca3b607404e3a829201c3442c94fcbd4ab891d73d4",
+      "bytes": 7802,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.resources.json",
+      "sha256": "63f5c59b4860c6e347e7c51cab70d4f369c9669e6f7ab1cc410d2f4f4d3c4ff8",
+      "bytes": 10630,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy-before.json",
+      "sha256": "0df089e91a181bcfc4c7f679ddbdd2c3781e17d912b20bf8d19f3ef242c039e1",
+      "bytes": 118382,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy.json",
+      "sha256": "0093ba31abd10d19bac6b85c802f6c11d3574f10fdaa57320c5cb6745dad65c4",
+      "bytes": 120959,
+      "role": "evidence"
+    },
+    {
+      "path": "operation-trace.json",
+      "sha256": "7cc2bb33fa2ea7f60f6fc30b0a9af175ca7a2820884d142ec6875d840c848d2e",
+      "bytes": 156731,
+      "role": "evidence"
+    },
+    {
+      "path": "plan/plan.json",
+      "sha256": "d64fb439e50b38d208ce28988a2693f6ec40e9b3655b5272dcaea646c21f68e1",
+      "bytes": 864,
+      "role": "evidence"
+    },
+    {
+      "path": "plan/tool-result.json",
+      "sha256": "91a402d7ecc6acd6b468e2377b30c2d2eb802d4292df48feab1af0c32a6120af",
+      "bytes": 378,
+      "role": "evidence"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "657af66ee4d36f5747e32b95e4fd65edacf6b1d89db0c235eb8a6c1982eac013",
+      "bytes": 746,
+      "role": "evidence"
+    },
+    {
+      "path": "rear_three_quarter.png",
+      "sha256": "5a945614e47e2490ca19bf512b331d817711261e45e066f011f2217e641ea98b",
+      "bytes": 977178,
+      "view": "rear_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "render-settings.json",
+      "sha256": "6e641c28f7ee1eb805ac5cc9ab55596b045c91d8fb167a399b195857aadccd69",
+      "bytes": 4557,
+      "role": "evidence"
+    },
+    {
+      "path": "side.png",
+      "sha256": "b4084c217f9f44900461a1a722fd559799c4d54f04cb9dfb58c1dfe36c704b9e",
+      "bytes": 921528,
+      "view": "side",
+      "role": "view"
+    },
+    {
+      "path": "silhouette_front.png",
+      "sha256": "b6f82a3ca47c1741e8466aafc1c058a7a3d495db80d000d9763aab57270b5e4e",
+      "bytes": 327374,
+      "view": "front",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_front_three_quarter.png",
+      "sha256": "a2d3a078aa5778e54fe2b1c2659468385b35576981fc770ab04f72ee92dc38b1",
+      "bytes": 293156,
+      "view": "front_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_rear_three_quarter.png",
+      "sha256": "06e10c2854efd59d37cb30eb67f793f206b035555c7c1ed1e2702e30596a3a87",
+      "bytes": 294830,
+      "view": "rear_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_side.png",
+      "sha256": "c67ab88df858bb745fc9457443fe9451c52815748441517a50a5b28ab5dcb9f2",
+      "bytes": 298773,
+      "view": "side",
+      "role": "silhouette"
+    }
+  ],
+  "geometry_method": "procedural_blender",
+  "pbr_texture_baking": false,
+  "limits": [
+    "procedural shaders are not baked into GLB",
+    "Unreal import not executed"
+  ]
+}

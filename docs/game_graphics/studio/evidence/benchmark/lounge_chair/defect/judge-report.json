@@ -1,0 +1,386 @@
+{
+  "family": "chair",
+  "case_id": "lounge_chair",
+  "criteria": {
+    "level": "prototype",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 0,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "benchmark_version": 1,
+  "scope": "measured_geometry_export_and_render_rules",
+  "defects": [
+    {
+      "id": "paired_component_alignment",
+      "object": "arm_left",
+      "reference_object": "arm_right",
+      "view": "front",
+      "reference": "original-lounge-chair-v1",
+      "observed_defect": "Target is projected higher than its paired reference.",
+      "measured_y_delta_pixels": 48.841138730540365,
+      "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+      "suggested_operation": "set_location",
+      "confidence": {
+        "kind": "small_native_fixture_calibration",
+        "calibrated": true,
+        "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+      },
+      "verification": {
+        "views": [
+          "front",
+          "rear"
+        ],
+        "max_y_delta_pixels": 4.0,
+        "minimum_pixels_per_component": 12
+      },
+      "estimated_target_delta_z_m": -0.12006779937924507,
+      "estimate_note": "Only valid for the frozen level orthographic camera; verify expected world position.",
+      "distance_m": 0.12006779937924507
+    },
+    {
+      "id": "paired_component_alignment",
+      "object": "arm_left",
+      "reference_object": "arm_right",
+      "view": "rear",
+      "reference": "original-lounge-chair-v1",
+      "observed_defect": "Target is projected higher than its paired reference.",
+      "measured_y_delta_pixels": 48.841138730540365,
+      "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+      "suggested_operation": "set_location",
+      "confidence": {
+        "kind": "small_native_fixture_calibration",
+        "calibrated": true,
+        "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+      },
+      "verification": {
+        "views": [
+          "front",
+          "rear"
+        ],
+        "max_y_delta_pixels": 4.0,
+        "minimum_pixels_per_component": 12
+      },
+      "estimated_target_delta_z_m": -0.12006779937924507,
+      "estimate_note": "Only valid for the frozen level orthographic camera; verify expected world position.",
+      "distance_m": 0.12006779937924507
+    }
+  ],
+  "unavailable": [],
+  "facts": {
+    "render_settings": {
+      "engine": "CYCLES",
+      "device": "CPU",
+      "samples": 64,
+      "seed": 14,
+      "denoising": false
+    },
+    "distinct_camera_transforms": 4,
+    "blend": {
+      "triangles": 18196,
+      "dimensions": [
+        1.087999939918518,
+        1.1007438898086548,
+        1.1936556249856949
+      ],
+      "objects": 33,
+      "materials": 5
+    },
+    "glb": {
+      "triangles": 18196,
+      "dimensions": [
+        1.087999939918518,
+        1.1007438898086548,
+        1.1936556249856949
+      ],
+      "objects": 33,
+      "materials": 5
+    },
+    "images": {
+      "front_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 39.077185565873705,
+        "subject_fraction": 0.25288483796296296,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "rear_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 38.32283215344709,
+        "subject_fraction": 0.17458188657407409,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "side": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 52.62037696293208,
+        "subject_fraction": 0.14888888888888888,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "front": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 58.77582212090413,
+        "subject_fraction": 0.19351417824074074,
+        "subject_pixels_at_image_boundary": 0
+      }
+    }
+  },
+  "advisory": [
+    "Shader parameters and material count do not certify convincing PBR appearance."
+  ],
+  "aesthetic_certification": false,
+  "limits": [
+    "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+    "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+    "Unreal import and runtime performance have not been measured by this oracle."
+  ],
+  "manifest_sha256": "6cc39bea73df4412abbcf06126ecb560d76cff8d63c97a2111ed0bdfcc92a180",
+  "visual": {
+    "scope": "isolated_paired_component_alignment",
+    "required": true,
+    "calibrated": true,
+    "status": "fail",
+    "calibration": {
+      "evidence_path": "calibration.json"
+    },
+    "measurements": [
+      {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/studio14-final/lounge_chair/defect/id_front.png",
+        "view": "front",
+        "reference": "original-lounge-chair-v1",
+        "objects": {
+          "red": "arm_left",
+          "green": "arm_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "fail",
+        "decisive": false,
+        "defects": [
+          {
+            "id": "paired_component_alignment",
+            "object": "arm_left",
+            "reference_object": "arm_right",
+            "view": "front",
+            "reference": "original-lounge-chair-v1",
+            "observed_defect": "Target is projected higher than its paired reference.",
+            "measured_y_delta_pixels": 48.841138730540365,
+            "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+            "suggested_operation": "set_location",
+            "confidence": {
+              "kind": "small_native_fixture_calibration",
+              "calibrated": true,
+              "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+            },
+            "verification": {
+              "views": [
+                "front",
+                "rear"
+              ],
+              "max_y_delta_pixels": 4.0,
+              "minimum_pixels_per_component": 12
+            },
+            "estimated_target_delta_z_m": -0.12006779937924507,
+            "estimate_note": "Only valid for the frozen level orthographic camera; verify expected world position.",
+            "distance_m": 0.12006779937924507
+          }
+        ],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "d38618ab6179816668729cce26a94b72546f9e0ccbb83901b4d20d7639e8edb1",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 964,
+            "centroid_xy": [
+              279.68983402489624,
+              255.01659751037346
+            ],
+            "bbox_xyxy": [
+              259,
+              241,
+              301,
+              271
+            ]
+          },
+          "green": {
+            "pixels": 963,
+            "centroid_xy": [
+              679.2980269989616,
+              303.8577362409138
+            ],
+            "bbox_xyxy": [
+              659,
+              289,
+              701,
+              319
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": -48.841138730540365,
+        "absolute_y_delta_pixels": 48.841138730540365,
+        "reason": "projected_alignment_measured"
+      },
+      {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/studio14-final/lounge_chair/defect/id_rear.png",
+        "view": "rear",
+        "reference": "original-lounge-chair-v1",
+        "objects": {
+          "red": "arm_left",
+          "green": "arm_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "fail",
+        "decisive": false,
+        "defects": [
+          {
+            "id": "paired_component_alignment",
+            "object": "arm_left",
+            "reference_object": "arm_right",
+            "view": "rear",
+            "reference": "original-lounge-chair-v1",
+            "observed_defect": "Target is projected higher than its paired reference.",
+            "measured_y_delta_pixels": 48.841138730540365,
+            "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+            "suggested_operation": "set_location",
+            "confidence": {
+              "kind": "small_native_fixture_calibration",
+              "calibrated": true,
+              "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+            },
+            "verification": {
+              "views": [
+                "front",
+                "rear"
+              ],
+              "max_y_delta_pixels": 4.0,
+              "minimum_pixels_per_component": 12
+            },
+            "estimated_target_delta_z_m": -0.12006779937924507,
+            "estimate_note": "Only valid for the frozen level orthographic camera; verify expected world position.",
+            "distance_m": 0.12006779937924507
+          }
+        ],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "580f5462e3e7ab05256c871d59586219fca82ac057d1953ecba92a1e3ea33666",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 964,
+            "centroid_xy": [
+              679.3101659751037,
+              255.01659751037346
+            ],
+            "bbox_xyxy": [
+              659,
+              241,
+              701,
+              271
+            ]
+          },
+          "green": {
+            "pixels": 963,
+            "centroid_xy": [
+              279.7019730010384,
+              303.8577362409138
+            ],
+            "bbox_xyxy": [
+              259,
+              289,
+              301,
+              319
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": -48.841138730540365,
+        "absolute_y_delta_pixels": 48.841138730540365,
+        "reason": "projected_alignment_measured"
+      }
+    ],
+    "defects": [
+      {
+        "id": "paired_component_alignment",
+        "object": "arm_left",
+        "reference_object": "arm_right",
+        "view": "front",
+        "reference": "original-lounge-chair-v1",
+        "observed_defect": "Target is projected higher than its paired reference.",
+        "measured_y_delta_pixels": 48.841138730540365,
+        "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+        "suggested_operation": "set_location",
+        "confidence": {
+          "kind": "small_native_fixture_calibration",
+          "calibrated": true,
+          "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+        },
+        "verification": {
+          "views": [
+            "front",
+            "rear"
+          ],
+          "max_y_delta_pixels": 4.0,
+          "minimum_pixels_per_component": 12
+        },
+        "estimated_target_delta_z_m": -0.12006779937924507,
+        "estimate_note": "Only valid for the frozen level orthographic camera; verify expected world position.",
+        "distance_m": 0.12006779937924507
+      },
+      {
+        "id": "paired_component_alignment",
+        "object": "arm_left",
+        "reference_object": "arm_right",
+        "view": "rear",
+        "reference": "original-lounge-chair-v1",
+        "observed_defect": "Target is projected higher than its paired reference.",
+        "measured_y_delta_pixels": 48.841138730540365,
+        "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+        "suggested_operation": "set_location",
+        "confidence": {
+          "kind": "small_native_fixture_calibration",
+          "calibrated": true,
+          "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+        },
+        "verification": {
+          "views": [
+            "front",
+            "rear"
+          ],
+          "max_y_delta_pixels": 4.0,
+          "minimum_pixels_per_component": 12
+        },
+        "estimated_target_delta_z_m": -0.12006779937924507,
+        "estimate_note": "Only valid for the frozen level orthographic camera; verify expected world position.",
+        "distance_m": 0.12006779937924507
+      }
+    ]
+  },
+  "verdict": "fail"
+}

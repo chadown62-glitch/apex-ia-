@@ -1,0 +1,4741 @@
+{
+  "blender": "4.3.2",
+  "source_format": ".glb",
+  "objects": {
+    "chassis": {
+      "vertices": 2905,
+      "triangles": 3580,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 5.0721815946104005,
+      "dimensions": [
+        4.800000190734863,
+        2.0009734630584717,
+        0.7626132965087891
+      ],
+      "geometry_center": [
+        0.0,
+        0.0,
+        0.5713066458702087
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "tyre_front_left": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.033038958014188484,
+      "dimensions": [
+        0.7100000381469727,
+        0.23200011253356934,
+        0.7100001133372444
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        -0.8999999761581421,
+        0.35499998147835043
+      ],
+      "pivot": [
+        1.399999976158142,
+        -0.8999999761581421,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -0.9999999403953552,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "tyre_rubber"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rim_front_left": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0010305901053497709,
+      "dimensions": [
+        0.5179998874664307,
+        0.03000009059906006,
+        0.518000066280365
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        -0.9929999709129333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        1.399999976158142,
+        -0.9929999709129333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "brake_front_left": {
+      "vertices": 200,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.002486680217638686,
+      "dimensions": [
+        0.4200000762939453,
+        0.018000006675720215,
+        0.42000003159046173
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        -0.9679999947547913,
+        0.35499998182058334
+      ],
+      "pivot": [
+        1.399999976158142,
+        -0.9679999947547913,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "brake_steel"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "hub_front_left": {
+      "vertices": 136,
+      "triangles": 124,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00031464166128496765,
+      "dimensions": [
+        0.11999988555908203,
+        0.0280001163482666,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        -1.0140000581741333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        1.399999976158142,
+        -1.0140000581741333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_0": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137183215273011e-05,
+      "dimensions": [
+        0.1766883134841919,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        1.5383170247077942,
+        -1.0115000009536743,
+        0.3674049377441406
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_1": {
+      "vertices": 68,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137178838617346e-05,
+      "dimensions": [
+        0.14157593250274658,
+        0.04078131914138794,
+        0.13883191347122192
+      ],
+      "geometry_center": [
+        1.5046094059944153,
+        -1.011499971151352,
+        0.4463365375995636
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_2": {
+      "vertices": 70,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.13718562464164e-05,
+      "dimensions": [
+        0.05262100696563721,
+        0.03999161720275879,
+        0.1765444576740265
+      ],
+      "geometry_center": [
+        1.4309445023536682,
+        -1.0115000009536743,
+        0.4903806895017624
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_3": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137173379259052e-05,
+      "dimensions": [
+        0.09787428379058838,
+        0.040434837341308594,
+        0.16731026768684387
+      ],
+      "geometry_center": [
+        1.3454598784446716,
+        -1.0115000009536743,
+        0.482713982462883
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_4": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137179588037517e-05,
+      "dimensions": [
+        0.1653282642364502,
+        0.040855467319488525,
+        0.10265359282493591
+      ],
+      "geometry_center": [
+        1.2808077335357666,
+        -1.011499971151352,
+        0.4262648969888687
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_5": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137186179235124e-05,
+      "dimensions": [
+        0.17668843269348145,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        1.2616829872131348,
+        -1.0115000009536743,
+        0.34259504079818726
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_6": {
+      "vertices": 69,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.1371777812233e-05,
+      "dimensions": [
+        0.14157581329345703,
+        0.04078131914138794,
+        0.1388319581747055
+      ],
+      "geometry_center": [
+        1.2953906059265137,
+        -1.011499971151352,
+        0.26366347819566727
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_7": {
+      "vertices": 66,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137178805459077e-05,
+      "dimensions": [
+        0.05262112617492676,
+        0.03999161720275879,
+        0.17654447257518768
+      ],
+      "geometry_center": [
+        1.3690555095672607,
+        -1.0115000009536743,
+        0.21961934119462967
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_8": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.13716954867273e-05,
+      "dimensions": [
+        0.09787416458129883,
+        0.040434837341308594,
+        0.1673102229833603
+      ],
+      "geometry_center": [
+        1.4545401334762573,
+        -1.0115000009536743,
+        0.22728601843118668
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_left_9": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.13717489370442e-05,
+      "dimensions": [
+        0.16532814502716064,
+        0.040855467319488525,
+        0.1026536077260971
+      ],
+      "geometry_center": [
+        1.5191922783851624,
+        -1.011499971151352,
+        0.28373510390520096
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "caliper_front_left": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0002526118858658466,
+      "dimensions": [
+        0.059999942779541016,
+        0.034999966621398926,
+        0.13999998569488525
+      ],
+      "geometry_center": [
+        1.2400000095367432,
+        -0.9729999899864197,
+        0.4099999964237213
+      ],
+      "pivot": [
+        1.2400000095367432,
+        -0.9729999899864197,
+        0.4099999964237213
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "rear_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arch_lip_front_left": {
+      "vertices": 634,
+      "triangles": 780,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0005256733572626386,
+      "dimensions": [
+        0.8458844423294067,
+        0.024000048637390137,
+        0.42417624592781067
+      ],
+      "geometry_center": [
+        1.4000000357627869,
+        -0.9769999980926514,
+        0.5659118741750717
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "tyre_front_right": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.033038958014188484,
+      "dimensions": [
+        0.7100000381469727,
+        0.23200011253356934,
+        0.7100001133372444
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        0.8999999761581421,
+        0.35499998147835043
+      ],
+      "pivot": [
+        1.399999976158142,
+        0.8999999761581421,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -0.9999999403953552,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "tyre_rubber"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rim_front_right": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0010305901053497709,
+      "dimensions": [
+        0.5179998874664307,
+        0.03000009059906006,
+        0.518000066280365
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        0.9929999709129333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        1.399999976158142,
+        0.9929999709129333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "brake_front_right": {
+      "vertices": 200,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.002486680217638686,
+      "dimensions": [
+        0.4200000762939453,
+        0.018000006675720215,
+        0.42000003159046173
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        0.9679999947547913,
+        0.35499998182058334
+      ],
+      "pivot": [
+        1.399999976158142,
+        0.9679999947547913,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "brake_steel"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "hub_front_right": {
+      "vertices": 136,
+      "triangles": 124,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00031464166128496765,
+      "dimensions": [
+        0.11999988555908203,
+        0.0280001163482666,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        1.399999976158142,
+        1.0140000581741333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        1.399999976158142,
+        1.0140000581741333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_0": {
+      "vertices": 66,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137178704975505e-05,
+      "dimensions": [
+        0.1766883134841919,
+        0.040884435176849365,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        1.5383170247077942,
+        1.0115000307559967,
+        0.3674049377441406
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_1": {
+      "vertices": 68,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137178442639678e-05,
+      "dimensions": [
+        0.14157593250274658,
+        0.04078131914138794,
+        0.13883191347122192
+      ],
+      "geometry_center": [
+        1.5046094059944153,
+        1.011499971151352,
+        0.4463365375995636
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_2": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137190647171878e-05,
+      "dimensions": [
+        0.05262100696563721,
+        0.03999161720275879,
+        0.1765444576740265
+      ],
+      "geometry_center": [
+        1.4309445023536682,
+        1.0115000009536743,
+        0.4903806895017624
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_3": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137174404710301e-05,
+      "dimensions": [
+        0.09787428379058838,
+        0.040434837341308594,
+        0.16731026768684387
+      ],
+      "geometry_center": [
+        1.3454598784446716,
+        1.0115000009536743,
+        0.482713982462883
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_4": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137153517283377e-05,
+      "dimensions": [
+        0.1653282642364502,
+        0.040855467319488525,
+        0.10265359282493591
+      ],
+      "geometry_center": [
+        1.2808077335357666,
+        1.011499971151352,
+        0.4262648969888687
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_5": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137186179235339e-05,
+      "dimensions": [
+        0.17668843269348145,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        1.2616829872131348,
+        1.0115000009536743,
+        0.34259504079818726
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_6": {
+      "vertices": 72,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137176362257551e-05,
+      "dimensions": [
+        0.14157581329345703,
+        0.04078131914138794,
+        0.1388319581747055
+      ],
+      "geometry_center": [
+        1.2953906059265137,
+        1.011499971151352,
+        0.26366347819566727
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_7": {
+      "vertices": 66,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137177952824076e-05,
+      "dimensions": [
+        0.05262112617492676,
+        0.03999161720275879,
+        0.1765444576740265
+      ],
+      "geometry_center": [
+        1.3690555095672607,
+        1.0115000009536743,
+        0.21961934864521027
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_8": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137170822183806e-05,
+      "dimensions": [
+        0.09787416458129883,
+        0.040434837341308594,
+        0.1673102229833603
+      ],
+      "geometry_center": [
+        1.4545401334762573,
+        1.0115000009536743,
+        0.22728601843118668
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_front_right_9": {
+      "vertices": 68,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137156837079699e-05,
+      "dimensions": [
+        0.16532814502716064,
+        0.040855467319488525,
+        0.1026536077260971
+      ],
+      "geometry_center": [
+        1.5191922783851624,
+        1.011499971151352,
+        0.28373510390520096
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "caliper_front_right": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0002526118858658466,
+      "dimensions": [
+        0.059999942779541016,
+        0.034999966621398926,
+        0.13999998569488525
+      ],
+      "geometry_center": [
+        1.2400000095367432,
+        0.9729999899864197,
+        0.4099999964237213
+      ],
+      "pivot": [
+        1.2400000095367432,
+        0.9729999899864197,
+        0.4099999964237213
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "rear_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arch_lip_front_right": {
+      "vertices": 634,
+      "triangles": 780,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0005256733648940298,
+      "dimensions": [
+        0.8458844423294067,
+        0.024000048637390137,
+        0.42417624592781067
+      ],
+      "geometry_center": [
+        1.4000000357627869,
+        0.9769999980926514,
+        0.5659118741750717
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "tyre_rear_left": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.033038958014188484,
+      "dimensions": [
+        0.7100000381469727,
+        0.23200011253356934,
+        0.7100001133372444
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        -0.8999999761581421,
+        0.35499998147835043
+      ],
+      "pivot": [
+        -1.399999976158142,
+        -0.8999999761581421,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -0.9999999403953552,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "tyre_rubber"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rim_rear_left": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0010305901053497709,
+      "dimensions": [
+        0.5179998874664307,
+        0.03000009059906006,
+        0.518000066280365
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        -0.9929999709129333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        -1.399999976158142,
+        -0.9929999709129333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "brake_rear_left": {
+      "vertices": 200,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.002486680217638686,
+      "dimensions": [
+        0.4200000762939453,
+        0.018000006675720215,
+        0.42000003159046173
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        -0.9679999947547913,
+        0.35499998182058334
+      ],
+      "pivot": [
+        -1.399999976158142,
+        -0.9679999947547913,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "brake_steel"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "hub_rear_left": {
+      "vertices": 136,
+      "triangles": 124,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00031464166128496765,
+      "dimensions": [
+        0.11999988555908203,
+        0.0280001163482666,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        -1.0140000581741333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        -1.399999976158142,
+        -1.0140000581741333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_0": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137188510135433e-05,
+      "dimensions": [
+        0.17668843269348145,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        -1.2616829872131348,
+        -1.0115000009536743,
+        0.3674049377441406
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_1": {
+      "vertices": 73,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.13717613137528e-05,
+      "dimensions": [
+        0.14157581329345703,
+        0.04078131914138794,
+        0.1388319432735443
+      ],
+      "geometry_center": [
+        -1.2953906059265137,
+        -1.011499971151352,
+        0.4463365226984024
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_2": {
+      "vertices": 66,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137178728006704e-05,
+      "dimensions": [
+        0.05262112617492676,
+        0.03999161720275879,
+        0.17654448747634888
+      ],
+      "geometry_center": [
+        -1.3690555095672607,
+        -1.0115000009536743,
+        0.4903806746006012
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_3": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137168903997e-05,
+      "dimensions": [
+        0.09787416458129883,
+        0.040434837341308594,
+        0.16731023788452148
+      ],
+      "geometry_center": [
+        -1.4545401334762573,
+        -1.0115000009536743,
+        0.4827139973640442
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_4": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137174733396582e-05,
+      "dimensions": [
+        0.16532814502716064,
+        0.040855467319488525,
+        0.10265359282493591
+      ],
+      "geometry_center": [
+        -1.5191922783851624,
+        -1.011499971151352,
+        0.4262648969888687
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_5": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.1371832152733e-05,
+      "dimensions": [
+        0.1766883134841919,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        -1.5383170247077942,
+        -1.0115000009536743,
+        0.34259504079818726
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_6": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137178731493661e-05,
+      "dimensions": [
+        0.14157593250274658,
+        0.04078131914138794,
+        0.13883192837238312
+      ],
+      "geometry_center": [
+        -1.5046094059944153,
+        -1.011499971151352,
+        0.2636634632945061
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_7": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137190354412783e-05,
+      "dimensions": [
+        0.05262100696563721,
+        0.03999161720275879,
+        0.1765444278717041
+      ],
+      "geometry_center": [
+        -1.4309445023536682,
+        -1.0115000009536743,
+        0.21961933374404907
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_8": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137175897920401e-05,
+      "dimensions": [
+        0.09787428379058838,
+        0.040434837341308594,
+        0.16731026768684387
+      ],
+      "geometry_center": [
+        -1.3454598784446716,
+        -1.0115000009536743,
+        0.22728602588176727
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_left_9": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137176186888951e-05,
+      "dimensions": [
+        0.1653282642364502,
+        0.040855467319488525,
+        0.1026536226272583
+      ],
+      "geometry_center": [
+        -1.2808077335357666,
+        -1.011499971151352,
+        0.28373509645462036
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "caliper_rear_left": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0002526118858658466,
+      "dimensions": [
+        0.059999942779541016,
+        0.034999966621398926,
+        0.13999998569488525
+      ],
+      "geometry_center": [
+        -1.559999942779541,
+        -0.9729999899864197,
+        0.4099999964237213
+      ],
+      "pivot": [
+        -1.559999942779541,
+        -0.9729999899864197,
+        0.4099999964237213
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "rear_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arch_lip_rear_left": {
+      "vertices": 634,
+      "triangles": 780,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0005256733522211179,
+      "dimensions": [
+        0.8458844423294067,
+        0.024000048637390137,
+        0.42417624592781067
+      ],
+      "geometry_center": [
+        -1.4000000357627869,
+        -0.9769999980926514,
+        0.5659118741750717
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "tyre_rear_right": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.033038958014188484,
+      "dimensions": [
+        0.7100000381469727,
+        0.23200011253356934,
+        0.7100001133372444
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        0.8999999761581421,
+        0.35499998147835043
+      ],
+      "pivot": [
+        -1.399999976158142,
+        0.8999999761581421,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -0.9999999403953552,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "tyre_rubber"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rim_rear_right": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0010305901053497709,
+      "dimensions": [
+        0.5179998874664307,
+        0.03000009059906006,
+        0.518000066280365
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        0.9929999709129333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        -1.399999976158142,
+        0.9929999709129333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "brake_rear_right": {
+      "vertices": 200,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.002486680217638686,
+      "dimensions": [
+        0.4200000762939453,
+        0.018000006675720215,
+        0.42000003159046173
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        0.9679999947547913,
+        0.35499998182058334
+      ],
+      "pivot": [
+        -1.399999976158142,
+        0.9679999947547913,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "brake_steel"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "hub_rear_right": {
+      "vertices": 136,
+      "triangles": 124,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00031464166128496765,
+      "dimensions": [
+        0.11999988555908203,
+        0.0280001163482666,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        -1.399999976158142,
+        1.0140000581741333,
+        0.35499998927116394
+      ],
+      "pivot": [
+        -1.399999976158142,
+        1.0140000581741333,
+        0.35499998927116394
+      ],
+      "spin_axis_world": [
+        0.0,
+        -1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_0": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137188470883301e-05,
+      "dimensions": [
+        0.17668843269348145,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        -1.2616829872131348,
+        1.0115000009536743,
+        0.3674049377441406
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_1": {
+      "vertices": 73,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137173363472599e-05,
+      "dimensions": [
+        0.14157581329345703,
+        0.04078131914138794,
+        0.1388319432735443
+      ],
+      "geometry_center": [
+        -1.2953906059265137,
+        1.011499971151352,
+        0.4463365226984024
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_2": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137174450026177e-05,
+      "dimensions": [
+        0.05262112617492676,
+        0.03999161720275879,
+        0.17654448747634888
+      ],
+      "geometry_center": [
+        -1.3690555095672607,
+        1.0115000009536743,
+        0.4903806746006012
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_3": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137169987654911e-05,
+      "dimensions": [
+        0.09787416458129883,
+        0.040434837341308594,
+        0.16731023788452148
+      ],
+      "geometry_center": [
+        -1.4545401334762573,
+        1.0115000009536743,
+        0.4827139973640442
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_4": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137152393608463e-05,
+      "dimensions": [
+        0.16532814502716064,
+        0.040855467319488525,
+        0.10265359282493591
+      ],
+      "geometry_center": [
+        -1.5191922783851624,
+        1.011499971151352,
+        0.4262648969888687
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_5": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.13718317602044e-05,
+      "dimensions": [
+        0.1766883134841919,
+        0.04088449478149414,
+        0.048568129539489746
+      ],
+      "geometry_center": [
+        -1.5383170247077942,
+        1.0115000009536743,
+        0.34259504079818726
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_6": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137177282296147e-05,
+      "dimensions": [
+        0.14157593250274658,
+        0.04078131914138794,
+        0.13883192837238312
+      ],
+      "geometry_center": [
+        -1.5046094059944153,
+        1.011499971151352,
+        0.2636634632945061
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_7": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.13719096044946e-05,
+      "dimensions": [
+        0.05262100696563721,
+        0.03999161720275879,
+        0.1765444129705429
+      ],
+      "geometry_center": [
+        -1.4309445023536682,
+        1.0115000009536743,
+        0.21961934119462967
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_8": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137176061972644e-05,
+      "dimensions": [
+        0.09787428379058838,
+        0.040434837341308594,
+        0.16731026768684387
+      ],
+      "geometry_center": [
+        -1.3454598784446716,
+        1.0115000009536743,
+        0.22728602588176727
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoke_rear_right_9": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 7.137156313011822e-05,
+      "dimensions": [
+        0.1653282642364502,
+        0.040855467319488525,
+        0.1026536226272583
+      ],
+      "geometry_center": [
+        -1.2808077335357666,
+        1.011499971151352,
+        0.28373509645462036
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "caliper_rear_right": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0002526118858658466,
+      "dimensions": [
+        0.059999942779541016,
+        0.034999966621398926,
+        0.13999998569488525
+      ],
+      "geometry_center": [
+        -1.559999942779541,
+        0.9729999899864197,
+        0.4099999964237213
+      ],
+      "pivot": [
+        -1.559999942779541,
+        0.9729999899864197,
+        0.4099999964237213
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "rear_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arch_lip_rear_right": {
+      "vertices": 634,
+      "triangles": 780,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0005256733464680251,
+      "dimensions": [
+        0.8458844423294067,
+        0.024000048637390137,
+        0.42417624592781067
+      ],
+      "geometry_center": [
+        -1.4000000357627869,
+        0.9769999980926514,
+        0.5659118741750717
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "windshield": {
+      "vertices": 44,
+      "triangles": 44,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.011804938383293224,
+      "dimensions": [
+        0.3899999875575304,
+        1.3799999952316284,
+        0.43500006198883057
+      ],
+      "geometry_center": [
+        0.22499999310821295,
+        0.0,
+        0.9975000023841858
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "smoked_glass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rear_glass": {
+      "vertices": 44,
+      "triangles": 44,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.014077280548923078,
+      "dimensions": [
+        0.48000001907348633,
+        1.3200000524520874,
+        0.45500004291534424
+      ],
+      "geometry_center": [
+        -1.1100000143051147,
+        0.0,
+        0.987500011920929
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "smoked_glass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "roof": {
+      "vertices": 64,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.05514883880827053,
+      "dimensions": [
+        0.9099999759346247,
+        1.1699999570846558,
+        0.09500002861022949
+      ],
+      "geometry_center": [
+        -0.44499998819082975,
+        0.0,
+        1.2274999618530273
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "side_glass_left": {
+      "vertices": 22,
+      "triangles": 12,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.004435202138680566,
+      "dimensions": [
+        1.6799999475479126,
+        0.14100003242492676,
+        0.3850000500679016
+      ],
+      "geometry_center": [
+        -0.44999998807907104,
+        -0.6234999895095825,
+        1.0025000274181366
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "smoked_glass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "a_pillar_left": {
+      "vertices": 108,
+      "triangles": 108,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0008676055308805038,
+      "dimensions": [
+        0.4785075020045042,
+        0.17240756750106812,
+        0.4575927257537842
+      ],
+      "geometry_center": [
+        0.22407151106745005,
+        -0.6350837647914886,
+        1.006611704826355
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "c_pillar_left": {
+      "vertices": 104,
+      "triangles": 108,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0012708670266238743,
+      "dimensions": [
+        0.5226423144340515,
+        0.1783592700958252,
+        0.4697015881538391
+      ],
+      "geometry_center": [
+        -1.1155060827732086,
+        -0.6310440897941589,
+        1.0054820477962494
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "window_seal_left": {
+      "vertices": 572,
+      "triangles": 192,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0008943409479461603,
+      "dimensions": [
+        1.6958969831466675,
+        0.29022109508514404,
+        0.872841864824295
+      ],
+      "geometry_center": [
+        -0.45007187128067017,
+        -0.6653361320495605,
+        0.8524004071950912
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "door_seam_left": {
+      "vertices": 152,
+      "triangles": 156,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0002078640353888682,
+      "dimensions": [
+        1.4215849936008453,
+        0.02649974822998047,
+        0.5828661173582077
+      ],
+      "geometry_center": [
+        -0.25505416095256805,
+        -0.9522796273231506,
+        0.4098047986626625
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "door_handle_left": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 5.14317078012127e-05,
+      "dimensions": [
+        0.15999996662139893,
+        0.018000006675720215,
+        0.02199995517730713
+      ],
+      "geometry_center": [
+        -0.6700000166893005,
+        -0.9649999737739563,
+        0.7200000286102295
+      ],
+      "pivot": [
+        -0.6700000166893005,
+        -0.9649999737739563,
+        0.7200000286102295
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "sill_left": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.013672618785113356,
+      "dimensions": [
+        2.25,
+        0.10000002384185791,
+        0.06499999761581421
+      ],
+      "geometry_center": [
+        -0.019999980926513672,
+        -0.9150000214576721,
+        0.20499999821186066
+      ],
+      "pivot": [
+        -0.019999999552965164,
+        -0.9150000214576721,
+        0.20499999821186066
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "mirror_stem_left": {
+      "vertices": 66,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00021255980542836492,
+      "dimensions": [
+        0.06569761037826538,
+        0.2346562147140503,
+        0.03600001335144043
+      ],
+      "geometry_center": [
+        0.24500000476837158,
+        -0.824999988079071,
+        0.8799999952316284
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "mirror_left": {
+      "vertices": 1783,
+      "triangles": 3168,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001881932045512749,
+      "dimensions": [
+        0.20628966391086578,
+        0.18655353784561157,
+        0.09447908401489258
+      ],
+      "geometry_center": [
+        0.27000003308057785,
+        -1.0249999463558197,
+        0.8999999761581421
+      ],
+      "pivot": [
+        0.27000001072883606,
+        -1.024999976158142,
+        0.8999999761581421
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "mirror_insert_left": {
+      "vertices": 348,
+      "triangles": 528,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 8.929770327239003e-05,
+      "dimensions": [
+        0.01799999177455902,
+        0.14999991655349731,
+        0.06499993801116943
+      ],
+      "geometry_center": [
+        0.21500001102685928,
+        -1.0299999415874481,
+        0.9039999842643738
+      ],
+      "pivot": [
+        0.2150000035762787,
+        -1.0299999713897705,
+        0.9039999842643738
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "headlamp_left": {
+      "vertices": 152,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0032226591243655076,
+      "dimensions": [
+        0.1399998664855957,
+        0.4700000286102295,
+        0.054000020027160645
+      ],
+      "geometry_center": [
+        2.4049999713897705,
+        -0.5600000023841858,
+        0.6600000262260437
+      ],
+      "pivot": [
+        2.4049999713897705,
+        -0.5600000023841858,
+        0.6600000262260437
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "headlamp_surround_left": {
+      "vertices": 144,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.005791702079141777,
+      "dimensions": [
+        0.13000011444091797,
+        0.5149999856948853,
+        0.09300005435943604
+      ],
+      "geometry_center": [
+        2.4049999713897705,
+        -0.5600000023841858,
+        0.6549999713897705
+      ],
+      "pivot": [
+        2.4049999713897705,
+        -0.5600000023841858,
+        0.6549999713897705
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "led_left_0": {
+      "vertices": 150,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.832702185492983e-06,
+      "dimensions": [
+        0.005000114440917969,
+        0.36000001430511475,
+        0.003999948501586914
+      ],
+      "geometry_center": [
+        2.4800000190734863,
+        -0.5600000023841858,
+        0.6510000228881836
+      ],
+      "pivot": [
+        2.4800000190734863,
+        -0.5600000023841858,
+        0.6510000228881836
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "led_left_1": {
+      "vertices": 150,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.832702185492983e-06,
+      "dimensions": [
+        0.005000114440917969,
+        0.36000001430511475,
+        0.003999948501586914
+      ],
+      "geometry_center": [
+        2.4800000190734863,
+        -0.5600000023841858,
+        0.6629999876022339
+      ],
+      "pivot": [
+        2.4800000190734863,
+        -0.5600000023841858,
+        0.6629999876022339
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "led_left_2": {
+      "vertices": 150,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.832702185492983e-06,
+      "dimensions": [
+        0.005000114440917969,
+        0.36000001430511475,
+        0.003999948501586914
+      ],
+      "geometry_center": [
+        2.4800000190734863,
+        -0.5600000023841858,
+        0.675000011920929
+      ],
+      "pivot": [
+        2.4800000190734863,
+        -0.5600000023841858,
+        0.675000011920929
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "tail_lamp_left": {
+      "vertices": 170,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001285949497559495,
+      "dimensions": [
+        0.05499982833862305,
+        0.5400000512599945,
+        0.04999995231628418
+      ],
+      "geometry_center": [
+        -2.4149999618530273,
+        -0.5400000363588333,
+        0.6600000262260437
+      ],
+      "pivot": [
+        -2.4149999618530273,
+        -0.5400000214576721,
+        0.6600000262260437
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "rear_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "side_glass_right": {
+      "vertices": 22,
+      "triangles": 12,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.004435202138680572,
+      "dimensions": [
+        1.6799999475479126,
+        0.14100003242492676,
+        0.3850000500679016
+      ],
+      "geometry_center": [
+        -0.44999998807907104,
+        0.6234999895095825,
+        1.0025000274181366
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "smoked_glass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "a_pillar_right": {
+      "vertices": 108,
+      "triangles": 108,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0008676057072803335,
+      "dimensions": [
+        0.47850750386714935,
+        0.17240756750106812,
+        0.4575927257537842
+      ],
+      "geometry_center": [
+        0.22407151013612747,
+        0.6350837647914886,
+        1.006611704826355
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "c_pillar_right": {
+      "vertices": 107,
+      "triangles": 108,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0012708672607990852,
+      "dimensions": [
+        0.5226422548294067,
+        0.1783592700958252,
+        0.4697015881538391
+      ],
+      "geometry_center": [
+        -1.115506112575531,
+        0.6310440897941589,
+        1.0054820477962494
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "window_seal_right": {
+      "vertices": 572,
+      "triangles": 192,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0008943405031643161,
+      "dimensions": [
+        1.6958969831466675,
+        0.29022109508514404,
+        0.8728418946266174
+      ],
+      "geometry_center": [
+        -0.45007187128067017,
+        0.6653361320495605,
+        0.85240039229393
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "door_seam_right": {
+      "vertices": 152,
+      "triangles": 156,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0002078639384196455,
+      "dimensions": [
+        1.4215849936008453,
+        0.02649974822998047,
+        0.5828661173582077
+      ],
+      "geometry_center": [
+        -0.25505416095256805,
+        0.9522796273231506,
+        0.4098047986626625
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "door_handle_right": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 5.14317078012127e-05,
+      "dimensions": [
+        0.15999996662139893,
+        0.018000006675720215,
+        0.02199995517730713
+      ],
+      "geometry_center": [
+        -0.6700000166893005,
+        0.9649999737739563,
+        0.7200000286102295
+      ],
+      "pivot": [
+        -0.6700000166893005,
+        0.9649999737739563,
+        0.7200000286102295
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "sill_right": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.013672618785113356,
+      "dimensions": [
+        2.25,
+        0.10000002384185791,
+        0.06499999761581421
+      ],
+      "geometry_center": [
+        -0.019999980926513672,
+        0.9150000214576721,
+        0.20499999821186066
+      ],
+      "pivot": [
+        -0.019999999552965164,
+        0.9150000214576721,
+        0.20499999821186066
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "mirror_stem_right": {
+      "vertices": 65,
+      "triangles": 60,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00021255983402410978,
+      "dimensions": [
+        0.06569761037826538,
+        0.2346562147140503,
+        0.03600001335144043
+      ],
+      "geometry_center": [
+        0.24500000476837158,
+        0.824999988079071,
+        0.8799999952316284
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "mirror_right": {
+      "vertices": 343,
+      "triangles": 528,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0019286777478845197,
+      "dimensions": [
+        0.2099999189376831,
+        0.1899999976158142,
+        0.09500002861022949
+      ],
+      "geometry_center": [
+        0.27000004053115845,
+        1.0250000059604645,
+        0.8999999761581421
+      ],
+      "pivot": [
+        0.27000001072883606,
+        1.024999976158142,
+        0.8999999761581421
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "petrol_paint"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "mirror_insert_right": {
+      "vertices": 348,
+      "triangles": 528,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 8.929770327239004e-05,
+      "dimensions": [
+        0.01799999177455902,
+        0.15000003576278687,
+        0.06499993801116943
+      ],
+      "geometry_center": [
+        0.21500001102685928,
+        1.030000001192093,
+        0.9039999842643738
+      ],
+      "pivot": [
+        0.2150000035762787,
+        1.0299999713897705,
+        0.9039999842643738
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "headlamp_right": {
+      "vertices": 152,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0032226591243655076,
+      "dimensions": [
+        0.1399998664855957,
+        0.4700000286102295,
+        0.054000020027160645
+      ],
+      "geometry_center": [
+        2.4049999713897705,
+        0.5600000023841858,
+        0.6600000262260437
+      ],
+      "pivot": [
+        2.4049999713897705,
+        0.5600000023841858,
+        0.6600000262260437
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "headlamp_surround_right": {
+      "vertices": 144,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.005791702079141777,
+      "dimensions": [
+        0.13000011444091797,
+        0.5149999856948853,
+        0.09300005435943604
+      ],
+      "geometry_center": [
+        2.4049999713897705,
+        0.5600000023841858,
+        0.6549999713897705
+      ],
+      "pivot": [
+        2.4049999713897705,
+        0.5600000023841858,
+        0.6549999713897705
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "led_right_0": {
+      "vertices": 150,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.832702185492983e-06,
+      "dimensions": [
+        0.005000114440917969,
+        0.36000001430511475,
+        0.003999948501586914
+      ],
+      "geometry_center": [
+        2.4800000190734863,
+        0.5600000023841858,
+        0.6510000228881836
+      ],
+      "pivot": [
+        2.4800000190734863,
+        0.5600000023841858,
+        0.6510000228881836
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "led_right_1": {
+      "vertices": 150,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.832702185492983e-06,
+      "dimensions": [
+        0.005000114440917969,
+        0.36000001430511475,
+        0.003999948501586914
+      ],
+      "geometry_center": [
+        2.4800000190734863,
+        0.5600000023841858,
+        0.6629999876022339
+      ],
+      "pivot": [
+        2.4800000190734863,
+        0.5600000023841858,
+        0.6629999876022339
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "led_right_2": {
+      "vertices": 150,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.832702185492983e-06,
+      "dimensions": [
+        0.005000114440917969,
+        0.36000001430511475,
+        0.003999948501586914
+      ],
+      "geometry_center": [
+        2.4800000190734863,
+        0.5600000023841858,
+        0.675000011920929
+      ],
+      "pivot": [
+        2.4800000190734863,
+        0.5600000023841858,
+        0.675000011920929
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "lamp_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "tail_lamp_right": {
+      "vertices": 170,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001285949497559495,
+      "dimensions": [
+        0.05499982833862305,
+        0.5400000512599945,
+        0.04999995231628418
+      ],
+      "geometry_center": [
+        -2.4149999618530273,
+        0.5400000363588333,
+        0.6600000262260437
+      ],
+      "pivot": [
+        -2.4149999618530273,
+        0.5400000214576721,
+        0.6600000262260437
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "rear_lens"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "front_grille": {
+      "vertices": 545,
+      "triangles": 812,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.012970144260323923,
+      "dimensions": [
+        0.07999992370605469,
+        1.1399999856948853,
+        0.15999996662139893
+      ],
+      "geometry_center": [
+        2.4149999618530273,
+        0.0,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4149999618530273,
+        0.0,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_0": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.011999964714050293,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.5099999904632568,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.5099999904632568,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_1": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.44600000977516174,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.44600000977516174,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_2": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.38199999928474426,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.38199999928474426,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_3": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.3179999887943268,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.3179999887943268,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_4": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000009417533875,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.2540000155568123,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.2540000081062317,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_5": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.01199999451637268,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.1899999976158142,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.1899999976158142,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_6": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.01199999451637268,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.12600000202655792,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.12600000202655792,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_7": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.011999998241662979,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        -0.06199999712407589,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        -0.06199999898672104,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_8": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000000104308128,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.0020000003278255463,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.0020000000949949026,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_9": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.011999998241662979,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.06599999777972698,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.06599999964237213,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_10": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.01199999451637268,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.12999999523162842,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.12999999523162842,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_11": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.01199999451637268,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.1940000057220459,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.1940000057220459,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_12": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.257999986410141,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.257999986410141,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_13": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.32199999690055847,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.32199999690055847,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_14": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.38600000739097595,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.38600000739097595,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_15": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.012000024318695068,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.44999998807907104,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.44999998807907104,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "grille_fin_16": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 2.0322966655804365e-05,
+      "dimensions": [
+        0.014999866485595703,
+        0.011999964714050293,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        2.4630000591278076,
+        0.5139999985694885,
+        0.3799999952316284
+      ],
+      "pivot": [
+        2.4630000591278076,
+        0.5139999985694885,
+        0.3799999952316284
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "front_splitter": {
+      "vertices": 152,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.013240348829488489,
+      "dimensions": [
+        0.19999980926513672,
+        1.7799999713897705,
+        0.03799998760223389
+      ],
+      "geometry_center": [
+        2.2899999618530273,
+        0.0,
+        0.20499999821186066
+      ],
+      "pivot": [
+        2.2899999618530273,
+        0.0,
+        0.20499999821186066
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rear_diffuser": {
+      "vertices": 148,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.018943871473094388,
+      "dimensions": [
+        0.2199997901916504,
+        1.600000023841858,
+        0.05500000715255737
+      ],
+      "geometry_center": [
+        -2.259999990463257,
+        0.0,
+        0.2150000035762787
+      ],
+      "pivot": [
+        -2.259999990463257,
+        0.0,
+        0.2150000035762787
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "diffuser_fin_42": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0004903277600019074,
+      "dimensions": [
+        0.2800002098083496,
+        0.019999980926513672,
+        0.09000000357627869
+      ],
+      "geometry_center": [
+        -2.2699999809265137,
+        -0.5799999833106995,
+        0.20000000298023224
+      ],
+      "pivot": [
+        -2.2699999809265137,
+        -0.5799999833106995,
+        0.20000000298023224
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "diffuser_fin_61": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0004903277600019074,
+      "dimensions": [
+        0.2800002098083496,
+        0.019999980926513672,
+        0.09000000357627869
+      ],
+      "geometry_center": [
+        -2.2699999809265137,
+        -0.38999998569488525,
+        0.20000000298023224
+      ],
+      "pivot": [
+        -2.2699999809265137,
+        -0.38999998569488525,
+        0.20000000298023224
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "diffuser_fin_100": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0004903277600019074,
+      "dimensions": [
+        0.2800002098083496,
+        0.019999999552965164,
+        0.09000000357627869
+      ],
+      "geometry_center": [
+        -2.2699999809265137,
+        0.0,
+        0.20000000298023224
+      ],
+      "pivot": [
+        -2.2699999809265137,
+        0.0,
+        0.20000000298023224
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "diffuser_fin_139": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0004903277600019074,
+      "dimensions": [
+        0.2800002098083496,
+        0.019999980926513672,
+        0.09000000357627869
+      ],
+      "geometry_center": [
+        -2.2699999809265137,
+        0.38999998569488525,
+        0.20000000298023224
+      ],
+      "pivot": [
+        -2.2699999809265137,
+        0.38999998569488525,
+        0.20000000298023224
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "diffuser_fin_158": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0004903277600019074,
+      "dimensions": [
+        0.2800002098083496,
+        0.019999980926513672,
+        0.09000000357627869
+      ],
+      "geometry_center": [
+        -2.2699999809265137,
+        0.5799999833106995,
+        0.20000000298023224
+      ],
+      "pivot": [
+        -2.2699999809265137,
+        0.5799999833106995,
+        0.20000000298023224
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "exhaust_46": {
+      "vertices": 136,
+      "triangles": 124,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001318810480546513,
+      "dimensions": [
+        0.09999990463256836,
+        0.12999999523162842,
+        0.1300000101327896
+      ],
+      "geometry_center": [
+        -2.390000104904175,
+        -0.5400000214576721,
+        0.30000000447034836
+      ],
+      "pivot": [
+        -2.390000104904175,
+        -0.5400000214576721,
+        0.30000001192092896
+      ],
+      "spin_axis_world": [
+        1.0,
+        0.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "exhaust_154": {
+      "vertices": 136,
+      "triangles": 124,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001318810480546513,
+      "dimensions": [
+        0.09999990463256836,
+        0.12999999523162842,
+        0.1300000101327896
+      ],
+      "geometry_center": [
+        -2.390000104904175,
+        0.5400000214576721,
+        0.30000000447034836
+      ],
+      "pivot": [
+        -2.390000104904175,
+        0.5400000214576721,
+        0.30000001192092896
+      ],
+      "spin_axis_world": [
+        1.0,
+        0.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "satin_alloy"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "driver_seat": {
+      "vertices": 134,
+      "triangles": 156,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.02329801547968354,
+      "dimensions": [
+        0.5199999809265137,
+        0.4599999934434891,
+        0.11000001430511475
+      ],
+      "geometry_center": [
+        -0.5199999809265137,
+        -0.33000000566244125,
+        0.6399999856948853
+      ],
+      "pivot": [
+        -0.5199999809265137,
+        -0.33000001311302185,
+        0.6399999856948853
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "cockpit_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "driver_seat_back": {
+      "vertices": 136,
+      "triangles": 156,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.015305337143763,
+      "dimensions": [
+        0.16946756839752197,
+        0.4300000071525574,
+        0.4021422266960144
+      ],
+      "geometry_center": [
+        -0.8399999737739563,
+        -0.33000001311302185,
+        0.8900000154972076
+      ],
+      "pivot": [
+        -0.8399999737739563,
+        -0.33000001311302185,
+        0.8899999856948853
+      ],
+      "spin_axis_world": [
+        -0.16918233036994934,
+        0.0,
+        0.9855847954750061
+      ],
+      "materials": [
+        "cockpit_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "driver_headrest": {
+      "vertices": 158,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0024258241337088136,
+      "dimensions": [
+        0.11000001430511475,
+        0.2199999839067459,
+        0.1400001049041748
+      ],
+      "geometry_center": [
+        -0.8899999856948853,
+        -0.33000000566244125,
+        1.0800000429153442
+      ],
+      "pivot": [
+        -0.8899999856948853,
+        -0.33000001311302185,
+        1.0800000429153442
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "cockpit_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "passenger_seat": {
+      "vertices": 134,
+      "triangles": 156,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.02329801547968354,
+      "dimensions": [
+        0.5199999809265137,
+        0.4599999934434891,
+        0.11000001430511475
+      ],
+      "geometry_center": [
+        -0.5199999809265137,
+        0.33000000566244125,
+        0.6399999856948853
+      ],
+      "pivot": [
+        -0.5199999809265137,
+        0.33000001311302185,
+        0.6399999856948853
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "cockpit_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "passenger_seat_back": {
+      "vertices": 136,
+      "triangles": 156,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.015305337143763,
+      "dimensions": [
+        0.16946756839752197,
+        0.4300000071525574,
+        0.4021422266960144
+      ],
+      "geometry_center": [
+        -0.8399999737739563,
+        0.33000001311302185,
+        0.8900000154972076
+      ],
+      "pivot": [
+        -0.8399999737739563,
+        0.33000001311302185,
+        0.8899999856948853
+      ],
+      "spin_axis_world": [
+        -0.16918233036994934,
+        0.0,
+        0.9855847954750061
+      ],
+      "materials": [
+        "cockpit_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "passenger_headrest": {
+      "vertices": 158,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0024258241337088136,
+      "dimensions": [
+        0.11000001430511475,
+        0.2199999839067459,
+        0.1400001049041748
+      ],
+      "geometry_center": [
+        -0.8899999856948853,
+        0.33000000566244125,
+        1.0800000429153442
+      ],
+      "pivot": [
+        -0.8899999856948853,
+        0.33000001311302185,
+        1.0800000429153442
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "cockpit_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "dashboard": {
+      "vertices": 152,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.03208189167635547,
+      "dimensions": [
+        0.24000000208616257,
+        1.1200000047683716,
+        0.12999999523162842
+      ],
+      "geometry_center": [
+        0.1600000001490116,
+        0.0,
+        0.8650000095367432
+      ],
+      "pivot": [
+        0.1599999964237213,
+        0.0,
+        0.8650000095367432
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "steering_wheel": {
+      "vertices": 684,
+      "triangles": 960,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00043048265843146526,
+      "dimensions": [
+        0.08450127393007278,
+        0.2620000094175339,
+        0.2617955207824707
+      ],
+      "geometry_center": [
+        0.0,
+        -0.33000002056360245,
+        1.0099999904632568
+      ],
+      "pivot": [
+        0.0,
+        -0.33000001311302185,
+        1.0099999904632568
+      ],
+      "spin_axis_world": [
+        0.975897490978241,
+        0.0,
+        0.21822956204414368
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "console": {
+      "vertices": 144,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.009323613630298508,
+      "dimensions": [
+        0.6399999558925629,
+        0.12999999523162842,
+        0.12000000476837158
+      ],
+      "geometry_center": [
+        -0.34999997913837433,
+        0.0,
+        0.8500000238418579
+      ],
+      "pivot": [
+        -0.3499999940395355,
+        0.0,
+        0.8500000238418579
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoiler_support_left": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0011046619984132115,
+      "dimensions": [
+        0.1099998950958252,
+        0.04999995231628418,
+        0.21000003814697266
+      ],
+      "geometry_center": [
+        -1.9199999570846558,
+        -0.5400000214576721,
+        0.8600000143051147
+      ],
+      "pivot": [
+        -1.9199999570846558,
+        -0.5400000214576721,
+        0.8600000143051147
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "spoiler_support_right": {
+      "vertices": 156,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0011046619984132115,
+      "dimensions": [
+        0.1099998950958252,
+        0.04999995231628418,
+        0.21000003814697266
+      ],
+      "geometry_center": [
+        -1.9199999570846558,
+        0.5400000214576721,
+        0.8600000143051147
+      ],
+      "pivot": [
+        -1.9199999570846558,
+        0.5400000214576721,
+        0.8600000143051147
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "rear_spoiler": {
+      "vertices": 52,
+      "triangles": 44,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.02450716422591108,
+      "dimensions": [
+        0.26999998092651367,
+        1.840000033378601,
+        0.0899999737739563
+      ],
+      "geometry_center": [
+        -1.9249999523162842,
+        0.0,
+        0.9949999749660492
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "black_trim"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    }
+  },
+  "dimensions": [
+    4.924999952316284,
+    2.238276720046997,
+    1.2888214147975106
+  ],
+  "triangles": 36288,
+  "scene_unit_scale": 1.0,
+  "source_sha256": "713bda6a28ba8c76536ab76aacea5c5c680788c782299ab3b43e19aca1a6ceec",
+  "independent_reopen": true
+}

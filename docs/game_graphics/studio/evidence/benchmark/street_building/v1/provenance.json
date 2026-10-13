@@ -1,0 +1,14 @@
+{
+  "family": "building",
+  "method": "trusted_procedural_blender",
+  "neural_geometry": false,
+  "parent_sha256": null,
+  "plan_sha256": null,
+  "source_scripts": {
+    "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+    "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+    "render_asset.py": "6be8aa6079e10a967a23dd01f78d3b6404ea92345947b77fe5e9ca3bc1b5dc2c",
+    "neural_cpu.py": "d0642bbc7f98ddbb791cf0d7d1f7b8eff2ab4f4677eee347eaa7054442426032",
+    "blender_ops.py": "8902467242a9c775d2580948150f09bbbfeeea238b60244c943c2307b684a4d4"
+  }
+}
