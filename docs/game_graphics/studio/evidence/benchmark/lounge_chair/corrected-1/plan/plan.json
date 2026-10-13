@@ -1,0 +1,26 @@
+{
+  "family": "chair",
+  "operations": [
+    {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    {
+      "op": "set_location",
+      "target": "arm_left",
+      "params": {
+        "location_m": [
+          0.0,
+          0.0,
+          -0.12
+        ]
+      }
+    },
+    {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    }
+  ]
+}

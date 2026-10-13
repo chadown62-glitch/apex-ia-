@@ -1,0 +1,151 @@
+{
+  "verdict": "pass",
+  "judge": {
+    "tier": "tier_0",
+    "oracle_result": {
+      "verdict": "pass",
+      "detail": "{\n  \"family\": \"vehicle\",\n  \"case_id\": \"sports_car\",\n  \"criteria\": {\n    \"level\": \"prototype\",\n    \"max_triangles\": 100000,\n    \"dimension_tolerance_m\": 0.04,\n    \"pivot_tolerance_m\": 0.002,\n    \"max_distinct_defect_attempts\": 3,\n    \"minimum_views\": 4,\n    \"required_lods\": 0,\n    \"required_texture_size\": 0,\n    \"require_calibrated_visual_reference\": false\n  },\n  \"benchmark_version\": 1,\n  \"scope\": \"measured_geometry_export_and_render_rules\",\n  \"defects\": [],\n  \"unavailable\": [],\n  \"facts\": {\n    \"blend\": {\n      \"triangles\": 38500,\n      \"dimensions\": [\n        4.833333730697632,\n        2.2399998903274536,\n        1.2888213781673201\n      ],\n      \"objects\": 136,\n      \"materials\": 9\n    },\n    \"glb\": {\n      \"triangles\": 38500,\n      \"dimensions\": [\n        4.833333730697632,\n        2.2399998903274536,\n        1.2888214147975106\n      ],\n      \"objects\": 136,\n      \"materials\": 9\n    },\n    \"images\": {\n      \"front_three_quarter\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 43.98520461166046,\n        \"subject_fraction\": 0.15890046296296295,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"rear_three_quarter\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 41.84866217794129,\n        \"subject_fraction\": 0.15146556712962964,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"side\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 64.34935563083576,\n        \"subject_fraction\": 0.13407841435185186,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"front\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 22.683401112644326,\n        \"subject_fraction\": 0.05744791666666667,\n        \"subject_pixels_at_image_boundary\": 0\n      }\n    }\n  },\n  \"advisory\": [\n    \"Shader parameters and material count do not certify convincing PBR appearance.\"\n  ],\n  \"aesthetic_certification\": false,\n  \"limits\": [\n    \"Geometry and image statistics do not certify aesthetic quality or reference fidelity.\",\n    \"Isolated component ID passes measure alignment, not visibility in the beauty render.\",\n    \"Unreal import and runtime performance have not been measured by this oracle.\"\n  ],\n  \"verdict\": \"pass\"\n}"
+    },
+    "notes": "tier 0 objectif seul (ExitCodeOracle) \u2014 TIER_1 (Verifier \u00e9tendu) et TIER_2 (Critic Clone, consultatif) restent PLANNED, jamais tent\u00e9s."
+  },
+  "inspection_runs": [
+    {
+      "mission_id": "game-graphics-studio",
+      "clone_id": "trusted-catalog-worker",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.5109780249986215,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 1.58,
+        "status": "real"
+      },
+      "memory_peak_mb": {
+        "value": 238.1640625,
+        "status": "real"
+      },
+      "pids_peak": {
+        "value": 1,
+        "status": "real"
+      },
+      "stdout": "Blender 4.3.2\nRead blend: \"/workspace/game-studio-output/studio14/sports_car/v1/asset.blend\"\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "command": [
+          "/usr/bin/blender",
+          "--background",
+          "--factory-startup",
+          "--disable-autoexec",
+          "--threads",
+          "4",
+          "--python-exit-code",
+          "2",
+          "--python",
+          "/workspace/apex-neural-3d/scripts/game_graphics/studio/inspect_asset.py",
+          "--",
+          "--input",
+          "/workspace/game-studio-output/studio14/sports_car/v1/asset.blend",
+          "--report",
+          "/workspace/game-studio-output/studio14/sports_car/v1/blend-inspection.json"
+        ],
+        "pid": 52790,
+        "process_stopped_verified": true,
+        "execution": "trusted_local_catalog",
+        "model_code_executed": false,
+        "script_sha256": "e30e6e16dcb81e4811e943ceb6d3a19f1ae40028063ee69828990e304e7ef8ce",
+        "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+        "sample_interval_s": 0.25,
+        "timeout_s": 120,
+        "rss_limit_mib": 12000,
+        "sources": {
+          "inspect_asset.py": "e30e6e16dcb81e4811e943ceb6d3a19f1ae40028063ee69828990e304e7ef8ce",
+          "build_assets.py": "01136f25e1573f3dd91e3f854bf7c61667b5424f5cc0cfeb128e63ed56600db5",
+          "render_asset.py": "e18798d7cf96833ebcdba77055d4a9c86f583eab155be098bf414c14c59f7f92",
+          "blender_ops.py": "ad8316fd4bda2979ebdd1e526c455ab9d4c0d83b3635f2f872eefd6ed7cead1b"
+        }
+      }
+    },
+    {
+      "mission_id": "game-graphics-studio",
+      "clone_id": "trusted-catalog-worker",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.7630532710027182,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 2.13,
+        "status": "real"
+      },
+      "memory_peak_mb": {
+        "value": 255.828125,
+        "status": "real"
+      },
+      "pids_peak": {
+        "value": 1,
+        "status": "real"
+      },
+      "stdout": "07:11:53 | INFO: Data are loaded, start creating Blender stuff\n07:11:53 | INFO: Blender create Mesh node chassis\n07:11:53 | INFO: Blender create Mesh node Torus\n07:11:53 | INFO: Blender create Mesh node Torus.001\n07:11:53 | INFO: Blender create Mesh node Cylinder.001\n07:11:53 | INFO: Blender create Mesh node Cylinder.002\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_0\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_1\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_2\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_3\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_4\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_5\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_6\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_7\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_8\n07:11:53 | INFO: Blender create Mesh node spoke_front_left_9\n07:11:53 | INFO: Blender create Mesh node Cube.001\n07:11:53 | INFO: Blender create Mesh node arch_lip_front_left\n07:11:53 | INFO: Blender create Mesh node Torus.002\n07:11:53 | INFO: Blender create Mesh node Torus.003\n07:11:53 | INFO: Blender create Mesh node Cylinder.004\n07:11:53 | INFO: Blender create Mesh node Cylinder.005\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_0\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_1\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_2\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_3\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_4\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_5\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_6\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_7\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_8\n07:11:53 | INFO: Blender create Mesh node spoke_front_right_9\n07:11:53 | INFO: Blender create Mesh node Cube.002\n07:11:53 | INFO: Blender create Mesh node arch_lip_front_right\n07:11:53 | INFO: Blender create Mesh node Torus.004\n07:11:53 | INFO: Blender create Mesh node Torus.005\n07:11:53 | INFO: Blender create Mesh node Cylinder.007\n07:11:53 | INFO: Blender create Mesh node Cylinder.008\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_0\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_1\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_2\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_3\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_4\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_5\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_6\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_7\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_8\n07:11:53 | INFO: Blender create Mesh node spoke_rear_left_9\n07:11:53 | INFO: Blender create Mesh node Cube.003\n07:11:53 | INFO: Blender create Mesh node arch_lip_rear_left\n07:11:53 | INFO: Blender create Mesh node Torus.006\n07:11:53 | INFO: Blender create Mesh node Torus.007\n07:11:53 | INFO: Blender create Mesh node Cylinder.010\n07:11:53 | INFO: Blender create Mesh node Cylinder.011\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_0\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_1\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_2\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_3\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_4\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_5\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_6\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_7\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_8\n07:11:53 | INFO: Blender create Mesh node spoke_rear_right_9\n07:11:53 | INFO: Blender create Mesh node Cube.004\n07:11:53 | INFO: Blender create Mesh node arch_lip_rear_right\n07:11:53 | INFO: Blender create Mesh node windshield\n07:11:53 | INFO: Blender create Mesh node rear_glass\n07:11:53 | INFO: Blender create Mesh node roof\n07:11:53 | INFO: Blender create Mesh node window_left\n07:11:53 | INFO: Blender create Mesh node a_pillar_left\n07:11:53 | INFO: Blender create Mesh node c_pillar_left\n07:11:53 | INFO: Blender create Mesh node window_seal_left\n07:11:53 | INFO: Blender create Mesh node door_seam_left\n07:11:53 | INFO: Blender create Mesh node Cube.005\n07:11:53 | INFO: Blender create Mesh node Cube.006\n07:11:53 | INFO: Blender create Mesh node mirror_stem_left\n07:11:53 | INFO: Blender create Mesh node Sphere\n07:11:53 | INFO: Blender create Mesh node Sphere.001\n07:11:53 | INFO: Blender create Mesh node Cube.007\n07:11:53 | INFO: Blender create Mesh node Cube.008\n07:11:53 | INFO: Blender create Mesh node Cube.009\n07:11:53 | INFO: Blender create Mesh node Cube.010\n07:11:53 | INFO: Blender create Mesh node Cube.011\n07:11:53 | INFO: Blender create Mesh node Cube.012\n07:11:53 | INFO: Blender create Mesh node window_right\n07:11:53 | INFO: Blender create Mesh node a_pillar_right\n07:11:53 | INFO: Blender create Mesh node c_pillar_right\n07:11:53 | INFO: Blender create Mesh node window_seal_right\n07:11:53 | INFO: Blender create Mesh node door_seam_right\n07:11:53 | INFO: Blender create Mesh node Cube.013\n07:11:53 | INFO: Blender create Mesh node Cube.014\n07:11:53 | INFO: Blender create Mesh node mirror_stem_right\n07:11:53 | INFO: Blender create Mesh node Sphere.002\n07:11:53 | INFO: Blender create Mesh node Sphere.003\n07:11:53 | INFO: Blender create Mesh node Cube.015\n07:11:53 | INFO: Blender create Mesh node Cube.016\n07:11:53 | INFO: Blender create Mesh node Cube.017\n07:11:53 | INFO: Blender create Mesh node Cube.018\n07:11:53 | INFO: Blender create Mesh node Cube.019\n07:11:53 | INFO: Blender create Mesh node Cube.020\n07:11:53 | INFO: Blender create Mesh node Cube.021\n07:11:53 | INFO: Blender create Mesh node Cube.022\n07:11:53 | INFO: Blender create Mesh node Cube.023\n07:11:53 | INFO: Blender create Mesh node Cube.024\n07:11:53 | INFO: Blender create Mesh node Cube.025\n07:11:53 | INFO: Blender create Mesh node Cube.026\n07:11:53 | INFO: Blender create Mesh node Cube.027\n07:11:53 | INFO: Blender create Mesh node Cube.028\n07:11:53 | INFO: Blender create Mesh node Cube.029\n07:11:53 | INFO: Blender create Mesh node Cube.030\n07:11:53 | INFO: Blender create Mesh node Cube.031\n07:11:53 | INFO: Blender create Mesh node Cube.032\n07:11:53 | INFO: Blender create Mesh node Cube.033\n07:11:53 | INFO: Blender create Mesh node Cube.034\n07:11:53 | INFO: Blender create Mesh node Cube.035\n07:11:53 | INFO: Blender create Mesh node Cube.036\n07:11:53 | INFO: Blender create Mesh node Cube.037\n07:11:53 | INFO: Blender create Mesh node Cube.038\n07:11:53 | INFO: Blender create Mesh node Cube.039\n07:11:53 | INFO: Blender create Mesh node Cube.040\n07:11:53 | INFO: Blender create Mesh node Cube.041\n07:11:53 | INFO: Blender create Mesh node Cube.042\n07:11:53 | INFO: Blender create Mesh node Cube.043\n07:11:53 | INFO: Blender create Mesh node Cube.044\n07:11:53 | INFO: Blender create Mesh node Cube.045\n07:11:53 | INFO: Blender create Mesh node Cylinder.012\n07:11:53 | INFO: Blender create Mesh node Cylinder.013\n07:11:53 | INFO: Blender create Mesh node Cube.046\n07:11:53 | INFO: Blender create Mesh node Cube.047\n07:11:53 | INFO: Blender create Mesh node Cube.048\n07:11:53 | INFO: Blender create Mesh node Cube.049\n07:11:53 | INFO: Blender create Mesh node Cube.050\n07:11:53 | INFO: Blender create Mesh node Cube.051\n07:11:53 | INFO: Blender create Mesh node Cube.052\n07:11:53 | INFO: Blender create Mesh node Torus.008\n07:11:53 | INFO: Blender create Mesh node Cube.053\n07:11:53 | INFO: glTF import finished in 0.15s\nBlender 4.3.2\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "command": [
+          "/usr/bin/blender",
+          "--background",
+          "--factory-startup",
+          "--disable-autoexec",
+          "--threads",
+          "4",
+          "--python-exit-code",
+          "2",
+          "--python",
+          "/workspace/apex-neural-3d/scripts/game_graphics/studio/inspect_asset.py",
+          "--",
+          "--input",
+          "/workspace/game-studio-output/studio14/sports_car/v1/asset.glb",
+          "--report",
+          "/workspace/game-studio-output/studio14/sports_car/v1/glb-inspection.json"
+        ],
+        "pid": 52811,
+        "process_stopped_verified": true,
+        "execution": "trusted_local_catalog",
+        "model_code_executed": false,
+        "script_sha256": "e30e6e16dcb81e4811e943ceb6d3a19f1ae40028063ee69828990e304e7ef8ce",
+        "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+        "sample_interval_s": 0.25,
+        "timeout_s": 120,
+        "rss_limit_mib": 12000,
+        "sources": {
+          "inspect_asset.py": "e30e6e16dcb81e4811e943ceb6d3a19f1ae40028063ee69828990e304e7ef8ce",
+          "build_assets.py": "01136f25e1573f3dd91e3f854bf7c61667b5424f5cc0cfeb128e63ed56600db5",
+          "render_asset.py": "e18798d7cf96833ebcdba77055d4a9c86f583eab155be098bf414c14c59f7f92",
+          "blender_ops.py": "ad8316fd4bda2979ebdd1e526c455ab9d4c0d83b3635f2f872eefd6ed7cead1b"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "family": "vehicle",
+  "operations": [
+    {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    {
+      "op": "add_component",
+      "target": "scene",
+      "params": {
+        "component": "rear_spoiler"
+      }
+    },
+    {
+      "op": "bevel_edges",
+      "target": "front_grille",
+      "params": {
+        "width_m": 0.004,
+        "segments": 3
+      }
+    },
+    {
+      "op": "subdivide_surface",
+      "target": "mirror_left",
+      "params": {
+        "levels": 1
+      }
+    },
+    {
+      "op": "set_material_pbr",
+      "target": "satin_alloy",
+      "params": {
+        "base_color": [
+          0.46,
+          0.51,
+          0.55
+        ],
+        "roughness": 0.32,
+        "metallic": 0.92
+      }
+    },
+    {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "family": "building",
+  "operations": [
+    {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    {
+      "op": "repair_degenerate_topology",
+      "target": "atelier_letters",
+      "params": {}
+    },
+    {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    }
+  ]
+}

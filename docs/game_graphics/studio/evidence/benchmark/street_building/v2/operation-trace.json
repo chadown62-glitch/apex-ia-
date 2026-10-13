@@ -1,0 +1,635 @@
+[
+  {
+    "operation": {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  },
+  {
+    "operation": {
+      "op": "repair_degenerate_topology",
+      "target": "atelier_letters",
+      "params": {}
+    },
+    "changed_objects": [
+      "atelier_letters"
+    ],
+    "before": {
+      "atelier_letters": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          -1.7039999961853027,
+          1.8949999809265137
+        ],
+        "dimensions_m": [
+          0.9575799703598022,
+          0.08983000367879868,
+          0.01600000075995922
+        ],
+        "materials": [
+          "limestone"
+        ],
+        "pbr": {
+          "limestone": {
+            "Base Color": {
+              "value": [
+                0.6499999761581421,
+                0.5899999737739563,
+                0.46000000834465027,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.6499999761581421,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 332,
+        "geometry_sha256": "d4153b2e0dd35529594d7f40012eaa39dbff5d51ee05052a21c62fd2b7944ffc"
+      }
+    },
+    "after": {
+      "atelier_letters": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          -1.7039999961853027,
+          1.8949999809265137
+        ],
+        "dimensions_m": [
+          0.9575799703598022,
+          0.08983000367879868,
+          0.01600000075995922
+        ],
+        "materials": [
+          "limestone"
+        ],
+        "pbr": {
+          "limestone": {
+            "Base Color": {
+              "value": [
+                0.6499999761581421,
+                0.5899999737739563,
+                0.46000000834465027,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.6499999761581421,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 332,
+        "geometry_sha256": "e4b4a55e4b3da91f54b06be8f1bf7f7927972989569a8bf20400d637a6bb1d66"
+      }
+    }
+  },
+  {
+    "operation": {
+      "op": "add_component",
+      "target": "scene",
+      "params": {
+        "component": "entrance_planters"
+      }
+    },
+    "changed_objects": [
+      "planter_left",
+      "topiary_left_0",
+      "topiary_left_1",
+      "topiary_left_2",
+      "topiary_left_3",
+      "topiary_left_4",
+      "planter_right",
+      "topiary_right_0",
+      "topiary_right_1",
+      "topiary_right_2",
+      "topiary_right_3",
+      "topiary_right_4"
+    ],
+    "before": {
+      "planter_left": null,
+      "topiary_left_0": null,
+      "topiary_left_1": null,
+      "topiary_left_2": null,
+      "topiary_left_3": null,
+      "topiary_left_4": null,
+      "planter_right": null,
+      "topiary_right_0": null,
+      "topiary_right_1": null,
+      "topiary_right_2": null,
+      "topiary_right_3": null,
+      "topiary_right_4": null
+    },
+    "after": {
+      "planter_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          -2.0999999046325684,
+          -1.940000057220459,
+          0.4699999988079071
+        ],
+        "dimensions_m": [
+          0.4000000059604645,
+          0.4000000059604645,
+          0.44999998807907104
+        ],
+        "materials": [
+          "limestone"
+        ],
+        "pbr": {
+          "limestone": {
+            "Base Color": {
+              "value": [
+                0.6499999761581421,
+                0.5899999737739563,
+                0.46000000834465027,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.6499999761581421,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 96,
+        "geometry_sha256": "3c737fdd78dd2dbc59982f1c6debc5f34e951f703af61446a5d1992fb4829308"
+      },
+      "topiary_left_0": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          -2.140000104904175,
+          -1.940000057220459,
+          0.8600000143051147
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "2e9db9a34c4655910c38078038e22b39bee3774c2fbee112f5edf3ca8f890d4b"
+      },
+      "topiary_left_1": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          -2.059999942779541,
+          -1.940000057220459,
+          0.925000011920929
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "c454a96125339eb8668941025e8fe6116a1e9ec864821eb23d50bdd6c65db5ab"
+      },
+      "topiary_left_2": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          -2.140000104904175,
+          -1.940000057220459,
+          0.9900000095367432
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "fbf4d2190e3dbac6f839681657a65345837e1cd16330ada3af0747a2537f6909"
+      },
+      "topiary_left_3": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          -2.059999942779541,
+          -1.940000057220459,
+          1.0549999475479126
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "f3d4a6fc9f97d6175e87bb58f8d59e5592067ab9949d6928014ee96b2435c572"
+      },
+      "topiary_left_4": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          -2.140000104904175,
+          -1.940000057220459,
+          1.1200000047683716
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "f3d4a6fc9f97d6175e87bb58f8d59e5592067ab9949d6928014ee96b2435c572"
+      },
+      "planter_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          2.0999999046325684,
+          -1.940000057220459,
+          0.4699999988079071
+        ],
+        "dimensions_m": [
+          0.4000000059604645,
+          0.4000000059604645,
+          0.44999998807907104
+        ],
+        "materials": [
+          "limestone"
+        ],
+        "pbr": {
+          "limestone": {
+            "Base Color": {
+              "value": [
+                0.6499999761581421,
+                0.5899999737739563,
+                0.46000000834465027,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.6499999761581421,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 96,
+        "geometry_sha256": "3c737fdd78dd2dbc59982f1c6debc5f34e951f703af61446a5d1992fb4829308"
+      },
+      "topiary_right_0": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          2.059999942779541,
+          -1.940000057220459,
+          0.8600000143051147
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "df78c108a5a206e3961a5cfa51fe9efbf13a020c219131d7751f2dcf7f1b84fa"
+      },
+      "topiary_right_1": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          2.140000104904175,
+          -1.940000057220459,
+          0.925000011920929
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "ac1291fa481e403afbba3060595a83a710f2b72ea171332987264457c4c77bde"
+      },
+      "topiary_right_2": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          2.059999942779541,
+          -1.940000057220459,
+          0.9900000095367432
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "df78c108a5a206e3961a5cfa51fe9efbf13a020c219131d7751f2dcf7f1b84fa"
+      },
+      "topiary_right_3": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          2.140000104904175,
+          -1.940000057220459,
+          1.0549999475479126
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "df78c108a5a206e3961a5cfa51fe9efbf13a020c219131d7751f2dcf7f1b84fa"
+      },
+      "topiary_right_4": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          2.059999942779541,
+          -1.940000057220459,
+          1.1200000047683716
+        ],
+        "dimensions_m": [
+          0.2999998927116394,
+          0.2799999713897705,
+          0.27000001072883606
+        ],
+        "materials": [
+          "foliage"
+        ],
+        "pbr": {
+          "foliage": {
+            "Base Color": {
+              "value": [
+                0.05999999865889549,
+                0.11999999731779099,
+                0.041999999433755875,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.800000011920929,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "0e2337bcd953a4a6c6f1346af756ed71de5ecfe827b17d0f31e77a68b46ecd5a"
+      }
+    }
+  },
+  {
+    "operation": {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  }
+]

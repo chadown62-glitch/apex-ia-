@@ -1,0 +1,290 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BoundedBlenderArtisticPlan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "family",
+    "operations"
+  ],
+  "properties": {
+    "family": {
+      "enum": [
+        "vehicle",
+        "building",
+        "chair"
+      ]
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "inspect_scene"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "save_revision_and_render"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "bevel_edges"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "width_m",
+                  "segments"
+                ],
+                "properties": {
+                  "width_m": {
+                    "type": "number",
+                    "minimum": 0.001,
+                    "maximum": 0.15
+                  },
+                  "segments": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "subdivide_surface"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "levels"
+                ],
+                "properties": {
+                  "levels": {
+                    "enum": [
+                      1,
+                      2
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "set_location"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "location_m"
+                ],
+                "properties": {
+                  "location_m": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": -10,
+                      "maximum": 10
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "set_material_pbr"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "base_color",
+                  "roughness",
+                  "metallic"
+                ],
+                "properties": {
+                  "base_color": {
+                    "type": "array",
+                    "items": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "minItems": 3,
+                    "maxItems": 3
+                  },
+                  "roughness": {
+                    "type": "number",
+                    "minimum": 0.04,
+                    "maximum": 1
+                  },
+                  "metallic": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "add_component"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "component"
+                ],
+                "properties": {
+                  "component": {
+                    "enum": [
+                      "rear_spoiler",
+                      "entrance_planters",
+                      "lumbar_cushion"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "target",
+              "params"
+            ],
+            "properties": {
+              "op": {
+                "const": "repair_degenerate_topology"
+              },
+              "target": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,79}$"
+              },
+              "params": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "$comment": "Runtime parse_plan also enforces family component ownership, scene targets, finite numbers and exactly one terminal save; worker enforces scene owner tags."
+}

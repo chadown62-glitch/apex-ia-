@@ -1,0 +1,134 @@
+{
+  "source_glb": "/workspace/game-studio-runtime/neural14-research/chair-cpu-64/neural-mesh.glb",
+  "source_glb_sha256": "294410f9eb0373e9286a2f88cf1ae1fb8c1afa9ee03945356555be480b5fa4f7",
+  "source_mesh_unchanged": true,
+  "four_native_views": [
+    {
+      "path": "view_000.png",
+      "sha256": "6134773d3572a6c2e351f43d931085b1215d46d17dc95b68b198ba7bc6be3570",
+      "size": [
+        960,
+        720
+      ],
+      "rgb_standard_deviation": 31.393554885252957,
+      "native": true
+    },
+    {
+      "path": "view_090.png",
+      "sha256": "59c29084d6cafeef16c0f78488a06a2b846f095f59547c2c47d7fd526cae8079",
+      "size": [
+        960,
+        720
+      ],
+      "rgb_standard_deviation": 24.831171523100096,
+      "native": true
+    },
+    {
+      "path": "view_180.png",
+      "sha256": "44920d0e18b8bddd4afbdaf52724d7424fd66ab9655a14c1d80b46138f320094",
+      "size": [
+        960,
+        720
+      ],
+      "rgb_standard_deviation": 21.24508464869439,
+      "native": true
+    },
+    {
+      "path": "view_270.png",
+      "sha256": "4c1bc5596c8629d5ea17fa2cdbfa032f8bae09b71892ef578b29a1b71b27db41",
+      "size": [
+        960,
+        720
+      ],
+      "rgb_standard_deviation": 18.074618787363047,
+      "native": true
+    }
+  ],
+  "independent_inspector": {
+    "path": "/workspace/apex-game-graphics/scripts/game_graphics/inspect_vehicle.py",
+    "sha256": "d19f64881be598c92771c116aa9741e21ee69d6fd0f0da255ce7764b9a86f2ea",
+    "second_process": true
+  },
+  "files": [
+    {
+      "path": "failed-denoise-render-resources.json",
+      "sha256": "c027b8e2f1ef53186494e3386f42fc29c2e8481d9fb0aa877a40bd8da264299b",
+      "bytes": 667
+    },
+    {
+      "path": "failed-denoise-render.log",
+      "sha256": "ed15f12fde3d9b0f19fdc56e38762d57aae1e6e1cf02ae2d0588936c891d2a51",
+      "bytes": 2069
+    },
+    {
+      "path": "independent-inspection.json",
+      "sha256": "96db707482e25849c87c01fb6d7336ac05496c7938ac7e439bd189fce2d47abc",
+      "bytes": 1030
+    },
+    {
+      "path": "neural.blend",
+      "sha256": "389e76968c91069c2aee0228efc7df89ca1737c7dd586765a3f7cc0b24f033ed",
+      "bytes": 802300
+    },
+    {
+      "path": "render-report.json",
+      "sha256": "16ae3746af2d1863f1a00c66b63d751b64fa21f0dc8cf68c3eea92d4583e2076",
+      "bytes": 4181
+    },
+    {
+      "path": "render-resources.json",
+      "sha256": "6df2421feb700b41ce16007a4da0b5b4f62a1e28483de11750860adf5c2bbe35",
+      "bytes": 27715
+    },
+    {
+      "path": "render.log",
+      "sha256": "b95e2c0490fe662e73dbd457c17076f264d6881dd5327855bb310687d024d9c8",
+      "bytes": 20557
+    },
+    {
+      "path": "render_neural.py",
+      "sha256": "c38510f94ca677a88c03e24720ad6074bae68c840a63dbdc4682d86b0008e1cc",
+      "bytes": 6831
+    },
+    {
+      "path": "reopen-independent-resources.json",
+      "sha256": "2ca40894d287c1b352d8adf2b205b89d5bba09b635d1d336a4788bb60c477131",
+      "bytes": 589
+    },
+    {
+      "path": "reopen-independent.log",
+      "sha256": "bb59345134f613822044025b63b52598126c2d9b0a6026195533501f18e3e7e2",
+      "bytes": 170
+    },
+    {
+      "path": "run_visual.py",
+      "sha256": "aa5379039d0283b9296044d0edfcbdf46e594e72d6158e5c62e360322b0db5a0",
+      "bytes": 1889
+    },
+    {
+      "path": "view_000.png",
+      "sha256": "6134773d3572a6c2e351f43d931085b1215d46d17dc95b68b198ba7bc6be3570",
+      "bytes": 1028978
+    },
+    {
+      "path": "view_090.png",
+      "sha256": "59c29084d6cafeef16c0f78488a06a2b846f095f59547c2c47d7fd526cae8079",
+      "bytes": 1007199
+    },
+    {
+      "path": "view_180.png",
+      "sha256": "44920d0e18b8bddd4afbdaf52724d7424fd66ab9655a14c1d80b46138f320094",
+      "bytes": 1063507
+    },
+    {
+      "path": "view_270.png",
+      "sha256": "4c1bc5596c8629d5ea17fa2cdbfa032f8bae09b71892ef578b29a1b71b27db41",
+      "bytes": 1004062
+    },
+    {
+      "path": "visual-review.json",
+      "sha256": "a32250fd8c8f78ec8c89521061f6920b409a5557f854209b877d1ad3cf9333ae",
+      "bytes": 4593
+    }
+  ]
+}

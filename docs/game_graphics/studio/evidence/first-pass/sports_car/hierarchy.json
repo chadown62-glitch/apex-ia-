@@ -1,0 +1,5442 @@
+{
+  "chassis": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      4.786667346954346,
+      1.884633183479309,
+      0.6076397895812988
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 4740,
+    "geometry_sha256": "72f2b260eef78be69d832cede599c04e9e840b35f6a8c1c430953687392690c5"
+  },
+  "tyre_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      -0.9399999976158142,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.7100000381469727,
+      0.7100000381469727,
+      0.23200000822544098
+    ],
+    "materials": [
+      "tyre_rubber"
+    ],
+    "pbr": {
+      "tyre_rubber": {
+        "Base Color": {
+          "value": [
+            0.014999999664723873,
+            0.017000000923871994,
+            0.019999999552965164,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.75,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "c82c5fb49f8c2b9eb1de3365b7da9ec5c32cccaed6ba7d1e62ce6f49fbd2bcf1"
+  },
+  "rim_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      -1.0329999923706055,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.5180000066757202,
+      0.5180000066757202,
+      0.029999999329447746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "42520979a15474d4a440997072efabaa4a832ebae80c8c3e9b82742aa4aa21ab"
+  },
+  "brake_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      -1.0080000162124634,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.41999998688697815,
+      0.41999998688697815,
+      0.017999999225139618
+    ],
+    "materials": [
+      "brake_steel"
+    ],
+    "pbr": {
+      "brake_steel": {
+        "Base Color": {
+          "value": [
+            0.1899999976158142,
+            0.2199999988079071,
+            0.25,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.4000000059604645,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5aeb96da36b853d431ac7fdf30d2fdd8cd3a570fa2fa4d93df88ada0a4b63dc8"
+  },
+  "hub_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      -1.0540000200271606,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.02800000086426735
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "4dfa1b6447e813a6948ef6233240b8be440bc80944011a58912522621bbba0f5"
+  },
+  "spoke_front_left_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1766883134841919,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "0f9e532d066a4a26a1cf3113b9d050ec891828a84fb5360b3beb082273f8bc28"
+  },
+  "spoke_front_left_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157593250274658,
+      0.040781259536743164,
+      0.13883191347122192
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "09863a0b929a8c053359942b52f9e6b3327d0846030be45c0cd20f9ee3644018"
+  },
+  "spoke_front_left_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262100696563721,
+      0.03999161720275879,
+      0.1765444576740265
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "7cb275b6adb60e3203601fcd303874f779b6f23d58512f41abb2817453fb785b"
+  },
+  "spoke_front_left_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787428379058838,
+      0.040434837341308594,
+      0.16731026768684387
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "20be66df885287000ad8551308b3e198c7bd651b0957ad60717372468a28e606"
+  },
+  "spoke_front_left_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1653282642364502,
+      0.04085540771484375,
+      0.10265359282493591
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "4b56bdd8d33e321ed214494c02c416051e9aa6124525b23400b4639b8706ff85"
+  },
+  "spoke_front_left_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.17668843269348145,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "298c5d42a5afa478ce113d84319db8727a81c12ec5eef344b07222317e9a8d47"
+  },
+  "spoke_front_left_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157581329345703,
+      0.040781259536743164,
+      0.1388319581747055
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "1a17fad734cd7fa4726b7077118d1d00150a3ddbdc709513d124deb1ad21a4b3"
+  },
+  "spoke_front_left_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262112617492676,
+      0.03999161720275879,
+      0.17654447257518768
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "17d8c402d93ba897b1528eec6994bf0f10a2988d76a02aeeee2a3c14e2f551fd"
+  },
+  "spoke_front_left_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787416458129883,
+      0.040434837341308594,
+      0.1673102229833603
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "9a3f55961509dff8d212064296b2d36f48e85a7289ca1cbd5669f3354db4992a"
+  },
+  "spoke_front_left_9": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.16532814502716064,
+      0.04085540771484375,
+      0.1026536077260971
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "852b93f86fee7aa1ca891db74483fb48024594b2ce396c6a5d9777fd776c89a4"
+  },
+  "caliper_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.2400000095367432,
+      -1.0130000114440918,
+      0.4099999964237213
+    ],
+    "dimensions_m": [
+      0.05999999865889549,
+      0.03500000014901161,
+      0.14000000059604645
+    ],
+    "materials": [
+      "rear_lens"
+    ],
+    "pbr": {
+      "rear_lens": {
+        "Base Color": {
+          "value": [
+            0.44999998807907104,
+            0.00800000037997961,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2199999988079071,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "98c8587295a3b2feddc8315c760b7ad5ab1cf63b54c68948415d25eda9041d22"
+  },
+  "arch_lip_front_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.8458844423294067,
+      0.023999929428100586,
+      0.42417624592781067
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 392,
+    "geometry_sha256": "82ad9015a77c892a194e9cc3eb9768f4b49c124e6a10b5c776eaf8e07c012411"
+  },
+  "tyre_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      0.9399999976158142,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.7100000381469727,
+      0.7100000381469727,
+      0.23200000822544098
+    ],
+    "materials": [
+      "tyre_rubber"
+    ],
+    "pbr": {
+      "tyre_rubber": {
+        "Base Color": {
+          "value": [
+            0.014999999664723873,
+            0.017000000923871994,
+            0.019999999552965164,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.75,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "c82c5fb49f8c2b9eb1de3365b7da9ec5c32cccaed6ba7d1e62ce6f49fbd2bcf1"
+  },
+  "rim_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      1.0329999923706055,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.5180000066757202,
+      0.5180000066757202,
+      0.029999999329447746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "42520979a15474d4a440997072efabaa4a832ebae80c8c3e9b82742aa4aa21ab"
+  },
+  "brake_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      1.0080000162124634,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.41999998688697815,
+      0.41999998688697815,
+      0.017999999225139618
+    ],
+    "materials": [
+      "brake_steel"
+    ],
+    "pbr": {
+      "brake_steel": {
+        "Base Color": {
+          "value": [
+            0.1899999976158142,
+            0.2199999988079071,
+            0.25,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.4000000059604645,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5aeb96da36b853d431ac7fdf30d2fdd8cd3a570fa2fa4d93df88ada0a4b63dc8"
+  },
+  "hub_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.399999976158142,
+      1.0540000200271606,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.02800000086426735
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "4dfa1b6447e813a6948ef6233240b8be440bc80944011a58912522621bbba0f5"
+  },
+  "spoke_front_right_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1766883134841919,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "ff331d74d4a0ed2c3d839790bad2a4d765e33030798c9cba032ed3a26c425f8a"
+  },
+  "spoke_front_right_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157593250274658,
+      0.040781259536743164,
+      0.13883191347122192
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "736d1e8a7e1a41d7bac7aa5a90235b5fd422db7bebc4e2e5877dc80aadb12fb2"
+  },
+  "spoke_front_right_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262100696563721,
+      0.03999161720275879,
+      0.1765444576740265
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "23a312739d0ee750845314a22130c5dfa84a9d45fd06dd6eefac0ccf81211ef9"
+  },
+  "spoke_front_right_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787428379058838,
+      0.040434837341308594,
+      0.16731026768684387
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "a393236ba7cb713fd85c83ffb57cc8e41d3ff2e8d33d9339ebcbb7757b3d8b17"
+  },
+  "spoke_front_right_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1653282642364502,
+      0.04085540771484375,
+      0.10265359282493591
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "78da6e933eda923cf7c7114b3faa55a27b190f275dfbbccf7b519031d9b22726"
+  },
+  "spoke_front_right_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.17668843269348145,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "ccfe51536313c914c1aff1057aec0a85f80293155d4cab5e22368534aa30df20"
+  },
+  "spoke_front_right_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157581329345703,
+      0.040781259536743164,
+      0.1388319581747055
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "2936a840220eadaef00743514734ab25ad5e5f5371932905dd5b77a4e7a96f3b"
+  },
+  "spoke_front_right_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262112617492676,
+      0.03999161720275879,
+      0.1765444576740265
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "72ad0f90bdfcd0bbd2914c923729e13b4c0f312edcf122757e61c403a4a4f30f"
+  },
+  "spoke_front_right_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787416458129883,
+      0.040434837341308594,
+      0.1673102229833603
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "7a4eb91550f714d9ec7ef346c880b65c37429014e2725f54430dd733efaffce4"
+  },
+  "spoke_front_right_9": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.16532814502716064,
+      0.04085540771484375,
+      0.1026536077260971
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "ecdcae76c3fcbef928308dae677d47856f6b512b60ec7eb9e2b104f3bd16e5c8"
+  },
+  "caliper_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.2400000095367432,
+      1.0130000114440918,
+      0.4099999964237213
+    ],
+    "dimensions_m": [
+      0.05999999865889549,
+      0.03500000014901161,
+      0.14000000059604645
+    ],
+    "materials": [
+      "rear_lens"
+    ],
+    "pbr": {
+      "rear_lens": {
+        "Base Color": {
+          "value": [
+            0.44999998807907104,
+            0.00800000037997961,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2199999988079071,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "98c8587295a3b2feddc8315c760b7ad5ab1cf63b54c68948415d25eda9041d22"
+  },
+  "arch_lip_front_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.8458844423294067,
+      0.023999929428100586,
+      0.42417624592781067
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 392,
+    "geometry_sha256": "e2a14c55f9b9aca4d0b1b714e7f383a95802da28c7cbe61c4130672a765e1956"
+  },
+  "tyre_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      -0.9399999976158142,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.7100000381469727,
+      0.7100000381469727,
+      0.23200000822544098
+    ],
+    "materials": [
+      "tyre_rubber"
+    ],
+    "pbr": {
+      "tyre_rubber": {
+        "Base Color": {
+          "value": [
+            0.014999999664723873,
+            0.017000000923871994,
+            0.019999999552965164,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.75,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "c82c5fb49f8c2b9eb1de3365b7da9ec5c32cccaed6ba7d1e62ce6f49fbd2bcf1"
+  },
+  "rim_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      -1.0329999923706055,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.5180000066757202,
+      0.5180000066757202,
+      0.029999999329447746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "42520979a15474d4a440997072efabaa4a832ebae80c8c3e9b82742aa4aa21ab"
+  },
+  "brake_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      -1.0080000162124634,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.41999998688697815,
+      0.41999998688697815,
+      0.017999999225139618
+    ],
+    "materials": [
+      "brake_steel"
+    ],
+    "pbr": {
+      "brake_steel": {
+        "Base Color": {
+          "value": [
+            0.1899999976158142,
+            0.2199999988079071,
+            0.25,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.4000000059604645,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5aeb96da36b853d431ac7fdf30d2fdd8cd3a570fa2fa4d93df88ada0a4b63dc8"
+  },
+  "hub_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      -1.0540000200271606,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.02800000086426735
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "4dfa1b6447e813a6948ef6233240b8be440bc80944011a58912522621bbba0f5"
+  },
+  "spoke_rear_left_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.17668843269348145,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "6f8174d6d1f8b33994dd7d6144927c32254310b052af5ccd2e0564e601701f77"
+  },
+  "spoke_rear_left_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157581329345703,
+      0.040781259536743164,
+      0.1388319432735443
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "5887f64b35fed523360e242cf0aad717746fdcb8aa362164132044f9a1c3809f"
+  },
+  "spoke_rear_left_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262112617492676,
+      0.03999161720275879,
+      0.17654448747634888
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "e14aa0f55c4fb233ce4ced7b0dc6bafed6835071c5bae594828e79f7501e68aa"
+  },
+  "spoke_rear_left_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787416458129883,
+      0.040434837341308594,
+      0.16731023788452148
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "cdbdb8b5bea871c9b4863598ad043447e32bec3a7af69f9a0b4871de8587261e"
+  },
+  "spoke_rear_left_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.16532814502716064,
+      0.04085540771484375,
+      0.10265359282493591
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "7d92e32cf12e8324d2c97cedd39fa08c0b73b33230d55439e7bb20d605c26c4e"
+  },
+  "spoke_rear_left_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1766883134841919,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "2db83f5e4b0b57814a47a1617202a0595f43c28d2227803de2edbece71ddabc1"
+  },
+  "spoke_rear_left_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157593250274658,
+      0.040781259536743164,
+      0.13883192837238312
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "24c92f9538b2e39259d1741e4c8e510040498c4f0044fc44ae30f248cfdcf164"
+  },
+  "spoke_rear_left_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262100696563721,
+      0.03999161720275879,
+      0.1765444278717041
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "02c90bfdff7646f23195693e88a972d82a8b94b4a206b28adb79e437bf058010"
+  },
+  "spoke_rear_left_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787428379058838,
+      0.040434837341308594,
+      0.16731026768684387
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "3569e4060480d9ec406e094a4d792cf90f0a32b78619c504ccb5ecf9e7d3745a"
+  },
+  "spoke_rear_left_9": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1653282642364502,
+      0.04085540771484375,
+      0.1026536226272583
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "feb3fa986d35bf4ac1dab0d004adcc75d4fdf676323134f2a2f6bb90733e0a6e"
+  },
+  "caliper_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.559999942779541,
+      -1.0130000114440918,
+      0.4099999964237213
+    ],
+    "dimensions_m": [
+      0.05999999865889549,
+      0.03500000014901161,
+      0.14000000059604645
+    ],
+    "materials": [
+      "rear_lens"
+    ],
+    "pbr": {
+      "rear_lens": {
+        "Base Color": {
+          "value": [
+            0.44999998807907104,
+            0.00800000037997961,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2199999988079071,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "98c8587295a3b2feddc8315c760b7ad5ab1cf63b54c68948415d25eda9041d22"
+  },
+  "arch_lip_rear_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.8458844423294067,
+      0.023999929428100586,
+      0.42417624592781067
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 392,
+    "geometry_sha256": "c8b9073bea96094c372779178d99ad42918769d721ada92d222c4f83abffa99b"
+  },
+  "tyre_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      0.9399999976158142,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.7100000381469727,
+      0.7100000381469727,
+      0.23200000822544098
+    ],
+    "materials": [
+      "tyre_rubber"
+    ],
+    "pbr": {
+      "tyre_rubber": {
+        "Base Color": {
+          "value": [
+            0.014999999664723873,
+            0.017000000923871994,
+            0.019999999552965164,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.75,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "c82c5fb49f8c2b9eb1de3365b7da9ec5c32cccaed6ba7d1e62ce6f49fbd2bcf1"
+  },
+  "rim_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      1.0329999923706055,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.5180000066757202,
+      0.5180000066757202,
+      0.029999999329447746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "42520979a15474d4a440997072efabaa4a832ebae80c8c3e9b82742aa4aa21ab"
+  },
+  "brake_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      1.0080000162124634,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.41999998688697815,
+      0.41999998688697815,
+      0.017999999225139618
+    ],
+    "materials": [
+      "brake_steel"
+    ],
+    "pbr": {
+      "brake_steel": {
+        "Base Color": {
+          "value": [
+            0.1899999976158142,
+            0.2199999988079071,
+            0.25,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.4000000059604645,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5aeb96da36b853d431ac7fdf30d2fdd8cd3a570fa2fa4d93df88ada0a4b63dc8"
+  },
+  "hub_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      1.0540000200271606,
+      0.35499998927116394
+    ],
+    "dimensions_m": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.02800000086426735
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "4dfa1b6447e813a6948ef6233240b8be440bc80944011a58912522621bbba0f5"
+  },
+  "spoke_rear_right_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.17668843269348145,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "ce692baaf5b80c1f8fffa864a78c1a9f37c1ab9af3abf7da5a7fb40481c357e8"
+  },
+  "spoke_rear_right_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157581329345703,
+      0.040781259536743164,
+      0.1388319432735443
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "fdcbe74e8c9097b01ec638b15e846456a7de3a11ca0298b7eafa4b886a710b2c"
+  },
+  "spoke_rear_right_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262112617492676,
+      0.03999161720275879,
+      0.17654448747634888
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "06e5226d6b2635b0ccab334f311f31419de21a2e9f06bc902f4cc98e23971873"
+  },
+  "spoke_rear_right_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787416458129883,
+      0.040434837341308594,
+      0.16731023788452148
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "3f6c6b39c9d2d05cb0316f3f7508d0f342c25ce9c01e987fdf3a8e845a06529a"
+  },
+  "spoke_rear_right_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.16532814502716064,
+      0.04085540771484375,
+      0.10265359282493591
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "44a8e477ccd3e81e413c8972988ee4e284f4f2e7442472c9b910efb03a66c1c3"
+  },
+  "spoke_rear_right_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1766883134841919,
+      0.04088449478149414,
+      0.048568129539489746
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "c236210be8fe7f85d71ffe82f9874e3104872d8f6d2a68f5af5ae47ad9d6eca5"
+  },
+  "spoke_rear_right_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.14157593250274658,
+      0.040781259536743164,
+      0.13883192837238312
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "24cd4f063e88708432090a2aa13a5672c7505635f76512c52e869d92d66f410e"
+  },
+  "spoke_rear_right_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.05262100696563721,
+      0.03999161720275879,
+      0.1765444129705429
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "320d5a81d2c22827bbb4f63f7ec29dac4837e522f855267c2a531a0065853a07"
+  },
+  "spoke_rear_right_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.09787428379058838,
+      0.040434837341308594,
+      0.16731026768684387
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "e1e181c2579aa8b013ceb6c6d4241dde800d49d7b2a855c170bb71ef099b440f"
+  },
+  "spoke_rear_right_9": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.1653282642364502,
+      0.04085540771484375,
+      0.1026536226272583
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "652047ddbcddf8e62b7c088988616e59c1009924d3c0537c61ffe82b2ba4d7a5"
+  },
+  "caliper_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.559999942779541,
+      1.0130000114440918,
+      0.4099999964237213
+    ],
+    "dimensions_m": [
+      0.05999999865889549,
+      0.03500000014901161,
+      0.14000000059604645
+    ],
+    "materials": [
+      "rear_lens"
+    ],
+    "pbr": {
+      "rear_lens": {
+        "Base Color": {
+          "value": [
+            0.44999998807907104,
+            0.00800000037997961,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2199999988079071,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "98c8587295a3b2feddc8315c760b7ad5ab1cf63b54c68948415d25eda9041d22"
+  },
+  "arch_lip_rear_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.8458844423294067,
+      0.023999929428100586,
+      0.42417624592781067
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 392,
+    "geometry_sha256": "89fa6ed5e916f19dc1f143baee7270b3ceca34e6e7b4d50b411f18d310a154cf"
+  },
+  "windshield": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.38999998569488525,
+      1.3799999952316284,
+      0.43500006198883057
+    ],
+    "materials": [
+      "smoked_glass"
+    ],
+    "pbr": {
+      "smoked_glass": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.06499999761581421,
+            0.0820000022649765,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.11999999731779099,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 24,
+    "geometry_sha256": "964ecbbfba366283099a87f7260bd1ad3c902e5fbb70d6ff2ccbc7d654431f01"
+  },
+  "rear_glass": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.48000001907348633,
+      1.3200000524520874,
+      0.45500004291534424
+    ],
+    "materials": [
+      "smoked_glass"
+    ],
+    "pbr": {
+      "smoked_glass": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.06499999761581421,
+            0.0820000022649765,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.11999999731779099,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 24,
+    "geometry_sha256": "11cdcbfe59f0123ddd72aec25c3dd10051513a4a531809df24fc043379bfd816"
+  },
+  "roof": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.9099999666213989,
+      1.1699999570846558,
+      0.09500002861022949
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "415d7262802d45946b64786537910d30f20d4c847f69595d92accf1d2923d774"
+  },
+  "side_glass_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      1.6799999475479126,
+      0.14100003242492676,
+      0.3850000500679016
+    ],
+    "materials": [
+      "smoked_glass"
+    ],
+    "pbr": {
+      "smoked_glass": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.06499999761581421,
+            0.0820000022649765,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.11999999731779099,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 8,
+    "geometry_sha256": "4d50993b752e236f68d12e42f5585b7f6d873b70a32206ecbdd9465e3089588d"
+  },
+  "a_pillar_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.47850748896598816,
+      0.17240756750106812,
+      0.4575927257537842
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 56,
+    "geometry_sha256": "ac6ce8cb01d10ed37c4b9388e66d05842c217993dca02b982633b573051aca09"
+  },
+  "c_pillar_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.5226423144340515,
+      0.1783592700958252,
+      0.4697015881538391
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 56,
+    "geometry_sha256": "da75fdc723e35a2224e8bfb6ee3c6b9e614d3e47bd81198f737c93bc3459a0bb"
+  },
+  "window_seal_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      1.6958969831466675,
+      0.29022109508514404,
+      0.8728418350219727
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "a7593f376c64e114735dec650b937773693fa82a5e7881c9a6a0b81a06ddf10a"
+  },
+  "door_seam_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      1.421584963798523,
+      0.02649974822998047,
+      0.5828661322593689
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "42d76aec2ca60a4b215f8e1ced3ad066a36f5f511ff4e1f1e9375670e1ff46f7"
+  },
+  "door_handle_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.6700000166893005,
+      -0.9649999737739563,
+      0.7200000286102295
+    ],
+    "dimensions_m": [
+      0.1599999964237213,
+      0.017999999225139618,
+      0.02199999988079071
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "03e6d91cb7111edd2622ae3370e902068cd951cc9cde46b6fbf40dd1c15a2233"
+  },
+  "sill_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.019999999552965164,
+      -0.9150000214576721,
+      0.20499999821186066
+    ],
+    "dimensions_m": [
+      2.25,
+      0.10000000149011612,
+      0.06499999761581421
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8241a88870bbf4a059035243cfb784dd391ac1b8e7bd76ef3abddf8219f01927"
+  },
+  "mirror_stem_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.06569761037826538,
+      0.2346562147140503,
+      0.03600001335144043
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "2e3839790c7393ef80a133ee6e9fa97339bba2185cbcdae2e401ad5d06473a17"
+  },
+  "mirror_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.27000001072883606,
+      -1.024999976158142,
+      0.8999999761581421
+    ],
+    "dimensions_m": [
+      0.2099999189376831,
+      0.18999996781349182,
+      0.0949999988079071
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "b3749fd71a7de6ec319e39535b2ff89d3dee075328dc156ee25494fcf6daa151"
+  },
+  "mirror_insert_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.2150000035762787,
+      -1.0299999713897705,
+      0.9039999842643738
+    ],
+    "dimensions_m": [
+      0.01799999177455902,
+      0.1499999761581421,
+      0.06499999761581421
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "8c06d4f7ac849cfa60361d6424f020c7d71eb97fb871089306c2afd0f4e04668"
+  },
+  "headlamp_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.240000009536743,
+      -0.550000011920929,
+      0.5849999785423279
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.4699999988079071,
+      0.05400000140070915
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "85b06756ee7c77ca0cc2430bf741e1d529a23a27bba24a7e41114198324b59dd"
+  },
+  "headlamp_surround_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.2249999046325684,
+      -0.550000011920929,
+      0.5839999914169312
+    ],
+    "dimensions_m": [
+      0.12999999523162842,
+      0.5149999856948853,
+      0.09300000220537186
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "4b82784c2cfc22f7c152255857bd7877ea31559bceefaebd03455a30ee35275a"
+  },
+  "led_left_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.315000057220459,
+      -0.550000011920929,
+      0.5759999752044678
+    ],
+    "dimensions_m": [
+      0.004999999888241291,
+      0.36000001430511475,
+      0.004000000189989805
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e0bfe968917ac21ba60a4baaded06ec0c3c9df0a36c9ebcd1276d2ec0cd43b1"
+  },
+  "led_left_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.315000057220459,
+      -0.550000011920929,
+      0.5879999995231628
+    ],
+    "dimensions_m": [
+      0.004999999888241291,
+      0.36000001430511475,
+      0.004000000189989805
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e0bfe968917ac21ba60a4baaded06ec0c3c9df0a36c9ebcd1276d2ec0cd43b1"
+  },
+  "led_left_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.315000057220459,
+      -0.550000011920929,
+      0.6000000238418579
+    ],
+    "dimensions_m": [
+      0.004999999888241291,
+      0.36000001430511475,
+      0.004000000189989805
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e0bfe968917ac21ba60a4baaded06ec0c3c9df0a36c9ebcd1276d2ec0cd43b1"
+  },
+  "tail_lamp_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2899999618530273,
+      -0.5400000214576721,
+      0.6200000047683716
+    ],
+    "dimensions_m": [
+      0.054999999701976776,
+      0.5400000214576721,
+      0.05000000074505806
+    ],
+    "materials": [
+      "rear_lens"
+    ],
+    "pbr": {
+      "rear_lens": {
+        "Base Color": {
+          "value": [
+            0.44999998807907104,
+            0.00800000037997961,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2199999988079071,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "38e68d4c2c6bcc4e5271bd0dc4a5b202919175b8b0f6dc2282a9d965d913b933"
+  },
+  "side_glass_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      1.6799999475479126,
+      0.14100003242492676,
+      0.3850000500679016
+    ],
+    "materials": [
+      "smoked_glass"
+    ],
+    "pbr": {
+      "smoked_glass": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.06499999761581421,
+            0.0820000022649765,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.11999999731779099,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 8,
+    "geometry_sha256": "465d97c9d0089a4ca68fcc44f54a38613043cc5247764c37e228b79f5bddaa63"
+  },
+  "a_pillar_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.47850751876831055,
+      0.17240756750106812,
+      0.4575927257537842
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 56,
+    "geometry_sha256": "b791ece48fb411790b7c772e09e9a3955ddebf304751f1479a1259896dbdcbf0"
+  },
+  "c_pillar_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.5226422548294067,
+      0.1783592700958252,
+      0.4697015881538391
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 56,
+    "geometry_sha256": "43b94c88d465d36f86f99e9a5c7dfa08fc290ba556f91ae2b267df366c7f3d8a"
+  },
+  "window_seal_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      1.6958969831466675,
+      0.29022109508514404,
+      0.8728418946266174
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "143a5cc87db6c7c24abf9c9b9c148f7a4839efa0a1f8e63a00ad971d6a2ac565"
+  },
+  "door_seam_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      1.421584963798523,
+      0.02649974822998047,
+      0.5828661322593689
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "8597176adb232cebb9cf995be6e492dbdda26f9aad337525cb6e999b07bd63b6"
+  },
+  "door_handle_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.6700000166893005,
+      0.9649999737739563,
+      0.7200000286102295
+    ],
+    "dimensions_m": [
+      0.1599999964237213,
+      0.017999999225139618,
+      0.02199999988079071
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "03e6d91cb7111edd2622ae3370e902068cd951cc9cde46b6fbf40dd1c15a2233"
+  },
+  "sill_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.019999999552965164,
+      0.9150000214576721,
+      0.20499999821186066
+    ],
+    "dimensions_m": [
+      2.25,
+      0.10000000149011612,
+      0.06499999761581421
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8241a88870bbf4a059035243cfb784dd391ac1b8e7bd76ef3abddf8219f01927"
+  },
+  "mirror_stem_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.06569761037826538,
+      0.2346562147140503,
+      0.03600001335144043
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 32,
+    "geometry_sha256": "13319eb744c2bd2cafc120aba082d043148f2e1a50f3bcdcf05941448bd2ab93"
+  },
+  "mirror_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.27000001072883606,
+      1.024999976158142,
+      0.8999999761581421
+    ],
+    "dimensions_m": [
+      0.2099999189376831,
+      0.18999996781349182,
+      0.0949999988079071
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "pbr": {
+      "petrol_paint": {
+        "Base Color": {
+          "value": [
+            0.017999999225139618,
+            0.10499999672174454,
+            0.14499999582767487,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.7799999713897705,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "af3e1f0c70452c85f709ea5b16a899c6900b2116ee184a84c38d4d0041f00c49"
+  },
+  "mirror_insert_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.2150000035762787,
+      1.0299999713897705,
+      0.9039999842643738
+    ],
+    "dimensions_m": [
+      0.01799999177455902,
+      0.1499999761581421,
+      0.06499999761581421
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "dbae8dfa3a68329713c335991a58d11a4b50d116a3b5aadde3259070a0d4ff2d"
+  },
+  "headlamp_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.240000009536743,
+      0.550000011920929,
+      0.5849999785423279
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.4699999988079071,
+      0.05400000140070915
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "85b06756ee7c77ca0cc2430bf741e1d529a23a27bba24a7e41114198324b59dd"
+  },
+  "headlamp_surround_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.2249999046325684,
+      0.550000011920929,
+      0.5839999914169312
+    ],
+    "dimensions_m": [
+      0.12999999523162842,
+      0.5149999856948853,
+      0.09300000220537186
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "4b82784c2cfc22f7c152255857bd7877ea31559bceefaebd03455a30ee35275a"
+  },
+  "led_right_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.315000057220459,
+      0.550000011920929,
+      0.5759999752044678
+    ],
+    "dimensions_m": [
+      0.004999999888241291,
+      0.36000001430511475,
+      0.004000000189989805
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e0bfe968917ac21ba60a4baaded06ec0c3c9df0a36c9ebcd1276d2ec0cd43b1"
+  },
+  "led_right_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.315000057220459,
+      0.550000011920929,
+      0.5879999995231628
+    ],
+    "dimensions_m": [
+      0.004999999888241291,
+      0.36000001430511475,
+      0.004000000189989805
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e0bfe968917ac21ba60a4baaded06ec0c3c9df0a36c9ebcd1276d2ec0cd43b1"
+  },
+  "led_right_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.315000057220459,
+      0.550000011920929,
+      0.6000000238418579
+    ],
+    "dimensions_m": [
+      0.004999999888241291,
+      0.36000001430511475,
+      0.004000000189989805
+    ],
+    "materials": [
+      "lamp_lens"
+    ],
+    "pbr": {
+      "lamp_lens": {
+        "Base Color": {
+          "value": [
+            0.699999988079071,
+            0.8299999833106995,
+            1.0,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.15000000596046448,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.20000000298023224,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e0bfe968917ac21ba60a4baaded06ec0c3c9df0a36c9ebcd1276d2ec0cd43b1"
+  },
+  "tail_lamp_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2899999618530273,
+      0.5400000214576721,
+      0.6200000047683716
+    ],
+    "dimensions_m": [
+      0.054999999701976776,
+      0.5400000214576721,
+      0.05000000074505806
+    ],
+    "materials": [
+      "rear_lens"
+    ],
+    "pbr": {
+      "rear_lens": {
+        "Base Color": {
+          "value": [
+            0.44999998807907104,
+            0.00800000037997961,
+            0.012000000104308128,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.2199999988079071,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "38e68d4c2c6bcc4e5271bd0dc4a5b202919175b8b0f6dc2282a9d965d913b933"
+  },
+  "front_grille": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.325000047683716,
+      0.0,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.07999999821186066,
+      1.1399999856948853,
+      0.1599999964237213
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "95ca88183e903341a0192111ddd4929cb06b4aea85a4bca00dd99012c295a982"
+  },
+  "grille_fin_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.5099999904632568,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.44600000977516174,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.38199999928474426,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.3179999887943268,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.2540000081062317,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.1899999976158142,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.12600000202655792,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      -0.06199999898672104,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.0020000000949949026,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_9": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.06599999964237213,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_10": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.12999999523162842,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_11": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.1940000057220459,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_12": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.257999986410141,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_13": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.32199999690055847,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_14": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.38600000739097595,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_15": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.44999998807907104,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "grille_fin_16": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.36899995803833,
+      0.5139999985694885,
+      0.3199999928474426
+    ],
+    "dimensions_m": [
+      0.014999999664723873,
+      0.012000000104308128,
+      0.11999999731779099
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "5917dcdda8e73455b71b6ce8c0baa9afeca2392b3f804db12dbb784ec4412af1"
+  },
+  "front_splitter": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.2899999618530273,
+      0.0,
+      0.20499999821186066
+    ],
+    "dimensions_m": [
+      0.20000000298023224,
+      1.7799999713897705,
+      0.03799999877810478
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "0db4e62aea51aea6a59d24d66aa1d74b246b30d4182094f1477822eb7f36d077"
+  },
+  "rear_diffuser": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.259999990463257,
+      0.0,
+      0.2150000035762787
+    ],
+    "dimensions_m": [
+      0.2199999988079071,
+      1.600000023841858,
+      0.054999999701976776
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "14a759fa5ad10e788852dd77702ffa43c0d1b880caded8adb2445106748ea467"
+  },
+  "diffuser_fin_42": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2699999809265137,
+      -0.5799999833106995,
+      0.20000000298023224
+    ],
+    "dimensions_m": [
+      0.2800000011920929,
+      0.019999999552965164,
+      0.09000000357627869
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "ab0b59411340144ef55aaf610ee623daf114b1424bb87d847cbd97adc95288d2"
+  },
+  "diffuser_fin_61": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2699999809265137,
+      -0.38999998569488525,
+      0.20000000298023224
+    ],
+    "dimensions_m": [
+      0.2800000011920929,
+      0.019999999552965164,
+      0.09000000357627869
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "ab0b59411340144ef55aaf610ee623daf114b1424bb87d847cbd97adc95288d2"
+  },
+  "diffuser_fin_100": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2699999809265137,
+      0.0,
+      0.20000000298023224
+    ],
+    "dimensions_m": [
+      0.2800000011920929,
+      0.019999999552965164,
+      0.09000000357627869
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "ab0b59411340144ef55aaf610ee623daf114b1424bb87d847cbd97adc95288d2"
+  },
+  "diffuser_fin_139": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2699999809265137,
+      0.38999998569488525,
+      0.20000000298023224
+    ],
+    "dimensions_m": [
+      0.2800000011920929,
+      0.019999999552965164,
+      0.09000000357627869
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "ab0b59411340144ef55aaf610ee623daf114b1424bb87d847cbd97adc95288d2"
+  },
+  "diffuser_fin_158": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.2699999809265137,
+      0.5799999833106995,
+      0.20000000298023224
+    ],
+    "dimensions_m": [
+      0.2800000011920929,
+      0.019999999552965164,
+      0.09000000357627869
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "ab0b59411340144ef55aaf610ee623daf114b1424bb87d847cbd97adc95288d2"
+  },
+  "exhaust_46": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.390000104904175,
+      -0.5400000214576721,
+      0.30000001192092896
+    ],
+    "dimensions_m": [
+      0.12999999523162842,
+      0.12999999523162842,
+      0.10000000149011612
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "79bdcb1672e2cc39edc5576063f03cc11f7403da7dde6d5b77cc82fad54a3713"
+  },
+  "exhaust_154": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.390000104904175,
+      0.5400000214576721,
+      0.30000001192092896
+    ],
+    "dimensions_m": [
+      0.12999999523162842,
+      0.12999999523162842,
+      0.10000000149011612
+    ],
+    "materials": [
+      "satin_alloy"
+    ],
+    "pbr": {
+      "satin_alloy": {
+        "Base Color": {
+          "value": [
+            0.46000000834465027,
+            0.5099999904632568,
+            0.550000011920929,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.23999999463558197,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.9200000166893005,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "79bdcb1672e2cc39edc5576063f03cc11f7403da7dde6d5b77cc82fad54a3713"
+  },
+  "driver_seat": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.5199999809265137,
+      -0.33000001311302185,
+      0.800000011920929
+    ],
+    "dimensions_m": [
+      0.5199999809265137,
+      0.46000000834465027,
+      0.10999999940395355
+    ],
+    "materials": [
+      "cockpit_leather"
+    ],
+    "pbr": {
+      "cockpit_leather": {
+        "Base Color": {
+          "value": [
+            0.07999999821186066,
+            0.04500000178813934,
+            0.02500000037252903,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5400000214576721,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "f62f53da343c5a4e5abe2656221edd18a5bff9518df994d625aa909da776c80d"
+  },
+  "driver_seat_back": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.8399999737739563,
+      -0.33000001311302185,
+      1.0
+    ],
+    "dimensions_m": [
+      0.10499999672174454,
+      0.4300000071525574,
+      0.38999998569488525
+    ],
+    "materials": [
+      "cockpit_leather"
+    ],
+    "pbr": {
+      "cockpit_leather": {
+        "Base Color": {
+          "value": [
+            0.07999999821186066,
+            0.04500000178813934,
+            0.02500000037252903,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5400000214576721,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "fc2b6846b48daec611fb0930734d2f7f48c2166133e5554e399ed5670562a494"
+  },
+  "driver_headrest": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.8899999856948853,
+      -0.33000001311302185,
+      1.190000057220459
+    ],
+    "dimensions_m": [
+      0.10999999940395355,
+      0.2199999988079071,
+      0.14000000059604645
+    ],
+    "materials": [
+      "cockpit_leather"
+    ],
+    "pbr": {
+      "cockpit_leather": {
+        "Base Color": {
+          "value": [
+            0.07999999821186066,
+            0.04500000178813934,
+            0.02500000037252903,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5400000214576721,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "a515d92546ce8c5ffe91bd9db8af11ed8f8ac35dedc4aec237f149f9ef6b28c8"
+  },
+  "passenger_seat": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.5199999809265137,
+      0.33000001311302185,
+      0.800000011920929
+    ],
+    "dimensions_m": [
+      0.5199999809265137,
+      0.46000000834465027,
+      0.10999999940395355
+    ],
+    "materials": [
+      "cockpit_leather"
+    ],
+    "pbr": {
+      "cockpit_leather": {
+        "Base Color": {
+          "value": [
+            0.07999999821186066,
+            0.04500000178813934,
+            0.02500000037252903,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5400000214576721,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "f62f53da343c5a4e5abe2656221edd18a5bff9518df994d625aa909da776c80d"
+  },
+  "passenger_seat_back": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.8399999737739563,
+      0.33000001311302185,
+      1.0
+    ],
+    "dimensions_m": [
+      0.10499999672174454,
+      0.4300000071525574,
+      0.38999998569488525
+    ],
+    "materials": [
+      "cockpit_leather"
+    ],
+    "pbr": {
+      "cockpit_leather": {
+        "Base Color": {
+          "value": [
+            0.07999999821186066,
+            0.04500000178813934,
+            0.02500000037252903,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5400000214576721,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "fc2b6846b48daec611fb0930734d2f7f48c2166133e5554e399ed5670562a494"
+  },
+  "passenger_headrest": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.8899999856948853,
+      0.33000001311302185,
+      1.190000057220459
+    ],
+    "dimensions_m": [
+      0.10999999940395355,
+      0.2199999988079071,
+      0.14000000059604645
+    ],
+    "materials": [
+      "cockpit_leather"
+    ],
+    "pbr": {
+      "cockpit_leather": {
+        "Base Color": {
+          "value": [
+            0.07999999821186066,
+            0.04500000178813934,
+            0.02500000037252903,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5400000214576721,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "a515d92546ce8c5ffe91bd9db8af11ed8f8ac35dedc4aec237f149f9ef6b28c8"
+  },
+  "dashboard": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.1599999964237213,
+      0.0,
+      0.8650000095367432
+    ],
+    "dimensions_m": [
+      0.23999999463558197,
+      1.1200000047683716,
+      0.12999999523162842
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "17fc2a4389617e253fa1a46ce4531cd990aed5414df662dadb7a1dca380afba6"
+  },
+  "steering_wheel": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.33000001311302185,
+      1.0099999904632568
+    ],
+    "dimensions_m": [
+      0.2619999647140503,
+      0.2619999945163727,
+      0.0279999990016222
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 480,
+    "geometry_sha256": "f2f672a443be6f1a186e02e934a71fe8007468e98e5cc35a7dcb88d28a4c5d12"
+  },
+  "console": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.3499999940395355,
+      0.0,
+      0.8500000238418579
+    ],
+    "dimensions_m": [
+      0.6399999856948853,
+      0.12999999523162842,
+      0.11999999731779099
+    ],
+    "materials": [
+      "black_trim"
+    ],
+    "pbr": {
+      "black_trim": {
+        "Base Color": {
+          "value": [
+            0.012000000104308128,
+            0.01600000075995922,
+            0.01899999938905239,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3400000035762787,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.30000001192092896,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "67f16bcf4eb6f7dfab126dc78f9e06798970e5e1334c5b247fa1c68a6cca1e4c"
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "status": "PREPARED_NOT_EXECUTED",
+  "created_utc": "2026-10-13T06:49:44.917306+00:00",
+  "candidate": "TripoSR",
+  "selection_reason": "Official MIT, publicly downloadable single 1.677 GB checkpoint, upstream PyTorch CPU path and CPU torchmcubes. No additional generator weights downloaded.",
+  "code": {
+    "url": "https://github.com/VAST-AI-Research/TripoSR",
+    "revision": "107cefdc244c39106fa830359024f6a2f1c78871",
+    "license": "MIT",
+    "license_sha256": "ade0a66629bdd7e01e46b3296b3851cff0fd27989bca53da470ad6e96ed620fb",
+    "local_patch_sha256": "1239e13ddac60581b5d86a091ef290dd8d5653abe1cec0c97eec4695a7dec542"
+  },
+  "marching_cubes": {
+    "url": "https://github.com/tatsy/torchmcubes",
+    "revision": "879926d0ef58e6ce0ac2630fdecb5e53af7ed3ff",
+    "license": "MPL-2.0",
+    "compiled_actual_cpu": true,
+    "cuda_compiled": false,
+    "source_modified": false,
+    "license_sha256": "393eaf2b92b3d49bea139e39b6fd205b6e99c499999986aec5554586a830dfdd",
+    "binary_sha256": "a65434228bf047719c63d00b6a9f03e2014122bc642a4fec1378ee9b4036c512"
+  },
+  "model_download": [
+    {
+      "repository": "stabilityai/TripoSR",
+      "revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+      "filename": "README.md",
+      "path": "/workspace/game-studio-runtime/neural14-research/weights/model-card.md",
+      "sha256": "5c12ef5b850c6ee2aa7454b1a264f6f8dfa95164384dbb1ab374acd917aa558b",
+      "expected_sha256": null,
+      "bytes": 2488,
+      "seconds": 0.23826136499701533,
+      "public_ungated": true
+    },
+    {
+      "repository": "stabilityai/TripoSR",
+      "revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+      "filename": "config.yaml",
+      "path": "/workspace/game-studio-runtime/neural14-research/weights/config.yaml",
+      "sha256": "74ca708ce086bf68e97709ea6b3d91f14717921c04691e84043f0eb8fcc68e62",
+      "expected_sha256": null,
+      "bytes": 987,
+      "seconds": 0.13400578699656762,
+      "public_ungated": true
+    },
+    {
+      "repository": "facebook/dino-vitb16",
+      "revision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2",
+      "filename": "config.json",
+      "path": "/workspace/game-studio-runtime/neural14-research/weights/dino-config.json",
+      "sha256": "b87c0270b97db085fd82cf114a761fd0f62ae7914fbd407c752a2260646b689c",
+      "expected_sha256": null,
+      "bytes": 454,
+      "seconds": 0.1284996989998035,
+      "public_ungated": true
+    },
+    {
+      "repository": "facebook/dino-vitb16",
+      "revision": "f205d5d8e640a89a2b8ef0369670dfc37cc07fc2",
+      "filename": "README.md",
+      "path": "/workspace/game-studio-runtime/neural14-research/weights/dino-card.md",
+      "sha256": "b6f423a18490fff28fa9a80fb2ba13c2e970c14dc532a63249e3cb3ce58c8c49",
+      "expected_sha256": null,
+      "bytes": 3261,
+      "seconds": 0.19851731100061443,
+      "public_ungated": true
+    },
+    {
+      "repository": "stabilityai/TripoSR",
+      "revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+      "filename": "model.ckpt",
+      "path": "/workspace/game-studio-runtime/neural14-research/weights/model.ckpt",
+      "sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+      "expected_sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+      "bytes": 1677246742,
+      "seconds": 82.05030039399571,
+      "public_ungated": true
+    }
+  ],
+  "local_upstream_patches": [
+    "rembg moved into optional remove_background branch to avoid second segmentation model",
+    "DINOViT config loaded from locally pinned JSON; all encoder weights come from same TripoSR checkpoint",
+    "torch.load explicitly weights_only=True"
+  ],
+  "dependency_deviations": {
+    "torch": "Existing 2.14.1+cpu",
+    "transformers": "Existing 4.57.6 vs upstream 4.35.0; actual import succeeds, forward pending",
+    "Pillow": "Existing 12.3.0 vs upstream 10.1.0",
+    "trimesh": "4.8.3 replaces upstream 4.0.5 after real GLB export failure on NumPy 2.5.4 (removed ndarray.ptp)",
+    "rembg": "Not installed; no model needed for authored RGBA input",
+    "xatlas/moderngl": "Not installed; vertex-colour export, no UV texture bake"
+  },
+  "experiment_predeclared": {
+    "images": 1,
+    "input": "APEX-authored Blender fauteuil RGBA, pending root",
+    "threads": 4,
+    "time_limit_seconds": 720,
+    "rss_limit_bytes": 21474836480,
+    "first_resolution": 64,
+    "renderer_chunk_size": 4096,
+    "threshold": 25.0,
+    "success_definition": "Real neural forward and nonempty finite mesh exported; visual fidelity remains independently judged, not presumed",
+    "resource_lease": "Existing apex.game_graphics.resources.resource_lease APEX_HOME plus /workspace/game-studio-runtime/resource.lock",
+    "alternatives_downloaded": 0
+  },
+  "future_cuda": "Same weights/code can be evaluated on CUDA with compatible PyTorch and torchmcubes; hardware unavailable, not executed",
+  "no_claims": [
+    "No inference completed yet",
+    "No fine tuning performed",
+    "No production visual quality established",
+    "No procedural substitution for unavailable neural output"
+  ]
+}

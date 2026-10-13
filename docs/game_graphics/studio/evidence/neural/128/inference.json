@@ -1,0 +1,72 @@
+{
+  "method": "neural_single_image_to_triplane_to_mesh",
+  "status": "INFERENCE_EXECUTED_QUALITY_UNQUALIFIED",
+  "device": "cpu",
+  "cuda_used": false,
+  "threads": 4,
+  "resolution": 128,
+  "density_threshold": 25.0,
+  "renderer_chunk_size": 4096,
+  "stages": {
+    "imports_hash_preprocess": {
+      "seconds": 2.6131714359944453,
+      "self_peak_rss_bytes_linux": 286109696
+    },
+    "model_load": {
+      "seconds": 4.775954061995435,
+      "self_peak_rss_bytes_linux": 3740823552
+    },
+    "neural_forward": {
+      "seconds": 13.521413399001176,
+      "self_peak_rss_bytes_linux": 3740823552
+    },
+    "neural_mesh_extraction": {
+      "seconds": 3.5788592960016103,
+      "self_peak_rss_bytes_linux": 3740823552
+    },
+    "export": {
+      "seconds": 0.0035598239992395975,
+      "self_peak_rss_bytes_linux": 3740823552
+    }
+  },
+  "input_original": "/workspace/game-studio-notes/chair14-candidate/chair-reference-rgba.png",
+  "torch_version": "2.14.1+cpu",
+  "trimesh_version": "4.8.3",
+  "torch_cuda_available": false,
+  "weight_sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+  "weights_repository": "stabilityai/TripoSR",
+  "weights_revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+  "weights_license": "MIT",
+  "input_original_sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+  "preprocessing": "upstream resize_foreground 0.85, alpha composite neutral grey; no segmentation model",
+  "model_input_sha256": "ad83c9399d5b69e504a3c409a1e3ed93442f63d60b2860dda788e870d43ca2d2",
+  "elapsed_seconds": 24.501354813000944,
+  "self_peak_rss_bytes_linux": 3740823552,
+  "mesh": {
+    "vertices": 9711,
+    "triangles": 19360,
+    "watertight": false,
+    "bounds": [
+      [
+        -0.3614993095397949,
+        -0.39823421835899353,
+        -0.40279731154441833
+      ],
+      [
+        0.41501379013061523,
+        0.38913893699645996,
+        0.5101851224899292
+      ]
+    ],
+    "vertex_color_count": 9711,
+    "glb_sha256": "2ab85f1356707a4b56fd6eb5b6d1a3d76bb90fb936fe52d868321c9013ce0d6a",
+    "ply_sha256": "3725886887596243d9fe05287e7a31b7980d3609cfa2262d98675136ef14f3da"
+  },
+  "limitations": [
+    "Single image hides back-side geometry; no fidelity guarantee",
+    "Resolution 64 or requested bounded grid; not production topology",
+    "Vertex colours, no PBR material decomposition, no UV baking",
+    "No training or weight updates",
+    "Upstream rembg disabled only for pre-masked input; DINO config local; PyTorch weights_only=True; dependencies version deviations recorded"
+  ]
+}

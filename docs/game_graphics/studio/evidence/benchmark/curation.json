@@ -1,0 +1,47 @@
+{
+  "rows": [
+    {
+      "revision": "sports_car/v1",
+      "verdict": "pass"
+    },
+    {
+      "revision": "sports_car/v2",
+      "verdict": "pass"
+    },
+    {
+      "revision": "street_building/v1",
+      "verdict": "fail"
+    },
+    {
+      "revision": "street_building/v2",
+      "verdict": "fail"
+    },
+    {
+      "revision": "street_building/v3",
+      "verdict": "pass"
+    },
+    {
+      "revision": "lounge_chair/corrected-1",
+      "verdict": "fail"
+    },
+    {
+      "revision": "lounge_chair/corrected-2",
+      "verdict": "pass"
+    },
+    {
+      "revision": "lounge_chair/defect",
+      "verdict": "fail"
+    },
+    {
+      "revision": "lounge_chair/v1",
+      "verdict": "pass"
+    },
+    {
+      "revision": "lounge_chair/v2",
+      "verdict": "pass"
+    }
+  ],
+  "binary_assets_and_native_renders_changed": false,
+  "native_processes_reexecuted_during_curation": false,
+  "changes": "Added model response receipts and portable dataset paths; rechecked hashes, existing native inspections and same frozen criteria. Original manifests/judges retained."
+}

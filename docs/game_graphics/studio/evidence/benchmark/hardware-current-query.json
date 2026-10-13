@@ -1,0 +1,13 @@
+{
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "cpu": "",
+  "logical_cpus": 5,
+  "ram_available_bytes": 34565050368,
+  "ram_total_bytes": 35743784960,
+  "cpu_max": "400000 100000",
+  "memory_max": "34359738368",
+  "cuda_available": false,
+  "cuda_device_count": 0,
+  "torch_version": "2.14.1+cpu",
+  "vram_measured": false
+}

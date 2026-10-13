@@ -1,0 +1,134 @@
+{
+  "family": "building",
+  "case_id": "street_building",
+  "criteria": {
+    "level": "prototype",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 0,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "benchmark_version": 1,
+  "scope": "measured_geometry_export_and_render_rules",
+  "defects": [
+    {
+      "id": "invalid_geometry",
+      "object": "atelier_letters",
+      "reference": "original-street-atelier-v1",
+      "correction": "Remove zero-area faces and orient a closed positive-volume surface.",
+      "expected_improvement": "Remove zero-area faces and orient a closed positive-volume surface.",
+      "confidence": 1.0,
+      "confidence_scope": "deterministic measured rule violation, not aesthetic judgment",
+      "format": "blend",
+      "degenerate_faces": 6,
+      "invalid_normals": 8,
+      "signed_volume": 0.00025023071498014626,
+      "verification": "Zero degenerate faces/invalid normals; positive finite volume."
+    },
+    {
+      "id": "invalid_geometry",
+      "object": "atelier_letters",
+      "reference": "original-street-atelier-v1",
+      "correction": "Remove zero-area faces and orient a closed positive-volume surface.",
+      "expected_improvement": "Remove zero-area faces and orient a closed positive-volume surface.",
+      "confidence": 1.0,
+      "confidence_scope": "deterministic measured rule violation, not aesthetic judgment",
+      "format": "glb",
+      "degenerate_faces": 6,
+      "invalid_normals": 8,
+      "signed_volume": 0.00025023071498014626,
+      "verification": "Zero degenerate faces/invalid normals; positive finite volume."
+    },
+    {
+      "id": "frame_clipping",
+      "object": "scene",
+      "reference": "original-street-atelier-v1",
+      "correction": "Expand the camera frame to keep the entire subject away from image edges.",
+      "expected_improvement": "Expand the camera frame to keep the entire subject away from image edges.",
+      "confidence": 1.0,
+      "confidence_scope": "deterministic measured rule violation, not aesthetic judgment",
+      "file": "silhouette_front_three_quarter.png",
+      "measured": 121,
+      "verification": "Native subject silhouette has no occupied boundary pixels."
+    },
+    {
+      "id": "frame_clipping",
+      "object": "scene",
+      "reference": "original-street-atelier-v1",
+      "correction": "Expand the camera frame to keep the entire subject away from image edges.",
+      "expected_improvement": "Expand the camera frame to keep the entire subject away from image edges.",
+      "confidence": 1.0,
+      "confidence_scope": "deterministic measured rule violation, not aesthetic judgment",
+      "file": "silhouette_rear_three_quarter.png",
+      "measured": 66,
+      "verification": "Native subject silhouette has no occupied boundary pixels."
+    }
+  ],
+  "unavailable": [],
+  "facts": {
+    "blend": {
+      "triangles": 29470,
+      "dimensions": [
+        5.0,
+        4.335000038146973,
+        7.049999713897705
+      ],
+      "objects": 143,
+      "materials": 6
+    },
+    "glb": {
+      "triangles": 29470,
+      "dimensions": [
+        5.0,
+        4.335000038146973,
+        7.049999713897705
+      ],
+      "objects": 143,
+      "materials": 6
+    },
+    "images": {
+      "front_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 52.96681218266709,
+        "subject_fraction": 0.44144820601851853,
+        "subject_pixels_at_image_boundary": 121
+      },
+      "rear_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 51.52953576562489,
+        "subject_fraction": 0.4381409143518519,
+        "subject_pixels_at_image_boundary": 66
+      },
+      "side": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 61.44759394078043,
+        "subject_fraction": 0.3088324652777778,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "front": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 64.09052410905718,
+        "subject_fraction": 0.3317028356481482,
+        "subject_pixels_at_image_boundary": 0
+      }
+    }
+  },
+  "advisory": [
+    "Shader parameters and material count do not certify convincing PBR appearance."
+  ],
+  "aesthetic_certification": false,
+  "limits": [
+    "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+    "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+    "Unreal import and runtime performance have not been measured by this oracle."
+  ],
+  "verdict": "fail"
+}

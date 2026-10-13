@@ -1,0 +1,47 @@
+{
+  "vertices_identical": false,
+  "faces_identical": false,
+  "vertex_colours_identical": false,
+  "triangles": [
+    19360,
+    19360
+  ],
+  "vertices": [
+    9711,
+    9711
+  ],
+  "bounds": [
+    [
+      [
+        -0.3614993095397949,
+        -0.39823421835899353,
+        -0.40279731154441833
+      ],
+      [
+        0.41501379013061523,
+        0.38913893699645996,
+        0.5101851224899292
+      ]
+    ],
+    [
+      [
+        -0.3614993095397949,
+        -0.39823421835899353,
+        -0.40279731154441833
+      ],
+      [
+        0.41501379013061523,
+        0.38913893699645996,
+        0.5101851224899292
+      ]
+    ]
+  ],
+  "max_nearest_vertex_distance": 0.0,
+  "same_triangle_coordinate_multiset": true,
+  "canonical_triangle_sha256": [
+    "b5791c31491ab88d46c402d2b17b6214630f185b09d53b1c2d93ef4aaffea5b3",
+    "b5791c31491ab88d46c402d2b17b6214630f185b09d53b1c2d93ef4aaffea5b3"
+  ],
+  "colour_max_difference_under_nearest_position": 0,
+  "note": "CPU marching cubes may emit vertices/faces in a different order; compare geometry, not just binary identity."
+}

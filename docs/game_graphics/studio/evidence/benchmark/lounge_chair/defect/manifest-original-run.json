@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "family": "chair",
+  "case_id": "lounge_chair",
+  "units": "m",
+  "files": [
+    {
+      "path": "asset.blend",
+      "sha256": "a633b7a5a816d14295632d2a03c87772317649cb5f077eff442ff423504a60d5",
+      "bytes": 2211440,
+      "role": "blender_project"
+    },
+    {
+      "path": "asset.glb",
+      "sha256": "112355e06698706e4aa533ca152b0081aec8bc99d0dd467ba49da860e933ffd8",
+      "bytes": 510252,
+      "role": "exchange"
+    },
+    {
+      "path": "blend-inspection.json",
+      "sha256": "5f13ea350da3b5502237358211897e62ca9c2329acb4e0f01e08fb447f93e7c3",
+      "bytes": 25865,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.log",
+      "sha256": "8f0687933add12053043230b040bbd4b38bc3d6b6c042782537374bc00315a63",
+      "bytes": 119,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.resources.json",
+      "sha256": "a6d792b47e96fb222b97300454b164721b332178f55e4fbe404de527e46e49a0",
+      "bytes": 2685,
+      "role": "evidence"
+    },
+    {
+      "path": "build.log",
+      "sha256": "a2fcd6fe2256ddf59df6d3c99edfcc0839e9cd210eb2b87d029d3db684504713",
+      "bytes": 79256,
+      "role": "evidence"
+    },
+    {
+      "path": "build.resources.json",
+      "sha256": "f3c9398ecfa8a68b9f0789e599e268da75b6815405b03986010499451ff3aba0",
+      "bytes": 93914,
+      "role": "evidence"
+    },
+    {
+      "path": "calibration.json",
+      "sha256": "c48f561de4fc6f8d15450730f281fe24812ff414bd948237aa232e9c1656c4db",
+      "bytes": 91575,
+      "role": "calibration"
+    },
+    {
+      "path": "execution.json",
+      "sha256": "4c360b5af63b39f5661cf02baf1fc1fb074ca39a911f6b4d25de14d94193a793",
+      "bytes": 68343,
+      "role": "evidence"
+    },
+    {
+      "path": "front.png",
+      "sha256": "a2a48cafe76878f5eb7528c25c53bcc0fab796623cdb89003b32799e2e7c913c",
+      "bytes": 792971,
+      "view": "front",
+      "role": "view"
+    },
+    {
+      "path": "front_three_quarter.png",
+      "sha256": "54bb30097b96be4b16f6323fda35def0e8ec287927e7f3f92db270ef2a40855e",
+      "bytes": 1071017,
+      "view": "front_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "glb-inspection.json",
+      "sha256": "4d245b6813e3af15b96d6ba8f52bd7c302c38b8925e04eca9e3fa0fc63dfa816",
+      "bytes": 25841,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.log",
+      "sha256": "6f931d6e1e88dbf5d796fce196df632357a55895d1c5d6fbdb733509ba34cebe",
+      "bytes": 1850,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.resources.json",
+      "sha256": "e2571d151f682c535cc80be4b95409e3c14b8b7c03d8a36982c2cad35fe9dd98",
+      "bytes": 4510,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy-before.json",
+      "sha256": "bf8826e8cf62a91266185e5f56f5e7c29ecb2d3c726da3ced712fd60d96eb54c",
+      "bytes": 29327,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy.json",
+      "sha256": "1568e16da141c82d04561236bd55565b28538436a0e4611eb0953d90c1f67ea1",
+      "bytes": 29343,
+      "role": "evidence"
+    },
+    {
+      "path": "id_front.png",
+      "sha256": "d38618ab6179816668729cce26a94b72546f9e0ccbb83901b4d20d7639e8edb1",
+      "bytes": 344595,
+      "role": "evidence"
+    },
+    {
+      "path": "id_rear.png",
+      "sha256": "580f5462e3e7ab05256c871d59586219fca82ac057d1953ecba92a1e3ea33666",
+      "bytes": 344588,
+      "role": "evidence"
+    },
+    {
+      "path": "operation-trace.json",
+      "sha256": "a43520e81a290ef1c2c200aed6bfb82e51b33870dccc801e2748c4738ed32272",
+      "bytes": 2463,
+      "role": "evidence"
+    },
+    {
+      "path": "plan/plan.json",
+      "sha256": "ca495330c602fdaa7613af2e9c4acaca7ac194c7e3c39f9a93fff8abb93c1fe3",
+      "bytes": 316,
+      "role": "evidence"
+    },
+    {
+      "path": "plan/tool-result.json",
+      "sha256": "9d71ee56d0b85f3ea0431d47b4e916b6d6684d72448d83dde26251b9a7daf416",
+      "bytes": 378,
+      "role": "evidence"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "df39e7caf90bce7668040bd6dc0ee4df914ece29d683d5ff2edff978af12b0b6",
+      "bytes": 744,
+      "role": "evidence"
+    },
+    {
+      "path": "rear_three_quarter.png",
+      "sha256": "c6ac00125068b95ab682e8c271a49cf665c175d5fbbd78ac4572d928917b91b3",
+      "bytes": 1028291,
+      "view": "rear_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "render-settings.json",
+      "sha256": "473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4",
+      "bytes": 4845,
+      "role": "evidence"
+    },
+    {
+      "path": "side.png",
+      "sha256": "6b6124f700f6f6e9619eeae62666278f5ffba026616f4de4718526571de934e2",
+      "bytes": 996821,
+      "view": "side",
+      "role": "view"
+    },
+    {
+      "path": "silhouette_front.png",
+      "sha256": "84b8592bb232af15e3316b63881f8278c9726f827c56fd22f7957f53f2a4c06c",
+      "bytes": 290743,
+      "view": "front",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_front_three_quarter.png",
+      "sha256": "31a567fc54d3bde51f7da501c702578f91427261be4b14732accc4cd98935e83",
+      "bytes": 275224,
+      "view": "front_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_rear_three_quarter.png",
+      "sha256": "9c2f5d92ca0fd2552d2120abf297a84d64a665d8ed10645d62a86acd7cae8b34",
+      "bytes": 298084,
+      "view": "rear_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_side.png",
+      "sha256": "1cc24b48b7d1991eab1acbc9594cf16538caa9dc1b607c0372dd9a50277098ce",
+      "bytes": 306751,
+      "view": "side",
+      "role": "silhouette"
+    },
+    {
+      "path": "visual-alignment.json",
+      "sha256": "357738337c2958c948ea4ecdd7d3d7d7d20e846976cf4b27c416266f711ddd5e",
+      "bytes": 8218,
+      "role": "evidence"
+    }
+  ],
+  "geometry_method": "procedural_blender",
+  "pbr_texture_baking": false,
+  "limits": [
+    "procedural shaders are not baked into GLB",
+    "Unreal import not executed"
+  ]
+}

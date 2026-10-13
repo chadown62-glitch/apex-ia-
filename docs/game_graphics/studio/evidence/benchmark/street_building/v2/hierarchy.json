@@ -1,0 +1,6202 @@
+{
+  "foundation": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.11999999731779099
+    ],
+    "dimensions_m": [
+      5.0,
+      3.700000047683716,
+      0.23999999463558197
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "58238dd2704039a0a24b95d747a6fb23976affa06093d31d724b2030b9746967"
+  },
+  "facade": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.10000000149011612,
+      3.380000114440918
+    ],
+    "dimensions_m": [
+      4.599999904632568,
+      3.200000047683716,
+      6.449999809265137
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 139,
+    "geometry_sha256": "20805d350f5fba8ededc439d0d1f94f79610e4ff2d6829d400abcdf5501af220"
+  },
+  "brick_0_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.6399999856948853,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.1299999952316284,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.6200000047683716,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4000000059604645,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.9100000262260437,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.4199999570846558,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_0_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      2.200000047683716
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_1_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      2.4200000762939453
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_1_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      2.4200000762939453
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_2_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      2.640000104904175
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_2_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      2.640000104904175
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_2_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      2.640000104904175
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_3_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      2.859999895095825
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_3_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      2.859999895095825
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_4_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      3.0799999237060547
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_4_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      3.0799999237060547
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_4_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      3.0799999237060547
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_5_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      3.299999952316284
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_5_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      3.299999952316284
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_6_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      3.5199999809265137
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_6_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      3.5199999809265137
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_6_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      3.5199999809265137
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_7_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      3.740000009536743
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_7_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      3.740000009536743
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.6399999856948853,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.1299999952316284,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.6200000047683716,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4000000059604645,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.9100000262260437,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.4199999570846558,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_8_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      3.9600000381469727
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.909999966621399,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.399999976158142,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.8899999856948853,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.3799999952316284,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.6399999856948853,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.149999976158142,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.659999966621399,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_9_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      4.179999828338623
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_10_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      4.400000095367432
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_10_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      4.400000095367432
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_10_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      4.400000095367432
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_11_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      4.619999885559082
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_11_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      4.619999885559082
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_12_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      4.840000152587891
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_12_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      4.840000152587891
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_12_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      4.840000152587891
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_13_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      5.059999942779541
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_13_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      5.059999942779541
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_14_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      5.28000020980835
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_14_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      5.28000020980835
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_14_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      5.28000020980835
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_15_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      5.5
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_15_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      5.5
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_16_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1500000953674316,
+      -1.5119999647140503,
+      5.71999979019165
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_16_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.10999999940395355,
+      -1.5119999647140503,
+      5.71999979019165
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_16_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.9299999475479126,
+      -1.5119999647140503,
+      5.71999979019165
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_17_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.12999999523162842,
+      -1.5119999647140503,
+      5.940000057220459
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "brick_17_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1700000762939453,
+      -1.5119999647140503,
+      5.940000057220459
+    ],
+    "dimensions_m": [
+      0.4699999988079071,
+      0.03500000014901161,
+      0.1850000023841858
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "09ef2bd4c780d152d1c1566482dd720f1f18916cc6355a492862c9c24a53c331"
+  },
+  "base_course": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.019999999552965164,
+      0.3799999952316284
+    ],
+    "dimensions_m": [
+      4.820000171661377,
+      3.5199999809265137,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "000c58ddd395a9342a2d6d05157b76004222c456b6e006b858b36506fcac20b8"
+  },
+  "shop_header": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.019999999552965164,
+      2.049999952316284
+    ],
+    "dimensions_m": [
+      4.820000171661377,
+      3.5199999809265137,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "000c58ddd395a9342a2d6d05157b76004222c456b6e006b858b36506fcac20b8"
+  },
+  "middle_course": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.019999999552965164,
+      4.199999809265137
+    ],
+    "dimensions_m": [
+      4.820000171661377,
+      3.5199999809265137,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "000c58ddd395a9342a2d6d05157b76004222c456b6e006b858b36506fcac20b8"
+  },
+  "cornice": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -0.019999999552965164,
+      6.650000095367432
+    ],
+    "dimensions_m": [
+      4.820000171661377,
+      3.5199999809265137,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "000c58ddd395a9342a2d6d05157b76004222c456b6e006b858b36506fcac20b8"
+  },
+  "parapet": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.10000000149011612,
+      6.840000152587891
+    ],
+    "dimensions_m": [
+      4.619999885559082,
+      3.25,
+      0.20000000298023224
+    ],
+    "materials": [
+      "warm_masonry"
+    ],
+    "pbr": {
+      "warm_masonry": {
+        "Base Color": {
+          "value": [
+            0.4300000071525574,
+            0.18000000715255737,
+            0.09000000357627869,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "b1a6ee6cde68b436ec85caa92ce2dd3423c7ba66ca3ccfbe0b30b93f0ee1e127"
+  },
+  "roof_cap": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.10000000149011612,
+      6.989999771118164
+    ],
+    "dimensions_m": [
+      4.900000095367432,
+      3.549999952316284,
+      0.11999999731779099
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "1d6921ba16d2a0f80f8fb5ffc348a99bb39c643c3cdcfc2363a9253c64358dc6"
+  },
+  "shop_window": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.6600000262260437,
+      -1.399999976158142,
+      1.1699999570846558
+    ],
+    "dimensions_m": [
+      2.5299999713897705,
+      0.04500000178813934,
+      1.4299999475479126
+    ],
+    "materials": [
+      "architectural_glass"
+    ],
+    "pbr": {
+      "architectural_glass": {
+        "Base Color": {
+          "value": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.11999999731779099,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.2800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 80,
+    "geometry_sha256": "a091669a26adb9acd99856e3c83f615b947144a57f428c263a291bd8976e52e3"
+  },
+  "entry_door": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.409999966621399,
+      -1.590000033378601,
+      1.1399999856948853
+    ],
+    "dimensions_m": [
+      0.9200000166893005,
+      0.10999999940395355,
+      1.5199999809265137
+    ],
+    "materials": [
+      "oak_door"
+    ],
+    "pbr": {
+      "oak_door": {
+        "Base Color": {
+          "value": [
+            0.18000000715255737,
+            0.07000000029802322,
+            0.02199999988079071,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.5199999809265137,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "e9e7a764146fa9a7d5fed1116ee0fe4e33f895f1be075eadebbdf59127a0817c"
+  },
+  "door_glazing": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.409999966621399,
+      -1.6549999713897705,
+      1.2799999713897705
+    ],
+    "dimensions_m": [
+      0.6499999761581421,
+      0.03500000014901161,
+      1.0199999809265137
+    ],
+    "materials": [
+      "architectural_glass"
+    ],
+    "pbr": {
+      "architectural_glass": {
+        "Base Color": {
+          "value": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.11999999731779099,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.2800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "2f1029c666a58278d2c4ea3796574ea13b7c51ee19ad0c421ac699c41c4b3026"
+  },
+  "shop_pier_98": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.0199999809265137,
+      -1.5800000429153442,
+      1.1399999856948853
+    ],
+    "dimensions_m": [
+      0.17000000178813934,
+      0.1899999976158142,
+      1.7000000476837158
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "1ddfe8d43abfd301cb86e265c87e8ff95d1ac772c5366bce09b1a480e1ff775d"
+  },
+  "shop_pier_366": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.6600000262260437,
+      -1.5800000429153442,
+      1.1399999856948853
+    ],
+    "dimensions_m": [
+      0.17000000178813934,
+      0.1899999976158142,
+      1.7000000476837158
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "1ddfe8d43abfd301cb86e265c87e8ff95d1ac772c5366bce09b1a480e1ff775d"
+  },
+  "shop_pier_507": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.069999933242798,
+      -1.5800000429153442,
+      1.1399999856948853
+    ],
+    "dimensions_m": [
+      0.17000000178813934,
+      0.1899999976158142,
+      1.7000000476837158
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "1ddfe8d43abfd301cb86e265c87e8ff95d1ac772c5366bce09b1a480e1ff775d"
+  },
+  "shop_mullion_152": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.4800000190734863,
+      -1.6019999980926514,
+      1.159999966621399
+    ],
+    "dimensions_m": [
+      0.04500000178813934,
+      0.04500000178813934,
+      1.399999976158142
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "e189143c5b2011a445af35ac6c4922e03bdd15bc147a2a8192227b291f1559b5"
+  },
+  "shop_mullion_229": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.699999988079071,
+      -1.6019999980926514,
+      1.159999966621399
+    ],
+    "dimensions_m": [
+      0.04500000178813934,
+      0.04500000178813934,
+      1.399999976158142
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "e189143c5b2011a445af35ac6c4922e03bdd15bc147a2a8192227b291f1559b5"
+  },
+  "shop_mullion_308": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.07999999821186066,
+      -1.6019999980926514,
+      1.159999966621399
+    ],
+    "dimensions_m": [
+      0.04500000178813934,
+      0.04500000178813934,
+      1.399999976158142
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "e189143c5b2011a445af35ac6c4922e03bdd15bc147a2a8192227b291f1559b5"
+  },
+  "door_handle": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.7000000476837158,
+      -1.7100000381469727,
+      1.1100000143051147
+    ],
+    "dimensions_m": [
+      0.05000000074505806,
+      0.05000000074505806,
+      0.25999999046325684
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "19468c83d2864c0f9ebf947a4b051c273275909936d537389565a1ecf8a60c7a"
+  },
+  "window_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.399999976158142,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      1.100000023841858,
+      0.054999999701976776,
+      1.2899999618530273
+    ],
+    "materials": [
+      "architectural_glass"
+    ],
+    "pbr": {
+      "architectural_glass": {
+        "Base Color": {
+          "value": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.11999999731779099,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.2800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "570dca821bbb4d1dc8a4d5cc7b433a986d21fbb2e3e322c65721dc1122410269"
+  },
+  "window_left_jamb_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.7100000381469727,
+      -1.6200000047683716,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "window_left_jamb_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4699999988079071,
+      -1.6200000047683716,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "window_left_lintel_bottom": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6200000047683716,
+      2.319999933242798
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "window_left_lintel_top": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6200000047683716,
+      3.7799999713897705
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "window_left_mullion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6119999885559082,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      0.0430000014603138,
+      0.03999999910593033,
+      1.309999942779541
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e22535b6dd79fa751637f2825561363f03478534287ce15d45deedaeb51e925"
+  },
+  "window_left_crossbar": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6169999837875366,
+      3.140000104904175
+    ],
+    "dimensions_m": [
+      1.1200000047683716,
+      0.03999999910593033,
+      0.0430000014603138
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "2604ee36a0fd0da63c6888fdea13b60f34b34a2ad25d7ea1f35f9681b0ff1774"
+  },
+  "window_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.399999976158142,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      1.100000023841858,
+      0.054999999701976776,
+      1.2899999618530273
+    ],
+    "materials": [
+      "architectural_glass"
+    ],
+    "pbr": {
+      "architectural_glass": {
+        "Base Color": {
+          "value": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.11999999731779099,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.2800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "570dca821bbb4d1dc8a4d5cc7b433a986d21fbb2e3e322c65721dc1122410269"
+  },
+  "window_right_jamb_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4699999988079071,
+      -1.6200000047683716,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "window_right_jamb_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.7100000381469727,
+      -1.6200000047683716,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "window_right_lintel_bottom": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6200000047683716,
+      2.319999933242798
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "window_right_lintel_top": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6200000047683716,
+      3.7799999713897705
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "window_right_mullion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6119999885559082,
+      3.049999952316284
+    ],
+    "dimensions_m": [
+      0.0430000014603138,
+      0.03999999910593033,
+      1.309999942779541
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e22535b6dd79fa751637f2825561363f03478534287ce15d45deedaeb51e925"
+  },
+  "window_right_crossbar": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6169999837875366,
+      3.140000104904175
+    ],
+    "dimensions_m": [
+      1.1200000047683716,
+      0.03999999910593033,
+      0.0430000014603138
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "2604ee36a0fd0da63c6888fdea13b60f34b34a2ad25d7ea1f35f9681b0ff1774"
+  },
+  "upper_window_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.399999976158142,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      1.100000023841858,
+      0.054999999701976776,
+      1.2899999618530273
+    ],
+    "materials": [
+      "architectural_glass"
+    ],
+    "pbr": {
+      "architectural_glass": {
+        "Base Color": {
+          "value": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.11999999731779099,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.2800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "570dca821bbb4d1dc8a4d5cc7b433a986d21fbb2e3e322c65721dc1122410269"
+  },
+  "upper_window_left_jamb_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.7100000381469727,
+      -1.6200000047683716,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "upper_window_left_jamb_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.4699999988079071,
+      -1.6200000047683716,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "upper_window_left_lintel_bottom": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6200000047683716,
+      4.46999979019165
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "upper_window_left_lintel_top": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6200000047683716,
+      5.929999828338623
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "upper_window_left_mullion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6119999885559082,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      0.0430000014603138,
+      0.03999999910593033,
+      1.309999942779541
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e22535b6dd79fa751637f2825561363f03478534287ce15d45deedaeb51e925"
+  },
+  "upper_window_left_crossbar": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.090000033378601,
+      -1.6169999837875366,
+      5.289999961853027
+    ],
+    "dimensions_m": [
+      1.1200000047683716,
+      0.03999999910593033,
+      0.0430000014603138
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "2604ee36a0fd0da63c6888fdea13b60f34b34a2ad25d7ea1f35f9681b0ff1774"
+  },
+  "upper_window_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.399999976158142,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      1.100000023841858,
+      0.054999999701976776,
+      1.2899999618530273
+    ],
+    "materials": [
+      "architectural_glass"
+    ],
+    "pbr": {
+      "architectural_glass": {
+        "Base Color": {
+          "value": [
+            0.03500000014901161,
+            0.0949999988079071,
+            0.11999999731779099,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.11999999731779099,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.2800000011920929,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "570dca821bbb4d1dc8a4d5cc7b433a986d21fbb2e3e322c65721dc1122410269"
+  },
+  "upper_window_right_jamb_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.4699999988079071,
+      -1.6200000047683716,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "upper_window_right_jamb_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.7100000381469727,
+      -1.6200000047683716,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      0.14000000059604645,
+      0.17000000178813934,
+      1.5399999618530273
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "8d664daaa4c31dced46cecfbe8014f50cfb7e13fe58bc8db4c0ad87a2fba9129"
+  },
+  "upper_window_right_lintel_bottom": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6200000047683716,
+      4.46999979019165
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "upper_window_right_lintel_top": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6200000047683716,
+      5.929999828338623
+    ],
+    "dimensions_m": [
+      1.3899999856948853,
+      0.20000000298023224,
+      0.14000000059604645
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "110e66952ce7e3660824c2018607503f6037cd760c773f12eb0351c905317d52"
+  },
+  "upper_window_right_mullion": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6119999885559082,
+      5.199999809265137
+    ],
+    "dimensions_m": [
+      0.0430000014603138,
+      0.03999999910593033,
+      1.309999942779541
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "6e22535b6dd79fa751637f2825561363f03478534287ce15d45deedaeb51e925"
+  },
+  "upper_window_right_crossbar": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.090000033378601,
+      -1.6169999837875366,
+      5.289999961853027
+    ],
+    "dimensions_m": [
+      1.1200000047683716,
+      0.03999999910593033,
+      0.0430000014603138
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "2604ee36a0fd0da63c6888fdea13b60f34b34a2ad25d7ea1f35f9681b0ff1774"
+  },
+  "balcony_floor": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -1.9199999570846558,
+      2.319999933242798
+    ],
+    "dimensions_m": [
+      3.7300000190734863,
+      1.0800000429153442,
+      0.18000000715255737
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "74d24726083ce554f7b0c27273a4dc04f785f442f349347afcb8563d94dd9bc3"
+  },
+  "balcony_top_rail": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      3.5999999046325684,
+      0.07000017166137695,
+      0.07000017166137695
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 37,
+    "geometry_sha256": "a79115ee0dce0668e36d62847f848754875b7370de73386a3c1af0612345f5d3"
+  },
+  "balcony_side_rail_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.06999993324279785,
+      0.8000000715255737,
+      0.07000017166137695
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 35,
+    "geometry_sha256": "2cf9ea72b275a5305ed6f3766e5e06ef07ac1d0996c9d1f04fd8886e81f7c796"
+  },
+  "balcony_side_rail_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "dimensions_m": [
+      0.06999993324279785,
+      0.8000000715255737,
+      0.07000017166137695
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 35,
+    "geometry_sha256": "7e4acc7761b7216d712e743ed651eec492064afce2c61e94b4d0a48e0b44ba4f"
+  },
+  "baluster_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.7699999809265137,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.5740000009536743,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.378000020980835,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.1820000410079956,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.9860000014305115,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_5": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.7900000214576721,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_6": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.593999981880188,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_7": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.39800000190734863,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_8": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.20200000703334808,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_9": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -0.006000000052154064,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_10": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.1899999976158142,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_11": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.38600000739097595,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_12": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.5820000171661377,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_13": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.777999997138977,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_14": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.9739999771118164,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_15": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.1699999570846558,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_16": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.3660000562667847,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_17": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.562000036239624,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "baluster_18": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.7580000162124634,
+      -2.390000104904175,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "side_baluster_21_168": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.7799999713897705,
+      -1.6799999475479126,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "side_baluster_21_206": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -1.7799999713897705,
+      -2.059999942779541,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "side_baluster_378_168": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.7799999713897705,
+      -1.6799999475479126,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "side_baluster_378_206": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      1.7799999713897705,
+      -2.059999942779541,
+      2.7899999618530273
+    ],
+    "dimensions_m": [
+      0.02800000086426735,
+      0.02800000086426735,
+      0.7799999713897705
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 64,
+    "geometry_sha256": "9489c33e669092e2158e2f03a00c5ed5a5efe5688800e2b6356e7c7293e14e21"
+  },
+  "lamp_mount_83": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1600000858306885,
+      -1.7000000476837158,
+      1.649999976158142
+    ],
+    "dimensions_m": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.23000000417232513
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "eb7b67051a0085332303d27403795db999ae2f6ff32525c2ff897f178f81893b"
+  },
+  "entrance_lamp_83": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.1600000858306885,
+      -1.7699999809265137,
+      1.659999966621399
+    ],
+    "dimensions_m": [
+      0.12999993562698364,
+      0.13999998569488525,
+      0.20000000298023224
+    ],
+    "materials": [
+      "warm_lamp"
+    ],
+    "pbr": {
+      "warm_lamp": {
+        "Base Color": {
+          "value": [
+            0.949999988079071,
+            0.6200000047683716,
+            0.2199999988079071,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.25,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.07999999821186066,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "2246c0642325561ab3fdd25838d252cad4fba2f65084e63df66dddf0e2dc34f0"
+  },
+  "lamp_mount_516": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1600000858306885,
+      -1.7000000476837158,
+      1.649999976158142
+    ],
+    "dimensions_m": [
+      0.11999999731779099,
+      0.11999999731779099,
+      0.23000000417232513
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "eb7b67051a0085332303d27403795db999ae2f6ff32525c2ff897f178f81893b"
+  },
+  "entrance_lamp_516": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.1600000858306885,
+      -1.7699999809265137,
+      1.659999966621399
+    ],
+    "dimensions_m": [
+      0.12999993562698364,
+      0.13999998569488525,
+      0.20000000298023224
+    ],
+    "materials": [
+      "warm_lamp"
+    ],
+    "pbr": {
+      "warm_lamp": {
+        "Base Color": {
+          "value": [
+            0.949999988079071,
+            0.6200000047683716,
+            0.2199999988079071,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.25,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.07999999821186066,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "af33fa1d5b4c3c5fe27cc34c4a20f9dfbabf50448357387b2a0bbc30c39c7199"
+  },
+  "shop_sign": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -1.659999966621399,
+      1.940000057220459
+    ],
+    "dimensions_m": [
+      2.619999885559082,
+      0.05999999865889549,
+      0.20000000298023224
+    ],
+    "materials": [
+      "ironwork"
+    ],
+    "pbr": {
+      "ironwork": {
+        "Base Color": {
+          "value": [
+            0.02500000037252903,
+            0.03500000014901161,
+            0.03999999910593033,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.3499999940395355,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.75,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "aed3e31e3f8cc0755b3c856e140552b117999766b666a51880f7e8bc032d9a60"
+  },
+  "atelier_letters": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      0.0,
+      -1.7039999961853027,
+      1.8949999809265137
+    ],
+    "dimensions_m": [
+      0.9575799703598022,
+      0.08983000367879868,
+      0.01600000075995922
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 332,
+    "geometry_sha256": "e4b4a55e4b3da91f54b06be8f1bf7f7927972989569a8bf20400d637a6bb1d66"
+  },
+  "planter_left": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.0999999046325684,
+      -1.940000057220459,
+      0.4699999988079071
+    ],
+    "dimensions_m": [
+      0.4000000059604645,
+      0.4000000059604645,
+      0.44999998807907104
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "3c737fdd78dd2dbc59982f1c6debc5f34e951f703af61446a5d1992fb4829308"
+  },
+  "topiary_left_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.140000104904175,
+      -1.940000057220459,
+      0.8600000143051147
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "2e9db9a34c4655910c38078038e22b39bee3774c2fbee112f5edf3ca8f890d4b"
+  },
+  "topiary_left_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.059999942779541,
+      -1.940000057220459,
+      0.925000011920929
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "c454a96125339eb8668941025e8fe6116a1e9ec864821eb23d50bdd6c65db5ab"
+  },
+  "topiary_left_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.140000104904175,
+      -1.940000057220459,
+      0.9900000095367432
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "fbf4d2190e3dbac6f839681657a65345837e1cd16330ada3af0747a2537f6909"
+  },
+  "topiary_left_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.059999942779541,
+      -1.940000057220459,
+      1.0549999475479126
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "f3d4a6fc9f97d6175e87bb58f8d59e5592067ab9949d6928014ee96b2435c572"
+  },
+  "topiary_left_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      -2.140000104904175,
+      -1.940000057220459,
+      1.1200000047683716
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "f3d4a6fc9f97d6175e87bb58f8d59e5592067ab9949d6928014ee96b2435c572"
+  },
+  "planter_right": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.0999999046325684,
+      -1.940000057220459,
+      0.4699999988079071
+    ],
+    "dimensions_m": [
+      0.4000000059604645,
+      0.4000000059604645,
+      0.44999998807907104
+    ],
+    "materials": [
+      "limestone"
+    ],
+    "pbr": {
+      "limestone": {
+        "Base Color": {
+          "value": [
+            0.6499999761581421,
+            0.5899999737739563,
+            0.46000000834465027,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.6499999761581421,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 96,
+    "geometry_sha256": "3c737fdd78dd2dbc59982f1c6debc5f34e951f703af61446a5d1992fb4829308"
+  },
+  "topiary_right_0": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.059999942779541,
+      -1.940000057220459,
+      0.8600000143051147
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "df78c108a5a206e3961a5cfa51fe9efbf13a020c219131d7751f2dcf7f1b84fa"
+  },
+  "topiary_right_1": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.140000104904175,
+      -1.940000057220459,
+      0.925000011920929
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "ac1291fa481e403afbba3060595a83a710f2b72ea171332987264457c4c77bde"
+  },
+  "topiary_right_2": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.059999942779541,
+      -1.940000057220459,
+      0.9900000095367432
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "df78c108a5a206e3961a5cfa51fe9efbf13a020c219131d7751f2dcf7f1b84fa"
+  },
+  "topiary_right_3": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.140000104904175,
+      -1.940000057220459,
+      1.0549999475479126
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "df78c108a5a206e3961a5cfa51fe9efbf13a020c219131d7751f2dcf7f1b84fa"
+  },
+  "topiary_right_4": {
+    "type": "MESH",
+    "parent": null,
+    "location_m": [
+      2.059999942779541,
+      -1.940000057220459,
+      1.1200000047683716
+    ],
+    "dimensions_m": [
+      0.2999998927116394,
+      0.2799999713897705,
+      0.27000001072883606
+    ],
+    "materials": [
+      "foliage"
+    ],
+    "pbr": {
+      "foliage": {
+        "Base Color": {
+          "value": [
+            0.05999999865889549,
+            0.11999999731779099,
+            0.041999999433755875,
+            1.0
+          ],
+          "linked": false
+        },
+        "Roughness": {
+          "value": 0.800000011920929,
+          "linked": false
+        },
+        "Metallic": {
+          "value": 0.0,
+          "linked": false
+        }
+      }
+    },
+    "vertices": 266,
+    "geometry_sha256": "0e2337bcd953a4a6c6f1346af756ed71de5ecfe827b17d0f31e77a68b46ecd5a"
+  }
+}
