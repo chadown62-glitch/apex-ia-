@@ -139,6 +139,8 @@ def inspect(job, plan):
 
 def begin_capture(job, observation):
     output = Path(job["capture_root"])
+    if output.exists() and any(output.iterdir()):
+        raise RuntimeError("stale_capture_output_refused")
     output.mkdir(exist_ok=True)
     subsystem = unreal.get_editor_subsystem(unreal.EditorActorSubsystem)
     # Inspector's camera is temporary and never saved into the artist's level.
@@ -204,6 +206,8 @@ if __name__ == "__main__":
                     {
                         "status": "error",
                         "nonce": job["nonce"],
+                        "plan_sha256": job["plan_sha256"],
+                        "engine_version": unreal.SystemLibrary.get_engine_version(),
                         "error": type(exc).__name__ + ": " + str(exc),
                     },
                     indent=2,

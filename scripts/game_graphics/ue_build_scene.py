@@ -13,7 +13,7 @@ sys.path.insert(0, str(PROJECT / "Tools"))
 from scene_contract import SHAPES, ScenePlan  # noqa: E402 - trusted private copy verified by host
 
 
-def load_job():
+def load_job(expected_mode="build"):
     normal = str(PROJECT).replace("\\", "/").lower().replace("//?/", "").rstrip("/")
     if any(normal == p or normal.startswith(p + "/") for p in ("c:/gameproject", "/mnt/c/gameproject")):
         raise RuntimeError("protected_personal_project")
@@ -26,7 +26,7 @@ def load_job():
     if (
         job["nonce"] != marker["nonce"]
         or job["kind"] != "APEX-isolated-graphics-scene"
-        or job["mode"] != "build"
+        or job["mode"] != expected_mode
     ):
         raise RuntimeError("invalid_graphics_project_marker")
     if (
@@ -160,6 +160,8 @@ if __name__ == "__main__":
                     {
                         "status": "error",
                         "nonce": job["nonce"],
+                        "plan_sha256": job["plan_sha256"],
+                        "engine_version": unreal.SystemLibrary.get_engine_version(),
                         "error": type(exc).__name__ + ": " + str(exc),
                     },
                     indent=2,

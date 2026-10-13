@@ -1,5 +1,49 @@
 # Rapport 9 bis — Game Graphics dans Unreal Engine — 12 octobre 2026
 
+## Suite du 13 octobre 2026 : qualification Windows préparée, moteur BLOCKED
+
+Accès revérifié : l'exécution de commandes s'effectue sur Linux x86_64. Aucun exécuteur
+Windows/WinRM/desktop distant n'est exposé parmi les outils de la session ; `cmd.exe`,
+`powershell.exe`, `wsl.exe`, UnrealEditor et NVIDIA sont absents du PATH. La tentative de
+lecture du terminal desktop a expiré. Aucun accès effectif au PC Windows 11/UE5.8/RTX4060Ti
+n'est établi. La déclaration de ce PC et les chemins Windows ne sont pas des preuves d'accès.
+
+Livraison supplémentaire : [lanceur reproductible et instructions Windows](WINDOWS.md),
+détection UE5.8/Python, dépendances minimales épinglées avec SHA256 dans un venv TEMP,
+projet neuf sans paramètre de projet utilisateur. Il réutilise le builder, l'inspecteur,
+`UnrealGraphicsOracle` et `Tier0Judge` de #16, avec les critères utilisateur. Le plan Qwen
+déjà accepté est l'entrée figée ; aucun modèle n'a été relancé ni téléchargé.
+
+Le parcours demandé au vrai moteur conserve trois versions et leurs empreintes : baseline,
+déplacement natif de la route (+150 cm), correction du seul transform. Il exige des processus
+distincts pour la sauvegarde et la relecture, quatre captures natives par version, PASS initial,
+FAIL unique `pose:road`, puis PASS après une correction. Il s'arrête sur absence de preuve,
+défaut différent, API non qualifiée ou correction sans succès. Les anciennes versions sont
+conservées. Cette correction ciblée est distincte de l'ancienne reconstruction du CLI général.
+
+Améliorations indépendantes : journal natif Unreal privé, erreurs Python liées au plan,
+refus des captures préexistantes, suivi des descendants observés, mesures RAM horodatées
+et requêtes NVIDIA réelles lorsqu'elles sont disponibles. Aucune correction d'API UE5.8
+n'est présentée comme validée ; les premières erreurs moteur doivent être recueillies sur le PC.
+
+Validation cloud : 35 tests **existants** repassés, zéro test ajouté, aucune simulation UE.
+Analyse/format Python et typage des trois modules modifiés concernés ; parsing du lanceur
+dans un véritable PowerShell 7.6.6 Linux, puis refus d'exécution sous Linux (code 2).
+Le contrôle du bundle et l'import du contrôleur ne prouvent ni PowerShell 5.1 Windows,
+ni l'éditeur UE. Preuves séparées dans `evidence/windows-launcher/` ; les anciennes preuves
+du 12 octobre sont conservées.
+
+Résultats natifs livrés à cette date : **zéro scène UE exécutée, zéro UMAP/UASSET/capture
+native produite par ce lancement, zéro correction UE démontrée, aucune mesure RTX locale**.
+Ces éléments restent BLOCKED jusqu'à exécution du lanceur Windows et examen de son archive.
+La prochaine action minimale est d'extraire le bundle puis lancer `Run-APEX-UE58.cmd` sur
+le PC cible ; si Python livré avec UE ne permet pas le venv, le diagnostic demande Python
+3.12 x64. Aucun accès à `C:\GameProject`, aucune modification du cœur ou des autres PR.
+#14 reste indépendante : le cloud n'a toujours pas de GPU CUDA utilisable ; aucun calcul
+neuronal 3D n'est revendiqué ici. Aucun élargissement PCG/Nanite/Lumen/paysages/villes.
+
+Le reste du rapport ci-dessous décrit la livraison initiale du 12 octobre.
+
 ## État : BLOCKED pour toute création/capture UE réelle
 
 Le code prépare un connecteur artistique UE et son premier démonstrateur, mais aucun Unreal Editor n’a été exécuté. Le moteur reste absent sur PATH (`UnrealEditor`, `UnrealEditor-Cmd`, `UnrealEditor.exe`, `RunUAT.sh`) et dans les racines connues examinées. Aucun plugin, version, GPU/FPS UE ou scène native ne peut être qualifié ici. `evidence/environment-probe.json` contient les observations exactes. Le PC Windows n’est pas accessible depuis ce cloud Linux.

@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "scene_id": "urban_demo",
+  "revision": 1,
+  "parent_manifest_sha256": null,
+  "level": "prototype",
+  "materials": [
+    {
+      "id": "asphalt",
+      "base_color": [
+        0.035,
+        0.04,
+        0.045
+      ],
+      "roughness": 0.8,
+      "metallic": 0
+    },
+    {
+      "id": "concrete",
+      "base_color": [
+        0.5,
+        0.45,
+        0.36
+      ],
+      "roughness": 0.65,
+      "metallic": 0
+    },
+    {
+      "id": "metal",
+      "base_color": [
+        0.25,
+        0.27,
+        0.3
+      ],
+      "roughness": 0.3,
+      "metallic": 0.8
+    }
+  ],
+  "actors": [
+    {
+      "id": "road",
+      "owner": "graphics",
+      "kind": "mesh",
+      "shape": "cube",
+      "material_id": "asphalt",
+      "location_cm": [
+        0,
+        0,
+        -10
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ],
+      "dimensions_cm": [
+        2400,
+        600,
+        20
+      ],
+      "intensity": null
+    },
+    {
+      "id": "building",
+      "owner": "graphics",
+      "kind": "mesh",
+      "shape": "cube",
+      "material_id": "concrete",
+      "location_cm": [
+        300,
+        700,
+        300
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ],
+      "dimensions_cm": [
+        600,
+        500,
+        600
+      ],
+      "intensity": null
+    },
+    {
+      "id": "bollard_a",
+      "owner": "graphics",
+      "kind": "mesh",
+      "shape": "cylinder",
+      "material_id": "metal",
+      "location_cm": [
+        -500,
+        390,
+        40
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ],
+      "dimensions_cm": [
+        30,
+        30,
+        80
+      ],
+      "intensity": null
+    },
+    {
+      "id": "bollard_b",
+      "owner": "graphics",
+      "kind": "mesh",
+      "shape": "cylinder",
+      "material_id": "metal",
+      "location_cm": [
+        0,
+        390,
+        40
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ],
+      "dimensions_cm": [
+        30,
+        30,
+        80
+      ],
+      "intensity": null
+    },
+    {
+      "id": "decor_planter",
+      "owner": "graphics",
+      "kind": "mesh",
+      "shape": "cube",
+      "material_id": "concrete",
+      "location_cm": [
+        -600,
+        750,
+        30
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ],
+      "dimensions_cm": [
+        160,
+        100,
+        60
+      ],
+      "intensity": null
+    },
+    {
+      "id": "sun",
+      "owner": "graphics",
+      "kind": "directional_light",
+      "shape": null,
+      "material_id": null,
+      "location_cm": [
+        0,
+        0,
+        800
+      ],
+      "rotation_deg": [
+        -40,
+        -25,
+        0
+      ],
+      "dimensions_cm": null,
+      "intensity": 45000
+    },
+    {
+      "id": "fill",
+      "owner": "graphics",
+      "kind": "point_light",
+      "shape": null,
+      "material_id": null,
+      "location_cm": [
+        -500,
+        600,
+        400
+      ],
+      "rotation_deg": [
+        0,
+        0,
+        0
+      ],
+      "dimensions_cm": null,
+      "intensity": 2000
+    }
+  ],
+  "protected_engineer_ids": []
+}

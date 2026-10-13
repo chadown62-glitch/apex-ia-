@@ -4,6 +4,13 @@ Le spécialiste graphique reçoit désormais un contrat de tâche et choisit Ble
 
 La présence du moteur est sondée sur PATH, `APEX_UE_ROOT`/`--engine-root`, racines connues, version et fichiers de plugins. Leur présence ne certifie aucune capacité. Le connecteur éditeur est une candidate UE5.6+, fondée sur les API publiques documentées, qui reste non qualifiée tant qu’elle n’a pas été exécutée avec le vrai moteur. Aucun Unreal n’est disponible dans ce cloud : toutes les créations, modifications et captures UE sont **BLOCKED** ici.
 
+Suite du 13 octobre : le [lanceur Windows UE5.8](WINDOWS.md) prépare un lancement local
+sur le PC, avec détection des installations, projet TEMP neuf, juge existant, réouvertures,
+défaut natif ciblé/correction et archive des preuves. Il rejoue le plan Qwen accepté, sans
+nouvelle inférence. Ce parcours Windows n'a pas encore été exécuté ; il ne fournit donc
+aucun résultat Unreal validé. Construire l'archive avec `scripts/game_graphics/package_ue_windows.py`,
+puis extraire et double-cliquer `Run-APEX-UE58.cmd`.
+
 ## Choix du logiciel
 
 | Travail demandé | Méthode recommandée |
