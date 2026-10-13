@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import stat
 import uuid
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,12 @@ def refuse_personal_project(path: Path) -> Path:
             raise ValueError("protected_personal_project")
     if path.is_symlink() or len(path.resolve().parts) < 3:
         raise ValueError("isolated_graphics_project_required")
+    for part in (path, *path.parents):
+        if part.exists() and (
+            part.is_symlink()
+            or getattr(part.lstat(), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT
+        ):
+            raise ValueError("project_reparse_point_refused")
     return path.resolve()
 
 
@@ -71,10 +78,10 @@ def prepare(root: Path, plan: ScenePlan, *, parent: Path | None = None) -> dict[
         "Config/DefaultEngine.ini",
         b"[/Script/Engine.RendererSettings]\nr.DynamicGlobalIlluminationMethod=0\nr.ReflectionMethod=0\n",
     )
-    for script in ("ue_build_scene.py", "ue_inspect_scene.py"):
+    for script in ("ue_build_scene.py", "ue_inspect_scene.py", "ue_mutate_scene.py"):
         workspace.write_bytes("Tools/" + script, (SCRIPTS / script).read_bytes())
     workspace.write_bytes("Tools/scene_contract.py", (Path(__file__).parent / "contract.py").read_bytes())
-    for mode in ("build", "inspect"):
+    for mode in ("build", "inspect", "mutate"):
         job = {
             **marker,
             "mode": mode,
