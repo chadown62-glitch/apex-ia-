@@ -1,0 +1,108 @@
+{
+  "unreal": {
+    "available": false,
+    "editor": null,
+    "root": null,
+    "version": null,
+    "checks": {
+      "python_plugin": {
+        "path": null,
+        "exists": false
+      },
+      "editor_scripting": {
+        "path": null,
+        "exists": false
+      },
+      "pcg_plugin": {
+        "path": null,
+        "exists": false
+      },
+      "modeling_plugin": {
+        "path": null,
+        "exists": false
+      }
+    },
+    "engine_executed": false,
+    "qualified": false
+  },
+  "blender": {
+    "available": true,
+    "scope": "PR12 procedural coupe only"
+  },
+  "features": {
+    "vehicle": {
+      "unreal": false,
+      "blender": true,
+      "hybrid": false
+    },
+    "mesh": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "uv_retopology": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "environment": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "lighting": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "materials": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "landscape": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "pcg": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    },
+    "modeling_tools": {
+      "unreal": false,
+      "blender": false,
+      "hybrid": false
+    }
+  },
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "ram_total_bytes": 35743784960,
+  "gpu_measurement": "unknown",
+  "costs": "unknown until representative measured engine runs",
+  "searched_roots": [
+    {
+      "path": "/opt/UnrealEngine",
+      "exists": false
+    },
+    {
+      "path": "/opt/unreal-engine",
+      "exists": false
+    },
+    {
+      "path": "/workspace/UnrealEngine",
+      "exists": false
+    },
+    {
+      "path": "/usr/local/UnrealEngine",
+      "exists": false
+    }
+  ],
+  "engine_path_lookups": {
+    "UnrealEditor": null,
+    "UnrealEditor-Cmd": null,
+    "UnrealEditor.exe": null,
+    "RunUAT.sh": null
+  },
+  "limitations": "Plugin files do not qualify operations, PCG, landscapes or Nanite/Lumen."
+}

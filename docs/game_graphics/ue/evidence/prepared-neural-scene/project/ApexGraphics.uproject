@@ -1,0 +1,14 @@
+{
+  "FileVersion": 3,
+  "Category": "APEX graphics only",
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    }
+  ]
+}

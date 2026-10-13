@@ -1,0 +1,25 @@
+{
+  "scope": "Cloud launcher checks only; no Windows or Unreal execution",
+  "files": [
+    {
+      "path": "cloud-validation.json",
+      "sha256": "7ee36cf75aabb5cc0efa75eb4fc2271ab17a1ab28bcc407059a5b75b7fca5681"
+    },
+    {
+      "path": "existing-tests.junit.xml",
+      "sha256": "c3cdb5d7209a1f6ba1aa09f56b10b6baafa412ff0227018f8cb2ad862d710c8a"
+    },
+    {
+      "path": "minimal-host.json",
+      "sha256": "a08611df09bc818b820b691f72559e661ad2c7175e08133d9b8ca4925e16e6c4"
+    },
+    {
+      "path": "save-map-api-docs.json",
+      "sha256": "1ceaddaf315ef8f71dc085846b51a6dbcd816b937070b2a67446d56245b29d93"
+    },
+    {
+      "path": "source-checksums.json",
+      "sha256": "6870508e0a6abb560dcde7021b65415a49ca0e6f26826f9435e2862c12f26941"
+    }
+  ]
+}
