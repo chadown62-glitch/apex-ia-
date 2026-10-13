@@ -1,0 +1,33 @@
+{
+  "prototype": {
+    "verdict": "pass",
+    "unavailable": []
+  },
+  "jouable": {
+    "verdict": "unknown",
+    "unavailable": [
+      "Required independently validated LODs unavailable."
+    ]
+  },
+  "soigne": {
+    "verdict": "unknown",
+    "unavailable": [
+      "Required independently validated LODs unavailable.",
+      "Required PBR texture maps and their resolution are unqualified.",
+      "General aesthetic judgment is uncalibrated; alignment tests are insufficient."
+    ]
+  },
+  "photorealiste": {
+    "verdict": "unknown",
+    "unavailable": [
+      "Required independently validated LODs unavailable.",
+      "Required PBR texture maps and their resolution are unqualified.",
+      "General aesthetic judgment is uncalibrated; alignment tests are insufficient."
+    ]
+  },
+  "tampered_glb": {
+    "rejected": true,
+    "error": "artifact_integrity:asset.glb",
+    "native_asset_copy": true
+  }
+}

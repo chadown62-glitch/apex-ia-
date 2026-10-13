@@ -1,0 +1,128 @@
+{
+  "blender": "4.3.2",
+  "source": "/workspace/game-studio-runtime/neural14-research/chair-cpu-64/neural-mesh.glb",
+  "source_sha256": "294410f9eb0373e9286a2f88cf1ae1fb8c1afa9ee03945356555be480b5fa4f7",
+  "method": "actual TripoSR mesh imported; no remesh, subdivision, hole repair, or procedural replacement",
+  "transforms": [
+    {
+      "object": "geometry_0",
+      "mesh_local_vertices_sha256": "c44ec361ca8277d16f3de17bc8d2e8704781d2e52eddf956f2f546e8cf360f30",
+      "final_matrix_world": [
+        [
+          1.9819968938827515,
+          0.0,
+          0.0,
+          -0.061702076345682144
+        ],
+        [
+          0.0,
+          -2.662988265456079e-07,
+          1.9819971323013306,
+          0.00040895806159824133
+        ],
+        [
+          0.0,
+          -1.9819971323013306,
+          -2.662988265456079e-07,
+          0.788987934589386
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "uniform_display_scale": 1.9819968801536927,
+      "rotation_x_degrees": -90,
+      "source_units": "unknown normalized neural units; display normalization only"
+    }
+  ],
+  "views": [
+    {
+      "path": "view_000.png",
+      "sha256": "d7c25884a9d9c2488a13649150748c09aa74b9e09d6cfb8169b5b5c15999cd44",
+      "camera_location": [
+        4.0,
+        0.0,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 0,
+      "render_seconds": 20.49437414699787
+    },
+    {
+      "path": "view_090.png",
+      "sha256": "1513469b0c71eb71ff4dc07e45cbd17b2135ab64c4fbf6f4cd20e2c5f9e6ca1f",
+      "camera_location": [
+        2.4492937051703357e-16,
+        4.0,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 90,
+      "render_seconds": 19.064931738997984
+    },
+    {
+      "path": "view_180.png",
+      "sha256": "7e319b9ef2d040d15b1afb8447377f15571609a3623755e9effdd00a5df8735f",
+      "camera_location": [
+        -4.0,
+        4.898587410340671e-16,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 180,
+      "render_seconds": 19.85709448900161
+    },
+    {
+      "path": "view_270.png",
+      "sha256": "d4d4cc6cc5b4a0fe3e3a57ce32d8d3cc8e1a05c395f998fd6a0bd7c75b560687",
+      "camera_location": [
+        -7.347880586115415e-16,
+        -4.0,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 270,
+      "render_seconds": 19.557577034000133
+    }
+  ],
+  "materials": [],
+  "render_engine": "Cycles CPU",
+  "samples": 64,
+  "seed": 14,
+  "denoising": false,
+  "denoising_reason": "Actual first render failed: cloud Blender build lacks OpenImageDenoise; original failure log preserved",
+  "resolution": [
+    960,
+    720
+  ],
+  "threads": 4,
+  "elapsed_seconds": 79.12072496500332,
+  "self_peak_rss_bytes_linux": 335892480,
+  "source_sha256_after": "294410f9eb0373e9286a2f88cf1ae1fb8c1afa9ee03945356555be480b5fa4f7",
+  "blend_sha256": "2b0e682f24d8c4077ec595dfefb40aca82e5e9ab4bd67a030c15c14d06abcf19",
+  "geometry_vertices_changed_by_display": false,
+  "interpretation": "Rendering only; source topology and inferred colours retain all defects"
+}

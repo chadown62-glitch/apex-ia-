@@ -1,0 +1,45 @@
+{
+  "blender": "4.3.2",
+  "source_format": ".blend",
+  "objects": {
+    "geometry_0": {
+      "vertices": 2375,
+      "triangles": 4716,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.04788681189211483,
+      "dimensions": [
+        1.5658289790153503,
+        1.5809499621391296,
+        1.8000006824867114
+      ],
+      "geometry_center": [
+        2.9802322387695312e-08,
+        2.9802322387695312e-08,
+        0.9000000879100867
+      ],
+      "pivot": [
+        -0.061702076345682144,
+        0.00040895806159824133,
+        0.788987934589386
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.9999999403953552,
+        -4.7153369564512104e-07
+      ],
+      "materials": [],
+      "uv_layers": 0,
+      "uv_finite": true,
+      "parent": "world"
+    }
+  },
+  "dimensions": [
+    1.5658289790153503,
+    1.5809499621391296,
+    1.8000006824867114
+  ],
+  "triangles": 4716,
+  "scene_unit_scale": 1.0
+}

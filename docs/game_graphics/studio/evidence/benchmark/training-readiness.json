@@ -1,0 +1,33 @@
+{
+  "status": "blocked",
+  "training_executed": false,
+  "weights_changed": false,
+  "accepted_revision_counts": {
+    "train": 2,
+    "validation": 1,
+    "heldout": 3
+  },
+  "accepted_families": 3,
+  "family_splits": {
+    "vehicle": "train",
+    "building": "validation",
+    "chair": "heldout"
+  },
+  "requirements": {
+    "executed": false,
+    "minimum_accepted_training_examples_before_lora": 100,
+    "minimum_task_families_before_lora": 10,
+    "minimum_independent_validation_examples": 30,
+    "minimum_independent_heldout_examples": 30
+  },
+  "reasons": [
+    "insufficient independent accepted TRAIN examples",
+    "insufficient task-family diversity",
+    "insufficient independent VALIDATION examples",
+    "insufficient independent HELDOUT examples",
+    "independent prompt baseline and controller generalization evaluation remain required",
+    "The chair family was observed during controller debugging; reserve a new unseen family after freezing the controller."
+  ],
+  "warning": "Revisions are not independent tasks; keep each correction chain in its family split.",
+  "independent_heldout_examples": 0
+}

@@ -1,0 +1,94 @@
+{
+  "execution": {
+    "mission_id": "game-graphics-studio",
+    "clone_id": "trusted-catalog-worker",
+    "status": "success",
+    "isolation_level": "none",
+    "exit_code": {
+      "value": 0,
+      "status": "real"
+    },
+    "signal": {
+      "value": null,
+      "status": "unknown"
+    },
+    "elapsed_s": {
+      "value": 1.2578616430037073,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 1.0,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 219.546875,
+      "status": "real"
+    },
+    "pids_peak": {
+      "value": 1,
+      "status": "real"
+    },
+    "stdout": "Blender 4.3.2\nRead blend: \"/workspace/game-studio-output/studio14-final/lounge_chair/corrected-1/asset.blend\"\n\nBlender quit\n",
+    "stderr": "",
+    "stdout_truncated": false,
+    "stderr_truncated": false,
+    "error_detail": null,
+    "facts": {
+      "command": [
+        "/usr/bin/blender",
+        "--background",
+        "--factory-startup",
+        "--disable-autoexec",
+        "--threads",
+        "4",
+        "--python-exit-code",
+        "2",
+        "--python",
+        "/workspace/apex-neural-3d/scripts/game_graphics/studio/inspect_asset.py",
+        "--",
+        "--input",
+        "/workspace/game-studio-output/studio14-final/lounge_chair/corrected-1/asset.blend",
+        "--report",
+        "/workspace/game-studio-output/studio14-final/lounge_chair/corrected-1/blend-inspection.json"
+      ],
+      "pid": 56826,
+      "process_stopped_verified": true,
+      "execution": "trusted_local_catalog",
+      "model_code_executed": false,
+      "script_sha256": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+      "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+      "sample_interval_s": 0.25,
+      "timeout_s": 120,
+      "rss_limit_mib": 12000,
+      "sources": {
+        "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+        "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+        "neural_cpu.py": "d0642bbc7f98ddbb791cf0d7d1f7b8eff2ab4f4677eee347eaa7054442426032",
+        "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e"
+      }
+    }
+  },
+  "rss_samples": [
+    {
+      "elapsed_s": 0.0,
+      "rss_bytes": 860160
+    },
+    {
+      "elapsed_s": 0.252,
+      "rss_bytes": 55021568
+    },
+    {
+      "elapsed_s": 0.503,
+      "rss_bytes": 196972544
+    },
+    {
+      "elapsed_s": 0.755,
+      "rss_bytes": 223936512
+    },
+    {
+      "elapsed_s": 1.006,
+      "rss_bytes": 230211584
+    }
+  ]
+}

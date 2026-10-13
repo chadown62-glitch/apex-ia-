@@ -1,0 +1,22 @@
+{
+  "family": "chair",
+  "operations": [
+    {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    {
+      "op": "add_component",
+      "target": "scene",
+      "params": {
+        "component": "lumbar_cushion"
+      }
+    },
+    {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "scene-codes.pt": {
+    "experiment": "90f74496bd267b79722de140b1c5fae9fef3f64e7c4a6cb3fcd297776a1819e1",
+    "portable": "90f74496bd267b79722de140b1c5fae9fef3f64e7c4a6cb3fcd297776a1819e1",
+    "identical": true
+  },
+  "model-input.png": {
+    "experiment": "ad83c9399d5b69e504a3c409a1e3ed93442f63d60b2860dda788e870d43ca2d2",
+    "portable": "ad83c9399d5b69e504a3c409a1e3ed93442f63d60b2860dda788e870d43ca2d2",
+    "identical": true
+  },
+  "neural-mesh.glb": {
+    "experiment": "2ab85f1356707a4b56fd6eb5b6d1a3d76bb90fb936fe52d868321c9013ce0d6a",
+    "portable": "8584f0393af0bd1415bd1d4ef87c99950cdfa8d7ac35e35409cef5676b0fc619",
+    "identical": false
+  }
+}

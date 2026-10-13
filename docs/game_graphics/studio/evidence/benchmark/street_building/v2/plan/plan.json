@@ -1,0 +1,27 @@
+{
+  "family": "building",
+  "operations": [
+    {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    {
+      "op": "repair_degenerate_topology",
+      "target": "atelier_letters",
+      "params": {}
+    },
+    {
+      "op": "add_component",
+      "target": "scene",
+      "params": {
+        "component": "entrance_planters"
+      }
+    },
+    {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    }
+  ]
+}

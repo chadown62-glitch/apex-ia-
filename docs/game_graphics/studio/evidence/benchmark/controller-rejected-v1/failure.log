@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/workspace/apex-neural-3d/apex/game_graphics/studio/benchmark.py", line 450, in <module>
+    main()
+  File "/workspace/apex-neural-3d/apex/game_graphics/studio/benchmark.py", line 443, in main
+    improve(root, args.runtime, benchmark, criteria)
+  File "/workspace/apex-neural-3d/apex/game_graphics/studio/benchmark.py", line 257, in improve
+    plans[family] = propose_plan(
+                    ^^^^^^^^^^^^^
+  File "/workspace/apex-neural-3d/apex/game_graphics/studio/controller.py", line 89, in propose_plan
+    plan = parse_plan(json.loads(text))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/apex-neural-3d/apex/game_graphics/studio/contract.py", line 92, in parse_plan
+    raise ValueError("one_terminal_save_required")
+ValueError: one_terminal_save_required

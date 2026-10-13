@@ -1,0 +1,30 @@
+{
+  "pid": 51995,
+  "return_code": 0,
+  "elapsed_seconds": 1.2569235109986039,
+  "sampled_peak_rss_bytes": 230100992,
+  "samples": [
+    {
+      "seconds": 0.0014157280020299368,
+      "rss_bytes": 737280
+    },
+    {
+      "seconds": 0.2527252310028416,
+      "rss_bytes": 54542336
+    },
+    {
+      "seconds": 0.5040152459987439,
+      "rss_bytes": 201555968
+    },
+    {
+      "seconds": 0.755386737997469,
+      "rss_bytes": 224034816
+    },
+    {
+      "seconds": 1.0067210580018582,
+      "rss_bytes": 230100992
+    }
+  ],
+  "stop_reason": null,
+  "owned_process_stopped": true
+}

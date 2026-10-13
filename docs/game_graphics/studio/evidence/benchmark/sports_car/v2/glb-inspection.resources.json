@@ -1,0 +1,102 @@
+{
+  "execution": {
+    "mission_id": "game-graphics-studio",
+    "clone_id": "trusted-catalog-worker",
+    "status": "success",
+    "isolation_level": "none",
+    "exit_code": {
+      "value": 0,
+      "status": "real"
+    },
+    "signal": {
+      "value": null,
+      "status": "unknown"
+    },
+    "elapsed_s": {
+      "value": 1.761507965005876,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 2.0700000000000003,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 244.765625,
+      "status": "real"
+    },
+    "pids_peak": {
+      "value": 1,
+      "status": "real"
+    },
+    "stdout": "07:42:17 | INFO: Data are loaded, start creating Blender stuff\n07:42:17 | INFO: Blender create Mesh node curved_chassis\n07:42:17 | INFO: Blender create Mesh node Torus\n07:42:17 | INFO: Blender create Mesh node Torus.001\n07:42:17 | INFO: Blender create Mesh node Cylinder.001\n07:42:17 | INFO: Blender create Mesh node Cylinder.002\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_0\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_1\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_2\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_3\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_4\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_5\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_6\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_7\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_8\n07:42:17 | INFO: Blender create Mesh node spoke_front_left_9\n07:42:17 | INFO: Blender create Mesh node Cube.001\n07:42:17 | INFO: Blender create Mesh node arch_lip_front_left\n07:42:17 | INFO: Blender create Mesh node Torus.002\n07:42:17 | INFO: Blender create Mesh node Torus.003\n07:42:17 | INFO: Blender create Mesh node Cylinder.004\n07:42:17 | INFO: Blender create Mesh node Cylinder.005\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_0\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_1\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_2\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_3\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_4\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_5\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_6\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_7\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_8\n07:42:17 | INFO: Blender create Mesh node spoke_front_right_9\n07:42:17 | INFO: Blender create Mesh node Cube.002\n07:42:17 | INFO: Blender create Mesh node arch_lip_front_right\n07:42:17 | INFO: Blender create Mesh node Torus.004\n07:42:17 | INFO: Blender create Mesh node Torus.005\n07:42:17 | INFO: Blender create Mesh node Cylinder.007\n07:42:17 | INFO: Blender create Mesh node Cylinder.008\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_0\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_1\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_2\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_3\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_4\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_5\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_6\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_7\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_8\n07:42:17 | INFO: Blender create Mesh node spoke_rear_left_9\n07:42:17 | INFO: Blender create Mesh node Cube.003\n07:42:17 | INFO: Blender create Mesh node arch_lip_rear_left\n07:42:17 | INFO: Blender create Mesh node Torus.006\n07:42:17 | INFO: Blender create Mesh node Torus.007\n07:42:17 | INFO: Blender create Mesh node Cylinder.010\n07:42:17 | INFO: Blender create Mesh node Cylinder.011\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_0\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_1\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_2\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_3\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_4\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_5\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_6\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_7\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_8\n07:42:17 | INFO: Blender create Mesh node spoke_rear_right_9\n07:42:17 | INFO: Blender create Mesh node Cube.004\n07:42:17 | INFO: Blender create Mesh node arch_lip_rear_right\n07:42:17 | INFO: Blender create Mesh node windshield\n07:42:17 | INFO: Blender create Mesh node rear_glass\n07:42:17 | INFO: Blender create Mesh node roof\n07:42:17 | INFO: Blender create Mesh node window_left\n07:42:17 | INFO: Blender create Mesh node a_pillar_left\n07:42:17 | INFO: Blender create Mesh node c_pillar_left\n07:42:17 | INFO: Blender create Mesh node window_seal_left\n07:42:17 | INFO: Blender create Mesh node door_seam_left\n07:42:17 | INFO: Blender create Mesh node Cube.005\n07:42:17 | INFO: Blender create Mesh node Cube.006\n07:42:17 | INFO: Blender create Mesh node mirror_stem_left\n07:42:17 | INFO: Blender create Mesh node Sphere\n07:42:17 | INFO: Blender create Mesh node Sphere.001\n07:42:17 | INFO: Blender create Mesh node Cube.007\n07:42:17 | INFO: Blender create Mesh node Cube.008\n07:42:17 | INFO: Blender create Mesh node Cube.009\n07:42:17 | INFO: Blender create Mesh node Cube.010\n07:42:17 | INFO: Blender create Mesh node Cube.011\n07:42:17 | INFO: Blender create Mesh node Cube.012\n07:42:17 | INFO: Blender create Mesh node window_right\n07:42:17 | INFO: Blender create Mesh node a_pillar_right\n07:42:17 | INFO: Blender create Mesh node c_pillar_right\n07:42:17 | INFO: Blender create Mesh node window_seal_right\n07:42:17 | INFO: Blender create Mesh node door_seam_right\n07:42:17 | INFO: Blender create Mesh node Cube.013\n07:42:17 | INFO: Blender create Mesh node Cube.014\n07:42:17 | INFO: Blender create Mesh node mirror_stem_right\n07:42:17 | INFO: Blender create Mesh node Sphere.002\n07:42:17 | INFO: Blender create Mesh node Sphere.003\n07:42:17 | INFO: Blender create Mesh node Cube.015\n07:42:17 | INFO: Blender create Mesh node Cube.016\n07:42:17 | INFO: Blender create Mesh node Cube.017\n07:42:17 | INFO: Blender create Mesh node Cube.018\n07:42:17 | INFO: Blender create Mesh node Cube.019\n07:42:17 | INFO: Blender create Mesh node Cube.020\n07:42:17 | INFO: Blender create Mesh node Cube.021\n07:42:17 | INFO: Blender create Mesh node Cube.022\n07:42:17 | INFO: Blender create Mesh node Cube.023\n07:42:17 | INFO: Blender create Mesh node Cube.024\n07:42:17 | INFO: Blender create Mesh node Cube.025\n07:42:17 | INFO: Blender create Mesh node Cube.026\n07:42:17 | INFO: Blender create Mesh node Cube.027\n07:42:17 | INFO: Blender create Mesh node Cube.028\n07:42:17 | INFO: Blender create Mesh node Cube.029\n07:42:17 | INFO: Blender create Mesh node Cube.030\n07:42:17 | INFO: Blender create Mesh node Cube.031\n07:42:17 | INFO: Blender create Mesh node Cube.032\n07:42:17 | INFO: Blender create Mesh node Cube.033\n07:42:17 | INFO: Blender create Mesh node Cube.034\n07:42:17 | INFO: Blender create Mesh node Cube.035\n07:42:17 | INFO: Blender create Mesh node Cube.036\n07:42:17 | INFO: Blender create Mesh node Cube.037\n07:42:17 | INFO: Blender create Mesh node Cube.038\n07:42:17 | INFO: Blender create Mesh node Cube.039\n07:42:17 | INFO: Blender create Mesh node Cube.040\n07:42:17 | INFO: Blender create Mesh node Cube.041\n07:42:17 | INFO: Blender create Mesh node Cube.042\n07:42:17 | INFO: Blender create Mesh node Cube.043\n07:42:17 | INFO: Blender create Mesh node Cube.044\n07:42:17 | INFO: Blender create Mesh node Cube.045\n07:42:17 | INFO: Blender create Mesh node Cylinder.012\n07:42:17 | INFO: Blender create Mesh node Cylinder.013\n07:42:17 | INFO: Blender create Mesh node Cube.046\n07:42:17 | INFO: Blender create Mesh node Cube.047\n07:42:17 | INFO: Blender create Mesh node Cube.048\n07:42:17 | INFO: Blender create Mesh node Cube.049\n07:42:17 | INFO: Blender create Mesh node Cube.050\n07:42:17 | INFO: Blender create Mesh node Cube.051\n07:42:17 | INFO: Blender create Mesh node Cube.052\n07:42:17 | INFO: Blender create Mesh node Torus.008\n07:42:17 | INFO: Blender create Mesh node Cube.053\n07:42:17 | INFO: Blender create Mesh node Cube\n07:42:17 | INFO: Blender create Mesh node Cube.055\n07:42:17 | INFO: Blender create Mesh node rear_spoiler\n07:42:17 | INFO: glTF import finished in 0.13s\nBlender 4.3.2\n\nBlender quit\n",
+    "stderr": "",
+    "stdout_truncated": false,
+    "stderr_truncated": false,
+    "error_detail": null,
+    "facts": {
+      "command": [
+        "/usr/bin/blender",
+        "--background",
+        "--factory-startup",
+        "--disable-autoexec",
+        "--threads",
+        "4",
+        "--python-exit-code",
+        "2",
+        "--python",
+        "/workspace/apex-neural-3d/scripts/game_graphics/studio/inspect_asset.py",
+        "--",
+        "--input",
+        "/workspace/game-studio-output/studio14-final/sports_car/v2/asset.glb",
+        "--report",
+        "/workspace/game-studio-output/studio14-final/sports_car/v2/glb-inspection.json"
+      ],
+      "pid": 55848,
+      "process_stopped_verified": true,
+      "execution": "trusted_local_catalog",
+      "model_code_executed": false,
+      "script_sha256": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+      "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+      "sample_interval_s": 0.25,
+      "timeout_s": 120,
+      "rss_limit_mib": 12000,
+      "sources": {
+        "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+        "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+        "neural_cpu.py": "d0642bbc7f98ddbb791cf0d7d1f7b8eff2ab4f4677eee347eaa7054442426032",
+        "blender_ops.py": "060fb28f6a330a15d349693c2767c721bfa0188f40ba6e815b1953add6797e62"
+      }
+    }
+  },
+  "rss_samples": [
+    {
+      "elapsed_s": 0.0,
+      "rss_bytes": 1142784
+    },
+    {
+      "elapsed_s": 0.252,
+      "rss_bytes": 75436032
+    },
+    {
+      "elapsed_s": 0.504,
+      "rss_bytes": 202739712
+    },
+    {
+      "elapsed_s": 0.755,
+      "rss_bytes": 224006144
+    },
+    {
+      "elapsed_s": 1.007,
+      "rss_bytes": 244514816
+    },
+    {
+      "elapsed_s": 1.259,
+      "rss_bytes": 256655360
+    },
+    {
+      "elapsed_s": 1.51,
+      "rss_bytes": 0
+    }
+  ]
+}

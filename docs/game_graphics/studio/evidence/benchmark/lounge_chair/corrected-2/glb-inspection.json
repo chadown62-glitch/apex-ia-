@@ -1,0 +1,1137 @@
+{
+  "blender": "4.3.2",
+  "source_format": ".glb",
+  "objects": {
+    "timber_back": {
+      "vertices": 1609,
+      "triangles": 2784,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.02419384154398501,
+      "dimensions": [
+        0.8600000143051147,
+        0.4398316890001297,
+        0.8016556203365326
+      ],
+      "geometry_center": [
+        0.0,
+        0.40414031594991684,
+        0.8008278161287308
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "timber_seat": {
+      "vertices": 1602,
+      "triangles": 2784,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.023580245382584873,
+      "dimensions": [
+        0.8600000143051147,
+        0.7699999809265137,
+        0.17308339476585388
+      ],
+      "geometry_center": [
+        0.0,
+        -0.06499999761581421,
+        0.3860466629266739
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "seat_cushion": {
+      "vertices": 654,
+      "triangles": 1056,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.08734779711980409,
+      "dimensions": [
+        0.800000011920929,
+        0.7719244360923767,
+        0.23559144139289856
+      ],
+      "geometry_center": [
+        0.0,
+        -0.06499999761581421,
+        0.47599999606609344
+      ],
+      "pivot": [
+        0.0,
+        -0.06499999761581421,
+        0.47600001096725464
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.08715574443340302,
+        0.9961947202682495
+      ],
+      "materials": [
+        "chair_saddle_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "back_cushion": {
+      "vertices": 654,
+      "triangles": 1056,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.07164710196853905,
+      "dimensions": [
+        0.7649999856948853,
+        0.411557212471962,
+        0.7210005223751068
+      ],
+      "geometry_center": [
+        0.0,
+        0.369999997317791,
+        0.8349999934434891
+      ],
+      "pivot": [
+        0.0,
+        0.3700000047683716,
+        0.8349999785423279
+      ],
+      "spin_axis_world": [
+        0.0,
+        -0.9271838665008545,
+        0.3746066093444824
+      ],
+      "materials": [
+        "chair_saddle_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "seat_cushion_piping": {
+      "vertices": 1196,
+      "triangles": 1536,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 9.274760159235507e-05,
+      "dimensions": [
+        0.803600013256073,
+        0.7614462971687317,
+        0.07334020733833313
+      ],
+      "geometry_center": [
+        0.0,
+        -0.061814457178115845,
+        0.5124109238386154
+      ],
+      "pivot": [
+        0.0,
+        -0.06499999761581421,
+        0.47600001096725464
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.08715574443340302,
+        0.9961947202682495
+      ],
+      "materials": [
+        "chair_stitched_edges"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "back_cushion_piping": {
+      "vertices": 1196,
+      "triangles": 1536,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 8.799428556640673e-05,
+      "dimensions": [
+        0.7687399983406067,
+        0.275624543428421,
+        0.6691368222236633
+      ],
+      "geometry_center": [
+        0.0,
+        0.3391015976667404,
+        0.8474837243556976
+      ],
+      "pivot": [
+        0.0,
+        0.3700000047683716,
+        0.8349999785423279
+      ],
+      "spin_axis_world": [
+        0.0,
+        -0.9271838665008545,
+        0.3746066093444824
+      ],
+      "materials": [
+        "chair_stitched_edges"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_left": {
+      "vertices": 507,
+      "triangles": 796,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0029900184857732694,
+      "dimensions": [
+        0.10494333505630493,
+        0.8329811692237854,
+        0.07371610403060913
+      ],
+      "geometry_center": [
+        -0.49152830243110657,
+        0.04949656128883362,
+        0.7368472516536713
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_support_front_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00017203999268917958,
+      "dimensions": [
+        0.11012345552444458,
+        0.02600008249282837,
+        0.32569432258605957
+      ],
+      "geometry_center": [
+        -0.4424999952316284,
+        -0.30000001192092896,
+        0.559499979019165
+      ],
+      "pivot": [
+        -0.4424999952316284,
+        -0.30000001192092896,
+        0.559499979019165
+      ],
+      "spin_axis_world": [
+        -0.25747421383857727,
+        -1.5522233809406316e-07,
+        0.9662851691246033
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_joint_front_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 4.4485469652285126e-05,
+      "dimensions": [
+        0.046000003814697266,
+        0.046000003814697266,
+        0.02799999713897705
+      ],
+      "geometry_center": [
+        -0.46700000762939453,
+        -0.30000001192092896,
+        0.718999981880188
+      ],
+      "pivot": [
+        -0.46700000762939453,
+        -0.30000001192092896,
+        0.718999981880188
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_support_rear_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00017203999268917958,
+      "dimensions": [
+        0.11012345552444458,
+        0.02600008249282837,
+        0.32569432258605957
+      ],
+      "geometry_center": [
+        -0.4424999952316284,
+        0.2800000011920929,
+        0.559499979019165
+      ],
+      "pivot": [
+        -0.4424999952316284,
+        0.2800000011920929,
+        0.559499979019165
+      ],
+      "spin_axis_world": [
+        -0.25747421383857727,
+        -1.5522233809406316e-07,
+        0.9662851691246033
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_joint_rear_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 4.4485469652285126e-05,
+      "dimensions": [
+        0.046000003814697266,
+        0.046000003814697266,
+        0.02799999713897705
+      ],
+      "geometry_center": [
+        -0.46700000762939453,
+        0.2800000011920929,
+        0.718999981880188
+      ],
+      "pivot": [
+        -0.46700000762939453,
+        0.2800000011920929,
+        0.718999981880188
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_front_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0011430170639147304,
+      "dimensions": [
+        0.2311963438987732,
+        0.22737544775009155,
+        0.3930778857320547
+      ],
+      "geometry_center": [
+        -0.4000000059604645,
+        -0.3630000054836273,
+        0.22549999970942736
+      ],
+      "pivot": [
+        -0.4000000059604645,
+        -0.3630000054836273,
+        0.22550000250339508
+      ],
+      "spin_axis_world": [
+        0.3233301043510437,
+        0.31338146328926086,
+        0.8928884267807007
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_collar_front_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00025158348301847954,
+      "dimensions": [
+        0.12175577878952026,
+        0.12140314280986786,
+        0.08333766460418701
+      ],
+      "geometry_center": [
+        -0.33984994888305664,
+        -0.30470073968172073,
+        0.3916066884994507
+      ],
+      "pivot": [
+        -0.33984994888305664,
+        -0.30470073223114014,
+        0.3916066884994507
+      ],
+      "spin_axis_world": [
+        0.32333052158355713,
+        0.31338146328926086,
+        0.8928882479667664
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "foot_front_left": {
+      "vertices": 180,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.451293271902256e-05,
+      "dimensions": [
+        0.04799997806549072,
+        0.04799997806549072,
+        0.03700000047683716
+      ],
+      "geometry_center": [
+        -0.4650000035762787,
+        -0.4259999990463257,
+        0.026500001549720764
+      ],
+      "pivot": [
+        -0.4650000035762787,
+        -0.4259999990463257,
+        0.026500001549720764
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_floor_glides"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_rear_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0011430170639147304,
+      "dimensions": [
+        0.2311963438987732,
+        0.22737544775009155,
+        0.39307788386940956
+      ],
+      "geometry_center": [
+        -0.4000000059604645,
+        0.3630000054836273,
+        0.22550000064074993
+      ],
+      "pivot": [
+        -0.4000000059604645,
+        0.3630000054836273,
+        0.22550000250339508
+      ],
+      "spin_axis_world": [
+        0.3233301341533661,
+        -0.3133814334869385,
+        0.8928884267807007
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_collar_rear_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00025158348301847954,
+      "dimensions": [
+        0.12175577878952026,
+        0.12140314280986786,
+        0.08333766460418701
+      ],
+      "geometry_center": [
+        -0.33984994888305664,
+        0.30470073968172073,
+        0.3916066884994507
+      ],
+      "pivot": [
+        -0.33984994888305664,
+        0.30470073223114014,
+        0.3916066884994507
+      ],
+      "spin_axis_world": [
+        0.3233305513858795,
+        -0.31338152289390564,
+        0.8928882479667664
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "foot_rear_left": {
+      "vertices": 180,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.451293271902256e-05,
+      "dimensions": [
+        0.04799997806549072,
+        0.04799997806549072,
+        0.03700000047683716
+      ],
+      "geometry_center": [
+        -0.4650000035762787,
+        0.4259999990463257,
+        0.026500001549720764
+      ],
+      "pivot": [
+        -0.4650000035762787,
+        0.4259999990463257,
+        0.026500001549720764
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_floor_glides"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "underframe_left": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001645852063074638,
+      "dimensions": [
+        0.05600005388259888,
+        0.6800000369548798,
+        0.05600011348724365
+      ],
+      "geometry_center": [
+        -0.33500000834465027,
+        0.015000000596046448,
+        0.37700000405311584
+      ],
+      "pivot": [
+        -0.33500000834465027,
+        0.015000000596046448,
+        0.37700000405311584
+      ],
+      "spin_axis_world": [
+        -7.549791547489804e-08,
+        1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_right": {
+      "vertices": 507,
+      "triangles": 796,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0029900184858989223,
+      "dimensions": [
+        0.10494333505630493,
+        0.8329811692237854,
+        0.07371610403060913
+      ],
+      "geometry_center": [
+        0.49152830243110657,
+        0.04949656128883362,
+        0.7368472516536713
+      ],
+      "pivot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_support_front_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00017203999268917958,
+      "dimensions": [
+        0.11012345552444458,
+        0.02600008249282837,
+        0.32569432258605957
+      ],
+      "geometry_center": [
+        0.4424999952316284,
+        -0.30000001192092896,
+        0.559499979019165
+      ],
+      "pivot": [
+        0.4424999952316284,
+        -0.30000001192092896,
+        0.559499979019165
+      ],
+      "spin_axis_world": [
+        0.25747421383857727,
+        -1.5522233809406316e-07,
+        0.9662851691246033
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_joint_front_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 4.4485469652285126e-05,
+      "dimensions": [
+        0.046000003814697266,
+        0.046000003814697266,
+        0.02799999713897705
+      ],
+      "geometry_center": [
+        0.46700000762939453,
+        -0.30000001192092896,
+        0.718999981880188
+      ],
+      "pivot": [
+        0.46700000762939453,
+        -0.30000001192092896,
+        0.718999981880188
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_support_rear_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00017203999268917958,
+      "dimensions": [
+        0.11012345552444458,
+        0.02600008249282837,
+        0.32569432258605957
+      ],
+      "geometry_center": [
+        0.4424999952316284,
+        0.2800000011920929,
+        0.559499979019165
+      ],
+      "pivot": [
+        0.4424999952316284,
+        0.2800000011920929,
+        0.559499979019165
+      ],
+      "spin_axis_world": [
+        0.25747421383857727,
+        -1.5522233809406316e-07,
+        0.9662851691246033
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "arm_joint_rear_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 4.4485469652285126e-05,
+      "dimensions": [
+        0.046000003814697266,
+        0.046000003814697266,
+        0.02799999713897705
+      ],
+      "geometry_center": [
+        0.46700000762939453,
+        0.2800000011920929,
+        0.718999981880188
+      ],
+      "pivot": [
+        0.46700000762939453,
+        0.2800000011920929,
+        0.718999981880188
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_front_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0011430170639147304,
+      "dimensions": [
+        0.2311963438987732,
+        0.22737544775009155,
+        0.3930778857320547
+      ],
+      "geometry_center": [
+        0.4000000059604645,
+        -0.3630000054836273,
+        0.22549999970942736
+      ],
+      "pivot": [
+        0.4000000059604645,
+        -0.3630000054836273,
+        0.22550000250339508
+      ],
+      "spin_axis_world": [
+        -0.3233301043510437,
+        0.31338146328926086,
+        0.8928884267807007
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_collar_front_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00025158348301847954,
+      "dimensions": [
+        0.12175577878952026,
+        0.12140314280986786,
+        0.08333766460418701
+      ],
+      "geometry_center": [
+        0.33984994888305664,
+        -0.30470073968172073,
+        0.3916066884994507
+      ],
+      "pivot": [
+        0.33984994888305664,
+        -0.30470073223114014,
+        0.3916066884994507
+      ],
+      "spin_axis_world": [
+        -0.32333052158355713,
+        0.31338146328926086,
+        0.8928882479667664
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "foot_front_right": {
+      "vertices": 180,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.451293271902256e-05,
+      "dimensions": [
+        0.04799997806549072,
+        0.04799997806549072,
+        0.03700000047683716
+      ],
+      "geometry_center": [
+        0.4650000035762787,
+        -0.4259999990463257,
+        0.026500001549720764
+      ],
+      "pivot": [
+        0.4650000035762787,
+        -0.4259999990463257,
+        0.026500001549720764
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_floor_glides"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_rear_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0011430170639147304,
+      "dimensions": [
+        0.2311963438987732,
+        0.22737544775009155,
+        0.39307788386940956
+      ],
+      "geometry_center": [
+        0.4000000059604645,
+        0.3630000054836273,
+        0.22550000064074993
+      ],
+      "pivot": [
+        0.4000000059604645,
+        0.3630000054836273,
+        0.22550000250339508
+      ],
+      "spin_axis_world": [
+        -0.3233301341533661,
+        -0.3133814334869385,
+        0.8928884267807007
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "leg_collar_rear_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.00025158348301847954,
+      "dimensions": [
+        0.12175577878952026,
+        0.12140314280986786,
+        0.08333766460418701
+      ],
+      "geometry_center": [
+        0.33984994888305664,
+        0.30470073968172073,
+        0.3916066884994507
+      ],
+      "pivot": [
+        0.33984994888305664,
+        0.30470073223114014,
+        0.3916066884994507
+      ],
+      "spin_axis_world": [
+        -0.3233305513858795,
+        -0.31338152289390564,
+        0.8928882479667664
+      ],
+      "materials": [
+        "chair_brushed_brass"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "foot_rear_right": {
+      "vertices": 180,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 6.451293271902256e-05,
+      "dimensions": [
+        0.04799997806549072,
+        0.04799997806549072,
+        0.03700000047683716
+      ],
+      "geometry_center": [
+        0.4650000035762787,
+        0.4259999990463257,
+        0.026500001549720764
+      ],
+      "pivot": [
+        0.4650000035762787,
+        0.4259999990463257,
+        0.026500001549720764
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_floor_glides"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "underframe_right": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.001645852063074638,
+      "dimensions": [
+        0.05600005388259888,
+        0.6800000369548798,
+        0.05600011348724365
+      ],
+      "geometry_center": [
+        0.33500000834465027,
+        0.015000000596046448,
+        0.37700000405311584
+      ],
+      "pivot": [
+        0.33500000834465027,
+        0.015000000596046448,
+        0.37700000405311584
+      ],
+      "spin_axis_world": [
+        -7.549791547489804e-08,
+        1.0,
+        -1.3435884227419592e-07
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "cross_brace_front": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0012247388500231753,
+      "dimensions": [
+        0.75,
+        0.046000003814697266,
+        0.046000003814697266
+      ],
+      "geometry_center": [
+        0.0,
+        -0.27000001072883606,
+        0.35600000619888306
+      ],
+      "pivot": [
+        0.0,
+        -0.27000001072883606,
+        0.35600000619888306
+      ],
+      "spin_axis_world": [
+        1.0,
+        0.0,
+        -2.220446049250313e-16
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "cross_brace_rear": {
+      "vertices": 176,
+      "triangles": 236,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.0012247388500231753,
+      "dimensions": [
+        0.75,
+        0.046000003814697266,
+        0.046000003814697266
+      ],
+      "geometry_center": [
+        0.0,
+        0.2800000011920929,
+        0.35600000619888306
+      ],
+      "pivot": [
+        0.0,
+        0.2800000011920929,
+        0.35600000619888306
+      ],
+      "spin_axis_world": [
+        1.0,
+        0.0,
+        -2.220446049250313e-16
+      ],
+      "materials": [
+        "chair_walnut"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    },
+    "lumbar_cushion": {
+      "vertices": 168,
+      "triangles": 188,
+      "degenerate_faces": 0,
+      "nonmanifold_edges": 0,
+      "invalid_normals": 0,
+      "signed_volume": 0.026331723027863487,
+      "dimensions": [
+        0.6499999761581421,
+        0.25,
+        0.20000004768371582
+      ],
+      "geometry_center": [
+        0.0,
+        0.019999995827674866,
+        0.6600000262260437
+      ],
+      "pivot": [
+        0.0,
+        0.019999999552965164,
+        0.6600000262260437
+      ],
+      "spin_axis_world": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "materials": [
+        "chair_saddle_leather"
+      ],
+      "uv_layers": 1,
+      "uv_finite": true,
+      "parent": null
+    }
+  },
+  "dimensions": [
+    1.087999939918518,
+    1.1007438898086548,
+    1.1936556249856949
+  ],
+  "triangles": 18196,
+  "scene_unit_scale": 1.0,
+  "source_sha256": "5ec273777b1fbcb38b3f40fd549a31362a0d97bbc4d66cc96812b262565c8443",
+  "independent_reopen": true
+}

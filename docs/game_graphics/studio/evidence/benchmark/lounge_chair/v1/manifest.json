@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "family": "chair",
+  "case_id": "lounge_chair",
+  "units": "m",
+  "files": [
+    {
+      "path": "asset.blend",
+      "sha256": "fa6880236cc6a0caed33d548267b281576a4d3359ce7592779d0f827ba97fd8e",
+      "bytes": 2219796,
+      "role": "blender_project"
+    },
+    {
+      "path": "asset.glb",
+      "sha256": "3651fffc9d9f14bf031687412821592116fa6f68fac8209dd01b182d2afb0ff4",
+      "bytes": 502848,
+      "role": "exchange"
+    },
+    {
+      "path": "blend-inspection.json",
+      "sha256": "061c76be66e3b457510eb023eda33c291ee63c3779d3a477ed9a8cff37a536d0",
+      "bytes": 25134,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.log",
+      "sha256": "15a49820ea81d99a7d5a1a02e93cd80c3e541267718e5b2cfdeb3f6488167ace",
+      "bytes": 115,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.resources.json",
+      "sha256": "ed7b73bcf537a4c645f8b77ddd58581fc6706b1cbb3d37d268aca3c01e922e45",
+      "bytes": 2673,
+      "role": "evidence"
+    },
+    {
+      "path": "build.log",
+      "sha256": "db9e0613e882f2316907eb87578cc8f09e77b685d902a0ebef9d4dc19a74b437",
+      "bytes": 78161,
+      "role": "evidence"
+    },
+    {
+      "path": "build.resources.json",
+      "sha256": "7bbb6365e625e7e76790e166a06e2e7785a60e975e4c13ca685f917d730492c4",
+      "bytes": 93730,
+      "role": "evidence"
+    },
+    {
+      "path": "calibration.json",
+      "sha256": "c48f561de4fc6f8d15450730f281fe24812ff414bd948237aa232e9c1656c4db",
+      "bytes": 91575,
+      "role": "calibration"
+    },
+    {
+      "path": "execution.json",
+      "sha256": "e3443944a2419b3d0842712a95afb56feea07375c5cdafaefef48c3bf297f0ed",
+      "bytes": 68037,
+      "role": "evidence"
+    },
+    {
+      "path": "front.png",
+      "sha256": "63e17611ac754e57c9e46810e0c756ebd7c1eb7b3c6d46bbd294ba40ced130db",
+      "bytes": 781986,
+      "view": "front",
+      "role": "view"
+    },
+    {
+      "path": "front_three_quarter.png",
+      "sha256": "0eeb77d6c5a79a3b016227292fb1bbab7d10350b7633708ea2cd6f19cb5d3005",
+      "bytes": 1061776,
+      "view": "front_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "glb-inspection.json",
+      "sha256": "b66858af0bf5ffe5fbd3a9c61693daf84f6df1f334cffe73c929de2b1890e534",
+      "bytes": 25109,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.log",
+      "sha256": "184e729f107bb715cccd078718f1e073f878be62bbfbbddb1ad5cedf67e68071",
+      "bytes": 1803,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.resources.json",
+      "sha256": "e4e7bebe880dd13af93021b214da134ace0faccac894e4146ad7d27cf8642a3a",
+      "bytes": 4470,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy-before.json",
+      "sha256": "9a31f12e0e8e0ea1401e3e61d31ba8347c129920cd323185cf6c4e82a1d26d11",
+      "bytes": 28459,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy.json",
+      "sha256": "9a31f12e0e8e0ea1401e3e61d31ba8347c129920cd323185cf6c4e82a1d26d11",
+      "bytes": 28459,
+      "role": "evidence"
+    },
+    {
+      "path": "id_front.png",
+      "sha256": "95a5e46e7804f605a6ef859ccf6d303c273ae720ed0a7d4e9ba2e99091517f27",
+      "bytes": 344297,
+      "role": "evidence"
+    },
+    {
+      "path": "id_rear.png",
+      "sha256": "272206e2c9e3de6b6fb4ef62e093610fb2ce3d8930321fe0cb0c360407566b84",
+      "bytes": 344350,
+      "role": "evidence"
+    },
+    {
+      "path": "judge-report-original-run.json",
+      "sha256": "4e82aacfa573e646dec606f9266087a28749f4aa49c4091ec1833ec36c685032",
+      "bytes": 6397,
+      "role": "evidence"
+    },
+    {
+      "path": "manifest-original-run.json",
+      "sha256": "0a63fa2b443b0a14b9cc9d9dc688e2ed8a4c79610e49ef2d5e9430a7428072de",
+      "bytes": 5578,
+      "role": "evidence"
+    },
+    {
+      "path": "operation-trace.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2,
+      "role": "evidence"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "26f3dbe2a53955e4b3e7591f5ed782295dc6a540921df137b918a5176b344424",
+      "bytes": 620,
+      "role": "evidence"
+    },
+    {
+      "path": "rear_three_quarter.png",
+      "sha256": "13203686f88a2b87ddcc6eae016a4b0484b0bdbfe918f20e70f12304f4b818dd",
+      "bytes": 1022434,
+      "view": "rear_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "render-settings.json",
+      "sha256": "473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4",
+      "bytes": 4845,
+      "role": "evidence"
+    },
+    {
+      "path": "side.png",
+      "sha256": "1693058511893eee8ae4bf21d0e7a3b2a8369b52fdcadb786660bf54da69b98a",
+      "bytes": 981551,
+      "view": "side",
+      "role": "view"
+    },
+    {
+      "path": "silhouette_front.png",
+      "sha256": "abc5fd6d93d0b6507607b87ed207fa992c4f0859528e465c4603c670636e3ca4",
+      "bytes": 290783,
+      "view": "front",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_front_three_quarter.png",
+      "sha256": "a97089a4f8ef45d89a637bf5d5a992cd64d0506a45b3f67343748fd8dea3ef3d",
+      "bytes": 276183,
+      "view": "front_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_rear_three_quarter.png",
+      "sha256": "c7ea9c185cd088f40b573c9b0d999ce035b4bda32a48bf3ef2b847d0473b18af",
+      "bytes": 298730,
+      "view": "rear_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_side.png",
+      "sha256": "9e41d73c3271f1a1bc6a97b71644fe0f44d58e9779b28db0a8764e2c075b5a44",
+      "bytes": 309597,
+      "view": "side",
+      "role": "silhouette"
+    },
+    {
+      "path": "verdict-original-run.json",
+      "sha256": "dda3d55263e9369c798e52b1aee9fd96de7a6a5a5df65a8e770e71158386d9fa",
+      "bytes": 13900,
+      "role": "evidence"
+    },
+    {
+      "path": "visual-alignment.json",
+      "sha256": "69c2a44e218915f5be6cf8ea2d70356f7929a2247f5c458e8adb1be98b914ba2",
+      "bytes": 3609,
+      "role": "evidence"
+    }
+  ],
+  "geometry_method": "procedural_blender",
+  "pbr_texture_baking": false,
+  "limits": [
+    "procedural shaders are not baked into GLB",
+    "Unreal import not executed"
+  ]
+}
