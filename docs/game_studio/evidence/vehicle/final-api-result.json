@@ -1,0 +1,536 @@
+{
+  "id": "768e1b04-665d-444d-bebc-7c692ff98325",
+  "mission_id": "830df6a4-c9e8-4517-9332-8cf72439b825",
+  "mission_history": [
+    "e439a8c2-c7f0-49ae-87a7-6751f4b896fd",
+    "830df6a4-c9e8-4517-9332-8cf72439b825"
+  ],
+  "created_at": "2026-10-15T19:03:00.335523+00:00",
+  "updated_at": "2026-10-15T19:14:25.514106+00:00",
+  "status": "review",
+  "current_task": "completed_for_review",
+  "specialist": "Game Graphics",
+  "model": "Qwen2.5-Coder-7B-Instruct Q5_K_M (pinned local)",
+  "request": {
+    "creation_type": "vehicule",
+    "creation_other": null,
+    "style": "realiste",
+    "style_other": null,
+    "quality": "prototype",
+    "tool": "auto",
+    "compute_backend": "cpu",
+    "controller_model": "pinned_7b",
+    "description": "Cr\u00e9e une voiture de sport r\u00e9aliste avec carrosserie d\u00e9taill\u00e9e, mat\u00e9riaux PBR et quatre rendus. Am\u00e9liore automatiquement les d\u00e9fauts d\u00e9tect\u00e9s.",
+    "judges_all_tasks": true,
+    "automatic_corrections": true,
+    "max_time_s": 1200,
+    "max_rss_mib": 12000,
+    "max_attempts": 3,
+    "criteria": {},
+    "resolved_controller_model": "pinned_7b"
+  },
+  "references": [],
+  "revisions": [
+    {
+      "number": 1,
+      "artifacts": [
+        {
+          "name": "asset.blend",
+          "hash": "sha256:5aa2bb159f06aeb7cbbf8ea596c45e41abb24bdf5ccc602b82549108ff1ff34b",
+          "content_type": "application/octet-stream",
+          "role": "blender_project",
+          "bytes": 3794364
+        },
+        {
+          "name": "asset.glb",
+          "hash": "sha256:38beee0e332c8f9e58f908d407b6b9c800cde3076228c427dbae963acdb80f62",
+          "content_type": "model/gltf-binary",
+          "role": "exchange",
+          "bytes": 1109336
+        },
+        {
+          "name": "blend-inspection.json",
+          "hash": "sha256:342ce63de4cecc0f14b18b2d6d4104083e6e80ba1a51ed194dcc1b3d8424a438",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 99983
+        },
+        {
+          "name": "blend-inspection.log",
+          "hash": "sha256:4baef12c0d551518fb297a72e3337dfd0445e5ab93efacc466e796b5f3b4bf49",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 178
+        },
+        {
+          "name": "blend-inspection.resources.json",
+          "hash": "sha256:3deef3fcf5d4833733edd1e25272b0136812ba0dca191f092cf6de6e0227a568",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2879
+        },
+        {
+          "name": "build.log",
+          "hash": "sha256:eacb57e9565df117f55d30330bd9bef3f7773785fefb6ac0a0f93480bc7cef92",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 166087
+        },
+        {
+          "name": "build.resources.json",
+          "hash": "sha256:ad01f911ea4c0bd1133145ef94ffc44034d492966b7fb709118f1fe97746f12f",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 91530
+        },
+        {
+          "name": "execution.json",
+          "hash": "sha256:27364793411c00e16322ea9d4cb9f462f947dfe1591e95c23d35465254030f16",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 68104
+        },
+        {
+          "name": "front.png",
+          "hash": "sha256:c32fe5f6756c3bdd391a0d4f1fb94c0ec72a8ab07a5249ab18c3ac609495c0a7",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 723744
+        },
+        {
+          "name": "front_three_quarter.png",
+          "hash": "sha256:cc56532e129a99ec2961d415763c1e2a7c44521d295bf34a734bde8d01dcae57",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 965794
+        },
+        {
+          "name": "glb-inspection.json",
+          "hash": "sha256:ab021451a39e8ff267dc540eb8c93444afca4587198d76250e1fc024721c147c",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 100078
+        },
+        {
+          "name": "glb-inspection.log",
+          "hash": "sha256:0714a12e5ba99946eaa5011cef9f820db625ad114223887228e6d21db6817e49",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 7649
+        },
+        {
+          "name": "glb-inspection.resources.json",
+          "hash": "sha256:fe400dff18e2af0765e8b782b3a9721089b3611f2df2add060c4ae424df7fff2",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 10616
+        },
+        {
+          "name": "hierarchy-before.json",
+          "hash": "sha256:5f7b30592552bbca0d11612d7fecad520c18fa7325d3d10ede5899a5a4691db3",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 118382
+        },
+        {
+          "name": "hierarchy.json",
+          "hash": "sha256:5f7b30592552bbca0d11612d7fecad520c18fa7325d3d10ede5899a5a4691db3",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 118382
+        },
+        {
+          "name": "operation-trace.json",
+          "hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2
+        },
+        {
+          "name": "provenance.json",
+          "hash": "sha256:86303f3c8af981423001d3771a45e68af3d6fe16d1b4cdd294b4f02c223036a3",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 622
+        },
+        {
+          "name": "rear_three_quarter.png",
+          "hash": "sha256:ba912f0d42f58bc0852b3c1cf19cb4822c2dddd5c5552ddc764ed2d712ecfeef",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 964897
+        },
+        {
+          "name": "render-settings.json",
+          "hash": "sha256:6e641c28f7ee1eb805ac5cc9ab55596b045c91d8fb167a399b195857aadccd69",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4557
+        },
+        {
+          "name": "side.png",
+          "hash": "sha256:c068b224a0bb1fa5da11e7930023a18c1096d1614b9da3b9a3b320a8eebf1d9e",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 916987
+        },
+        {
+          "name": "silhouette_front.png",
+          "hash": "sha256:aae8079cb6496b3387568870b41655a1773a8366f69c468488a2facc3d1b650f",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 327724
+        },
+        {
+          "name": "silhouette_front_three_quarter.png",
+          "hash": "sha256:426f89c4a2e7d5ec4f1f5a5d4ff8653b11dfc636037e9633033d0bbb1bded06e",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 293815
+        },
+        {
+          "name": "silhouette_rear_three_quarter.png",
+          "hash": "sha256:b8a1c26f9a6fe3b9b8f26fb55293db451bd7f30fe4b8ed7fbf0cb7458e8fd5db",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 295188
+        },
+        {
+          "name": "silhouette_side.png",
+          "hash": "sha256:f0b5ac53fd40eecc4056fdcb7d4accdf1e97f5e1ad6bb2e6fce496523948b217",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 299142
+        },
+        {
+          "name": "manifest.json",
+          "hash": "sha256:e165a7f3adb4566210b4ff0e104a5c8ca52498803c3760ba99fe1d851d72712a",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 4870
+        },
+        {
+          "name": "judge-report.json",
+          "hash": "sha256:b418bc58189dbf0d7278dbcf3af355b71e5be4f6d2fb1685ef203b92780c61af",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 2522
+        },
+        {
+          "name": "verdict.json",
+          "hash": "sha256:d5b65aeffd22bad9a00735c98306095a377a60aa8b1b7b5fce3a28864e783f87",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 15981
+        }
+      ],
+      "verdict": "pass",
+      "defects": [],
+      "unavailable": [],
+      "created_at": "2026-10-15T19:04:28.883492+00:00"
+    },
+    {
+      "number": 2,
+      "artifacts": [
+        {
+          "name": "asset.blend",
+          "hash": "sha256:b2ff52bbfa5f5f485433c61b1eda4f78322e519b970eaeb0c99f94d60ecc1728",
+          "content_type": "application/octet-stream",
+          "role": "blender_project",
+          "bytes": 3813736
+        },
+        {
+          "name": "asset.glb",
+          "hash": "sha256:9f30ab7729b1ce5f04e8e040d58330863e31ded0eb881d19fbb0e2a3eb55d38a",
+          "content_type": "model/gltf-binary",
+          "role": "exchange",
+          "bytes": 1124880
+        },
+        {
+          "name": "blend-inspection.json",
+          "hash": "sha256:1bca0c9591282987e18ddf77e43ccd6f4bcee7ccb05aa2102e63bb5421b16727",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 102177
+        },
+        {
+          "name": "blend-inspection.log",
+          "hash": "sha256:1d6fee8696693d775135ced146ed653e29a1f3fb486af035cf33d1475ca9e649",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 178
+        },
+        {
+          "name": "blend-inspection.resources.json",
+          "hash": "sha256:c49d362168a7b114310361f413b99d83660acf3a0a2eecf93e00aae03f365258",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 3095
+        },
+        {
+          "name": "build.log",
+          "hash": "sha256:9ef17c387ae3565a199e3b251206feb11058bc5e9e91296618f9ae0c2d75a745",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 190954
+        },
+        {
+          "name": "build.resources.json",
+          "hash": "sha256:40b62e1e82067cf8b22c29c30e809905c3dff5ba4a91032b251bcacf6b5adc9e",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 105110
+        },
+        {
+          "name": "execution.json",
+          "hash": "sha256:143ef9a0b005134633f85876b390fec3d54213f7c9aedf08a1271d64d6df86ae",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 68509
+        },
+        {
+          "name": "front.png",
+          "hash": "sha256:dc53314c2392cb52e9b2284a93f9329c6f110576f35063ddc4a256ab1b28432e",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 707251
+        },
+        {
+          "name": "front_three_quarter.png",
+          "hash": "sha256:e0286c3ee60e55fe1c11749824da4b2e9d74d88bf46c7baa2c21553b6be0fb16",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 916109
+        },
+        {
+          "name": "glb-inspection.json",
+          "hash": "sha256:d287ecd6a18efdd846826cc6d08dc8460e719c2177ed02bed0959f884811066d",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 102274
+        },
+        {
+          "name": "glb-inspection.log",
+          "hash": "sha256:dc49f6dacaa2335cf3a75c8daf62e67c038dd8a26d0cea2512a53324aa98b9f2",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 7802
+        },
+        {
+          "name": "glb-inspection.resources.json",
+          "hash": "sha256:21ff32b8f52235f041e0664cde6214e9adabec960e591b4e516ce5db25562441",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 11056
+        },
+        {
+          "name": "hierarchy-before.json",
+          "hash": "sha256:5f7b30592552bbca0d11612d7fecad520c18fa7325d3d10ede5899a5a4691db3",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 118382
+        },
+        {
+          "name": "hierarchy.json",
+          "hash": "sha256:c86bed0beaa0b515b8c2d7cd5ff4049a7b57b6401a668b3da5567bd7d22e1bc4",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 120891
+        },
+        {
+          "name": "operation-trace.json",
+          "hash": "sha256:bfaabfc8e829f0f72799a73397ce5f7f3038cdc48c28a0bd7ededa7f001ff515",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 20539
+        },
+        {
+          "name": "plan/plan.json",
+          "hash": "sha256:5f02fd6c5e1c1e5bc0144e2651dd87cb8f8e4b50a750efcff571fe7c42eeb985",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 589
+        },
+        {
+          "name": "plan/tool-result.json",
+          "hash": "sha256:89008eb50af80ec3fb4746fc2717c573f90311415a1a9ea2aef68c071970d3b4",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 378
+        },
+        {
+          "name": "provenance.json",
+          "hash": "sha256:309add4b2d776348844da05f86b0459e0e13c47fc482a3aec9bac3471dec7a50",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 746
+        },
+        {
+          "name": "rear_three_quarter.png",
+          "hash": "sha256:06a190ae83b85a94cac39e99af32cfdf67a68e180fe1cdcc4d7bd335c3abadf7",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 911376
+        },
+        {
+          "name": "render-settings.json",
+          "hash": "sha256:6e641c28f7ee1eb805ac5cc9ab55596b045c91d8fb167a399b195857aadccd69",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4557
+        },
+        {
+          "name": "side.png",
+          "hash": "sha256:bc43e757cce5b8507d8c293a25581944078ac8bc1f6ce263a18b7397553c7e3d",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 879561
+        },
+        {
+          "name": "silhouette_front.png",
+          "hash": "sha256:fb27302fbbbab7faf954129b9d4568d5d82d07fa8a2f10774ee08825907038e5",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 327435
+        },
+        {
+          "name": "silhouette_front_three_quarter.png",
+          "hash": "sha256:cb1bb122d25cc7a69f2051af3f68ddfb6b923b6c291302e4e1b4d45b9c2b2415",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 293221
+        },
+        {
+          "name": "silhouette_rear_three_quarter.png",
+          "hash": "sha256:7af6f0dbd2a95a134fdc20e2b5e4beef7162d9080c9525f0a3579ebc4eba71b9",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 294895
+        },
+        {
+          "name": "silhouette_side.png",
+          "hash": "sha256:8b30b0e9d279594e466af1e7af710d34647d224dff9deb94f5ff95153c441a18",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 298838
+        },
+        {
+          "name": "manifest.json",
+          "hash": "sha256:144aabbb131c6b75381dc82681977b1248ab43af121909748c99375ffbbdb7f6",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 5231
+        },
+        {
+          "name": "judge-report.json",
+          "hash": "sha256:de0dab1c83d3300bed816d1333d78abed94923587e8c6b45949ed9260ca5236c",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 2518
+        },
+        {
+          "name": "verdict.json",
+          "hash": "sha256:9b3ad774f0768b5eef9c3736f9d84fc242fbee1d7464ca3b952f5bc8fd791d11",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 16165
+        },
+        {
+          "name": "controller/lifecycle.json",
+          "hash": "sha256:90ab39744ec6883c0c6621099a00c01a223d1eadb945dd0a4a9b25ae9caad243",
+          "content_type": "application/json",
+          "role": "controller",
+          "bytes": 471
+        },
+        {
+          "name": "controller/plan.json",
+          "hash": "sha256:0503ba41e9043b730a1733ba18e3f8adf8782404abd4a003a8345c789f2b7639",
+          "content_type": "application/json",
+          "role": "controller",
+          "bytes": 7269
+        }
+      ],
+      "verdict": "pass",
+      "defects": [],
+      "unavailable": [],
+      "created_at": "2026-10-15T19:14:25.509678+00:00"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-10-15T19:03:00.342638+00:00",
+      "kind": "dependency_check"
+    },
+    {
+      "at": "2026-10-15T19:03:00.352792+00:00",
+      "kind": "blender_baseline"
+    },
+    {
+      "at": "2026-10-15T19:04:25.620296+00:00",
+      "kind": "mandatory_integrity_judge"
+    },
+    {
+      "at": "2026-10-15T19:04:28.884072+00:00",
+      "kind": "qwen_artistic_plan",
+      "iteration": 2
+    },
+    {
+      "at": "2026-10-15T19:08:43.449442+00:00",
+      "kind": "execution_stopped",
+      "reason": "ValueError: topology_operation_on_protected_mesh"
+    },
+    {
+      "at": "2026-10-15T19:10:21.843299+00:00",
+      "kind": "resume",
+      "mission_id": "830df6a4-c9e8-4517-9332-8cf72439b825"
+    },
+    {
+      "at": "2026-10-15T19:10:21.854693+00:00",
+      "kind": "dependency_check"
+    },
+    {
+      "at": "2026-10-15T19:10:21.877761+00:00",
+      "kind": "qwen_artistic_plan",
+      "iteration": 2
+    },
+    {
+      "at": "2026-10-15T19:12:05.490089+00:00",
+      "kind": "blender_artistic_revision",
+      "iteration": 2
+    },
+    {
+      "at": "2026-10-15T19:14:20.359357+00:00",
+      "kind": "mandatory_integrity_judge",
+      "iteration": 2
+    },
+    {
+      "at": "2026-10-15T19:14:25.514043+00:00",
+      "kind": "completed_for_review",
+      "elapsed_s": 243.67
+    }
+  ],
+  "error": null,
+  "resource_measurements": [
+    {
+      "revision": 2,
+      "elapsed_s": {
+        "value": 134.85369369701948,
+        "status": "real"
+      },
+      "sampled_memory_peak_mb": {
+        "value": 358.01953125,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 327.43,
+        "status": "real"
+      },
+      "process_stopped_verified": true
+    }
+  ],
+  "limitations": [
+    "Image references are archived with provenance; the text-only controller does not interpret their pixels."
+  ],
+  "selected_revision_number": 2,
+  "mission_state": "review"
+}

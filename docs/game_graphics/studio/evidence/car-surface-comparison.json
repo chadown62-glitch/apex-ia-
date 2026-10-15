@@ -1,0 +1,81 @@
+{
+  "before": "first-pass/sports_car",
+  "after": "benchmark/sports_car/v1",
+  "same_cameras": true,
+  "same_lights": true,
+  "chassis_before": {
+    "vertices": 4740,
+    "triangles": 9476,
+    "degenerate_faces": 0,
+    "nonmanifold_edges": 0,
+    "invalid_normals": 0,
+    "signed_volume": 3.7392769060661006,
+    "dimensions": [
+      4.786667346954346,
+      1.884633183479309,
+      0.6076398193836212
+    ],
+    "geometry_center": [
+      0.0,
+      0.0,
+      0.4976678937673569
+    ],
+    "pivot": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "spin_axis_world": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "uv_layers": 1,
+    "uv_finite": true,
+    "parent": null
+  },
+  "chassis_after": {
+    "vertices": 1792,
+    "triangles": 3580,
+    "degenerate_faces": 0,
+    "nonmanifold_edges": 0,
+    "invalid_normals": 0,
+    "signed_volume": 5.0721815946104005,
+    "dimensions": [
+      4.800000190734863,
+      2.0009734630584717,
+      0.7626132965087891
+    ],
+    "geometry_center": [
+      0.0,
+      0.0,
+      0.5713066458702087
+    ],
+    "pivot": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "spin_axis_world": [
+      0.0,
+      0.0,
+      1.0
+    ],
+    "materials": [
+      "petrol_paint"
+    ],
+    "uv_layers": 1,
+    "uv_finite": true,
+    "parent": null
+  },
+  "changes": [
+    "rebuilt rounded body profiles and closed fender bridges",
+    "lights integrated at nose and tail",
+    "headrests moved below roof",
+    "glass material darkened"
+  ],
+  "limits": "Original design comparison; no calibrated beauty score. Material change is disclosed separately from body geometry."
+}

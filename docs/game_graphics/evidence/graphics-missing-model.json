@@ -1,0 +1,15 @@
+{
+  "status": "blocked",
+  "reason": "RuntimeError: coder_model_missing",
+  "criteria": {
+    "level": "photorealiste",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 2,
+    "required_texture_size": 4096,
+    "require_calibrated_visual_reference": true
+  }
+}

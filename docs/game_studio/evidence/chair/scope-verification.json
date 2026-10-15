@@ -1,0 +1,30 @@
+{
+  "diagnostic_injection": {
+    "method": "actual Blender catalog set_location on arm_left",
+    "offset_z_m": 0.12,
+    "public_api_exposed": false
+  },
+  "defect_judge": {
+    "verdict": "fail",
+    "paired_alignment_defects": 2
+  },
+  "corrected_judge": {
+    "verdict": "pass",
+    "paired_alignment_defects": 0
+  },
+  "corrected_target": "arm_left",
+  "target_location_before_m": [
+    0.0,
+    0.0,
+    0.11999999731779099
+  ],
+  "target_location_after_m": [
+    0.0,
+    0.0,
+    0.0
+  ],
+  "target_geometry_unchanged": true,
+  "unrelated_objects_unchanged": true,
+  "render_settings_unchanged": true,
+  "render_settings_sha256": "473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4"
+}

@@ -1,0 +1,138 @@
+ERROR Draco mesh compression is not available because library could not be found at /usr/bin/4.3/python/lib/python3.13/site-packages/libextern_draco.so
+16:17:12 | INFO: Starting glTF 2.0 export
+16:17:12 | INFO: Extracting primitive: chassis
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Torus
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cylinder.001
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.001
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.002
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.003
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.004
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.005
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Torus.001
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cylinder.003
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.006
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.007
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.008
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.009
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.010
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Torus.002
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cylinder.005
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.011
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.012
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.013
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.014
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.015
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Torus.003
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cylinder.007
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.016
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.017
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.018
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.019
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.020
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: cabin_glass
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.021
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.022
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.023
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.024
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.025
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.026
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.027
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Extracting primitive: Cube.028
+16:17:12 | INFO: Primitives created: 1
+16:17:12 | INFO: Finished glTF 2.0 export in 0.0762643814086914 s
+Blender 4.3.2
+Fra:1 Mem:15.66M (Peak 15.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:15.66M (Peak 15.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_left_rim
+Fra:1 Mem:15.79M (Peak 15.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_left_spoke_0
+Fra:1 Mem:15.79M (Peak 15.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:15.80M (Peak 15.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_left_spoke_3
+Fra:1 Mem:15.81M (Peak 15.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_left_spoke_4
+Fra:1 Mem:15.82M (Peak 15.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_right
+Fra:1 Mem:15.87M (Peak 15.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_sill_1
+Fra:1 Mem:15.90M (Peak 15.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_right_rim
+Fra:1 Mem:15.90M (Peak 15.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_right_spoke_0
+Fra:1 Mem:15.91M (Peak 15.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_lamp_1
+Fra:1 Mem:15.91M (Peak 15.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_lamp_1
+Fra:1 Mem:15.92M (Peak 15.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_sill_-1
+Fra:1 Mem:15.93M (Peak 15.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_lamp_-1
+Fra:1 Mem:15.94M (Peak 15.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_lamp_-1
+Fra:1 Mem:15.95M (Peak 15.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:15.95M (Peak 15.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_right_spoke_2
+Fra:1 Mem:15.96M (Peak 15.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_right_spoke_3
+Fra:1 Mem:15.97M (Peak 15.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:15.98M (Peak 15.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_front_right_spoke_4
+Fra:1 Mem:15.99M (Peak 15.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | cabin_glass
+Fra:1 Mem:15.99M (Peak 15.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_left
+Fra:1 Mem:16.04M (Peak 16.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right_spoke_4
+Fra:1 Mem:16.07M (Peak 16.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right_spoke_3
+Fra:1 Mem:16.07M (Peak 16.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_left_rim
+Fra:1 Mem:16.09M (Peak 16.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right_spoke_2
+Fra:1 Mem:16.09M (Peak 16.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_left_spoke_0
+Fra:1 Mem:16.09M (Peak 16.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right_spoke_1
+Fra:1 Mem:16.11M (Peak 16.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_left_spoke_2
+Fra:1 Mem:16.12M (Peak 16.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right_spoke_0
+Fra:1 Mem:16.12M (Peak 16.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_left_spoke_3
+Fra:1 Mem:16.13M (Peak 16.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right_rim
+Fra:1 Mem:16.13M (Peak 16.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | wheel_rear_right
+Fra:1 Mem:16.22M (Peak 16.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:14.53M (Peak 16.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Failed to denoise, build has no OpenImageDenoise support
+Fra:1 Mem:14.53M (Peak 16.22M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:14.53M (Peak 16.22M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:14.53M (Peak 16.22M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:14.62M (Peak 16.22M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Loading denoising kernels (may take a few minutes the first time)
+Fra:1 Mem:14.62M (Peak 16.22M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Failed to denoise, build has no OpenImageDenoise support
+Traceback (most recent call last):
+  File "/workspace/apex-game-graphics/scripts/game_graphics/build_vehicle.py", line 216, in <module>
+    make_car(json.loads(args.spec.read_text()), args.output, args.defect)
+    ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/apex-game-graphics/scripts/game_graphics/build_vehicle.py", line 203, in make_car
+    bpy.ops.render.render(write_still=True)
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/usr/share/blender/scripts/modules/bpy/ops.py", line 109, in __call__
+    ret = _op_call(self.idname_py(), kw)
+RuntimeError: Error: Failed to denoise, build has no OpenImageDenoise support
+Error: Failed to denoise, build has no OpenImageDenoise support
+
+
+Error: Failed to denoise, build has no OpenImageDenoise support
+Error: Failed to denoise, build has no OpenImageDenoise support
+
+Blender quit

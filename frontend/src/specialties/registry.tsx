@@ -14,6 +14,7 @@ import { ChatPage } from "../pages/ChatPage";
 import { CodeIntelligencePage } from "../pages/CodeIntelligencePage";
 import { DashboardPage } from "../pages/DashboardPage";
 import { DesignStudioPage } from "../pages/DesignStudioPage";
+import { GameStudioPage } from "../pages/GameStudioPage";
 import { EvolutionTimelinePage } from "../pages/EvolutionTimelinePage";
 import { ExperimentLabPage } from "../pages/ExperimentLabPage";
 import { FilesPage } from "../pages/FilesPage";
@@ -51,6 +52,7 @@ const COMPONENTS: Partial<Record<string, Specialty["component"]>> = {
   models: ModelsPage,
   "code-intelligence": CodeIntelligencePage,
   "design-studio": DesignStudioPage,
+  "game-studio": GameStudioPage,
   "project-manager": ProjectManagerPage,
   "security-gate": SecurityGatePage,
   resources: ResourcesPage,

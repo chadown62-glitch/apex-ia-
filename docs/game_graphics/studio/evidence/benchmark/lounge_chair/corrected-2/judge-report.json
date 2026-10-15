@@ -1,0 +1,220 @@
+{
+  "family": "chair",
+  "case_id": "lounge_chair",
+  "criteria": {
+    "level": "prototype",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 0,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "benchmark_version": 1,
+  "scope": "measured_geometry_export_and_render_rules",
+  "defects": [],
+  "unavailable": [],
+  "facts": {
+    "render_settings": {
+      "engine": "CYCLES",
+      "device": "CPU",
+      "samples": 64,
+      "seed": 14,
+      "denoising": false
+    },
+    "distinct_camera_transforms": 4,
+    "blend": {
+      "triangles": 18196,
+      "dimensions": [
+        1.087999939918518,
+        1.1007438898086548,
+        1.1936556249856949
+      ],
+      "objects": 33,
+      "materials": 5
+    },
+    "glb": {
+      "triangles": 18196,
+      "dimensions": [
+        1.087999939918518,
+        1.1007438898086548,
+        1.1936556249856949
+      ],
+      "objects": 33,
+      "materials": 5
+    },
+    "images": {
+      "front_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 39.09768764480939,
+        "subject_fraction": 0.2518243634259259,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "rear_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 38.21476035769067,
+        "subject_fraction": 0.17167679398148147,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "side": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 52.669635295400816,
+        "subject_fraction": 0.1478935185185185,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "front": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 58.80777636196554,
+        "subject_fraction": 0.1931857638888889,
+        "subject_pixels_at_image_boundary": 0
+      }
+    }
+  },
+  "advisory": [
+    "Shader parameters and material count do not certify convincing PBR appearance."
+  ],
+  "aesthetic_certification": false,
+  "limits": [
+    "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+    "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+    "Unreal import and runtime performance have not been measured by this oracle."
+  ],
+  "manifest_sha256": "7469c71bdfbaa03413f07bc7fb1372702fce643de46fa28b2270a34e1f5fb7ce",
+  "visual": {
+    "scope": "isolated_paired_component_alignment",
+    "required": true,
+    "calibrated": true,
+    "status": "pass",
+    "calibration": {
+      "evidence_path": "calibration.json"
+    },
+    "measurements": [
+      {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/studio14-final/lounge_chair/corrected-2/id_front.png",
+        "view": "front",
+        "reference": "original-lounge-chair-v1",
+        "objects": {
+          "red": "arm_left",
+          "green": "arm_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "pass",
+        "decisive": false,
+        "defects": [],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "fd3c5adc0c427df3f2512954c1863207bf773d77e8df12f87d47899740e7e686",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 963,
+            "centroid_xy": [
+              279.7019730010384,
+              303.8577362409138
+            ],
+            "bbox_xyxy": [
+              259,
+              289,
+              301,
+              319
+            ]
+          },
+          "green": {
+            "pixels": 963,
+            "centroid_xy": [
+              679.2980269989616,
+              303.8577362409138
+            ],
+            "bbox_xyxy": [
+              659,
+              289,
+              701,
+              319
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": 0.0,
+        "absolute_y_delta_pixels": 0.0,
+        "reason": "projected_alignment_measured"
+      },
+      {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/studio14-final/lounge_chair/corrected-2/id_rear.png",
+        "view": "rear",
+        "reference": "original-lounge-chair-v1",
+        "objects": {
+          "red": "arm_left",
+          "green": "arm_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "pass",
+        "decisive": false,
+        "defects": [],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "d350ba603e0443a2dee3955573cea9244dd753953e17cf469fed9bdfd58cfca5",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 963,
+            "centroid_xy": [
+              679.2980269989616,
+              303.8577362409138
+            ],
+            "bbox_xyxy": [
+              659,
+              289,
+              701,
+              319
+            ]
+          },
+          "green": {
+            "pixels": 963,
+            "centroid_xy": [
+              279.7019730010384,
+              303.8577362409138
+            ],
+            "bbox_xyxy": [
+              259,
+              289,
+              301,
+              319
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": 0.0,
+        "absolute_y_delta_pixels": 0.0,
+        "reason": "projected_alignment_measured"
+      }
+    ],
+    "defects": []
+  },
+  "verdict": "pass"
+}

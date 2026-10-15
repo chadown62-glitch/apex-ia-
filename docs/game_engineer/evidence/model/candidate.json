@@ -1,0 +1,45 @@
+{
+  "generation": {
+    "text": "### Header File: MyVehiclePawn.h\n\n```cpp\n#pragma once\n\n#include \"CoreMinimal.h\"\n#include \"GameFramework/WheeledVehiclePawn.h\"\n#include \"MyVehiclePawn.generated.h\"\n\nUCLASS()\nclass MYPROJECT_API AMyVehiclePawn : public AWheeledVehiclePawn\n{\n    GENERATED_BODY()\n\npublic:\n    // Sets default values for this pawn's properties\n    AMyVehiclePawn();\n\nprotected:\n    virtual void BeginPlay() override;\n\npublic:\n    // Called every frame\n    virtual void Tick(float DeltaTime) override;\n\n    // Throttle control function\n    UFUNCTION(BlueprintCallable, Category = \"Vehicle Control\")\n    void SetThrottle(float Value);\n\n    // Steering control function\n    UFUNCTION(BlueprintCallable, Category = \"Vehicle Control\")\n    void SetSteering(float Value);\n\nprivate:\n    UPROPERTY(VisibleAnywhere)\n    USpringArmComponent* SpringArm;\n\n    UPROPERTY(VisibleAnywhere)\n    UCameraComponent* Camera;\n\n    UPROPERTY(VisibleAnywhere)\n    UStaticMeshComponent* VehicleMesh;\n};\n```\n\n### Source File: MyVehiclePawn.cpp\n\n```cpp\n#include \"MyVehiclePawn.h\"\n#include \"Components/SkeletalMeshComponent.h\"\n#include \"GameFramework/CharacterMovementComponent.h\"\n\n// Sets default values\nAMyVehiclePawn::AMyVehiclePawn()\n{\n    // Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.\n    PrimaryActorTick.bCanEverTick = true;\n\n    VehicleMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT(\"VehicleMesh\"));\n    RootComponent = VehicleMesh;\n\n    SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT(\"SpringArm\"));\n    SpringArm->SetupAttachment(RootComponent);\n    SpringArm->TargetOffset = FVector(0.0f, 0.0f, 150.0f);\n    SpringArm->bUsePawnControlRotation = true;\n\n    Camera = CreateDefaultSubobject<UCameraComponent>(TEXT(\"Camera\"));\n    Camera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);\n}\n\n// Called when the game starts or when spawned\nvoid AMyVehiclePawn::BeginPlay()\n{\n    Super::BeginPlay();\n}\n\n// Called every frame\nvoid AMyVehiclePawn::Tick(float DeltaTime)\n{\n    Super::Tick(DeltaTime);\n}\n\n// Throttle control function\nvoid AMyVehiclePawn::SetThrottle(float Value)\n{\n    if (UChaosWheeledVehicleMovementComponent* VehicleMovement = Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovement()))\n    {\n        VehicleMovement->SetThrottleInput(Value);\n    }\n}\n\n// Steering control function\nvoid AMyVehiclePawn::SetSteering(float Value)\n{\n    if (UChaosWheeledVehicleMovementComponent* VehicleMovement = Cast<UChaosWheeledVehicleMovementComponent>(GetVehicleMovement()))\n    {\n        VehicleMovement->SetSteeringInput(Value);\n    }\n}\n```\n\n### Build.cs Modules\n\n```csharp\nusing UnrealBuildTool;\n\npublic class MyProject : ModuleRules\n{\n    public MyProject(ReadOnlyTargetRules Target) : base(Target)\n    {\n        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;\n        PublicDependencyModuleNames.AddRange(new string[] { \"Core\", \"CoreUObject\", \"Engine\", \"InputCore\", \"ChaosVehicle\" });\n        PrivateDependencyModuleNames.AddRange(new string[] {  });\n\n        // Uncomment if you are using Slate UI\n        // PrivateDependencyModuleNames.AddRange(new string[] { \"Slate\", \"SlateCore\" });\n\n        // Uncomment if you are using online features\n        // PrivateDependencyModuleNames.Add(\"OnlineSubsystem\");\n\n        // To include OnlineSubsystemSteam, add it to the plugins section in your uproject file with the Enabled attribute set to true\n    }\n}\n```\n\n### Prerequisites\n\n1. **Skeletal Mesh**: A skeletal mesh representing the vehicle.\n2. **Wheel Bone**: The bone in the skeletal mesh that represents the wheel.\n3. **PhysicsAsset**: A physics asset for the vehicle's wheels.\n\nThese prerequisites are necessary for the vehicle to be properly simulated and controlled within Unreal Engine 5.",
+    "model_used": "qwen2.5-coder-7b-instruct-q5",
+    "tokens_prompt": {
+      "value": 112,
+      "status": "real"
+    },
+    "tokens_completion": {
+      "value": 871,
+      "status": "real"
+    },
+    "finish_reason": "stop",
+    "elapsed_s": 147.827,
+    "facts": {
+      "id": "chatcmpl-20c6f873-3239-46ba-83ec-7f1d180aa87d",
+      "created": 1791826338
+    }
+  },
+  "request": {
+    "endpoint": {
+      "pool_id": "local",
+      "runtime": "openai_compatible",
+      "url": "http://127.0.0.1:8082/v1",
+      "served_model": "qwen2.5-coder-7b-instruct-q5",
+      "max_context": 8192,
+      "vram_gb": null,
+      "measured": null,
+      "secret_key": null,
+      "enabled": true
+    },
+    "prompt": "Write a minimal UE5 C++ header and cpp for a class derived from AWheeledVehiclePawn. Add a spring arm and camera attached to the mesh. Expose throttle and steering functions calling UChaosWheeledVehicleMovementComponent. Name required Build.cs modules. Mention the skeletal mesh, wheel bone and PhysicsAsset prerequisites. No fabricated API stubs. Keep within 1000 tokens.",
+    "max_tokens": 1200,
+    "temperature": 0,
+    "timeout_s": 300,
+    "cancel_event": null,
+    "seed": 42,
+    "system": "You are a UE5 C++ candidate. Do not claim compilation or runtime success.",
+    "messages": null
+  },
+  "ue_api_qualified": false,
+  "compile_status": "blocked_without_actual_engine",
+  "driving_status": "blocked",
+  "policy": "candidate text never executed on host or accepted as compile evidence"
+}

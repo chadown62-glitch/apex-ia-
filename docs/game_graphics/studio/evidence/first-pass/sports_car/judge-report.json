@@ -1,0 +1,81 @@
+{
+  "family": "vehicle",
+  "case_id": "sports_car",
+  "criteria": {
+    "level": "prototype",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 0,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "benchmark_version": 1,
+  "scope": "measured_geometry_export_and_render_rules",
+  "defects": [],
+  "unavailable": [],
+  "facts": {
+    "blend": {
+      "triangles": 38500,
+      "dimensions": [
+        4.833333730697632,
+        2.2399998903274536,
+        1.2888213781673201
+      ],
+      "objects": 136,
+      "materials": 9
+    },
+    "glb": {
+      "triangles": 38500,
+      "dimensions": [
+        4.833333730697632,
+        2.2399998903274536,
+        1.2888214147975106
+      ],
+      "objects": 136,
+      "materials": 9
+    },
+    "images": {
+      "front_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 43.98520461166046,
+        "subject_fraction": 0.15890046296296295,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "rear_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 41.84866217794129,
+        "subject_fraction": 0.15146556712962964,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "side": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 64.34935563083576,
+        "subject_fraction": 0.13407841435185186,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "front": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 22.683401112644326,
+        "subject_fraction": 0.05744791666666667,
+        "subject_pixels_at_image_boundary": 0
+      }
+    }
+  },
+  "advisory": [
+    "Shader parameters and material count do not certify convincing PBR appearance."
+  ],
+  "aesthetic_certification": false,
+  "limits": [
+    "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+    "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+    "Unreal import and runtime performance have not been measured by this oracle."
+  ],
+  "verdict": "pass"
+}

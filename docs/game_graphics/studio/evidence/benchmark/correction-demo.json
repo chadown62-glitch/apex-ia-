@@ -1,0 +1,53 @@
+{
+  "status": "pass",
+  "max_scene_attempts": 3,
+  "scene_attempts": 3,
+  "correction_attempts": 2,
+  "before": "lounge_chair/defect",
+  "failed_attempt": "lounge_chair/corrected-1",
+  "after": "lounge_chair/corrected-2",
+  "initial_residual_pixels": [
+    48.841138730540365,
+    48.841138730540365
+  ],
+  "failed_residual_pixels": [
+    48.790660863532935,
+    48.790660863532935
+  ],
+  "final_residual_pixels": [
+    0.0,
+    0.0
+  ],
+  "unrelated_objects_unchanged": true,
+  "target_topology_uvs_unchanged": true,
+  "same_lights_cameras_render_settings": true,
+  "change": "arm_left absolute object placement only; no lighting improvement claim",
+  "no_progress_result": "no_improvement",
+  "interrupted_unapplied_model_attempt": "subpixel jitter was incorrectly treated as progress; stopped owned process, tightened progress threshold to >=1px",
+  "plan": {
+    "family": "chair",
+    "operations": [
+      {
+        "op": "inspect_scene",
+        "target": "scene",
+        "params": {}
+      },
+      {
+        "op": "set_location",
+        "target": "arm_left",
+        "params": {
+          "location_m": [
+            0.0,
+            0.0,
+            0.0
+          ]
+        }
+      },
+      {
+        "op": "save_revision_and_render",
+        "target": "scene",
+        "params": {}
+      }
+    ]
+  }
+}

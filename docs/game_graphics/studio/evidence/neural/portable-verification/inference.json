@@ -1,0 +1,80 @@
+{
+  "status": "INFERENCE_EXECUTED_QUALITY_UNQUALIFIED",
+  "method": "neural_single_image_to_triplane_to_mesh",
+  "device": "cpu",
+  "cuda_used": false,
+  "threads": 4,
+  "resolution": 128,
+  "density_threshold": 25.0,
+  "renderer_chunk_size": 4096,
+  "stages": {
+    "imports_hash_preprocess": {
+      "seconds": 2.7903429830039386,
+      "self_peak_rss_bytes": 291315712
+    },
+    "model_load": {
+      "seconds": 5.326722867997887,
+      "self_peak_rss_bytes": 3746082816
+    },
+    "neural_forward": {
+      "seconds": 14.495408132999728,
+      "self_peak_rss_bytes": 3746082816
+    },
+    "neural_mesh_extraction": {
+      "seconds": 3.925470989997848,
+      "self_peak_rss_bytes": 3746082816
+    },
+    "export": {
+      "seconds": 0.0039733029989292845,
+      "self_peak_rss_bytes": 3746082816
+    }
+  },
+  "input": "/workspace/game-studio-notes/chair14-candidate/chair-reference-rgba.png",
+  "torch_cuda_available": false,
+  "cpu_selected_even_if_cuda_available": true,
+  "packages": {
+    "torch": "2.14.1+cpu",
+    "transformers": "4.57.6",
+    "trimesh": "4.8.3",
+    "numpy": "2.5.4",
+    "Pillow": "12.3.0",
+    "einops": "0.7.0",
+    "omegaconf": "2.3.0"
+  },
+  "weights_repository": "stabilityai/TripoSR",
+  "weights_revision": "5b521936b01fbe1890f6f9baed0254ab6351c04a",
+  "weights_sha256": "429e2c6b22a0923967459de24d67f05962b235f79cde6b032aa7ed2ffcd970ee",
+  "weights_license": "MIT",
+  "input_sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+  "preprocessing": "upstream resize_foreground 0.85; alpha composite neutral grey; no segmentation model",
+  "model_input_sha256": "ad83c9399d5b69e504a3c409a1e3ed93442f63d60b2860dda788e870d43ca2d2",
+  "elapsed_seconds": 26.551174933003495,
+  "self_peak_rss_bytes": 3746082816,
+  "mesh": {
+    "vertices": 9711,
+    "triangles": 19360,
+    "watertight_raw": false,
+    "bounds": [
+      [
+        -0.3614993095397949,
+        -0.39823421835899353,
+        -0.40279731154441833
+      ],
+      [
+        0.41501379013061523,
+        0.38913893699645996,
+        0.5101851224899292
+      ]
+    ],
+    "vertex_color_count": 9711,
+    "glb_sha256": "8584f0393af0bd1415bd1d4ef87c99950cdfa8d7ac35e35409cef5676b0fc619",
+    "ply_sha256": "94764c29a7f4c097e1da8f9a9a67cd537b5a6d68a1a53a7191d81d2900a3d02f"
+  },
+  "limitations": [
+    "Single image hides back-side geometry; no fidelity guarantee",
+    "Vertex colours only, no predicted PBR or baked UV textures",
+    "No training or weight update performed",
+    "Raw topology may contain nearly coincident seams; independent inspector metrics state their weld tolerance",
+    "Native Blender views and independent visual inspection required; runtime success does not establish beauty"
+  ]
+}

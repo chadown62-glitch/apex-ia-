@@ -1,0 +1,10 @@
+{
+  "pid": 51243,
+  "returncode": 0,
+  "process_stopped_verified": true,
+  "elapsed_s": 32.119193541999266,
+  "sampled_peak_rss_bytes": 305414144,
+  "memory_kind": "process-tree RSS sampled every 0.5 s",
+  "timeout_s": 600,
+  "isolation": "trusted local fixed Blender script; no arbitrary model code"
+}

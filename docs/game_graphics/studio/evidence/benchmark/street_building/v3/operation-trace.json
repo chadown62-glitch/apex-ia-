@@ -1,0 +1,116 @@
+[
+  {
+    "operation": {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  },
+  {
+    "operation": {
+      "op": "repair_degenerate_topology",
+      "target": "atelier_letters",
+      "params": {}
+    },
+    "changed_objects": [
+      "atelier_letters"
+    ],
+    "before": {
+      "atelier_letters": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          -1.7039999961853027,
+          1.8949999809265137
+        ],
+        "dimensions_m": [
+          0.9575799703598022,
+          0.08983000367879868,
+          0.01600000075995922
+        ],
+        "materials": [
+          "limestone"
+        ],
+        "pbr": {
+          "limestone": {
+            "Base Color": {
+              "value": [
+                0.6499999761581421,
+                0.5899999737739563,
+                0.46000000834465027,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.6499999761581421,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 332,
+        "geometry_sha256": "e4b4a55e4b3da91f54b06be8f1bf7f7927972989569a8bf20400d637a6bb1d66"
+      }
+    },
+    "after": {
+      "atelier_letters": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          -1.7039999961853027,
+          1.8949999809265137
+        ],
+        "dimensions_m": [
+          0.9575799703598022,
+          0.08983000367879868,
+          0.01600000075995922
+        ],
+        "materials": [
+          "limestone"
+        ],
+        "pbr": {
+          "limestone": {
+            "Base Color": {
+              "value": [
+                0.6499999761581421,
+                0.5899999737739563,
+                0.46000000834465027,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.6499999761581421,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 332,
+        "geometry_sha256": "62a01b5951d73457971342a24d26757401cf8f4f2c4c4b4e269762a5d640bafc"
+      }
+    }
+  },
+  {
+    "operation": {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  }
+]

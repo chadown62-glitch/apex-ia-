@@ -105,6 +105,19 @@ def _assemble_common(src_root: Path, out_dir: Path) -> None:
     verify_partition_matches_repo(src_apex)
     _copy_runtime_apex(src_apex, out_dir / "apex")
 
+    # Fixed trusted Blender/UE workers and the frozen judging contract are
+    # runtime inputs.  Large proof bundles and model weights stay outside
+    # the distribution; operators install weights explicitly.
+    worker_source = src_root / "scripts" / "game_graphics"
+    if worker_source.is_dir():
+        shutil.copytree(worker_source, out_dir / "scripts" / "game_graphics",
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    benchmark = src_root / "docs/game_graphics/studio/benchmark-v1.json"
+    if benchmark.is_file():
+        target = out_dir / "docs/game_graphics/studio/benchmark-v1.json"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(benchmark, target)
+
     # Chaîne Alembic officielle COMPLÈTE, jamais un sous-ensemble — voir
     # runtime_build/README.md, décision explicite : une seule chaîne de
     # migrations partagée, y compris les migrations qui créent des tables

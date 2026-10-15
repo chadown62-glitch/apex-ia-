@@ -33,6 +33,15 @@ SPECIALTIES: tuple[Specialty, ...] = (
         compatible_agent_types=(Subject.RESEARCH,),
     ),
     Specialty(
+        id="game-graphics",
+        name="Game Graphics",
+        description="Création graphique Blender via le catalogue Game Studio et des contrôles réels.",
+        dev_stage=ImplStatus.STUB,
+        capabilities=("véhicule Blender", "bâtiment Blender", "fauteuil Blender"),
+        tools=("blender", "game-graphics.studio"),
+        required_permissions=("validation humaine avant COMPLETED",),
+    ),
+    Specialty(
         id="code-intelligence",
         name="Code Intelligence",
         description="Analyse, revue et génération de code par clones DEVELOPER/CRITIC.",

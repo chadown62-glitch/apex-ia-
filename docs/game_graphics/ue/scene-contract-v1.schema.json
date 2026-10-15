@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:apex:SceneAssetContract:1",
+  "title": "SceneAssetContract v1 — independent Graphics/Engineer boundary",
+  "type": "object",
+  "required": ["contract", "schema_version", "scene_id", "revision", "parent_manifest_sha256", "owner", "protected_engineer_ids", "engineer_integrated", "map_path", "units", "actors", "material_ids", "plan_sha256", "engine_created", "engine_judged", "status"],
+  "properties": {
+    "contract": {"const": "SceneAssetContract"},
+    "schema_version": {"const": 1},
+    "scene_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,47}$"},
+    "revision": {"type": "integer", "minimum": 1, "maximum": 100},
+    "parent_manifest_sha256": {"anyOf": [{"type": "null"}, {"type": "string", "pattern": "^[a-f0-9]{64}$"}]},
+    "owner": {"const": "graphics"},
+    "protected_engineer_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "engineer_integrated": {"type": "boolean"},
+    "map_path": {"type": "string", "pattern": "^/Game/APEXGraphics/[a-z][a-z0-9_]*/R[0-9]{3}/Scene$"},
+    "units": {"const": "cm"},
+    "actors": {"type": "array", "maxItems": 40, "items": {"type": "object", "required": ["id", "owner"], "properties": {"id": {"type": "string"}, "owner": {"const": "graphics"}}}},
+    "material_ids": {"type": "array", "uniqueItems": true, "items": {"type": "string"}},
+    "plan_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "engine_created": {"type": "boolean"},
+    "engine_judged": {"type": "boolean"},
+    "status": {"enum": ["prepared_unverified", "created_unqualified", "objectively_checked"]},
+    "files": {"type": "array", "items": {"type": "object", "required": ["path", "sha256", "bytes", "artifact"], "properties": {"path": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}, "bytes": {"type": "integer", "minimum": 1}, "artifact": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}}}}
+  }
+}

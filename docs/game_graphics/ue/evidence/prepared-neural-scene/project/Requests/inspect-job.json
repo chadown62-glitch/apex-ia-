@@ -1,0 +1,13 @@
+{
+  "kind": "APEX-isolated-graphics-scene",
+  "nonce": "1d5c32fa-fce2-4f57-a46e-7ab7c540c769",
+  "scene_id": "urban_demo",
+  "revision": 1,
+  "plan_sha256": "be4351ccc4eaaee085e27b8a72c6f7160afe61988eb45d23bd23b3cb42c378d6",
+  "mode": "inspect",
+  "plan": "/workspace/game-studio-output/ue-graphics-delivery/attempt-01/project/Requests/scene-plan.json",
+  "map_path": "/Game/APEXGraphics/urban_demo/R001/Scene",
+  "report": "/workspace/game-studio-output/ue-graphics-delivery/attempt-01/inspect-observation.json",
+  "capture_root": "/workspace/game-studio-output/ue-graphics-delivery/attempt-01/captures",
+  "deadline_seconds": 480
+}

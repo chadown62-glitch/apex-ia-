@@ -1,0 +1,57 @@
+diff --git a/tsr/models/tokenizers/image.py b/tsr/models/tokenizers/image.py
+index d4034b2..fc7eef4 100644
+--- a/tsr/models/tokenizers/image.py
++++ b/tsr/models/tokenizers/image.py
+@@ -1,4 +1,5 @@
+ from dataclasses import dataclass
++import os
+ 
+ import torch
+ import torch.nn as nn
+@@ -19,12 +20,7 @@ class DINOSingleImageTokenizer(BaseModule):
+ 
+     def configure(self) -> None:
+         self.model: ViTModel = ViTModel(
+-            ViTModel.config_class.from_pretrained(
+-                hf_hub_download(
+-                    repo_id=self.cfg.pretrained_model_name_or_path,
+-                    filename="config.json",
+-                )
+-            )
++            ViTModel.config_class.from_json_file(os.environ["APEX_TRIPOSR_DINO_CONFIG"])
+         )
+ 
+         if self.cfg.enable_gradient_checkpointing:
+diff --git a/tsr/system.py b/tsr/system.py
+index bcdb69b..90906d0 100644
+--- a/tsr/system.py
++++ b/tsr/system.py
+@@ -66,7 +66,7 @@ class TSR(BaseModule):
+         cfg = OmegaConf.load(config_path)
+         OmegaConf.resolve(cfg)
+         model = cls(cfg)
+-        ckpt = torch.load(weight_path, map_location="cpu")
++        ckpt = torch.load(weight_path, map_location="cpu", weights_only=True)
+         model.load_state_dict(ckpt)
+         return model
+ 
+diff --git a/tsr/utils.py b/tsr/utils.py
+index 9758f2e..90760ad 100644
+--- a/tsr/utils.py
++++ b/tsr/utils.py
+@@ -7,7 +7,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+ import imageio
+ import numpy as np
+ import PIL.Image
+-import rembg
+ import torch
+ import torch.nn as nn
+ import torch.nn.functional as F
+@@ -410,6 +409,7 @@ def remove_background(
+         do_remove = False
+     do_remove = do_remove or force
+     if do_remove:
++        import rembg  # Optional: pre-masked APEX input needs no segmentation model.
+         image = rembg.remove(image, session=rembg_session, **rembg_kwargs)
+     return image
+ 

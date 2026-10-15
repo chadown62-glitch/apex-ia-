@@ -1,0 +1,12 @@
+[
+  [
+    "blue-heldout",
+    "heldout",
+    "Coup\u00e9 bleu, RGB [0.01,0.08,0.65]. Longueur 4.2 m, largeur 1.8 m, hauteur 1.25 m, empattement 2.5 m, rayon roue 0.31 m, largeur roue 0.20 m, masse 1200 kg, metallic 0.7, roughness 0.15. Prototype reconnaissable."
+  ],
+  [
+    "silver-heldout",
+    "heldout",
+    "Coup\u00e9 gris argent RGB [0.55,0.55,0.55]. Longueur 4.8 m, largeur 2.0 m, hauteur 1.4 m, empattement 2.9 m, rayon roue 0.36 m, largeur roue 0.23 m, masse 1600 kg, metallic 0.8, roughness 0.2. Prototype reconnaissable."
+  ]
+]

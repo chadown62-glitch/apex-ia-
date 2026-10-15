@@ -1,0 +1,15 @@
+{
+  "FileVersion": 3,
+  "Category": "APEX isolated import probe",
+  "Description": "Not a drivable game",
+  "Plugins": [
+    {
+      "Name": "PythonScriptPlugin",
+      "Enabled": true
+    },
+    {
+      "Name": "EditorScriptingUtilities",
+      "Enabled": true
+    }
+  ]
+}

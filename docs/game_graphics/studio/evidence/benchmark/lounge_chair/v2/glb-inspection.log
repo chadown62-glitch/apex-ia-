@@ -1,0 +1,38 @@
+07:45:25 | INFO: Data are loaded, start creating Blender stuff
+07:45:25 | INFO: Blender create Mesh node timber_back
+07:45:25 | INFO: Blender create Mesh node timber_seat
+07:45:25 | INFO: Blender create Mesh node seat_cushion
+07:45:25 | INFO: Blender create Mesh node back_cushion
+07:45:25 | INFO: Blender create Mesh node seat_cushion_piping
+07:45:25 | INFO: Blender create Mesh node back_cushion_piping
+07:45:25 | INFO: Blender create Mesh node arm_left
+07:45:25 | INFO: Blender create Mesh node Cone
+07:45:25 | INFO: Blender create Mesh node Cone.001
+07:45:25 | INFO: Blender create Mesh node Cone.002
+07:45:25 | INFO: Blender create Mesh node Cone.003
+07:45:25 | INFO: Blender create Mesh node Cone.004
+07:45:25 | INFO: Blender create Mesh node Cone.005
+07:45:25 | INFO: Blender create Mesh node Cone.006
+07:45:25 | INFO: Blender create Mesh node Cone.007
+07:45:25 | INFO: Blender create Mesh node Cone.008
+07:45:25 | INFO: Blender create Mesh node Cone.009
+07:45:25 | INFO: Blender create Mesh node Cone.010
+07:45:25 | INFO: Blender create Mesh node arm_right
+07:45:25 | INFO: Blender create Mesh node Cone.011
+07:45:25 | INFO: Blender create Mesh node Cone.012
+07:45:25 | INFO: Blender create Mesh node Cone.013
+07:45:25 | INFO: Blender create Mesh node Cone.014
+07:45:25 | INFO: Blender create Mesh node Cone.015
+07:45:25 | INFO: Blender create Mesh node Cone.016
+07:45:25 | INFO: Blender create Mesh node Cone.017
+07:45:25 | INFO: Blender create Mesh node Cone.018
+07:45:25 | INFO: Blender create Mesh node Cone.019
+07:45:25 | INFO: Blender create Mesh node Cone.020
+07:45:25 | INFO: Blender create Mesh node Cone.021
+07:45:25 | INFO: Blender create Mesh node Cone.022
+07:45:25 | INFO: Blender create Mesh node Cone.023
+07:45:25 | INFO: Blender create Mesh node Cube
+07:45:25 | INFO: glTF import finished in 0.04s
+Blender 4.3.2
+
+Blender quit

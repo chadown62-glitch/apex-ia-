@@ -1,0 +1,144 @@
+{
+  "blender": "4.3.2",
+  "source": "/workspace/game-studio-runtime/neural14-research/chair-cpu-128/neural-mesh.glb",
+  "source_sha256": "2ab85f1356707a4b56fd6eb5b6d1a3d76bb90fb936fe52d868321c9013ce0d6a",
+  "method": "actual TripoSR mesh imported; no remesh, subdivision, hole repair, or procedural replacement",
+  "transforms": [
+    {
+      "object": "geometry_0",
+      "mesh_local_vertices_sha256": "89bbf767211d21ba89af4e638b8db7696a803c71967f21fa1f1468a1b208ab9d",
+      "final_matrix_world": [
+        [
+          1.9819968938827515,
+          0.0,
+          0.0,
+          -0.061702076345682144
+        ],
+        [
+          0.0,
+          -2.662988265456079e-07,
+          1.9819971323013306,
+          0.00040895806159824133
+        ],
+        [
+          0.0,
+          -1.9819971323013306,
+          -2.662988265456079e-07,
+          0.7889876961708069
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "uniform_display_scale": 1.9819968801536927,
+      "rotation_x_degrees": -90,
+      "source_units": "unknown normalized neural units; display normalization only"
+    }
+  ],
+  "views": [
+    {
+      "path": "view_000.png",
+      "sha256": "35ea46a31cc91790b4caf5db3466120ba729fb7b7db38b823418d344c2b00cc9",
+      "camera_location": [
+        4.0,
+        0.0,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 0,
+      "render_seconds": 23.519016316997295
+    },
+    {
+      "path": "view_090.png",
+      "sha256": "f49f115a969c0eb093ac220b2de8dd8de85573a55457ff66235cde0a4829cb46",
+      "camera_location": [
+        2.4492937051703357e-16,
+        4.0,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 90,
+      "render_seconds": 21.579262889994425
+    },
+    {
+      "path": "view_180.png",
+      "sha256": "7f7d286c469d4e42eed5a7c29fc5515e72cc551de514e4d6cf6a6dd654b8fce9",
+      "camera_location": [
+        -4.0,
+        4.898587410340671e-16,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 180,
+      "render_seconds": 23.11120768100227
+    },
+    {
+      "path": "view_270.png",
+      "sha256": "c286817e4aa9a918dca584507ea627639a274ac43e27e1479abf3719b5b85e4c",
+      "camera_location": [
+        -7.347880586115415e-16,
+        -4.0,
+        2.6500000953674316
+      ],
+      "camera_target": [
+        0.0,
+        0.0,
+        0.9000000357627869
+      ],
+      "orthographic_scale": 2.799999952316284,
+      "azimuth_degrees": 270,
+      "render_seconds": 21.069349199999124
+    }
+  ],
+  "materials": [
+    {
+      "name": "TripoSR_predicted_vertex_colours",
+      "colour_attributes": [
+        "Color"
+      ],
+      "nodes": [
+        "ShaderNodeBsdfPrincipled",
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeVertexColor"
+      ],
+      "roughness": 0.68,
+      "metallic": 0,
+      "note": "Neutral display shader, not predicted PBR; imported vertex colours retained"
+    }
+  ],
+  "render_engine": "Cycles CPU",
+  "samples": 64,
+  "seed": 14,
+  "denoising": false,
+  "denoising_reason": "Actual first render failed: cloud Blender build lacks OpenImageDenoise; original failure log preserved",
+  "resolution": [
+    960,
+    720
+  ],
+  "threads": 4,
+  "elapsed_seconds": 89.45678175899957,
+  "self_peak_rss_bytes_linux": 348962816,
+  "source_sha256_after": "2ab85f1356707a4b56fd6eb5b6d1a3d76bb90fb936fe52d868321c9013ce0d6a",
+  "blend_sha256": "c0731dcab859c541b2a9eec92283d53cca118cd5bda17b24cdc5d65a3ea0ae0c",
+  "geometry_vertices_changed_by_display": false,
+  "display_material_fix": "GLB has COLOR_0 but no material; explicit vertex-color node added after first white-render inspection. Initial renders archived, not used as neural quality evidence",
+  "interpretation": "Rendering only; source topology and inferred colours retain all defects; camera/light/display transform frozen from baseline64"
+}

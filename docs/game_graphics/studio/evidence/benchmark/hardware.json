@@ -1,0 +1,9 @@
+{
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "cpu": "",
+  "logical_cpus": 5,
+  "ram_available_bytes": 34562482176,
+  "ram_total_bytes": 35743784960,
+  "cpu_max": "400000 100000",
+  "gpu_measurement": "no CUDA device available; VRAM not measured"
+}

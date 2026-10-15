@@ -97,6 +97,17 @@ export function isSessionMode(): boolean {
   return !getApiToken();
 }
 
+/** Binary artifacts use the same authenticated session as JSON routes. */
+export async function fetchArtifactBlob(path: string): Promise<Blob> {
+  const token = getApiToken();
+  const response = await fetch(`${BASE_URL}${API_PREFIX}${path}`, {
+    credentials: "same-origin",
+    headers: token ? { Authorization: `Bearer ${token}` } : { "X-APEX-UI": "1" },
+  });
+  if (!response.ok) throw new ApiError(`Artefact indisponible (HTTP ${response.status})`, response.status);
+  return response.blob();
+}
+
 export async function fetchEnvelope<T>(path: string, init?: RequestInit): Promise<DataEnvelope<T>> {
   const token = getApiToken();
   const auth: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : { "X-APEX-UI": "1" };

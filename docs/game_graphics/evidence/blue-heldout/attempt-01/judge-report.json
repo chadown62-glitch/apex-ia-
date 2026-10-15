@@ -1,0 +1,48 @@
+{
+  "defects": [],
+  "unavailable": [],
+  "facts": {
+    "blend": {
+      "triangles": 14048,
+      "dimensions": [
+        4.206799745559692,
+        1.8000000715255737,
+        1.253999956051377
+      ],
+      "objects": 38
+    },
+    "glb": {
+      "triangles": 14048,
+      "dimensions": [
+        4.206799745559692,
+        1.8000001907348633,
+        1.2539999917397964
+      ],
+      "objects": 38
+    },
+    "lod1": {
+      "triangles": 10096,
+      "dimensions": [
+        4.206274032592773,
+        1.8000001907348633,
+        1.2533691361794936
+      ],
+      "objects": 38
+    }
+  },
+  "criteria": {
+    "level": "jouable",
+    "max_triangles": 60000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 1,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "limits": [
+    "objective geometry and pixel checks do not certify aesthetic quality",
+    "engine import/performance not measured"
+  ]
+}

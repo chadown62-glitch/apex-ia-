@@ -1,0 +1,149 @@
+{
+  "date_utc": "2026-10-13T06:18:37.245890+00:00",
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "commands": {
+    "cmd.exe": null,
+    "powershell.exe": null,
+    "wsl.exe": null,
+    "UnrealEditor": null,
+    "UnrealEditor.exe": null,
+    "nvidia-smi": null
+  },
+  "engine_probe": {
+    "unreal": {
+      "available": false,
+      "editor": null,
+      "root": null,
+      "version": null,
+      "checks": {
+        "python_plugin": {
+          "path": null,
+          "exists": false
+        },
+        "editor_scripting": {
+          "path": null,
+          "exists": false
+        },
+        "pcg_plugin": {
+          "path": null,
+          "exists": false
+        },
+        "modeling_plugin": {
+          "path": null,
+          "exists": false
+        }
+      },
+      "engine_executed": false,
+      "qualified": false
+    },
+    "blender": {
+      "available": true,
+      "scope": "PR12 procedural coupe only"
+    },
+    "features": {
+      "vehicle": {
+        "unreal": false,
+        "blender": true,
+        "hybrid": false
+      },
+      "mesh": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "uv_retopology": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "environment": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "lighting": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "materials": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "landscape": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "pcg": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "modeling_tools": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      }
+    },
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "ram_total_bytes": 35743784960,
+    "gpu_measurement": "unknown",
+    "costs": "unknown until representative measured engine runs",
+    "searched_roots": [
+      {
+        "path": "/opt/UnrealEngine",
+        "exists": false
+      },
+      {
+        "path": "/opt/unreal-engine",
+        "exists": false
+      },
+      {
+        "path": "/workspace/UnrealEngine",
+        "exists": false
+      },
+      {
+        "path": "/usr/local/UnrealEngine",
+        "exists": false
+      }
+    ],
+    "engine_path_lookups": {
+      "UnrealEditor": null,
+      "UnrealEditor-Cmd": null,
+      "UnrealEditor.exe": null,
+      "RunUAT.sh": null
+    },
+    "limitations": "Plugin files do not qualify operations, PCG, landscapes or Nanite/Lumen."
+  },
+  "gpu": {
+    "status": "unknown",
+    "reason": "nvidia_smi_unavailable"
+  },
+  "remote_windows_executor_exposed": false,
+  "desktop_terminal_read": "timeout; no Windows access established",
+  "powershell_parser_version": "7.6.6 Linux, syntax only",
+  "powershell_linux_refusal": {
+    "exit_code": 2,
+    "stdout": "BLOCKED: this launcher requires actual Windows; no Unreal process started.\n",
+    "stderr": ""
+  },
+  "extracted_bundle_host_refusal": {
+    "exit_code": 2,
+    "stdout": "{\"status\": \"blocked\", \"reason\": \"Windows execution required\", \"engine_executed\": false}\n",
+    "stderr": "",
+    "output_created": false
+  },
+  "bundle_file_hashes_verified": 459,
+  "bundle_source_dirty": true,
+  "native_script_syntax_checked": [
+    "ue_build_scene.py",
+    "ue_mutate_scene.py",
+    "ue_inspect_scene.py"
+  ],
+  "native_engine_execution": false,
+  "windows_runtime_tested": false,
+  "api_ue58_qualified": false,
+  "new_tests_added": 0
+}

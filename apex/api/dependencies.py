@@ -165,6 +165,21 @@ def reset_scheduler_service_for_tests() -> None:
 _design_service: "DesignService | None" = None
 _design_lock = threading.Lock()
 
+_game_studio_service: Any = None
+_game_studio_lock = threading.Lock()
+
+
+def get_game_studio_service() -> Any:
+    """One process-owned adapter; Mission and ArtifactStore remain canonical."""
+    global _game_studio_service
+    if _game_studio_service is None:
+        with _game_studio_lock:
+            if _game_studio_service is None:
+                from apex.game_studio.service import GameStudioService
+
+                _game_studio_service = GameStudioService(get_session_factory())
+    return _game_studio_service
+
 
 def get_design_service() -> "DesignService":
     """Construit — UNE SEULE FOIS par processus — le Design Engine

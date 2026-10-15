@@ -1,0 +1,10 @@
+{
+  "rights":"Original internal design briefs, user-authorized APEX work. No external branded asset or photograph.",
+  "references":[
+    {"id":"original-sports-coupe-v1","description":"A low contemporary sports coupe: flowing shoulder surfaces, cut wheel arches, separate glazing, inset paired lamps, mirrors, open alloy rims and brakes, simple cockpit. Dark petrol blue paint, satin metal and black trim.","constraints":["Four wheels centered on their axles","Paired headlamps at equal world height","Separate glass/paint/rubber/alloy materials","Body geometry and added components must exceed PR12 slab baseline"]},
+    {"id":"original-street-atelier-v1","description":"A warm masonry street workshop with a glazed ground floor, two upper storeys, recessed framed windows, metal balcony, sill/cornice details, a doorway and entrance lights.","constraints":["Front window pair aligned horizontally","Balcony with floor and rail","Distinct glass, masonry, wood, metal and stone"]},
+    {"id":"original-lounge-chair-v1","description":"An original contemporary lounge chair: curved walnut back shell, separate generous saddle leather seat and back cushions, open arms, angled metal/wood base, geometric seams and feet.","constraints":["Arm pads at equal height","Separate structural shell and cushions","Four grounded feet","Distinct wood/leather/metal/piping"]}
+  ],
+  "baseline":"PR12 b2334f4 evidence/red renders: original APEX procedural coupe, internal comparison only",
+  "aesthetic_reference_calibrated":false
+}

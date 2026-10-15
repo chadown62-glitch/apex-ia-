@@ -1,0 +1,175 @@
+{
+  "contract": "SceneIntegrationReport",
+  "schema_version": 1,
+  "scene_id": "urban_demo",
+  "requested_revision": 1,
+  "status": "blocked",
+  "selection": {
+    "method": "unreal",
+    "stages": [
+      "unreal"
+    ],
+    "status": "blocked",
+    "reason": "level/material/light/environment work belongs in the target editor",
+    "candidates": [
+      {
+        "method": "unreal",
+        "stages": [
+          "unreal"
+        ],
+        "available": false,
+        "operation_qualified": false,
+        "cost": {
+          "status": "unknown"
+        },
+        "within_budget": true
+      }
+    ],
+    "blockers": [
+      "required_tool_missing"
+    ],
+    "level": "prototype",
+    "silent_fallback_allowed": false,
+    "quality_before_speed": true,
+    "cost_limitations": "Costs and GPU/RAM fit require measurements for this task."
+  },
+  "criteria": {
+    "level": "prototype",
+    "position_tolerance_cm": 0.2,
+    "dimension_tolerance_cm": 1,
+    "max_triangles": 100000,
+    "max_attempts_per_defect": 3,
+    "min_fps": null,
+    "calibrated_reference_required": false,
+    "texture_maps_required": false,
+    "captures": 4
+  },
+  "engine_executed": false,
+  "captures_created": false,
+  "attempts": [
+    {
+      "number": 1,
+      "scene_id": "urban_demo",
+      "revision": 1,
+      "root": "/workspace/game-studio-output/ue-graphics-delivery/attempt-01",
+      "stage": "prepared",
+      "engine_executed": false
+    }
+  ],
+  "photorealism_qualified": false,
+  "gameplay_modified": false,
+  "reason": "unreal_editor_missing",
+  "defect_attempts": {},
+  "revision": 1,
+  "capabilities": {
+    "unreal": {
+      "available": false,
+      "editor": null,
+      "root": null,
+      "version": null,
+      "checks": {
+        "python_plugin": {
+          "path": null,
+          "exists": false
+        },
+        "editor_scripting": {
+          "path": null,
+          "exists": false
+        },
+        "pcg_plugin": {
+          "path": null,
+          "exists": false
+        },
+        "modeling_plugin": {
+          "path": null,
+          "exists": false
+        }
+      },
+      "engine_executed": false,
+      "qualified": false
+    },
+    "blender": {
+      "available": true,
+      "scope": "PR12 procedural coupe only"
+    },
+    "features": {
+      "vehicle": {
+        "unreal": false,
+        "blender": true,
+        "hybrid": false
+      },
+      "mesh": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "uv_retopology": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "environment": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "lighting": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "materials": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "landscape": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "pcg": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      },
+      "modeling_tools": {
+        "unreal": false,
+        "blender": false,
+        "hybrid": false
+      }
+    },
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+    "ram_total_bytes": 35743784960,
+    "gpu_measurement": "unknown",
+    "costs": "unknown until representative measured engine runs",
+    "searched_roots": [
+      {
+        "path": "/opt/UnrealEngine",
+        "exists": false
+      },
+      {
+        "path": "/opt/unreal-engine",
+        "exists": false
+      },
+      {
+        "path": "/workspace/UnrealEngine",
+        "exists": false
+      },
+      {
+        "path": "/usr/local/UnrealEngine",
+        "exists": false
+      }
+    ],
+    "engine_path_lookups": {
+      "UnrealEditor": null,
+      "UnrealEditor-Cmd": null,
+      "UnrealEditor.exe": null,
+      "RunUAT.sh": null
+    },
+    "limitations": "Plugin files do not qualify operations, PCG, landscapes or Nanite/Lumen."
+  },
+  "scene_asset_contract": "/workspace/game-studio-output/ue-graphics-delivery/attempt-01/scene-contract.json",
+  "integration_report_contract": "SceneIntegrationReport v1",
+  "integration_to_game_engineer": "versioned IDs and SHA; functional dependencies require independent Engineer revalidation"
+}

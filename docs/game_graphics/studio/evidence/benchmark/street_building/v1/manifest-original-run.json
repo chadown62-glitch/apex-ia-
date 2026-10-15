@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "family": "building",
+  "case_id": "street_building",
+  "units": "m",
+  "files": [
+    {
+      "path": "asset.blend",
+      "sha256": "4afd9e1afbf3ebfe63763ae4d2cb864406afb0c2d2b520835f37b3bc03b64454",
+      "bytes": 3318712,
+      "role": "blender_project"
+    },
+    {
+      "path": "asset.glb",
+      "sha256": "41fade7740cf2515e47995d4deaa0b1b3e32941d87518b8ce5926fbbfc4baa30",
+      "bytes": 1855680,
+      "role": "exchange"
+    },
+    {
+      "path": "blend-inspection.json",
+      "sha256": "90f104d600c01994e7d9a7136691e88412a2577bd5dd1d8f83f3b6f6c54807dd",
+      "bytes": 106553,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.log",
+      "sha256": "96af275fe6f0bc28c855c428df7a5139030f7c83a3312a5a0d2093c15beccdd3",
+      "bytes": 118,
+      "role": "evidence"
+    },
+    {
+      "path": "blend-inspection.resources.json",
+      "sha256": "8f52e626f604fedc7c4b01392c2907373df293642d6a266feac03aa0fcb3b5e1",
+      "bytes": 2686,
+      "role": "evidence"
+    },
+    {
+      "path": "build.log",
+      "sha256": "56ea0ade36057142dfcb0a284324e05c038bb0b6e55235c6f3d2f3ee0ce3c0a6",
+      "bytes": 178118,
+      "role": "evidence"
+    },
+    {
+      "path": "build.resources.json",
+      "sha256": "c9399aef4f8bdcf2e63fc286b7b04368a6c5eafc5a0db35c28a7e58ac188d5d0",
+      "bytes": 91457,
+      "role": "evidence"
+    },
+    {
+      "path": "execution.json",
+      "sha256": "9f64cc9b8d5c94a50033f444842c69d1747aaba13a3148227bbc865ff31c004e",
+      "bytes": 68025,
+      "role": "evidence"
+    },
+    {
+      "path": "front.png",
+      "sha256": "d5109ea168082830e0463dae0a918da9cb1e04099f554e8737d7fc9d39a1fd4d",
+      "bytes": 935948,
+      "view": "front",
+      "role": "view"
+    },
+    {
+      "path": "front_three_quarter.png",
+      "sha256": "2c28c5303a948e3ab77e98d1a7b6f7469e139fe74e13d009833d9eebf22133db",
+      "bytes": 1118581,
+      "view": "front_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "glb-inspection.json",
+      "sha256": "96fd82a84bd017b07fbe5acf4248c58031bbb0466e7e4ae44be368645fb87c61",
+      "bytes": 106688,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.log",
+      "sha256": "f0e506f37bcf21ae79474f755562327e42437ad899c357467d0d301a3c3f84f8",
+      "bytes": 7567,
+      "role": "evidence"
+    },
+    {
+      "path": "glb-inspection.resources.json",
+      "sha256": "409220955d8650a1650b07e0a245ce2ce67f216f39c4381902650042c79a379c",
+      "bytes": 10406,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy-before.json",
+      "sha256": "b89358373c415f6f967ce10f9b18dc1f843c924c263cebc33ab71e381ae65ce6",
+      "bytes": 124710,
+      "role": "evidence"
+    },
+    {
+      "path": "hierarchy.json",
+      "sha256": "b89358373c415f6f967ce10f9b18dc1f843c924c263cebc33ab71e381ae65ce6",
+      "bytes": 124710,
+      "role": "evidence"
+    },
+    {
+      "path": "operation-trace.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2,
+      "role": "evidence"
+    },
+    {
+      "path": "provenance.json",
+      "sha256": "49f0a90cd550879b3ed36354ab2707407c7f25809d3fb60b5757220d589bfb83",
+      "bytes": 623,
+      "role": "evidence"
+    },
+    {
+      "path": "rear_three_quarter.png",
+      "sha256": "00a1335ebb9693684dbd5ff91aec224ebd14e284cf5210e172fcaae33c69acc0",
+      "bytes": 954164,
+      "view": "rear_three_quarter",
+      "role": "view"
+    },
+    {
+      "path": "render-settings.json",
+      "sha256": "5fbd4f3c4724bc5346748085c09be7a741a83dc3c67e6b77e14bc9c94e4fcc83",
+      "bytes": 4592,
+      "role": "evidence"
+    },
+    {
+      "path": "side.png",
+      "sha256": "fae37bdfd41228abfa0f48956a67e83500f7b1db61b8a4e72cb046afe268ab70",
+      "bytes": 990599,
+      "view": "side",
+      "role": "view"
+    },
+    {
+      "path": "silhouette_front.png",
+      "sha256": "0117a58dea73ff38a0e149a6420f579c40bc1bc367ef05a8cb95087df55e56cf",
+      "bytes": 269159,
+      "view": "front",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_front_three_quarter.png",
+      "sha256": "05b5f2fe9dbdde78617f04a89de3c62f29ceafe6568d287318f661d9a01c53e7",
+      "bytes": 242727,
+      "view": "front_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_rear_three_quarter.png",
+      "sha256": "5711d1fb5d46840651083c3dafd0b4d52dfa206ddd03b8f738e7ede0e16d07a5",
+      "bytes": 243804,
+      "view": "rear_three_quarter",
+      "role": "silhouette"
+    },
+    {
+      "path": "silhouette_side.png",
+      "sha256": "c4b13cbe52f1ae6b8479f84bd9242f708639680b940c7769ddb867631df024cf",
+      "bytes": 276172,
+      "view": "side",
+      "role": "silhouette"
+    }
+  ],
+  "geometry_method": "procedural_blender",
+  "pbr_texture_baking": false,
+  "limits": [
+    "procedural shaders are not baked into GLB",
+    "Unreal import not executed"
+  ]
+}

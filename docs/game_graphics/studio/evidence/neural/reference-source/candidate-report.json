@@ -1,0 +1,224 @@
+{
+  "method": "original_authorized_procedural_blender",
+  "neural_mesh": false,
+  "blender": "4.3.2",
+  "geometry_s": 0.2234303250006633,
+  "beauty_s": 25.633728775996133,
+  "reference_s": 4.415574825994554,
+  "elapsed_s": 30.57521249000274,
+  "bounds_m": [
+    1.087999939918518,
+    1.1007438898086548,
+    1.1936556249856949
+  ],
+  "triangles": 18008,
+  "objects": {
+    "timber_back": {
+      "triangles": 2784,
+      "nonmanifold": 0,
+      "signed_volume": 0.02419385180825577,
+      "uv_layers": 1
+    },
+    "timber_seat": {
+      "triangles": 2784,
+      "nonmanifold": 0,
+      "signed_volume": 0.023580250344196856,
+      "uv_layers": 1
+    },
+    "seat_cushion": {
+      "triangles": 1056,
+      "nonmanifold": 0,
+      "signed_volume": 0.08734779711128972,
+      "uv_layers": 1
+    },
+    "back_cushion": {
+      "triangles": 1056,
+      "nonmanifold": 0,
+      "signed_volume": 0.07164710214234661,
+      "uv_layers": 1
+    },
+    "seat_cushion_piping": {
+      "triangles": 1536,
+      "nonmanifold": 0,
+      "signed_volume": 9.274760160170564e-05,
+      "uv_layers": 1
+    },
+    "back_cushion_piping": {
+      "triangles": 1536,
+      "nonmanifold": 0,
+      "signed_volume": 8.799428554105591e-05,
+      "uv_layers": 1
+    },
+    "arm_left": {
+      "triangles": 796,
+      "nonmanifold": 0,
+      "signed_volume": 0.0029900083232524905,
+      "uv_layers": 1
+    },
+    "arm_support_front_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0001720399926815425,
+      "uv_layers": 1
+    },
+    "arm_joint_front_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 4.448546952829136e-05,
+      "uv_layers": 1
+    },
+    "arm_support_rear_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0001720399926815425,
+      "uv_layers": 1
+    },
+    "arm_joint_rear_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 4.448546952829136e-05,
+      "uv_layers": 1
+    },
+    "leg_front_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.001143017063964863,
+      "uv_layers": 1
+    },
+    "leg_collar_front_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0002515834829886694,
+      "uv_layers": 1
+    },
+    "foot_front_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 6.451293274230654e-05,
+      "uv_layers": 1
+    },
+    "leg_rear_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.001143017063964863,
+      "uv_layers": 1
+    },
+    "leg_collar_rear_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0002515834829886694,
+      "uv_layers": 1
+    },
+    "foot_rear_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 6.451293274230654e-05,
+      "uv_layers": 1
+    },
+    "underframe_left": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0016458520630591017,
+      "uv_layers": 1
+    },
+    "arm_right": {
+      "triangles": 796,
+      "nonmanifold": 0,
+      "signed_volume": 0.0029900282159068146,
+      "uv_layers": 1
+    },
+    "arm_support_front_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0001720399926815425,
+      "uv_layers": 1
+    },
+    "arm_joint_front_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 4.448546952829136e-05,
+      "uv_layers": 1
+    },
+    "arm_support_rear_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0001720399926815425,
+      "uv_layers": 1
+    },
+    "arm_joint_rear_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 4.448546952829136e-05,
+      "uv_layers": 1
+    },
+    "leg_front_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.001143017063964863,
+      "uv_layers": 1
+    },
+    "leg_collar_front_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0002515834829886694,
+      "uv_layers": 1
+    },
+    "foot_front_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 6.451293274230654e-05,
+      "uv_layers": 1
+    },
+    "leg_rear_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.001143017063964863,
+      "uv_layers": 1
+    },
+    "leg_collar_rear_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0002515834829886694,
+      "uv_layers": 1
+    },
+    "foot_rear_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 6.451293274230654e-05,
+      "uv_layers": 1
+    },
+    "underframe_right": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0016458520630591017,
+      "uv_layers": 1
+    },
+    "cross_brace_-0.27": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0012247388500247571,
+      "uv_layers": 1
+    },
+    "cross_brace_0.28": {
+      "triangles": 236,
+      "nonmanifold": 0,
+      "signed_volume": 0.0012247388500247571,
+      "uv_layers": 1
+    }
+  },
+  "render": {
+    "device": "CPU",
+    "threads": 4,
+    "samples": 64,
+    "seed": 14,
+    "denoise": false,
+    "beauty_resolution": [
+      960,
+      720
+    ],
+    "reference_resolution": [
+      512,
+      512
+    ]
+  }
+}

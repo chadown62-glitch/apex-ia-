@@ -1,0 +1,16 @@
+{
+  "call_id": "store-artistic-plan",
+  "tool": "graphics.store_plan",
+  "ok": true,
+  "output": {
+    "validated": true,
+    "operations": 2
+  },
+  "error": null,
+  "duration_s": 0.0003,
+  "provenance": {
+    "requested_by": "studio-controller",
+    "workspace_id": "studio-plan",
+    "arguments_sha256": "780db71131a481acd2da8320bd565a27380cad5d718db27e20f5e6c8284b172a"
+  }
+}

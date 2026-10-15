@@ -1,0 +1,45 @@
+17:11:07 | INFO: Data are loaded, start creating Blender stuff
+17:11:07 | INFO: Blender create Mesh node chassis.001
+17:11:07 | INFO: Blender create Mesh node Torus.004
+17:11:07 | INFO: Blender create Mesh node Cylinder.008
+17:11:07 | INFO: Blender create Mesh node Cube.029
+17:11:07 | INFO: Blender create Mesh node Cube.030
+17:11:07 | INFO: Blender create Mesh node Cube.031
+17:11:07 | INFO: Blender create Mesh node Cube.032
+17:11:07 | INFO: Blender create Mesh node Cube.033
+17:11:07 | INFO: Blender create Mesh node Torus.005
+17:11:07 | INFO: Blender create Mesh node Cylinder.009
+17:11:07 | INFO: Blender create Mesh node Cube.034
+17:11:07 | INFO: Blender create Mesh node Cube.035
+17:11:07 | INFO: Blender create Mesh node Cube.036
+17:11:07 | INFO: Blender create Mesh node Cube.037
+17:11:07 | INFO: Blender create Mesh node Cube.038
+17:11:07 | INFO: Blender create Mesh node Torus.006
+17:11:07 | INFO: Blender create Mesh node Cylinder.010
+17:11:07 | INFO: Blender create Mesh node Cube.039
+17:11:07 | INFO: Blender create Mesh node Cube.040
+17:11:07 | INFO: Blender create Mesh node Cube.041
+17:11:07 | INFO: Blender create Mesh node Cube.042
+17:11:07 | INFO: Blender create Mesh node Cube.043
+17:11:07 | INFO: Blender create Mesh node Torus.007
+17:11:07 | INFO: Blender create Mesh node Cylinder.011
+17:11:07 | INFO: Blender create Mesh node Cube.044
+17:11:07 | INFO: Blender create Mesh node Cube.045
+17:11:07 | INFO: Blender create Mesh node Cube.046
+17:11:07 | INFO: Blender create Mesh node Cube.047
+17:11:07 | INFO: Blender create Mesh node Cube.048
+17:11:07 | INFO: Blender create Mesh node cabin_glass.001
+17:11:07 | INFO: Blender create Mesh node Cube.049
+17:11:07 | INFO: Blender create Mesh node Cube.050
+17:11:07 | INFO: Blender create Mesh node Cube.051
+17:11:07 | INFO: Blender create Mesh node Cube.052
+17:11:07 | INFO: Blender create Mesh node Cube.053
+17:11:07 | INFO: Blender create Mesh node Cube.054
+17:11:07 | INFO: Blender create Mesh node Cube.055
+17:11:07 | INFO: Blender create Mesh node Cube.056
+17:11:07 | INFO: glTF import finished in 0.04s
+APEX_INSPECTION={"objects": 38, "triangles": 10096}
+Blender 4.3.2
+
+Blender quit
+

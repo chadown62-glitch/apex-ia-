@@ -1,0 +1,35 @@
+{
+  "text": "```json\n{\n  \"length_m\": 4.5,\n  \"width_m\": 1.9,\n  \"height_m\": 1.35,\n  \"wheelbase_m\": 2.65,\n  \"wheel_radius_m\": 0.34,\n  \"wheel_width_m\": 0.22,\n  \"mass_kg\": 1350,\n  \"body_color\": [0.62, 0.015, 0.008],\n  \"paint_metallic\": 0.65,\n  \"paint_roughness\": 0.18\n}\n```",
+  "model_used": "qwen2.5-coder-7b-instruct-q5",
+  "tokens_prompt": {
+    "value": 338,
+    "status": "real"
+  },
+  "tokens_completion": {
+    "value": 136,
+    "status": "real"
+  },
+  "finish_reason": "stop",
+  "elapsed_s": 37.408,
+  "facts": {
+    "id": "chatcmpl-8b6346f1-b2ab-4384-8ff7-83458d2443fc",
+    "created": 1791823307
+  },
+  "prompt": "Crée un prototype de coupé sportif rouge. Longueur 4.5, largeur 1.9, hauteur 1.35, empattement 2.65, rayon de roue 0.34, largeur de roue 0.22, masse 1350. Couleur RGB [0.62,0.015,0.008], metallic 0.65, roughness 0.18.",
+  "spec": {
+    "length_m": 4.5,
+    "width_m": 1.9,
+    "height_m": 1.35,
+    "wheelbase_m": 2.65,
+    "wheel_radius_m": 0.34,
+    "wheel_width_m": 0.22,
+    "mass_kg": 1350,
+    "body_color": [
+      0.62,
+      0.015,
+      0.008
+    ],
+    "paint_metallic": 0.65,
+    "paint_roughness": 0.18
+  }
+}

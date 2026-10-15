@@ -1,0 +1,1460 @@
+{
+  "execution": {
+    "mission_id": "game-graphics-studio",
+    "clone_id": "trusted-catalog-worker",
+    "status": "success",
+    "isolation_level": "none",
+    "exit_code": {
+      "value": 0,
+      "status": "real"
+    },
+    "signal": {
+      "value": null,
+      "status": "unknown"
+    },
+    "elapsed_s": {
+      "value": 86.90099439500045,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 330.96,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 352.82421875,
+      "status": "real"
+    },
+    "pids_peak": {
+      "value": 1,
+      "status": "real"
+    },
+    "stdout": "3.38M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Images\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Film\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:8.95M, Peak:9.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.12 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.12 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/studio14-final/street_building/v3/silhouette_front_three_quarter.png'\nTime: 00:00.16 (Saving: 00:00.04)\n\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | foundation\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_0\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_1\nFra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_2\nFra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_3\nFra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_4\nFra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_6\nFra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_7\nFra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_8\nFra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_1_4\nFra:1 Mem:26.21M (Peak 26.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_1_8\nFra:1 Mem:26.21M (Peak 26.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_0\nFra:1 Mem:26.22M (Peak 26.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_4\nFra:1 Mem:26.22M (Peak 26.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_8\nFra:1 Mem:26.23M (Peak 26.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_3_8\nFra:1 Mem:26.24M (Peak 26.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_0\nFra:1 Mem:26.24M (Peak 26.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_4\nFra:1 Mem:26.26M (Peak 26.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_8\nFra:1 Mem:26.26M (Peak 26.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_5_8\nFra:1 Mem:26.27M (Peak 26.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_0\nFra:1 Mem:26.27M (Peak 26.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_4\nFra:1 Mem:26.29M (Peak 26.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_8\nFra:1 Mem:26.29M (Peak 26.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_7_4\nFra:1 Mem:26.30M (Peak 26.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_0\nFra:1 Mem:26.30M (Peak 26.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_1\nFra:1 Mem:26.31M (Peak 26.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_2\nFra:1 Mem:26.32M (Peak 26.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_3\nFra:1 Mem:26.32M (Peak 26.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_4\nFra:1 Mem:26.34M (Peak 26.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_5\nFra:1 Mem:26.34M (Peak 26.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_7\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_8\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_0\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_2\nFra:1 Mem:26.38M (Peak 26.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_3\nFra:1 Mem:26.38M (Peak 26.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_4\nFra:1 Mem:26.39M (Peak 26.39M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_5\nFra:1 Mem:26.39M (Peak 26.39M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_7\nFra:1 Mem:26.41M (Peak 26.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_8\nFra:1 Mem:26.42M (Peak 26.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_0\nFra:1 Mem:26.42M (Peak 26.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_8\nFra:1 Mem:26.44M (Peak 26.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_11_4\nFra:1 Mem:26.44M (Peak 26.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_11_8\nFra:1 Mem:26.44M (Peak 26.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_4\nFra:1 Mem:26.46M (Peak 26.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_8\nFra:1 Mem:26.47M (Peak 26.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_13_4\nFra:1 Mem:26.47M (Peak 26.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_0\nFra:1 Mem:26.48M (Peak 26.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_4\nFra:1 Mem:26.49M (Peak 26.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_8\nFra:1 Mem:26.49M (Peak 26.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_15_8\nFra:1 Mem:26.50M (Peak 26.50M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_0\nFra:1 Mem:26.51M (Peak 26.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_4\nFra:1 Mem:26.52M (Peak 26.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_8\nFra:1 Mem:26.52M (Peak 26.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_17_4\nFra:1 Mem:26.53M (Peak 26.53M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_17_8\nFra:1 Mem:26.54M (Peak 26.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | base_course\nFra:1 Mem:26.54M (Peak 26.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | middle_course\nFra:1 Mem:26.55M (Peak 26.55M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | cornice\nFra:1 Mem:26.55M (Peak 26.55M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | parapet\nFra:1 Mem:26.57M (Peak 26.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof_cap\nFra:1 Mem:26.58M (Peak 26.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_window\nFra:1 Mem:26.58M (Peak 26.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entry_door\nFra:1 Mem:26.58M (Peak 26.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_98\nFra:1 Mem:26.60M (Peak 26.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_366\nFra:1 Mem:26.60M (Peak 26.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_152\nFra:1 Mem:26.62M (Peak 26.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_229\nFra:1 Mem:26.62M (Peak 26.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_308\nFra:1 Mem:26.63M (Peak 26.63M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle\nFra:1 Mem:26.63M (Peak 26.63M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_jamb_left\nFra:1 Mem:26.65M (Peak 26.65M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_jamb_right\nFra:1 Mem:26.66M (Peak 26.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_lintel_bottom\nFra:1 Mem:26.66M (Peak 26.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_mullion\nFra:1 Mem:26.68M (Peak 26.68M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_crossbar\nFra:1 Mem:26.68M (Peak 26.68M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_jamb_left\nFra:1 Mem:26.69M (Peak 26.69M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_jamb_right\nFra:1 Mem:26.70M (Peak 26.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_lintel_bottom\nFra:1 Mem:26.70M (Peak 26.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_mullion\nFra:1 Mem:26.72M (Peak 26.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_crossbar\nFra:1 Mem:26.72M (Peak 26.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_jamb_left\nFra:1 Mem:26.72M (Peak 26.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_jamb_right\nFra:1 Mem:26.74M (Peak 26.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_lintel_bottom\nFra:1 Mem:26.75M (Peak 26.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_lintel_top\nFra:1 Mem:26.75M (Peak 26.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_mullion\nFra:1 Mem:26.76M (Peak 26.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_crossbar\nFra:1 Mem:26.76M (Peak 26.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_jamb_left\nFra:1 Mem:26.78M (Peak 26.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_3\nFra:1 Mem:26.79M (Peak 26.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_jamb_right\nFra:1 Mem:26.80M (Peak 26.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_2\nFra:1 Mem:26.83M (Peak 26.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_lintel_bottom\nFra:1 Mem:26.82M (Peak 26.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_1\nFra:1 Mem:26.83M (Peak 26.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_lintel_top\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_mullion\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_floor\nFra:1 Mem:26.86M (Peak 26.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_top_rail\nFra:1 Mem:26.86M (Peak 26.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_side_rail_left\nFra:1 Mem:26.86M (Peak 26.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_side_rail_right\nFra:1 Mem:26.89M (Peak 26.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_0\nFra:1 Mem:26.89M (Peak 26.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_1\nFra:1 Mem:26.89M (Peak 26.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_0\nFra:1 Mem:26.89M (Peak 26.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_3\nFra:1 Mem:26.92M (Peak 26.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_4\nFra:1 Mem:26.92M (Peak 26.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_5\nFra:1 Mem:26.93M (Peak 26.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | planter_right\nFra:1 Mem:26.93M (Peak 26.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_8\nFra:1 Mem:26.94M (Peak 26.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_9\nFra:1 Mem:26.94M (Peak 26.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_10\nFra:1 Mem:26.94M (Peak 26.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_4\nFra:1 Mem:26.97M (Peak 26.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_12\nFra:1 Mem:26.97M (Peak 26.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_3\nFra:1 Mem:26.97M (Peak 26.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_13\nFra:1 Mem:27.00M (Peak 27.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_2\nFra:1 Mem:27.00M (Peak 27.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_15\nFra:1 Mem:27.02M (Peak 27.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_16\nFra:1 Mem:27.02M (Peak 27.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_17\nFra:1 Mem:27.02M (Peak 27.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_1\nFra:1 Mem:27.04M (Peak 27.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_18\nFra:1 Mem:27.05M (Peak 27.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_21_168\nFra:1 Mem:27.05M (Peak 27.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_21_206\nFra:1 Mem:27.06M (Peak 27.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_378_168\nFra:1 Mem:27.08M (Peak 27.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_378_206\nFra:1 Mem:27.08M (Peak 27.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | planter_left\nFra:1 Mem:27.09M (Peak 27.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entrance_lamp_83\nFra:1 Mem:27.10M (Peak 27.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | atelier_letters\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entrance_lamp_516\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_sign\nFra:1 Mem:27.16M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:22.65M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Images\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Film\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:8.95M, Peak:9.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.13 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.13 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/studio14-final/street_building/v3/silhouette_rear_three_quarter.png'\nTime: 00:00.18 (Saving: 00:00.04)\n\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | foundation\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_0\nFra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_1\nFra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_2\nFra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_3\nFra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_4\nFra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_5\nFra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_6\nFra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_7\nFra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_8\nFra:1 Mem:26.20M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_1_4\nFra:1 Mem:26.21M (Peak 26.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_1_8\nFra:1 Mem:26.21M (Peak 26.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_8\nFra:1 Mem:26.22M (Peak 26.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_3_4\nFra:1 Mem:26.23M (Peak 26.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_3_8\nFra:1 Mem:26.24M (Peak 26.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_0\nFra:1 Mem:26.25M (Peak 26.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_4\nFra:1 Mem:26.26M (Peak 26.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_8\nFra:1 Mem:26.26M (Peak 26.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_5_4\nFra:1 Mem:26.27M (Peak 26.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_0\nFra:1 Mem:26.27M (Peak 26.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_4\nFra:1 Mem:26.28M (Peak 26.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_8\nFra:1 Mem:26.29M (Peak 26.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_7_4\nFra:1 Mem:26.30M (Peak 26.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_7_8\nFra:1 Mem:26.31M (Peak 26.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_1\nFra:1 Mem:26.31M (Peak 26.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_2\nFra:1 Mem:26.31M (Peak 26.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_3\nFra:1 Mem:26.33M (Peak 26.33M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_4\nFra:1 Mem:26.34M (Peak 26.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_5\nFra:1 Mem:26.35M (Peak 26.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_6\nFra:1 Mem:26.35M (Peak 26.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_7\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_8\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_1\nFra:1 Mem:26.37M (Peak 26.37M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_2\nFra:1 Mem:26.38M (Peak 26.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_4\nFra:1 Mem:26.38M (Peak 26.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_5\nFra:1 Mem:26.40M (Peak 26.40M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_6\nFra:1 Mem:26.41M (Peak 26.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_7\nFra:1 Mem:26.41M (Peak 26.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_0\nFra:1 Mem:26.43M (Peak 26.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_4\nFra:1 Mem:26.43M (Peak 26.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_11_4\nFra:1 Mem:26.44M (Peak 26.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_11_8\nFra:1 Mem:26.45M (Peak 26.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_0\nFra:1 Mem:26.45M (Peak 26.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_8\nFra:1 Mem:26.47M (Peak 26.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_13_4\nFra:1 Mem:26.47M (Peak 26.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_13_8\nFra:1 Mem:26.48M (Peak 26.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_0\nFra:1 Mem:26.49M (Peak 26.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_4\nFra:1 Mem:26.49M (Peak 26.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_8\nFra:1 Mem:26.49M (Peak 26.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_15_4\nFra:1 Mem:26.51M (Peak 26.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_15_8\nFra:1 Mem:26.51M (Peak 26.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_4\nFra:1 Mem:26.52M (Peak 26.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_8\nFra:1 Mem:26.53M (Peak 26.53M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_17_4\nFra:1 Mem:26.54M (Peak 26.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | base_course\nFra:1 Mem:26.54M (Peak 26.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_header\nFra:1 Mem:26.55M (Peak 26.55M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | middle_course\nFra:1 Mem:26.56M (Peak 26.56M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | cornice\nFra:1 Mem:26.57M (Peak 26.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | parapet\nFra:1 Mem:26.57M (Peak 26.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof_cap\nFra:1 Mem:26.58M (Peak 26.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_window\nFra:1 Mem:26.59M (Peak 26.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entry_door\nFra:1 Mem:26.59M (Peak 26.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_glazing\nFra:1 Mem:26.59M (Peak 26.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_98\nFra:1 Mem:26.60M (Peak 26.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_366\nFra:1 Mem:26.61M (Peak 26.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_507\nFra:1 Mem:26.61M (Peak 26.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_229\nFra:1 Mem:26.62M (Peak 26.63M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_308\nFra:1 Mem:26.64M (Peak 26.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle\nFra:1 Mem:26.64M (Peak 26.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_4\nFra:1 Mem:26.64M (Peak 26.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_jamb_right\nFra:1 Mem:26.66M (Peak 26.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_3\nFra:1 Mem:26.68M (Peak 26.68M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_lintel_top\nFra:1 Mem:26.69M (Peak 26.69M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_mullion\nFra:1 Mem:26.70M (Peak 26.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_crossbar\nFra:1 Mem:26.71M (Peak 26.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right\nFra:1 Mem:26.72M (Peak 26.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_jamb_left\nFra:1 Mem:26.73M (Peak 26.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_jamb_right\nFra:1 Mem:26.74M (Peak 26.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_1\nFra:1 Mem:26.75M (Peak 26.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_lintel_top\nFra:1 Mem:26.77M (Peak 26.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_mullion\nFra:1 Mem:26.78M (Peak 26.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_0\nFra:1 Mem:26.80M (Peak 26.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_crossbar\nFra:1 Mem:26.81M (Peak 26.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left\nFra:1 Mem:26.81M (Peak 26.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | planter_right\nFra:1 Mem:26.81M (Peak 26.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_lintel_bottom\nFra:1 Mem:26.82M (Peak 26.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_4\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_3\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_mullion\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_crossbar\nFra:1 Mem:26.88M (Peak 26.88M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right\nFra:1 Mem:26.90M (Peak 26.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_jamb_left\nFra:1 Mem:26.90M (Peak 26.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_jamb_right\nFra:1 Mem:26.90M (Peak 26.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_lintel_top\nFra:1 Mem:26.93M (Peak 26.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_crossbar\nFra:1 Mem:26.93M (Peak 26.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_1\nFra:1 Mem:26.96M (Peak 26.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_floor\nFra:1 Mem:26.96M (Peak 26.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_0\nFra:1 Mem:26.96M (Peak 26.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_side_rail_left\nFra:1 Mem:26.97M (Peak 26.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_side_rail_right\nFra:1 Mem:26.97M (Peak 26.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_0\nFra:1 Mem:26.98M (Peak 26.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_1\nFra:1 Mem:26.98M (Peak 26.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_3\nFra:1 Mem:27.01M (Peak 27.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_4\nFra:1 Mem:27.01M (Peak 27.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_5\nFra:1 Mem:27.02M (Peak 27.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_6\nFra:1 Mem:27.02M (Peak 27.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_8\nFra:1 Mem:27.03M (Peak 27.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_9\nFra:1 Mem:27.04M (Peak 27.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_10\nFra:1 Mem:27.04M (Peak 27.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_11\nFra:1 Mem:27.04M (Peak 27.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_12\nFra:1 Mem:27.05M (Peak 27.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_13\nFra:1 Mem:27.05M (Peak 27.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_14\nFra:1 Mem:27.05M (Peak 27.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | atelier_letters\nFra:1 Mem:27.06M (Peak 27.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_15\nFra:1 Mem:27.08M (Peak 27.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_16\nFra:1 Mem:27.08M (Peak 27.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_18\nFra:1 Mem:27.09M (Peak 27.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_sign\nFra:1 Mem:27.09M (Peak 27.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_21_168\nFra:1 Mem:27.09M (Peak 27.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_21_206\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_378_168\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | lamp_mount_83\nFra:1 Mem:27.14M (Peak 27.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_378_206\nFra:1 Mem:27.14M (Peak 27.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entrance_lamp_83\nFra:1 Mem:27.16M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:22.65M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:1.01M, Peak:1.01M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Images\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.04 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.04 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Film\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.04 | Mem:8.95M, Peak:9.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.04 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.04 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.04 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.11 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.11 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/studio14-final/street_building/v3/silhouette_side.png'\nTime: 00:00.17 (Saving: 00:00.05)\n\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | foundation\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | facade\nFra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_0\nFra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_1\nFra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_2\nFra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_3\nFra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_4\nFra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_5\nFra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_6\nFra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_7\nFra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_0_8\nFra:1 Mem:26.20M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_1_4\nFra:1 Mem:26.21M (Peak 26.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_0\nFra:1 Mem:26.22M (Peak 26.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_4\nFra:1 Mem:26.22M (Peak 26.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_2_8\nFra:1 Mem:26.23M (Peak 26.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_3_4\nFra:1 Mem:26.23M (Peak 26.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_3_8\nFra:1 Mem:26.24M (Peak 26.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_0\nFra:1 Mem:26.24M (Peak 26.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_4\nFra:1 Mem:26.26M (Peak 26.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_4_8\nFra:1 Mem:26.26M (Peak 26.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_5_4\nFra:1 Mem:26.27M (Peak 26.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_5_8\nFra:1 Mem:26.28M (Peak 26.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_0\nFra:1 Mem:26.28M (Peak 26.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_4\nFra:1 Mem:26.29M (Peak 26.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_6_8\nFra:1 Mem:26.30M (Peak 26.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_7_8\nFra:1 Mem:26.30M (Peak 26.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_0\nFra:1 Mem:26.32M (Peak 26.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_1\nFra:1 Mem:26.32M (Peak 26.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_2\nFra:1 Mem:26.33M (Peak 26.33M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_3\nFra:1 Mem:26.33M (Peak 26.33M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_4\nFra:1 Mem:26.34M (Peak 26.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_5\nFra:1 Mem:26.34M (Peak 26.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_6\nFra:1 Mem:26.35M (Peak 26.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_7\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_8_8\nFra:1 Mem:26.36M (Peak 26.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_0\nFra:1 Mem:26.37M (Peak 26.37M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_1\nFra:1 Mem:26.38M (Peak 26.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_2\nFra:1 Mem:26.38M (Peak 26.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_3\nFra:1 Mem:26.39M (Peak 26.39M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_4\nFra:1 Mem:26.40M (Peak 26.40M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_5\nFra:1 Mem:26.40M (Peak 26.40M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_6\nFra:1 Mem:26.41M (Peak 26.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_7\nFra:1 Mem:26.42M (Peak 26.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_9_8\nFra:1 Mem:26.42M (Peak 26.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_0\nFra:1 Mem:26.43M (Peak 26.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_4\nFra:1 Mem:26.43M (Peak 26.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_10_8\nFra:1 Mem:26.44M (Peak 26.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_11_4\nFra:1 Mem:26.45M (Peak 26.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_11_8\nFra:1 Mem:26.45M (Peak 26.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_0\nFra:1 Mem:26.46M (Peak 26.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_4\nFra:1 Mem:26.47M (Peak 26.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_12_8\nFra:1 Mem:26.47M (Peak 26.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_13_4\nFra:1 Mem:26.48M (Peak 26.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_13_8\nFra:1 Mem:26.48M (Peak 26.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_0\nFra:1 Mem:26.49M (Peak 26.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_4\nFra:1 Mem:26.50M (Peak 26.50M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_14_8\nFra:1 Mem:26.51M (Peak 26.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_15_4\nFra:1 Mem:26.51M (Peak 26.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_15_8\nFra:1 Mem:26.52M (Peak 26.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_0\nFra:1 Mem:26.52M (Peak 26.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_4\nFra:1 Mem:26.52M (Peak 26.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_16_8\nFra:1 Mem:26.53M (Peak 26.53M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_17_4\nFra:1 Mem:26.54M (Peak 26.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brick_17_8\nFra:1 Mem:26.54M (Peak 26.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | base_course\nFra:1 Mem:26.55M (Peak 26.55M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_header\nFra:1 Mem:26.55M (Peak 26.55M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | middle_course\nFra:1 Mem:26.56M (Peak 26.56M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | cornice\nFra:1 Mem:26.57M (Peak 26.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | parapet\nFra:1 Mem:26.57M (Peak 26.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof_cap\nFra:1 Mem:26.58M (Peak 26.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_window\nFra:1 Mem:26.58M (Peak 26.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entry_door\nFra:1 Mem:26.60M (Peak 26.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_glazing\nFra:1 Mem:26.60M (Peak 26.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_98\nFra:1 Mem:26.62M (Peak 26.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_366\nFra:1 Mem:26.62M (Peak 26.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_3\nFra:1 Mem:26.64M (Peak 26.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_pier_507\nFra:1 Mem:26.64M (Peak 26.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_2\nFra:1 Mem:26.67M (Peak 26.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_152\nFra:1 Mem:26.67M (Peak 26.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_1\nFra:1 Mem:26.68M (Peak 26.68M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_mullion_308\nFra:1 Mem:26.71M (Peak 26.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_right_0\nFra:1 Mem:26.70M (Peak 26.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle\nFra:1 Mem:26.72M (Peak 26.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left\nFra:1 Mem:26.73M (Peak 26.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | planter_right\nFra:1 Mem:26.74M (Peak 26.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_4\nFra:1 Mem:26.75M (Peak 26.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_3\nFra:1 Mem:26.78M (Peak 26.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_2\nFra:1 Mem:26.79M (Peak 26.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_lintel_bottom\nFra:1 Mem:26.79M (Peak 26.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | topiary_left_1\nFra:1 Mem:26.82M (Peak 26.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_lintel_top\nFra:1 Mem:26.82M (Peak 26.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_mullion\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_left_crossbar\nFra:1 Mem:26.85M (Peak 26.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | planter_left\nFra:1 Mem:26.86M (Peak 26.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_jamb_left\nFra:1 Mem:26.86M (Peak 26.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:26.87M (Peak 26.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | atelier_letters\nFra:1 Mem:26.89M (Peak 26.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_jamb_right\nFra:1 Mem:26.90M (Peak 26.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_lintel_bottom\nFra:1 Mem:26.90M (Peak 26.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | shop_sign\nFra:1 Mem:26.91M (Peak 26.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_lintel_top\nFra:1 Mem:26.92M (Peak 26.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_mullion\nFra:1 Mem:26.92M (Peak 26.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_right_crossbar\nFra:1 Mem:26.95M (Peak 26.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left\nFra:1 Mem:26.95M (Peak 26.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | lamp_mount_516\nFra:1 Mem:26.97M (Peak 26.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | entrance_lamp_83\nFra:1 Mem:26.98M (Peak 26.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_jamb_right\nFra:1 Mem:26.98M (Peak 26.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | lamp_mount_83\nFra:1 Mem:26.99M (Peak 26.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_378_206\nFra:1 Mem:27.00M (Peak 27.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_lintel_top\nFra:1 Mem:27.00M (Peak 27.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_378_168\nFra:1 Mem:27.01M (Peak 27.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_left_crossbar\nFra:1 Mem:27.02M (Peak 27.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right\nFra:1 Mem:27.03M (Peak 27.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_jamb_left\nFra:1 Mem:27.03M (Peak 27.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_jamb_right\nFra:1 Mem:27.03M (Peak 27.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_lintel_bottom\nFra:1 Mem:27.05M (Peak 27.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_lintel_top\nFra:1 Mem:27.06M (Peak 27.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_21_206\nFra:1 Mem:27.06M (Peak 27.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | upper_window_right_crossbar\nFra:1 Mem:27.07M (Peak 27.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_baluster_21_168\nFra:1 Mem:27.07M (Peak 27.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_floor\nFra:1 Mem:27.08M (Peak 27.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_top_rail\nFra:1 Mem:27.08M (Peak 27.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | balcony_side_rail_left\nFra:1 Mem:27.09M (Peak 27.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_17\nFra:1 Mem:27.10M (Peak 27.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_0\nFra:1 Mem:27.10M (Peak 27.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_16\nFra:1 Mem:27.10M (Peak 27.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_15\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_2\nFra:1 Mem:27.11M (Peak 27.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_3\nFra:1 Mem:27.12M (Peak 27.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_4\nFra:1 Mem:27.12M (Peak 27.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_5\nFra:1 Mem:27.13M (Peak 27.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_13\nFra:1 Mem:27.14M (Peak 27.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_6\nFra:1 Mem:27.14M (Peak 27.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_12\nFra:1 Mem:27.14M (Peak 27.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_7\nFra:1 Mem:27.15M (Peak 27.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_11\nFra:1 Mem:27.15M (Peak 27.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_8\nFra:1 Mem:27.15M (Peak 27.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_10\nFra:1 Mem:27.16M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | baluster_9\nFra:1 Mem:27.16M (Peak 27.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:22.02M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:22.10M (Peak 27.16M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:22.14M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:22.65M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:22.63M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:2.28M, Peak:3.25M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Images\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.38M, Peak:3.38M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:23.74M (Peak 27.16M) | Time:00:00.01 | Mem:3.46M, Peak:3.46M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.03M, Peak:9.03M | Scene, ViewLayer | Updating Film\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:8.95M, Peak:9.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:29.31M (Peak 33.24M) | Time:00:00.05 | Mem:9.04M, Peak:9.04M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.12 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:63.61M (Peak 84.70M) | Time:00:00.12 | Mem:32.77M, Peak:32.77M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/studio14-final/street_building/v3/silhouette_front.png'\nTime: 00:00.16 (Saving: 00:00.04)\n\n\nInfo: Saved \"asset.blend\"\n\nBlender quit\n",
+    "stderr": "",
+    "stdout_truncated": true,
+    "stderr_truncated": false,
+    "error_detail": null,
+    "facts": {
+      "command": [
+        "/usr/bin/blender",
+        "--background",
+        "--factory-startup",
+        "--disable-autoexec",
+        "--threads",
+        "4",
+        "--python-exit-code",
+        "2",
+        "--python",
+        "/workspace/apex-neural-3d/scripts/game_graphics/studio/render_asset.py",
+        "--",
+        "--family",
+        "building",
+        "--output",
+        "/workspace/game-studio-output/studio14-final/street_building/v3",
+        "--input",
+        "/workspace/game-studio-output/studio14-final/street_building/v2/asset.blend",
+        "--parent-sha",
+        "1dba7378be2e552796422ae783293a202839caeabcb5708532506a2b055aee12",
+        "--plan",
+        "/workspace/game-studio-output/studio14-final/street_building/v3/plan/plan.json"
+      ],
+      "pid": 56161,
+      "process_stopped_verified": true,
+      "execution": "trusted_local_catalog",
+      "model_code_executed": false,
+      "script_sha256": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+      "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+      "sample_interval_s": 0.25,
+      "timeout_s": 600,
+      "rss_limit_mib": 12000,
+      "sources": {
+        "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+        "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+        "neural_cpu.py": "d0642bbc7f98ddbb791cf0d7d1f7b8eff2ab4f4677eee347eaa7054442426032",
+        "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e"
+      }
+    }
+  },
+  "rss_samples": [
+    {
+      "elapsed_s": 0.0,
+      "rss_bytes": 815104
+    },
+    {
+      "elapsed_s": 0.252,
+      "rss_bytes": 57438208
+    },
+    {
+      "elapsed_s": 0.503,
+      "rss_bytes": 201666560
+    },
+    {
+      "elapsed_s": 0.754,
+      "rss_bytes": 224022528
+    },
+    {
+      "elapsed_s": 1.006,
+      "rss_bytes": 234295296
+    },
+    {
+      "elapsed_s": 1.258,
+      "rss_bytes": 266330112
+    },
+    {
+      "elapsed_s": 1.539,
+      "rss_bytes": 268451840
+    },
+    {
+      "elapsed_s": 1.793,
+      "rss_bytes": 268689408
+    },
+    {
+      "elapsed_s": 2.046,
+      "rss_bytes": 269062144
+    },
+    {
+      "elapsed_s": 2.299,
+      "rss_bytes": 269758464
+    },
+    {
+      "elapsed_s": 2.55,
+      "rss_bytes": 262320128
+    },
+    {
+      "elapsed_s": 2.802,
+      "rss_bytes": 262320128
+    },
+    {
+      "elapsed_s": 3.054,
+      "rss_bytes": 257470464
+    },
+    {
+      "elapsed_s": 3.305,
+      "rss_bytes": 253300736
+    },
+    {
+      "elapsed_s": 3.557,
+      "rss_bytes": 261996544
+    },
+    {
+      "elapsed_s": 3.811,
+      "rss_bytes": 312934400
+    },
+    {
+      "elapsed_s": 4.062,
+      "rss_bytes": 312938496
+    },
+    {
+      "elapsed_s": 4.314,
+      "rss_bytes": 312942592
+    },
+    {
+      "elapsed_s": 4.567,
+      "rss_bytes": 312942592
+    },
+    {
+      "elapsed_s": 4.819,
+      "rss_bytes": 312942592
+    },
+    {
+      "elapsed_s": 5.07,
+      "rss_bytes": 312942592
+    },
+    {
+      "elapsed_s": 5.323,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 5.574,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 5.826,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 6.078,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 6.33,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 6.582,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 6.833,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 7.085,
+      "rss_bytes": 312930304
+    },
+    {
+      "elapsed_s": 7.337,
+      "rss_bytes": 312885248
+    },
+    {
+      "elapsed_s": 7.589,
+      "rss_bytes": 312885248
+    },
+    {
+      "elapsed_s": 7.841,
+      "rss_bytes": 308154368
+    },
+    {
+      "elapsed_s": 8.093,
+      "rss_bytes": 308154368
+    },
+    {
+      "elapsed_s": 8.344,
+      "rss_bytes": 308154368
+    },
+    {
+      "elapsed_s": 8.596,
+      "rss_bytes": 308154368
+    },
+    {
+      "elapsed_s": 8.848,
+      "rss_bytes": 308154368
+    },
+    {
+      "elapsed_s": 9.1,
+      "rss_bytes": 308154368
+    },
+    {
+      "elapsed_s": 9.351,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 9.603,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 9.855,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 10.107,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 10.358,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 10.61,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 10.862,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 11.115,
+      "rss_bytes": 308051968
+    },
+    {
+      "elapsed_s": 11.367,
+      "rss_bytes": 307871744
+    },
+    {
+      "elapsed_s": 11.619,
+      "rss_bytes": 307871744
+    },
+    {
+      "elapsed_s": 11.871,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 12.122,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 12.374,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 12.629,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 12.88,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 13.132,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 13.384,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 13.636,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 13.887,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 14.139,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 14.391,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 14.643,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 14.895,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 15.147,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 15.398,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 15.65,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 15.902,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 16.154,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 16.406,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 16.658,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 16.909,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 17.161,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 17.412,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 17.664,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 17.918,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 18.169,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 18.421,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 18.672,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 18.924,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 19.175,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 19.427,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 19.679,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 19.931,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 20.182,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 20.434,
+      "rss_bytes": 306978816
+    },
+    {
+      "elapsed_s": 20.686,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 20.938,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 21.189,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 21.442,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 21.694,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 21.946,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 22.197,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 22.449,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 22.7,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 22.952,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 23.203,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 23.455,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 23.706,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 23.958,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 24.21,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 24.462,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 24.714,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 24.965,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 25.217,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 25.471,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 25.722,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 25.975,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 26.226,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 26.478,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 26.729,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 26.982,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 27.234,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 27.485,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 27.737,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 27.989,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 28.24,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 28.492,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 28.743,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 28.995,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 29.247,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 29.499,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 29.751,
+      "rss_bytes": 306995200
+    },
+    {
+      "elapsed_s": 30.003,
+      "rss_bytes": 319610880
+    },
+    {
+      "elapsed_s": 30.255,
+      "rss_bytes": 328540160
+    },
+    {
+      "elapsed_s": 30.508,
+      "rss_bytes": 328540160
+    },
+    {
+      "elapsed_s": 30.763,
+      "rss_bytes": 328540160
+    },
+    {
+      "elapsed_s": 31.014,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 31.266,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 31.518,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 31.769,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 32.021,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 32.272,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 32.524,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 32.776,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 33.028,
+      "rss_bytes": 330817536
+    },
+    {
+      "elapsed_s": 33.279,
+      "rss_bytes": 322605056
+    },
+    {
+      "elapsed_s": 33.53,
+      "rss_bytes": 322605056
+    },
+    {
+      "elapsed_s": 33.782,
+      "rss_bytes": 322605056
+    },
+    {
+      "elapsed_s": 34.034,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 34.285,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 34.537,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 34.788,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 35.04,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 35.292,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 35.544,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 35.796,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 36.047,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 36.299,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 36.55,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 36.802,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 37.054,
+      "rss_bytes": 319582208
+    },
+    {
+      "elapsed_s": 37.306,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 37.558,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 37.81,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 38.062,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 38.314,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 38.566,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 38.817,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 39.069,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 39.32,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 39.572,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 39.823,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 40.075,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 40.327,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 40.578,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 40.83,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 41.081,
+      "rss_bytes": 318271488
+    },
+    {
+      "elapsed_s": 41.333,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 41.585,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 41.837,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 42.088,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 42.34,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 42.594,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 42.846,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 43.098,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 43.35,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 43.602,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 43.853,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 44.105,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 44.356,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 44.608,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 44.863,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 45.114,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 45.366,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 45.617,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 45.869,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 46.12,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 46.372,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 46.624,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 46.876,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 47.128,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 47.38,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 47.632,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 47.884,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 48.135,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 48.387,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 48.639,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 48.89,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 49.142,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 49.393,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 49.645,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 49.897,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 50.148,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 50.4,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 50.651,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 50.903,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 51.155,
+      "rss_bytes": 318894080
+    },
+    {
+      "elapsed_s": 51.406,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 51.657,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 51.909,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 52.16,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 52.412,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 52.665,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 52.916,
+      "rss_bytes": 324702208
+    },
+    {
+      "elapsed_s": 53.169,
+      "rss_bytes": 333447168
+    },
+    {
+      "elapsed_s": 53.421,
+      "rss_bytes": 333447168
+    },
+    {
+      "elapsed_s": 53.675,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 53.927,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 54.178,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 54.431,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 54.684,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 54.938,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 55.189,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 55.441,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 55.692,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 55.945,
+      "rss_bytes": 333451264
+    },
+    {
+      "elapsed_s": 56.197,
+      "rss_bytes": 325169152
+    },
+    {
+      "elapsed_s": 56.45,
+      "rss_bytes": 325169152
+    },
+    {
+      "elapsed_s": 56.701,
+      "rss_bytes": 325169152
+    },
+    {
+      "elapsed_s": 56.953,
+      "rss_bytes": 325169152
+    },
+    {
+      "elapsed_s": 57.204,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 57.456,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 57.707,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 57.958,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 58.21,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 58.461,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 58.713,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 58.964,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 59.216,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 59.467,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 59.719,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 59.97,
+      "rss_bytes": 321613824
+    },
+    {
+      "elapsed_s": 60.224,
+      "rss_bytes": 320794624
+    },
+    {
+      "elapsed_s": 60.475,
+      "rss_bytes": 320794624
+    },
+    {
+      "elapsed_s": 60.727,
+      "rss_bytes": 320794624
+    },
+    {
+      "elapsed_s": 60.978,
+      "rss_bytes": 319369216
+    },
+    {
+      "elapsed_s": 61.23,
+      "rss_bytes": 319369216
+    },
+    {
+      "elapsed_s": 61.481,
+      "rss_bytes": 319369216
+    },
+    {
+      "elapsed_s": 61.733,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 61.984,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 62.236,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 62.487,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 62.739,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 62.99,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 63.242,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 63.493,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 63.745,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 63.996,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 64.248,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 64.499,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 64.751,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 65.002,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 65.254,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 65.505,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 65.757,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 66.008,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 66.26,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 66.511,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 66.763,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 67.014,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 67.266,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 67.517,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 67.769,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 68.021,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 68.272,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 68.524,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 68.775,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 69.029,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 69.28,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 69.533,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 69.785,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 70.036,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 70.288,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 70.539,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 70.791,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 71.042,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 71.295,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 71.547,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 71.799,
+      "rss_bytes": 322867200
+    },
+    {
+      "elapsed_s": 72.051,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 72.303,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 72.555,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 72.806,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 73.058,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 73.309,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 73.561,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 73.812,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 74.064,
+      "rss_bytes": 324833280
+    },
+    {
+      "elapsed_s": 74.319,
+      "rss_bytes": 334716928
+    },
+    {
+      "elapsed_s": 74.57,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 74.822,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 75.074,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 75.326,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 75.578,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 75.829,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 76.081,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 76.332,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 76.584,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 76.835,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 77.087,
+      "rss_bytes": 334721024
+    },
+    {
+      "elapsed_s": 77.339,
+      "rss_bytes": 326483968
+    },
+    {
+      "elapsed_s": 77.59,
+      "rss_bytes": 326483968
+    },
+    {
+      "elapsed_s": 77.842,
+      "rss_bytes": 326483968
+    },
+    {
+      "elapsed_s": 78.094,
+      "rss_bytes": 326483968
+    },
+    {
+      "elapsed_s": 78.345,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 78.597,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 78.849,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 79.1,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 79.352,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 79.603,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 79.855,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 80.107,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 80.359,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 80.61,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 80.862,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 81.114,
+      "rss_bytes": 323084288
+    },
+    {
+      "elapsed_s": 81.366,
+      "rss_bytes": 322445312
+    },
+    {
+      "elapsed_s": 81.618,
+      "rss_bytes": 322445312
+    },
+    {
+      "elapsed_s": 81.87,
+      "rss_bytes": 322445312
+    },
+    {
+      "elapsed_s": 82.121,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 82.373,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 82.624,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 82.876,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 83.127,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 83.379,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 83.63,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 83.882,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 84.134,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 84.385,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 84.636,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 84.888,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 85.14,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 85.391,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 85.643,
+      "rss_bytes": 322449408
+    },
+    {
+      "elapsed_s": 85.894,
+      "rss_bytes": 311853056
+    },
+    {
+      "elapsed_s": 86.146,
+      "rss_bytes": 352186368
+    },
+    {
+      "elapsed_s": 86.397,
+      "rss_bytes": 369963008
+    },
+    {
+      "elapsed_s": 86.649,
+      "rss_bytes": 331390976
+    }
+  ]
+}

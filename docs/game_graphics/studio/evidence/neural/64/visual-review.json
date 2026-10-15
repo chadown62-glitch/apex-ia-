@@ -1,0 +1,77 @@
+{
+  "status": "TECHNICAL_INFERENCE_PASS_VISUAL_QUALITY_UNQUALIFIED",
+  "reviewer": "Codex direct visual inspection of four native Blender renders and input reference",
+  "calibrated_automatic_judge": false,
+  "not_a_second_judge_system": true,
+  "neural_mesh_claim": "True inference-produced mesh; no procedural reconstruction or geometry repair",
+  "reference": {
+    "path": "/workspace/game-studio-notes/chair14-candidate/chair-reference-rgba.png",
+    "sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+    "provenance": "APEX-authored Blender chair from mission14, supplied by root"
+  },
+  "observations": [
+    {
+      "element": "geometry_0 / thin armrest rails",
+      "defect": "At least one armrest is discontinuous and lacks the coherent support of the reference; visible floating fragments.",
+      "views": [
+        "view_000.png",
+        "view_270.png"
+      ],
+      "reference_sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+      "expected_improvement": "Continuous arm rails supported as in the authored reference, without altering the accepted source reference.",
+      "confidence": 0.97,
+      "confidence_calibrated": false,
+      "verification": "Inspect the same four camera transforms; verify no detached arm fragments and compare connected components/semantic rail continuity.",
+      "next_operation_candidate": "Bounded extraction of the same neural field at 128 instead of 64, then inspect; success not guaranteed",
+      "correction_executed": false
+    },
+    {
+      "element": "geometry_0 / legs and feet",
+      "defect": "Detached foot tip visible below a shortened leg; other thin leg sections fragmented.",
+      "views": [
+        "view_090.png",
+        "view_180.png",
+        "view_270.png"
+      ],
+      "reference_sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+      "expected_improvement": "Four continuous supports ending at the ground as in the input.",
+      "confidence": 0.99,
+      "confidence_calibrated": false,
+      "verification": "Same four views plus connected component inspection; no floating foot component.",
+      "next_operation_candidate": "First evaluate denser extraction using retained scene-codes.pt; if field lacks support, another reconstruction method or separately declared constrained editing is needed.",
+      "correction_executed": false
+    },
+    {
+      "element": "geometry_0 / cushion silhouette and back panel",
+      "defect": "Strong faceting and irregular sawtooth silhouettes; coherent smooth cushion contours from the reference are not retained.",
+      "views": [
+        "view_000.png",
+        "view_090.png",
+        "view_180.png",
+        "view_270.png"
+      ],
+      "reference_sha256": "f0b528e66531bb425b7bfbb2fc2e662b9a5b7b578a06f9337efcd0e0c0d9b0b7",
+      "expected_improvement": "Smoother geometric contours at unchanged viewing and lighting settings.",
+      "confidence": 0.98,
+      "confidence_calibrated": false,
+      "verification": "Compare silhouette curvature and facet count at same camera settings; smoothing normals alone does not establish geometric improvement.",
+      "next_operation_candidate": "Higher marching-cubes grid only after explicit bounded experiment, preserving baseline64 artifacts.",
+      "correction_executed": false
+    }
+  ],
+  "color_limit": "Neural vertex colours are preserved and linked explicitly in Blender; display shader roughness/light exposure are not inferred PBR. Render colours and reference lighting are not calibrated for pixelwise fidelity scoring.",
+  "topology_caveat": "Raw PLY inspection finds 68 boundary edges. Existing PR12 inspector merges positions within 1e-6 in temporary bmesh before checking and finds 0 nonmanifold edges. These diagnostics differ; do not claim 68 visible holes. Visible disconnected parts remain genuine defects.",
+  "corrections_in_this_stage": [
+    {
+      "kind": "rendering prerequisite",
+      "detail": "Disabled OpenImageDenoise unavailable in actual Blender build; no samples/resolution reduction.",
+      "geometry_improved": false
+    },
+    {
+      "kind": "display integration",
+      "detail": "GLB contains vertex colors but no material. Added neutral shader connected to imported color attribute; archived initial white-material renders.",
+      "geometry_improved": false
+    }
+  ],
+  "next_experiment": "Keep same checkpoint, input, threshold25 and render views; extract retained neural scene codes at128, measure time/RAM and semantic fragmentation before deciding whether denser extraction helps."
+}

@@ -1,0 +1,71 @@
+{
+  "neural_source_sha256": "2ab85f1356707a4b56fd6eb5b6d1a3d76bb90fb936fe52d868321c9013ce0d6a",
+  "source_mesh_unchanged_by_render": true,
+  "files": [
+    {
+      "path": "independent-inspection.json",
+      "bytes": 1025,
+      "sha256": "f81498745ed2725f88f27d9511b67603acb96166c14fb1327d33b2cf5b3329a3"
+    },
+    {
+      "path": "neural.blend",
+      "bytes": 1688548,
+      "sha256": "c0731dcab859c541b2a9eec92283d53cca118cd5bda17b24cdc5d65a3ea0ae0c"
+    },
+    {
+      "path": "render-report.json",
+      "bytes": 4238,
+      "sha256": "d98d42f44b113db0c70fb833f240a7c57723d9cd516b9c8250d2e7f84736b247"
+    },
+    {
+      "path": "render-resources.json",
+      "bytes": 28344,
+      "sha256": "b3afbad645ca570f8407c5059dade97092da88b0d35cdeea35dca793e655f7e0"
+    },
+    {
+      "path": "render.log",
+      "bytes": 20573,
+      "sha256": "0031c0ea89cbb5394068fd51759cecbbdd5142b68f364ea991d368b48bad8738"
+    },
+    {
+      "path": "render_neural.py",
+      "bytes": 7119,
+      "sha256": "1f87eece42b618ca22a8c220a333b4baeafdfd502f11cf0635970fd23e266999"
+    },
+    {
+      "path": "reopen-independent-resources.json",
+      "bytes": 587,
+      "sha256": "7d2292153136c428098217592559da41300ef7470efa9bd18b9edb513f3fa0c8"
+    },
+    {
+      "path": "reopen-independent.log",
+      "bytes": 175,
+      "sha256": "01429c1ee278ab4472604b2862bb18b324cd06c8f9ce4b8fb3f8f6a9e7d5ca06"
+    },
+    {
+      "path": "run_visual.py",
+      "bytes": 1893,
+      "sha256": "060e56be954231446ba253016ffa280be9af802f9417bc9b986623b19c96d2d6"
+    },
+    {
+      "path": "view_000.png",
+      "bytes": 1031162,
+      "sha256": "35ea46a31cc91790b4caf5db3466120ba729fb7b7db38b823418d344c2b00cc9"
+    },
+    {
+      "path": "view_090.png",
+      "bytes": 1007859,
+      "sha256": "f49f115a969c0eb093ac220b2de8dd8de85573a55457ff66235cde0a4829cb46"
+    },
+    {
+      "path": "view_180.png",
+      "bytes": 1065048,
+      "sha256": "7f7d286c469d4e42eed5a7c29fc5515e72cc551de514e4d6cf6a6dd654b8fce9"
+    },
+    {
+      "path": "view_270.png",
+      "bytes": 1002776,
+      "sha256": "c286817e4aa9a918dca584507ea627639a274ac43e27e1479abf3719b5b85e4c"
+    }
+  ]
+}
