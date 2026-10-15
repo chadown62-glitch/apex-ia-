@@ -356,6 +356,10 @@ class ApexBrainProvider(ModelProvider):
                 "model_fingerprint": engine.fingerprint,
                 # Calculs exacts demandés par le Cerveau (expression, résultat de la calculatrice).
                 "tool_calls": list(stats.tool_calls),
+                # Confiance du Cerveau dans sa réponse (probabilités de ses propres jetons) : MESURÉE, pas
+                # interprétée ici (voir docs/CERVEAU_APEX_V2.md pour ce qu'elle prédit).
+                "confidence": stats.confidence,
+                "min_token_prob": stats.min_token_prob,
                 "prompt_used": prompt_used,
             },
         )

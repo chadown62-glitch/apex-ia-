@@ -23,6 +23,7 @@
 from __future__ import annotations
 
 import gc
+import math
 import sys
 import threading
 import time
@@ -82,6 +83,17 @@ class GenerationStats:
     weights: str = ""
     kv_cache_bytes: int = 0
     tool_calls: list[dict[str, str]] = field(default_factory=list)
+    #: Confiance du modèle dans SA réponse : somme des log-probabilités (distribution brute, température 1)
+    #: des jetons qu'il a choisis, leur nombre, et la plus faible probabilité rencontrée. Les jetons fournis
+    #: par un outil (résultat de calcul, résumé 3D) n'y entrent pas : le modèle ne les a pas choisis.
+    logprob_sum: float = 0.0
+    scored_tokens: int = 0
+    min_token_prob: float | None = None
+
+    @property
+    def confidence(self) -> float | None:
+        """Moyenne géométrique des probabilités des jetons choisis (0 à 1) ; None si rien n'a été choisi."""
+        return round(math.exp(self.logprob_sum / self.scored_tokens), 4) if self.scored_tokens else None
 
     @property
     def tokens_per_s(self) -> float | None:
@@ -100,6 +112,7 @@ class GenerationStats:
             **self.__dict__,
             "tokens_per_s": self.tokens_per_s,
             "prefill_tokens_per_s": self.prefill_tokens_per_s,
+            "confidence": self.confidence,
         }
 
 
@@ -321,6 +334,13 @@ class BrainEngine:
                     stats.time_to_first_token_s = round(time.perf_counter() - started, 4)
                 if call_start is not None and len(produced) - call_start >= MAX_CALL_TOKENS:
                     token = result_id  # expression démesurée : refermée, la calculatrice dira l'erreur
+                else:
+                    logprob = float(torch.log_softmax(logits[0, -1].float(), dim=-1)[token])
+                    stats.logprob_sum += logprob
+                    stats.scored_tokens += 1
+                    probability = math.exp(logprob)
+                    if stats.min_token_prob is None or probability < stats.min_token_prob:
+                        stats.min_token_prob = round(probability, 6)
                 if use_tools and token == call_id and call_start is None:
                     if len(stats.tool_calls) >= MAX_TOOL_CALLS:
                         stats.finish_reason = "tool_limit"

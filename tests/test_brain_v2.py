@@ -868,6 +868,10 @@ def test_the_engine_runs_the_calculation_the_model_asks_for(tiny_brain) -> None:
     assert result.text == "Résultat : 86686." and result.stats.finish_reason == "stop"
     assert result.stats.tool_calls == [{"tool": "calc", "expression": "974*89", "result": "86686"}]
     assert tokenizer.encode("86686")[0] in fed  # le résultat est entré dans le contexte du modèle
+    # Confiance : seuls les jetons CHOISIS par le modèle comptent (le script les impose avec certitude) ; le
+    # résultat fourni par la calculatrice n'y entre pas.
+    assert result.stats.scored_tokens == len(script) and result.stats.confidence == 1.0
+    assert result.stats.to_dict()["confidence"] == 1.0
 
 
 def test_the_engine_builds_the_3d_model_the_brain_asks_for(tiny_brain) -> None:
