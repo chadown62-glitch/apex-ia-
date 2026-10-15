@@ -693,6 +693,79 @@ def test_models_built_by_the_brain_are_written_only_when_the_turn_may_write(env,
         assert any("pas été écrits" in note for note in answer.meta["tools_notes"])  # … et c'est dit
 
 
+class _UnsureBrainProvider(_ScriptedProvider):
+    """Premier appel : une réponse du Cerveau APEX avec sa confiance mesurée ; les appels suivants (le
+    moteur suivant du mode automatique) répondent normalement, ou échouent tous si `offline`."""
+
+    def __init__(self, replies: list[str], *, confidence: float, offline: bool = False) -> None:
+        super().__init__(replies)
+        self.confidence = confidence
+        self.offline = offline
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        from apex.errors import ModelProviderError
+
+        first = not self.requests
+        if not first and self.offline:
+            self.requests.append(request)
+            raise ModelProviderError("test", endpoint_url="test", detail="moteur hors ligne")
+        result = super().generate(request)
+        if not first:
+            return result
+        return GenerationResult(text=result.text, model_used=result.model_used,
+                                tokens_prompt=result.tokens_prompt,
+                                tokens_completion=result.tokens_completion,
+                                finish_reason="stop", elapsed_s=0.01,
+                                facts={"backend": "apex_brain", "confidence": self.confidence})
+
+
+def _brain_turn(env, provider, settings=None):
+    from apex.assistant.settings import SettingsService
+
+    _no_memory(env)
+    if settings:
+        SettingsService(env).update({"models": settings})
+    manager = TurnManager(env, provider_factory=lambda _candidate: provider,
+                          config=parse_config(copy.deepcopy(BASE_CONFIG)),
+                          sandbox_selection=lambda: _Selection(False), synchronous=True)
+    conversation = _conversation(env)
+    _, turn = manager.submit(conversation.id, "Écris une fonction Rust qui inverse une liste.")
+    return turn, _messages(env, conversation.id)[-1]
+
+
+def test_an_unsure_brain_hands_the_question_to_the_next_engine_and_says_so(env) -> None:
+    provider = _UnsureBrainProvider(["réponse peu sûre", "réponse du moteur suivant"], confidence=0.62)
+    turn, answer = _brain_turn(env, provider)
+    assert turn.status == "done" and len(provider.requests) == 2
+    assert answer.content == "réponse du moteur suivant"
+    delegation = answer.meta["delegation"]
+    assert delegation["status"] == "delegated" and delegation["confidence"] == 0.62
+    assert delegation["threshold"] == 0.97 and delegation["to"] == answer.model_id != delegation["from"]
+
+
+def test_a_confident_brain_keeps_the_question(env) -> None:
+    provider = _UnsureBrainProvider(["réponse sûre", "jamais demandée"], confidence=0.99)
+    _, answer = _brain_turn(env, provider)
+    assert answer.content == "réponse sûre" and len(provider.requests) == 1
+    assert "delegation" not in answer.meta
+
+
+def test_an_unsure_brain_answer_is_kept_and_flagged_when_no_other_engine_answers(env) -> None:
+    provider = _UnsureBrainProvider(["réponse peu sûre"], confidence=0.62, offline=True)
+    turn, answer = _brain_turn(env, provider)
+    assert turn.status == "done" and answer.content == "réponse peu sûre"  # jamais perdue faute de mieux
+    assert len(provider.requests) >= 2  # les autres moteurs ont bien été essayés
+    assert answer.meta["delegation"]["status"] == "kept" and answer.meta["delegation"]["to"] is None
+
+
+@pytest.mark.parametrize("settings", [{"brain_delegate_below": 0.0}, {"engine": "brain"}])
+def test_the_brain_never_hands_over_when_disabled_or_chosen_explicitly(env, settings) -> None:
+    provider = _UnsureBrainProvider(["réponse du Cerveau", "jamais demandée"], confidence=0.30)
+    _, answer = _brain_turn(env, provider, settings)
+    assert answer.content == "réponse du Cerveau" and len(provider.requests) == 1
+    assert "delegation" not in answer.meta
+
+
 def test_api_serves_exact_bytes_of_a_3d_preview(env, monkeypatch, tmp_path) -> None:
     from fastapi.testclient import TestClient
 

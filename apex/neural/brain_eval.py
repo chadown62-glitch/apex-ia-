@@ -61,6 +61,7 @@ def evaluate_tasks(
     )  # la moitié du contexte reste à l'invite
     per_family: dict[str, dict[str, Any]] = {}
     refused, ordinary = 0, 0  # refus abusifs : « je ne peux pas » à une question ordinaire
+    confidences: list[tuple[float, bool]] = []
     started = time.perf_counter()
     skipped: dict[str, int] = {}
     for row in rows:
@@ -74,6 +75,8 @@ def evaluate_tasks(
                 continue
         result = engine.chat(_messages(row), SamplingSettings(max_new_tokens=max_new_tokens))
         passed = score(row["check"], result.text, row["messages"][-2]["content"])
+        if result.stats.confidence is not None:
+            confidences.append((result.stats.confidence, bool(passed)))
         if row["check"]["type"] != "refusal":
             ordinary += 1
             refused += int(score({"type": "refusal"}, result.text))
@@ -101,9 +104,42 @@ def evaluate_tasks(
         "total": total,
         "rate": round(passed / total, 4) if total else None,
         "over_refusal_rate": round(refused / ordinary, 4) if ordinary else None,
+        "calibration": calibration(confidences),
         "skipped_without_compiler": skipped,
         "elapsed_s": round(time.perf_counter() - started, 1),
     }
+
+
+def calibration(
+    pairs: Sequence[tuple[float, bool]], thresholds: Sequence[float] = (0.90, 0.95, 0.97, 0.98)
+) -> dict[str, Any]:
+    """La confiance mesurée du Cerveau (`GenerationStats.confidence`) sépare-t-elle ses réponses justes des
+    fausses ? AUROC : probabilité qu'une réponse juste ait une confiance plus haute qu'une fausse (0,5 :
+    aucune information ; 1 : séparation parfaite). Pour chaque seuil de délégation (réglage
+    `brain_delegate_below` de l'assistant) : part des réponses gardées, justesse des réponses gardées,
+    part des erreurs et des réponses justes confiées au moteur suivant. Propre à CE Cerveau : à re-mesurer
+    pour tout nouveau Cerveau."""
+    from bisect import bisect_left, bisect_right
+
+    good = sorted(c for c, ok in pairs if ok)
+    bad = [c for c, ok in pairs if not ok]
+    auroc = None
+    if good and bad:
+        wins = sum(len(good) - bisect_right(good, b) + 0.5 * (bisect_right(good, b) - bisect_left(good, b))
+                   for b in bad)
+        auroc = round(wins / (len(good) * len(bad)), 4)
+    table = {}
+    for threshold in thresholds:
+        kept = [ok for c, ok in pairs if c >= threshold]
+        table[f"{threshold:.2f}"] = {
+            "kept_rate": round(len(kept) / len(pairs), 4) if pairs else None,
+            "kept_precision": round(sum(kept) / len(kept), 4) if kept else None,
+            "errors_handed_over": (round(sum(1 for b in bad if b < threshold) / len(bad), 4)
+                                   if bad else None),
+            "correct_handed_over": (round(sum(1 for g in good if g < threshold) / len(good), 4)
+                                    if good else None),
+        }
+    return {"answers": len(pairs), "correct": len(good), "auroc": auroc, "thresholds": table}
 
 
 def baselines(rows: Sequence[dict[str, Any]]) -> dict[str, dict[str, float]]:

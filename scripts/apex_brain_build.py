@@ -390,6 +390,7 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
         "tasks_rate": report["tasks"]["rate"],
         "tasks": {k: v["rate"] for k, v in report["tasks"]["families"].items()},
         "over_refusal_rate": report["tasks"].get("over_refusal_rate"),
+        "calibration": report["tasks"].get("calibration"),
         "decode_tokens_per_s_cpu": [r["decode_tokens_per_s"] for r in report["speed"]["runs"]],
         "time_to_first_token_s_cpu": [r["time_to_first_token_s"] for r in report["speed"]["runs"]],
         "stability_errors": report["stability"]["errors"],

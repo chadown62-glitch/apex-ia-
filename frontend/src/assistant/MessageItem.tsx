@@ -66,6 +66,13 @@ function MetaLine({ message }: { message: Message }) {
   if (typeof meta?.runtime?.tokens_per_s === "number") parts.push(`${meta.runtime.tokens_per_s.toFixed(1)} tokens/s`);
   if (meta?.memory && meta.memory.length > 0) parts.push(`${meta.memory.length} souvenir${meta.memory.length > 1 ? "s" : ""} rappelé${meta.memory.length > 1 ? "s" : ""}`);
   if (meta?.attachments && meta.attachments.length > 0) parts.push(`pièces jointes : ${meta.attachments.join(", ")}`);
+  const delegation = meta?.delegation;
+  if (delegation) {
+    const confidence = typeof delegation.confidence === "number" ? delegation.confidence.toFixed(2) : "?";
+    parts.push(delegation.status === "delegated"
+      ? `confié par le Cerveau APEX (confiance ${confidence})`
+      : `Cerveau APEX peu sûr (confiance ${confidence}), aucun autre moteur disponible`);
+  }
   if (parts.length === 0) return null;
   return <div className="ax-msg__meta">{parts.join(" · ")}</div>;
 }

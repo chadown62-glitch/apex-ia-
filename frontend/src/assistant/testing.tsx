@@ -72,7 +72,7 @@ export const MODES = [
 
 export const SETTINGS = {
   appearance: { theme: "night", animations: true, particles: true, reduce_motion: "system" },
-  models: { engine: "auto", preferred_model: "auto", temperature: 0.4, max_tokens: 768 },
+  models: { engine: "auto", preferred_model: "auto", temperature: 0.4, max_tokens: 768, brain_delegate_below: 0.97 },
   runtime: { generation_timeout_s: 900 },
   behavior: { default_mode: "normal", use_memory: true, history_chars: 6000 },
   tools: { workspace_write: true, code_execution: true, max_tool_steps: 6 },

@@ -275,6 +275,53 @@ compile (rustc) mais ajoute une valeur absolue : `somme_pairs(&[1, 2, 3, 4, -6])
 fonction écrite à la main jamais montrée : 1/20. Prochain levier : faire exécuter et tester son code au
 Cerveau, et corriger d'après le résultat (outils `code.run`/`tests.run` existants).
 
+## 9 quater. Le Cerveau sait quand il n'est pas sûr de lui (15/10/2026)
+
+**Mesure.** Chaque réponse du Cerveau porte sa **confiance** : la moyenne géométrique des probabilités que le
+modèle donnait aux jetons qu'il a choisis (distribution brute, avant température), et la plus faible de ces
+probabilités. Les jetons écrits par la calculatrice ou l'atelier 3D sont exclus : ce ne sont pas des choix du
+modèle. Calcul fait pendant la génération, sans seconde passe (`GenerationStats.confidence`).
+
+**Calibration sur les 1 220 exercices jamais vus** (réponse gloutonne, 384 jetons au plus ; justesse donnée par
+l'évaluation, compilateurs réels pour le code) : 1 017 justes (83,4 %). L'AUROC de la confiance est de **0,960**
+(0,962 pour la plus faible probabilité) : une réponse juste a 96 % de chances d'avoir une confiance plus haute
+qu'une réponse fausse.
+
+| Seuil | Réponses gardées | Justes parmi les gardées | Erreurs confiées au moteur suivant | Réponses justes confiées |
+|---|---|---|---|---|
+| 0,90 | 87,0 % | 93,3 % | 132 / 203 | 27 / 1 017 |
+| 0,95 | 82,5 % | 96,2 % | 165 / 203 | 48 / 1 017 |
+| **0,97** | **78,3 %** | **97,6 %** | **180 / 203** | **85 / 1 017** |
+| 0,98 | 75,3 % | 98,3 % | 187 / 203 | 114 / 1 017 |
+
+Les 23 erreurs qui passent le seuil de 0,97 sont presque toutes du code : Go 9, Ruby 4, autres exercices de
+code 7. S'y ajoutent deux demandes 3D et une sortie de programme. Le Cerveau peut donc se tromper **en étant sûr
+de lui**, surtout en code. À l'inverse, il doute beaucoup, que sa réponse soit juste ou non, en traduction
+(confiance moyenne 0,53 pour les justes, 0,49 pour les fausses) et en connaissances (0,67 à 0,83 pour les
+justes ; 0,57 à 0,66 pour les fausses).
+
+**Hors des familles d'entraînement** (16 vraies demandes libres, justesse vérifiée par rustc, g++ ou Python,
+sinon par un critère écrit avant de voir la réponse ; script hors dépôt) : **16 réponses fausses sur 16**.
+13 sont sous 0,97. Passent quand même : la fonction Rust avec signature (code faux, confiance 0,985), et deux
+questions de culture générale (capitale de l'Australie, auteur des *Misérables*), auxquelles le Cerveau répond
+par sa phrase apprise « Je n'ai pas accès à Internet… » (0,988 et 0,974). Ces mesures confirment le §9 ter :
+hors de ce qu'il a appris, ce Cerveau de 15,7 M de paramètres se trompe presque toujours.
+
+**Usage dans APEX** (moteur **Automatique** de l'assistant) : une réponse du Cerveau dont la confiance est sous
+le seuil (réglage « Le Cerveau passe la main sous cette confiance », 0,97 par défaut, 0 pour jamais) est confiée
+au moteur suivant (Ollama, moteur intégré). Sous la réponse, APEX l'écrit : « confié par le Cerveau APEX
+(confiance 0.62) ». Si aucun autre moteur ne répond, la réponse du Cerveau est gardée, et APEX l'écrit aussi.
+La décision se prend à la première étape du tour, qui choisit le modèle de tout le tour. La réponse déclinée
+reste dans la trace de la génération : `apex/assistant/turns.py` rappelle `generate_with_fallback`, inchangé,
+sur les moteurs suivants. Avec le moteur « Cerveau » choisi explicitement, rien n'est jamais confié ailleurs. Seuil 0,97 : il confie 89 % des
+erreurs en ne cédant que 8 % des réponses justes. Une délégation coûte une seconde génération.
+
+**Ce qui n'est pas mesuré ici** : aucun autre moteur ne tourne dans cet environnement (Ollama et les poids du
+moteur intégré ne sont pas téléchargeables). La chaîne de délégation est vérifiée par des tests avec des doubles
+de test (`tests/test_assistant.py`). Le gain réel dépend de la qualité du moteur suivant sur le PC. Le seuil vaut pour **ce** Cerveau : chaque évaluation (`apex_brain_build.py evaluate`)
+mesure désormais la calibration (`tasks.calibration` dans `evaluation.json`, résumé dans la provenance). Pour un
+nouveau Cerveau, par exemple celui entraîné sur le GPU, le seuil se règle d'après sa propre mesure.
+
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 
 Dans Ubuntu (WSL) :

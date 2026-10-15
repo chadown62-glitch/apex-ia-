@@ -59,6 +59,8 @@ export interface MessageMeta {
   attachments?: string[];
   tools_offered?: string[];
   tools_notes?: string[];
+  /** Mode automatique : le Cerveau APEX, pas assez sûr de sa réponse, l'a confiée à un autre moteur (ou l'a gardée). */
+  delegation?: { from: string; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
 }
 
 export interface Message {
@@ -102,7 +104,7 @@ export interface Attachment {
 
 export interface AppSettings {
   appearance: { theme: "night" | "dune"; animations: boolean; particles: boolean; reduce_motion: "system" | "always" | "never" };
-  models: { engine: EngineId; preferred_model: string; temperature: number; max_tokens: number };
+  models: { engine: EngineId; preferred_model: string; temperature: number; max_tokens: number; brain_delegate_below: number };
   runtime: { generation_timeout_s: number };
   behavior: { default_mode: ModeId; use_memory: boolean; history_chars: number };
   tools: { workspace_write: boolean; code_execution: boolean; max_tool_steps: number };

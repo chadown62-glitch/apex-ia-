@@ -325,6 +325,17 @@ describe("mode panels", () => {
   });
 });
 
+describe("MessageItem", () => {
+  it("says when the APEX Brain handed an answer over, or kept it for lack of another engine", async () => {
+    const { MessageItem } = await import("./MessageItem");
+    const delegated = message({ id: "d", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.623, threshold: 0.97, to: "qwen", status: "delegated" } } });
+    const kept = message({ id: "k", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.5, threshold: 0.97, to: null, status: "kept" } } });
+    renderAt("/", [{ path: "/", element: <><MessageItem message={delegated as never} /><MessageItem message={kept as never} /></> }]);
+    expect(screen.getByText(/confié par le Cerveau APEX \(confiance 0\.62\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Cerveau APEX peu sûr \(confiance 0\.50\), aucun autre moteur disponible/)).toBeInTheDocument();
+  });
+});
+
 describe("summarizeError", () => {
   it("keeps the readable head of a routing error and flags a missing local model", async () => {
     const { summarizeError } = await import("./MessageItem");

@@ -300,6 +300,12 @@ export function SettingsView() {
           <Row label="Longueur maximale d'une réponse" hint="En tokens (64 à 4096). Plus long = plus lent sur processeur.">
             <NumberField label="Tokens maximum" value={m.max_tokens} min={64} max={4096} step={64} onChange={(n) => modelSection.update({ max_tokens: n })} />
           </Row>
+          <Row
+            label="Le Cerveau passe la main sous cette confiance"
+            hint="Mode automatique : une réponse du Cerveau APEX moins sûre que ce seuil (0 à 1, mesuré sur ses propres mots) est confiée au moteur suivant. 0 : jamais."
+          >
+            <NumberField label="Seuil de confiance" value={m.brain_delegate_below} min={0} max={1} step={0.01} onChange={(n) => modelSection.update({ brain_delegate_below: n })} />
+          </Row>
           <SaveBar section={modelSection} />
         </Section>
       )}

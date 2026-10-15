@@ -24,10 +24,15 @@ class Appearance(_Section):
 
 
 class ModelSettings(_Section):
-    #: Moteur de réponse (`apex.assistant.engines`) : `auto` (Ollama puis moteur intégré, jamais le
-    #: Cerveau), `ollama`, `integrated` (Qwen 1.5B exécuté par APEX) ou `brain` (Cerveau APEX,
-    #: expérimental).
+    #: Moteur de réponse (`apex.assistant.engines`) : `auto` (le Cerveau APEX s'il sait converser, puis
+    #: Ollama et le moteur intégré), `ollama`, `integrated` (Qwen 1.5B exécuté par APEX) ou `brain` (Cerveau
+    #: APEX).
     engine: Literal["auto", "ollama", "integrated", "brain"] = "auto"
+    #: Mode automatique : une réponse du Cerveau dont la confiance MESURÉE (probabilités de ses propres
+    #: jetons) est sous ce seuil est confiée au moteur suivant ; si aucun autre ne répond, la réponse du
+    #: Cerveau est gardée et c'est dit. 0 : jamais. Seuil choisi sur 1 220 exercices jamais vus
+    #: (docs/CERVEAU_APEX_V2.md). Sans effet quand le moteur « Cerveau » est choisi explicitement.
+    brain_delegate_below: float = Field(default=0.97, ge=0.0, le=1.0)
     #: `auto` : le routage d'APEX choisit parmi les modèles du moteur ; sinon l'identifiant d'un modèle.
     preferred_model: str = Field(default="auto", max_length=200)
     temperature: float = Field(default=0.4, ge=0.0, le=1.5)

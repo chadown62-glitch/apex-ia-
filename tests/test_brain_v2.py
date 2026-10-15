@@ -546,6 +546,19 @@ def test_cpu_precision_keeps_bfloat16_only_when_clearly_faster(tokenizer, monkey
     assert fp32 > 0 and bf16 > 0
 
 
+def test_calibration_measures_how_well_confidence_separates_right_from_wrong() -> None:
+    """Calculé à la main : justes 0,99 / 0,95 / 0,90, fausses 0,95 / 0,50.
+    AUROC = (1 + ½ égalité + 3) / 6."""
+    from apex.neural.brain_eval import calibration
+
+    pairs = [(0.99, True), (0.95, True), (0.90, True), (0.95, False), (0.50, False)]
+    report = calibration(pairs, thresholds=(0.95,))
+    assert report["answers"] == 5 and report["correct"] == 3 and report["auroc"] == 0.75
+    assert report["thresholds"]["0.95"] == {"kept_rate": 0.6, "kept_precision": 0.6667,
+                                            "errors_handed_over": 0.5, "correct_handed_over": 0.3333}
+    assert calibration([(0.9, True)])["auroc"] is None  # aucune réponse fausse : rien à séparer
+
+
 def test_gpu_batch_fit_uses_the_memory_actually_free(tokenizer, tmp_path, monkeypatch) -> None:
     """Logique de l'ajustement du lot au GPU, sur CPU avec des quantités de mémoire SIMULÉES (aucun GPU
     ici) : le budget est la mémoire libre (+ ce que le processus détient), pas la VRAM totale ; le lot est
