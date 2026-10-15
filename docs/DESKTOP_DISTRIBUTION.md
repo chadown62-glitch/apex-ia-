@@ -693,3 +693,28 @@ mêmes 660 exercices jamais vus (47,9 % en 0.5.0), détail dans [`docs/CERVEAU_A
 | WINE — **Windows simulé, pas Windows** | cycle de vie **17/17** ; mise à jour **0.5.0 → 0.5.1** **18/18** ; robustesse **10/10** |
 
 Non vérifié ici : le Cerveau sous Windows réel (Wine n'exécute pas torch) ; l'entraînement GPU (§15.2).
+
+## 17. APEX.exe 0.6.0 — code dans 10 langages, mode 3D, outils de gros projets
+
+Panel inchangé, bibliothèques inchangées (même verrou d'exigences que 0.5.1 : pas de nouvelle préparation).
+L'application livre :
+
+- le Cerveau v2 réinstruit sur le code dans 10 langages et sur les demandes 3D : **83,3 %** sur 1 220 exercices
+  jamais vus, contre **46,3 %** pour le Cerveau 0.5.1 réévalué sur les mêmes exercices
+  ([`docs/CERVEAU_APEX_V2.md` §9 ter](CERVEAU_APEX_V2.md)) ;
+- le mode 3D de l'assistant (outil `model3d.create`, panneau « Atelier 3D »), l'extension Blender
+  ([`docs/ATELIER_3D.md`](ATELIER_3D.md)) ;
+- les outils `fs.search` et `fs.edit` et jusqu'à 40 étapes d'outils par réponse en mode Code ;
+- l'entraînement sur CPU qui choisit float32 ou bfloat16 par mesure.
+
+| Niveau | Résultat |
+|---|---|
+| Tests Python des fichiers concernés (cerveau, atelier 3D, assistant, moteurs, outils, runtime natif, statut, conversations) | **202 réussis**, 1 ignoré (validateur glTF Khronos non installé dans ce lancement ; réussi quand il l'est), 0 échec, avec le nouveau Cerveau dans `brain/` |
+| Tests de l'interface (vitest) | **174 réussis** |
+| Cerveau dans l'application (assistant réel, moteur « Cerveau ») | mode 3D : char, voiture et épée construits par le Cerveau, fichiers écrits par l'outil ; « 1234 × 5678 » → 7006652 |
+| Installateur 0.6.0 (SHA-256 `9c4955cf…0de034087b`, commit `132d764`) | construit depuis le commit (artefact « release ») ; manifeste : Cerveau `sha256:5be29821…` |
+| WINE — **Windows simulé, pas Windows** | cycle de vie **17/17** ; mise à jour **0.5.1 → 0.6.0** **18/18** (raccourci et paramètres conservés) ; robustesse **10/10** |
+
+Non vérifié ici : le Cerveau sous Windows réel (Wine n'exécute pas torch) ; les scripts Unity et Unreal dans les
+moteurs (syntaxe seulement) ; l'entraînement GPU (§15.2). Game Studio (développé en parallèle par Codex, PR
+#19) n'est pas dans cette version : il n'est pas fusionné.
