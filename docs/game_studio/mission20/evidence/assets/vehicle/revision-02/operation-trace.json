@@ -1,0 +1,691 @@
+[
+  {
+    "operation": {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  },
+  {
+    "operation": {
+      "op": "set_material_pbr",
+      "target": "petrol_paint",
+      "params": {
+        "base_color": [
+          0.8,
+          0.2,
+          0.1
+        ],
+        "roughness": 0.3,
+        "metallic": 0
+      }
+    },
+    "changed_objects": [
+      "chassis",
+      "roof",
+      "a_pillar_left",
+      "c_pillar_left",
+      "mirror_left",
+      "a_pillar_right",
+      "c_pillar_right",
+      "mirror_right"
+    ],
+    "before": {
+      "chassis": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          4.800000190734863,
+          2.0009734630584717,
+          0.7626132965087891
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 1792,
+        "geometry_sha256": "79102fae1105ba71526af90f24fdd4610d605a28b05b06bdd0a2a11bad0d45cc"
+      },
+      "roof": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.9099999666213989,
+          1.1699999570846558,
+          0.09500002861022949
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 32,
+        "geometry_sha256": "d9c028485b10cf1f45c4352bb374fed721663cfcbaf918f9d275c81cd2b00aa0"
+      },
+      "a_pillar_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.47850748896598816,
+          0.17240756750106812,
+          0.4575927257537842
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "a15a4fea40159a47cf885b6bce26350d54690d282878106c00573d7fb4dc84ea"
+      },
+      "c_pillar_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.5226423144340515,
+          0.1783592700958252,
+          0.4697015881538391
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "ddcfb5b6133531bbfa0069cc9fa879c68ac17f29f80e5a5db8059ed24be9a479"
+      },
+      "mirror_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.27000001072883606,
+          -1.024999976158142,
+          0.8999999761581421
+        ],
+        "dimensions_m": [
+          0.2099999189376831,
+          0.18999996781349182,
+          0.0949999988079071
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "95b46bc108f5ed74cfff12fd1c31d32d0f0326f2c12c7845716e0139cb5a917f"
+      },
+      "a_pillar_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.47850751876831055,
+          0.17240756750106812,
+          0.4575927257537842
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "ca4e6ffaa4f1ca63663219c998d26908ec56fb0fefc50bd346c9cc37182ef820"
+      },
+      "c_pillar_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.5226422548294067,
+          0.1783592700958252,
+          0.4697015881538391
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "ae678a5dad5c3dfc4dfe7a444a0421f77843de2e6ab9696f937dda3d9b123145"
+      },
+      "mirror_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.27000001072883606,
+          1.024999976158142,
+          0.8999999761581421
+        ],
+        "dimensions_m": [
+          0.2099999189376831,
+          0.18999996781349182,
+          0.0949999988079071
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.017999999225139618,
+                0.10499999672174454,
+                0.14499999582767487,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.23999999463558197,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.7799999713897705,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "07868a0cf7ea12036c7bf59cc4233fc329586a7a39b9005230c9aa93bf1ac730"
+      }
+    },
+    "after": {
+      "chassis": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          4.800000190734863,
+          2.0009734630584717,
+          0.7626132965087891
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 1792,
+        "geometry_sha256": "79102fae1105ba71526af90f24fdd4610d605a28b05b06bdd0a2a11bad0d45cc"
+      },
+      "roof": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.9099999666213989,
+          1.1699999570846558,
+          0.09500002861022949
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 32,
+        "geometry_sha256": "d9c028485b10cf1f45c4352bb374fed721663cfcbaf918f9d275c81cd2b00aa0"
+      },
+      "a_pillar_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.47850748896598816,
+          0.17240756750106812,
+          0.4575927257537842
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "a15a4fea40159a47cf885b6bce26350d54690d282878106c00573d7fb4dc84ea"
+      },
+      "c_pillar_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.5226423144340515,
+          0.1783592700958252,
+          0.4697015881538391
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "ddcfb5b6133531bbfa0069cc9fa879c68ac17f29f80e5a5db8059ed24be9a479"
+      },
+      "mirror_left": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.27000001072883606,
+          -1.024999976158142,
+          0.8999999761581421
+        ],
+        "dimensions_m": [
+          0.2099999189376831,
+          0.18999996781349182,
+          0.0949999988079071
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "95b46bc108f5ed74cfff12fd1c31d32d0f0326f2c12c7845716e0139cb5a917f"
+      },
+      "a_pillar_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.47850751876831055,
+          0.17240756750106812,
+          0.4575927257537842
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "ca4e6ffaa4f1ca63663219c998d26908ec56fb0fefc50bd346c9cc37182ef820"
+      },
+      "c_pillar_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "dimensions_m": [
+          0.5226422548294067,
+          0.1783592700958252,
+          0.4697015881538391
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 56,
+        "geometry_sha256": "ae678a5dad5c3dfc4dfe7a444a0421f77843de2e6ab9696f937dda3d9b123145"
+      },
+      "mirror_right": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.27000001072883606,
+          1.024999976158142,
+          0.8999999761581421
+        ],
+        "dimensions_m": [
+          0.2099999189376831,
+          0.18999996781349182,
+          0.0949999988079071
+        ],
+        "materials": [
+          "petrol_paint"
+        ],
+        "pbr": {
+          "petrol_paint": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.20000000298023224,
+                0.10000000149011612,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 266,
+        "geometry_sha256": "07868a0cf7ea12036c7bf59cc4233fc329586a7a39b9005230c9aa93bf1ac730"
+      }
+    }
+  },
+  {
+    "operation": {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  }
+]

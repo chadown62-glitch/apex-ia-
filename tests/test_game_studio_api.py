@@ -59,3 +59,47 @@ def test_quality_criterion_rejects_wrong_type():
 def test_artifact_path_cannot_escape_job():
     response = authed_client().get("/api/v1/game-studio/missions/not-a-uuid/artifacts/bad")
     assert response.status_code == 404
+
+
+def test_project_routes_require_existing_api_token():
+    client = TestClient(create_app())
+    assert client.get("/api/v1/game-studio/projects").status_code == 401
+    assert client.post("/api/v1/game-studio/projects", json=request()).status_code == 401
+    assert client.post("/api/v1/game-studio/projects/not-a-uuid/cancel").status_code == 401
+    assert client.post("/api/v1/game-studio/projects/not-a-uuid/improve-framing").status_code == 401
+    assert client.get("/api/v1/game-studio/projects/not-a-uuid/artifacts/bad").status_code == 401
+
+
+def test_project_rejects_unavailable_tool_before_launch():
+    response = authed_client().post(
+        "/api/v1/game-studio/projects",
+        json={**request(), "creation_type": "environnement", "tool": "unreal"},
+    )
+    assert response.status_code == 422
+    assert "garage_recipe_requires_realistic_blender_environment" in response.text
+
+
+def test_project_does_not_claim_to_use_unread_visual_references():
+    response = authed_client().post(
+        "/api/v1/game-studio/projects",
+        json={**request(), "creation_type": "environnement", "references": [{
+            "content_type": "text/plain", "data_base64": base64.b64encode(b"reference").decode(),
+            "provenance": "User supplied reference",
+        }]},
+    )
+    assert response.status_code == 422
+    assert "garage_visual_references_not_consumed_by_controller" in response.text
+
+
+def test_scene_revision_requires_an_existing_project(monkeypatch):
+    from apex.api.routes import game_studio
+
+    class MissingProject:
+        def improve_framing(self, _project_id):
+            raise LookupError("game_studio_project_missing")
+
+    monkeypatch.setattr(game_studio, "_projects", lambda: MissingProject())
+    response = authed_client().post(
+        "/api/v1/game-studio/projects/00000000-0000-0000-0000-000000000000/improve-framing"
+    )
+    assert response.status_code == 404

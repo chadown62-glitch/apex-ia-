@@ -1,0 +1,19 @@
+{
+  "specialist": "Game Engineer preflight",
+  "status": "blocked",
+  "source_vehicle_artifact": {
+    "mission_id": "129b2de5-c572-44c8-8281-a60ae3f61526",
+    "job_id": "eb3888e3-6f30-4aa8-ab30-a8a764d6bf86",
+    "hash": "sha256:4b01dc06b14fe0742ea8170c7e4030b60010544f8e9efa590f6479922673f494"
+  },
+  "glb_structure_verified": true,
+  "missing_vehicle_contract_wheel_nodes": [
+    "wheel_front_left",
+    "wheel_front_right",
+    "wheel_rear_left",
+    "wheel_rear_right"
+  ],
+  "unreal_editor_executed": false,
+  "vehicle_physics_executed": false,
+  "reason": "studio_vehicle_export_not_yet_VehicleAssetContract_v1_compatible"
+}

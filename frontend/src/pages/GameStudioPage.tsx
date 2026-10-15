@@ -5,6 +5,8 @@ import {
   cancelGameStudioMission, gameStudioCapabilities, getGameStudioArtifact,
   getGameStudioMission, listGameStudioMissions, resumeGameStudioMission,
   submitGameStudioMission,
+  cancelGameStudioProject, getGameStudioProject, listGameStudioProjects,
+  resumeGameStudioProject, submitGameStudioProject, getGameStudioProjectArtifact,
 } from "../api/endpoints";
 import type { GameStudioArtifact, GameStudioMission, GameStudioRequest } from "../api/types";
 import { Panel } from "../components/common/Panel";
@@ -18,25 +20,30 @@ const initial: GameStudioRequest = {
   max_rss_mib: 12000, max_attempts: 3, criteria: {}, references: [],
 };
 
-function ArtifactImage({ jobId, artifact }: { jobId: string; artifact: GameStudioArtifact }) {
+function ArtifactImage({ jobId, artifact, project = false }: { jobId: string; artifact: GameStudioArtifact; project?: boolean }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let active = true;
-    let objectUrl: string | null = null;
-    getGameStudioArtifact(jobId, artifact.hash).then((blob) => {
-      if (active) { objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); }
+    let reader: FileReader | null = null;
+    (project ? getGameStudioProjectArtifact : getGameStudioArtifact)(jobId, artifact.hash).then((blob) => {
+      if (!active) return;
+      // The existing APEX UI CSP allows data: images, while blob: images are blocked.
+      reader = new FileReader();
+      reader.onload = () => { if (active && typeof reader?.result === "string") setUrl(reader.result); };
+      reader.onerror = () => { if (active) setUrl(null); };
+      reader.readAsDataURL(blob);
     }).catch(() => setUrl(null));
-    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+    return () => { active = false; if (reader?.readyState === FileReader.LOADING) reader.abort(); };
   }, [jobId, artifact.hash]);
   return url ? <img src={url} alt={`Rendu Blender natif ${artifact.name}`} /> : <span>Chargement du rendu…</span>;
 }
 
-function ArtifactDownload({ jobId, artifact }: { jobId: string; artifact: GameStudioArtifact }) {
+function ArtifactDownload({ jobId, artifact, project = false }: { jobId: string; artifact: GameStudioArtifact; project?: boolean }) {
   const [busy, setBusy] = useState(false);
   async function download() {
     setBusy(true);
     try {
-      const blob = await getGameStudioArtifact(jobId, artifact.hash);
+      const blob = await (project ? getGameStudioProjectArtifact : getGameStudioArtifact)(jobId, artifact.hash);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -48,18 +55,18 @@ function ArtifactDownload({ jobId, artifact }: { jobId: string; artifact: GameSt
   return <button type="button" onClick={download} disabled={busy}>{artifact.name}</button>;
 }
 
-function MissionDetail({ mission, onCancel, onResume }: {
-  mission: GameStudioMission; onCancel: () => void; onResume: () => void;
+function MissionDetail({ mission, onCancel, onResume, controls = true }: {
+  mission: GameStudioMission; onCancel: () => void; onResume: () => void; controls?: boolean;
 }) {
   return <section className="game-mission" aria-label="Suivi de mission">
     <div className="game-mission__heading"><h3>{mission.request.description}</h3><strong>{mission.status}</strong></div>
     <p>Mission APEX {mission.mission_id} · {mission.specialist} · {mission.model}</p>
     <p>Tâche : {mission.current_task} · début {new Date(mission.created_at).toLocaleString()}</p>
     {mission.error && <p role="alert">{mission.error}</p>}
-    <div className="game-actions">
+    {controls && <div className="game-actions">
       {mission.status === "running" || mission.status === "queued" ? <button type="button" onClick={onCancel}>Arrêter</button> : null}
       {["failed", "interrupted", "cancelled"].includes(mission.status) ? <button type="button" onClick={onResume}>Reprendre</button> : null}
-    </div>
+    </div>}
     <div className="game-revisions">
       {mission.revisions.map((revision) => {
         const renders = revision.artifacts.filter((item) => item.role === "view");
@@ -106,18 +113,29 @@ export function GameStudioPage() {
   const [provenance, setProvenance] = useState("");
   const [criteriaText, setCriteriaText] = useState("{}");
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const capabilities = useQuery({ queryKey: ["game-studio-capabilities"], queryFn: gameStudioCapabilities });
   const list = useQuery({ queryKey: ["game-studio-missions"], queryFn: listGameStudioMissions, refetchInterval: 5000 });
   const detail = useQuery({ queryKey: ["game-studio-mission", selected], queryFn: () => getGameStudioMission(selected!),
     enabled: Boolean(selected), refetchInterval: 3000 });
+  const projects = useQuery({ queryKey: ["game-studio-projects"], queryFn: listGameStudioProjects, refetchInterval: 5000 });
+  const projectDetail = useQuery({ queryKey: ["game-studio-project", selectedProject], queryFn: () => getGameStudioProject(selectedProject!),
+    enabled: Boolean(selectedProject), refetchInterval: 3000 });
   const submit = useMutation({ mutationFn: submitGameStudioMission, onSuccess: (result) => {
     if (result.data) { setSelected(result.data.id); queryClient.invalidateQueries({ queryKey: ["game-studio-missions"] }); }
     else setError(result.detail ?? "Mission indisponible");
   }, onError: (failure) => setError(String(failure)) });
   const cancel = useMutation({ mutationFn: cancelGameStudioMission, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["game-studio-mission"] }) });
   const resume = useMutation({ mutationFn: resumeGameStudioMission, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["game-studio-mission"] }) });
+  const projectSubmit = useMutation({ mutationFn: submitGameStudioProject, onSuccess: (result) => {
+    if (result.data) { setSelectedProject(result.data.id); queryClient.invalidateQueries({ queryKey: ["game-studio-projects"] }); }
+    else setError(result.detail ?? "Projet indisponible");
+  }, onError: (failure) => setError(String(failure)) });
+  const projectCancel = useMutation({ mutationFn: cancelGameStudioProject, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["game-studio-project"] }) });
+  const projectResume = useMutation({ mutationFn: resumeGameStudioProject, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["game-studio-project"] }) });
   const mission = detail.data?.data;
+  const project = projectDetail.data?.data;
 
   async function send(event: React.FormEvent) {
     event.preventDefault(); setError(null);
@@ -125,12 +143,13 @@ export function GameStudioPage() {
       const criteria = JSON.parse(criteriaText) as GameStudioRequest["criteria"];
       if (!criteria || Array.isArray(criteria) || typeof criteria !== "object") throw new Error("Critères JSON invalides");
       const references = await encodeReferences(files, provenance);
-      submit.mutate({ ...form, criteria, references });
+      if (form.creation_type === "environnement") projectSubmit.mutate({ ...form, criteria, references });
+      else submit.mutate({ ...form, criteria, references });
     } catch (failure) { setError(String(failure)); }
   }
 
   return <main className="game-studio-page">
-    <header><h1>Game Studio</h1><p>Créations Blender, versions, jugements et fichiers dans APEX.</p></header>
+    <header><h1>Game Studio</h1><p>Créations Blender, projets multi-assets, versions, jugements et fichiers dans APEX.</p></header>
     <Panel title="Capacités observées">
       {capabilities.data?.data ? <div className="game-capabilities">
         {Object.entries(capabilities.data.data).filter(([, value]) => typeof value === "object" && value !== null && "status" in value)
@@ -139,9 +158,14 @@ export function GameStudioPage() {
     </Panel>
     <Panel title="Nouvelle mission graphique">
       <form onSubmit={send} className="game-form">
-        <label>Type de création<select value={form.creation_type} onChange={(e) => setForm({ ...form, creation_type: e.target.value as GameStudioRequest["creation_type"] })}>
+        <label>Type de création<select value={form.creation_type} onChange={(e) => {
+          const creation_type = e.target.value as GameStudioRequest["creation_type"];
+          setForm({ ...form, creation_type, description: creation_type === "environnement" && form.description === initial.description
+            ? "Crée un petit garage réaliste avec voiture sportive, bâtiment, mobilier de décor et quatre rendus par asset."
+            : form.description });
+        }}>
           <option value="vehicule">Véhicule</option><option value="batiment">Bâtiment</option><option value="objet_3d">Objet 3D</option>
-          <option value="environnement">Environnement</option><option value="monde_ouvert">Monde ouvert</option><option value="autre">Autre</option>
+          <option value="environnement">Environnement : recette garage Blender (3 assets)</option><option value="monde_ouvert">Monde ouvert (indisponible)</option><option value="autre">Autre (indisponible)</option>
         </select></label>
         {form.creation_type === "autre" && <label>Type libre<input value={form.creation_other ?? ""} onChange={(e) => setForm({ ...form, creation_other: e.target.value })} /></label>}
         <label>Style<select value={form.style} onChange={(e) => setForm({ ...form, style: e.target.value as GameStudioRequest["style"] })}>
@@ -168,12 +192,47 @@ export function GameStudioPage() {
         <label className="game-check"><input type="checkbox" checked={form.automatic_corrections} onChange={(e) => setForm({ ...form, automatic_corrections: e.target.checked })} /> Autoriser les corrections automatiques</label>
         <label>Temps maximum (s)<input type="number" min={120} max={3600} value={form.max_time_s} onChange={(e) => setForm({ ...form, max_time_s: Number(e.target.value) })} /></label>
         <label>RAM échantillonnée max (Mio)<input type="number" min={512} max={16384} value={form.max_rss_mib} onChange={(e) => setForm({ ...form, max_rss_mib: Number(e.target.value) })} /></label>
-        <label>Versions max<input type="number" min={1} max={3} value={form.max_attempts} onChange={(e) => setForm({ ...form, max_attempts: Number(e.target.value) })} /></label>
+        <label>Versions max par asset<input type="number" min={1} max={3} value={form.max_attempts} onChange={(e) => setForm({ ...form, max_attempts: Number(e.target.value) })} /></label>
         <label className="game-form__wide">Critères de qualité personnalisés (JSON)<textarea rows={2} value={criteriaText} onChange={(e) => setCriteriaText(e.target.value)} /></label>
-        <p className="game-form__wide">Les références visuelles sont archivées avec leur provenance ; le contrôleur texte ne les interprète pas encore. UE5 et CUDA affichent leur état réel dans les capacités.</p>
+        <p className="game-form__wide">Environnement lance une recette fixe de garage : voiture, bâtiment puis fauteuil de décor, chacun vérifié séparément, avant assemblage dans Blender. Les références visuelles ne sont pas interprétées par le contrôleur texte ; ce parcours multi-assets les refuse. UE5 et CUDA affichent leur état réel dans les capacités.</p>
         {error && <p role="alert" className="game-form__wide">{error}</p>}
-        <button type="submit" disabled={submit.isPending}>{submit.isPending ? "Création…" : "Créer la mission APEX"}</button>
+        <button type="submit" disabled={submit.isPending || projectSubmit.isPending}>{submit.isPending || projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</button>
       </form>
+    </Panel>
+    <Panel title="Projets multi-assets">
+      {projects.data?.data?.length ? <ul>{projects.data.data.map((item) => <li key={item.id}><button type="button" onClick={() => setSelectedProject(item.id)}>
+        {item.recipe} · {item.status} · {new Date(item.created_at).toLocaleString()}
+      </button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
+      {project && <section className="game-mission" aria-label="Suivi du projet">
+        <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · {project.elapsed_s != null ? `dernière exécution : ${project.elapsed_s} s` : "en cours"}</p>
+        <div className="game-actions">
+          {["running", "queued"].includes(project.status) && <button type="button" onClick={() => projectCancel.mutate(project.id)}>Arrêter le projet</button>}
+          {(["failed", "interrupted", "cancelled"].includes(project.status) || (project.status === "review" && !project.assembly)) &&
+            <button type="button" onClick={() => projectResume.mutate(project.id)}>Reprendre le projet</button>}
+        </div>
+        {project.steps.map((step) => <article key={step.key}>
+          <h4>{step.key} · {step.specialist} · {step.status}</h4>
+          <p>Dépendances : {step.depends_on.length ? step.depends_on.join(", ") : "aucune"}</p>
+          {step.mission && <MissionDetail mission={step.mission} controls={false} onCancel={() => cancel.mutate(step.mission!.id)} onResume={() => resume.mutate(step.mission!.id)} />}
+        </article>)}
+        {project.assembly && <article>
+          <h4>Scène de garage assemblée · version {project.assembly.version ?? 1} · {project.assembly.verdict}</h4>
+          <p>Fichier Blender rouvert dans un second processus. Meshes par asset : {JSON.stringify(project.assembly.source_mesh_counts)}. Qualité visuelle certifiée : non.</p>
+          {project.assembly.engineer_handoff && <p>Game Engineer : {project.assembly.engineer_handoff.status} · {project.assembly.engineer_handoff.reason}.</p>}
+          <div className="game-renders">{project.assembly.artifacts.filter((item) => item.role === "view").map((item) =>
+            <ArtifactImage key={item.hash} jobId={project.id} artifact={item} project />)}</div>
+          <div className="game-files">{project.assembly.artifacts.filter((item) => item.role !== "view").map((item) =>
+            <ArtifactDownload key={item.hash + item.name} jobId={project.id} artifact={item} project />)}</div>
+        </article>}
+        {project.assembly_history?.map((prior, index) => <article key={index}>
+          <h4>Scène antérieure · version {prior.version ?? index + 1}</h4>
+          <div className="game-renders">{prior.artifacts.filter((item) => item.role === "view").map((item) =>
+            <ArtifactImage key={item.hash} jobId={project.id} artifact={item} project />)}</div>
+          <div className="game-files">{prior.artifacts.filter((item) => item.role !== "view").map((item) =>
+            <ArtifactDownload key={item.hash + item.name} jobId={project.id} artifact={item} project />)}</div>
+        </article>)}
+        <details><summary>Historique et limites</summary><pre>{JSON.stringify({ events: project.events, limitations: project.limitations }, null, 2)}</pre></details>
+      </section>}
     </Panel>
     <Panel title="Missions Game Studio">
       {list.data?.data?.length ? <ul>{list.data.data.map((item) => <li key={item.id}><button type="button" onClick={() => setSelected(item.id)}>

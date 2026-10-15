@@ -63,6 +63,7 @@ import type {
   GameStudioMission,
   GameStudioRequest,
   GameStudioCapabilities,
+  GameStudioProject,
 } from "./types";
 
 export const gameStudioCapabilities = (): Promise<DataEnvelope<GameStudioCapabilities>> =>
@@ -79,6 +80,18 @@ export const resumeGameStudioMission = (id: string): Promise<DataEnvelope<GameSt
   fetchEnvelope<GameStudioMission>(`/game-studio/missions/${encodeURIComponent(id)}/resume`, { method: "POST" });
 export const getGameStudioArtifact = (id: string, digest: string): Promise<Blob> =>
   fetchArtifactBlob(`/game-studio/missions/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(digest)}`);
+export const listGameStudioProjects = (): Promise<DataEnvelope<GameStudioProject[]>> =>
+  fetchEnvelope<GameStudioProject[]>("/game-studio/projects");
+export const getGameStudioProject = (id: string): Promise<DataEnvelope<GameStudioProject>> =>
+  fetchEnvelope<GameStudioProject>(`/game-studio/projects/${encodeURIComponent(id)}`);
+export const submitGameStudioProject = (input: GameStudioRequest): Promise<DataEnvelope<GameStudioProject>> =>
+  fetchEnvelope<GameStudioProject>("/game-studio/projects", { method: "POST", body: JSON.stringify(input) });
+export const cancelGameStudioProject = (id: string): Promise<DataEnvelope<GameStudioProject>> =>
+  fetchEnvelope<GameStudioProject>(`/game-studio/projects/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+export const resumeGameStudioProject = (id: string): Promise<DataEnvelope<GameStudioProject>> =>
+  fetchEnvelope<GameStudioProject>(`/game-studio/projects/${encodeURIComponent(id)}/resume`, { method: "POST" });
+export const getGameStudioProjectArtifact = (id: string, digest: string): Promise<Blob> =>
+  fetchArtifactBlob(`/game-studio/projects/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(digest)}`);
 
 export function getHealth(): Promise<DataEnvelope<Health>> {
   return fetchEnvelope<Health>("/health");

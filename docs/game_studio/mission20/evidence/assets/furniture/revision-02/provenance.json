@@ -1,0 +1,15 @@
+{
+  "family": "chair",
+  "method": "trusted_procedural_blender",
+  "neural_geometry": false,
+  "parent_sha256": "0c04775e95f457a7499102aa17465efbff2070da1e425652dc208345147376b6",
+  "plan_sha256": "e1d51c56899002f41fa3e9295b1c1c91d92bd51b23093ee1b67944b2c8a0fb68",
+  "source_scripts": {
+    "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+    "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+    "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+    "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+    "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+    "assemble_garage.py": "bf99e491e33d18323389d4265627a05092dbbbcca80425320a53c96b6447599c"
+  }
+}

@@ -1162,6 +1162,44 @@ export interface GameStudioMission {
   limitations: string[];
 }
 
+export interface GameStudioProjectStep {
+  key: string;
+  creation_type: string;
+  depends_on: string[];
+  description: string;
+  specialist: string;
+  job_id: string | null;
+  status: string;
+  mission: GameStudioMission | null;
+}
+
+export interface GameStudioProject {
+  id: string;
+  mission_id: string;
+  mission_history: string[];
+  mission_state: string;
+  status: string;
+  created_at: string;
+  finished_at?: string;
+  elapsed_s?: number;
+  recipe: string;
+  request: Omit<GameStudioRequest, "references">;
+  steps: GameStudioProjectStep[];
+  limitations: string[];
+  events: { kind: string; [key: string]: unknown }[];
+  assembly?: {
+    version?: number;
+    verdict: string;
+    artifacts: GameStudioArtifact[];
+    source_mesh_counts: Record<string, number>;
+    engineer_handoff?: { status: string; reason: string; missing_vehicle_contract_wheel_nodes: string[] };
+    visual_quality_certified: boolean;
+    blender_execution: Record<string, unknown>;
+    reopen_execution: Record<string, unknown>;
+  } | null;
+  assembly_history?: { version?: number; verdict: string; artifacts: GameStudioArtifact[] }[];
+}
+
 export interface GameStudioCapabilities {
   [capability: string]: unknown;
 }

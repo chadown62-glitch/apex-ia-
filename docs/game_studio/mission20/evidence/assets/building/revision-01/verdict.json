@@ -1,0 +1,155 @@
+{
+  "verdict": "fail",
+  "judge": {
+    "tier": "tier_0",
+    "oracle_result": {
+      "verdict": "fail",
+      "detail": "{\n  \"family\": \"building\",\n  \"case_id\": \"street_building\",\n  \"criteria\": {\n    \"level\": \"prototype\",\n    \"max_triangles\": 100000,\n    \"dimension_tolerance_m\": 0.04,\n    \"pivot_tolerance_m\": 0.002,\n    \"max_distinct_defect_attempts\": 3,\n    \"minimum_views\": 4,\n    \"required_lods\": 0,\n    \"required_texture_size\": 0,\n    \"require_calibrated_visual_reference\": false\n  },\n  \"benchmark_version\": 1,\n  \"scope\": \"measured_geometry_export_and_render_rules\",\n  \"defects\": [\n    {\n      \"id\": \"invalid_geometry\",\n      \"object\": \"atelier_letters\",\n      \"reference\": \"original-street-atelier-v1\",\n      \"correction\": \"Remove zero-area faces and orient a closed positive-volume surface.\",\n      \"expected_improvement\": \"Remove zero-area faces and orient a closed positive-volume surface.\",\n      \"confidence\": 1.0,\n      \"confidence_scope\": \"deterministic measured rule violation, not aesthetic judgment\",\n      \"format\": \"blend\",\n      \"degenerate_faces\": 2,\n      \"invalid_normals\": 3,\n      \"signed_volume\": 0.0002856314049573962,\n      \"verification\": \"Zero degenerate faces/invalid normals; positive finite volume.\"\n    },\n    {\n      \"id\": \"invalid_geometry\",\n      \"object\": \"atelier_letters\",\n      \"reference\": \"original-street-atelier-v1\",\n      \"correction\": \"Remove zero-area faces and orient a closed positive-volume surface.\",\n      \"expected_improvement\": \"Remove zero-area faces and orient a closed positive-volume surface.\",\n      \"confidence\": 1.0,\n      \"confidence_scope\": \"deterministic measured rule violation, not aesthetic judgment\",\n      \"format\": \"glb\",\n      \"degenerate_faces\": 2,\n      \"invalid_normals\": 3,\n      \"signed_volume\": 0.0002856314049573962,\n      \"verification\": \"Zero degenerate faces/invalid normals; positive finite volume.\"\n    }\n  ],\n  \"unavailable\": [],\n  \"facts\": {\n    \"render_settings\": {\n      \"engine\": \"CYCLES\",\n      \"device\": \"CPU\",\n      \"samples\": 64,\n      \"seed\": 14,\n      \"denoising\": false\n    },\n    \"distinct_camera_transforms\": 4,\n    \"blend\": {\n      \"triangles\": 26150,\n      \"dimensions\": [\n        5.0,\n        4.335000038146973,\n        7.049999713897705\n      ],\n      \"objects\": 143,\n      \"materials\": 6\n    },\n    \"glb\": {\n      \"triangles\": 26150,\n      \"dimensions\": [\n        5.0,\n        4.335000038146973,\n        7.049999713897705\n      ],\n      \"objects\": 143,\n      \"materials\": 6\n    },\n    \"images\": {\n      \"front_three_quarter\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 54.92819022681048,\n        \"subject_fraction\": 0.34661024305555554,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"rear_three_quarter\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 56.904670940205925,\n        \"subject_fraction\": 0.34327546296296296,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"side\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 62.977606998607364,\n        \"subject_fraction\": 0.2413252314814815,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"front\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 58.1291722643988,\n        \"subject_fraction\": 0.2596614583333333,\n        \"subject_pixels_at_image_boundary\": 0\n      }\n    }\n  },\n  \"advisory\": [\n    \"Shader parameters and material count do not certify convincing PBR appearance.\"\n  ],\n  \"aesthetic_certification\": false,\n  \"limits\": [\n    \"Geometry and image statistics do not certify aesthetic quality or reference fidelity.\",\n    \"Isolated component ID passes measure alignment, not visibility in the beauty render.\",\n    \"Unreal import and runtime performance have not been measured by this oracle.\"\n  ],\n  \"manifest_sha256\": \"88d6f1687c117c0b8da600be6054d17ee518def7c7449ba72b950c169c8ba25b\",\n  \"verdict\": \"fail\"\n}"
+    },
+    "notes": "tier 0 objectif seul (ExitCodeOracle) \u2014 TIER_1 (Verifier \u00e9tendu) et TIER_2 (Critic Clone, consultatif) restent PLANNED, jamais tent\u00e9s."
+  },
+  "inspection_runs": [
+    {
+      "mission_id": "game-graphics-studio",
+      "clone_id": "trusted-catalog-worker",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.264151016017422,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 1.01,
+        "status": "real"
+      },
+      "memory_peak_mb": {
+        "value": 215.7421875,
+        "status": "real"
+      },
+      "pids_peak": {
+        "value": 1,
+        "status": "real"
+      },
+      "stdout": "Blender 4.3.2\nRead blend: \"/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/revision-01/asset.blend\"\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "command": [
+          "/usr/bin/blender",
+          "--background",
+          "--factory-startup",
+          "--disable-autoexec",
+          "--threads",
+          "4",
+          "--python-exit-code",
+          "2",
+          "--python",
+          "/workspace/apex-game-studio-multi-agent/scripts/game_graphics/studio/inspect_asset.py",
+          "--",
+          "--input",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/revision-01/asset.blend",
+          "--report",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/revision-01/blend-inspection.json"
+        ],
+        "pid": 208121,
+        "process_stopped_verified": true,
+        "execution": "trusted_local_catalog",
+        "model_code_executed": false,
+        "script_sha256": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+        "sample_interval_s": 0.25,
+        "timeout_s": 120,
+        "rss_limit_mib": 12000,
+        "sources": {
+          "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+          "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+          "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+          "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+          "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+          "assemble_garage.py": "8a6275719205e3cdea45709e30525f50f286fa66c4f8c81472cba95253c71d99"
+        }
+      }
+    },
+    {
+      "mission_id": "game-graphics-studio",
+      "clone_id": "trusted-catalog-worker",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.768892340012826,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 2.2600000000000002,
+        "status": "real"
+      },
+      "memory_peak_mb": {
+        "value": 258.83203125,
+        "status": "real"
+      },
+      "pids_peak": {
+        "value": 1,
+        "status": "real"
+      },
+      "stdout": "21:25:10 | INFO: Data are loaded, start creating Blender stuff\n21:25:10 | INFO: Blender create Mesh node Cube.001\n21:25:10 | INFO: Blender create Mesh node Cube.002\n21:25:10 | INFO: Blender create Mesh node Cube.008\n21:25:10 | INFO: Blender create Mesh node Cube.009\n21:25:10 | INFO: Blender create Mesh node Cube.010\n21:25:10 | INFO: Blender create Mesh node Cube.011\n21:25:10 | INFO: Blender create Mesh node Cube.012\n21:25:10 | INFO: Blender create Mesh node Cube.013\n21:25:10 | INFO: Blender create Mesh node Cube.014\n21:25:10 | INFO: Blender create Mesh node Cube.015\n21:25:10 | INFO: Blender create Mesh node Cube.016\n21:25:10 | INFO: Blender create Mesh node Cube.017\n21:25:10 | INFO: Blender create Mesh node Cube.018\n21:25:10 | INFO: Blender create Mesh node Cube.019\n21:25:10 | INFO: Blender create Mesh node Cube.020\n21:25:10 | INFO: Blender create Mesh node Cube.021\n21:25:10 | INFO: Blender create Mesh node Cube.022\n21:25:10 | INFO: Blender create Mesh node Cube.023\n21:25:10 | INFO: Blender create Mesh node Cube.024\n21:25:10 | INFO: Blender create Mesh node Cube.025\n21:25:10 | INFO: Blender create Mesh node Cube.026\n21:25:10 | INFO: Blender create Mesh node Cube.027\n21:25:10 | INFO: Blender create Mesh node Cube.028\n21:25:10 | INFO: Blender create Mesh node Cube.029\n21:25:10 | INFO: Blender create Mesh node Cube.030\n21:25:10 | INFO: Blender create Mesh node Cube.031\n21:25:10 | INFO: Blender create Mesh node Cube.032\n21:25:10 | INFO: Blender create Mesh node Cube.033\n21:25:10 | INFO: Blender create Mesh node Cube.034\n21:25:10 | INFO: Blender create Mesh node Cube.035\n21:25:10 | INFO: Blender create Mesh node Cube.036\n21:25:10 | INFO: Blender create Mesh node Cube.037\n21:25:10 | INFO: Blender create Mesh node Cube.038\n21:25:10 | INFO: Blender create Mesh node Cube.039\n21:25:10 | INFO: Blender create Mesh node Cube.040\n21:25:10 | INFO: Blender create Mesh node Cube.041\n21:25:10 | INFO: Blender create Mesh node Cube.042\n21:25:10 | INFO: Blender create Mesh node Cube.043\n21:25:10 | INFO: Blender create Mesh node Cube.044\n21:25:10 | INFO: Blender create Mesh node Cube.045\n21:25:10 | INFO: Blender create Mesh node Cube.046\n21:25:10 | INFO: Blender create Mesh node Cube.047\n21:25:10 | INFO: Blender create Mesh node Cube.048\n21:25:10 | INFO: Blender create Mesh node Cube.049\n21:25:10 | INFO: Blender create Mesh node Cube.050\n21:25:10 | INFO: Blender create Mesh node Cube.051\n21:25:10 | INFO: Blender create Mesh node Cube.052\n21:25:10 | INFO: Blender create Mesh node Cube.053\n21:25:10 | INFO: Blender create Mesh node Cube.054\n21:25:10 | INFO: Blender create Mesh node Cube.055\n21:25:10 | INFO: Blender create Mesh node Cube.056\n21:25:10 | INFO: Blender create Mesh node Cube.057\n21:25:10 | INFO: Blender create Mesh node Cube.058\n21:25:10 | INFO: Blender create Mesh node Cube.059\n21:25:10 | INFO: Blender create Mesh node Cube.060\n21:25:10 | INFO: Blender create Mesh node Cube.061\n21:25:10 | INFO: Blender create Mesh node Cube.062\n21:25:10 | INFO: Blender create Mesh node Cube.063\n21:25:10 | INFO: Blender create Mesh node Cube.064\n21:25:10 | INFO: Blender create Mesh node Cube.065\n21:25:10 | INFO: Blender create Mesh node Cube.066\n21:25:10 | INFO: Blender create Mesh node Cube.067\n21:25:10 | INFO: Blender create Mesh node Cube.068\n21:25:10 | INFO: Blender create Mesh node Cube.069\n21:25:10 | INFO: Blender create Mesh node Cube.070\n21:25:10 | INFO: Blender create Mesh node Cube.071\n21:25:10 | INFO: Blender create Mesh node Cube.072\n21:25:10 | INFO: Blender create Mesh node Cube.073\n21:25:10 | INFO: Blender create Mesh node Cube.074\n21:25:10 | INFO: Blender create Mesh node Cube.075\n21:25:10 | INFO: Blender create Mesh node Cube.076\n21:25:10 | INFO: Blender create Mesh node Cube.077\n21:25:10 | INFO: Blender create Mesh node Cube.078\n21:25:10 | INFO: Blender create Mesh node Cube.079\n21:25:10 | INFO: Blender create Mesh node Cube.080\n21:25:10 | INFO: Blender create Mesh node Cube.081\n21:25:10 | INFO: Blender create Mesh node Cube.082\n21:25:10 | INFO: Blender create Mesh node Cube.083\n21:25:10 | INFO: Blender create Mesh node Cube.084\n21:25:10 | INFO: Blender create Mesh node Cube.085\n21:25:10 | INFO: Blender create Mesh node Cube.086\n21:25:10 | INFO: Blender create Mesh node Cylinder\n21:25:10 | INFO: Blender create Mesh node Cube.087\n21:25:10 | INFO: Blender create Mesh node Cube.088\n21:25:10 | INFO: Blender create Mesh node Cube.089\n21:25:10 | INFO: Blender create Mesh node Cube.090\n21:25:10 | INFO: Blender create Mesh node Cube.091\n21:25:10 | INFO: Blender create Mesh node Cube.092\n21:25:10 | INFO: Blender create Mesh node Cube.093\n21:25:10 | INFO: Blender create Mesh node Cube.094\n21:25:10 | INFO: Blender create Mesh node Cube.095\n21:25:10 | INFO: Blender create Mesh node Cube.096\n21:25:10 | INFO: Blender create Mesh node Cube.097\n21:25:10 | INFO: Blender create Mesh node Cube.098\n21:25:10 | INFO: Blender create Mesh node Cube.099\n21:25:10 | INFO: Blender create Mesh node Cube.100\n21:25:10 | INFO: Blender create Mesh node Cube.101\n21:25:10 | INFO: Blender create Mesh node Cube.102\n21:25:10 | INFO: Blender create Mesh node Cube.103\n21:25:10 | INFO: Blender create Mesh node Cube.104\n21:25:10 | INFO: Blender create Mesh node Cube.105\n21:25:10 | INFO: Blender create Mesh node Cube.106\n21:25:10 | INFO: Blender create Mesh node Cube.107\n21:25:10 | INFO: Blender create Mesh node Cube.108\n21:25:10 | INFO: Blender create Mesh node Cube.109\n21:25:10 | INFO: Blender create Mesh node Cube.110\n21:25:10 | INFO: Blender create Mesh node Cube.111\n21:25:10 | INFO: Blender create Mesh node Cube.112\n21:25:10 | INFO: Blender create Mesh node Cube.113\n21:25:10 | INFO: Blender create Mesh node Cube.114\n21:25:10 | INFO: Blender create Mesh node Cube.115\n21:25:10 | INFO: Blender create Mesh node balcony_top_rail\n21:25:10 | INFO: Blender create Mesh node balcony_side_rail_left\n21:25:10 | INFO: Blender create Mesh node balcony_side_rail_right\n21:25:10 | INFO: Blender create Mesh node Cylinder.001\n21:25:10 | INFO: Blender create Mesh node Cylinder.002\n21:25:10 | INFO: Blender create Mesh node Cylinder.003\n21:25:10 | INFO: Blender create Mesh node Cylinder.004\n21:25:10 | INFO: Blender create Mesh node Cylinder.005\n21:25:10 | INFO: Blender create Mesh node Cylinder.006\n21:25:10 | INFO: Blender create Mesh node Cylinder.007\n21:25:10 | INFO: Blender create Mesh node Cylinder.008\n21:25:10 | INFO: Blender create Mesh node Cylinder.009\n21:25:10 | INFO: Blender create Mesh node Cylinder.010\n21:25:10 | INFO: Blender create Mesh node Cylinder.011\n21:25:10 | INFO: Blender create Mesh node Cylinder.012\n21:25:10 | INFO: Blender create Mesh node Cylinder.013\n21:25:10 | INFO: Blender create Mesh node Cylinder.014\n21:25:10 | INFO: Blender create Mesh node Cylinder.015\n21:25:10 | INFO: Blender create Mesh node Cylinder.016\n21:25:10 | INFO: Blender create Mesh node Cylinder.017\n21:25:10 | INFO: Blender create Mesh node Cylinder.018\n21:25:10 | INFO: Blender create Mesh node Cylinder.019\n21:25:10 | INFO: Blender create Mesh node Cylinder.020\n21:25:10 | INFO: Blender create Mesh node Cylinder.021\n21:25:10 | INFO: Blender create Mesh node Cylinder.022\n21:25:10 | INFO: Blender create Mesh node Cylinder.023\n21:25:10 | INFO: Blender create Mesh node Cube.116\n21:25:10 | INFO: Blender create Mesh node Sphere\n21:25:10 | INFO: Blender create Mesh node Cube.117\n21:25:10 | INFO: Blender create Mesh node Sphere.001\n21:25:10 | INFO: Blender create Mesh node Cube.118\n21:25:10 | INFO: Blender create Mesh node atelier_letters\n21:25:10 | INFO: glTF import finished in 0.14s\nBlender 4.3.2\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "command": [
+          "/usr/bin/blender",
+          "--background",
+          "--factory-startup",
+          "--disable-autoexec",
+          "--threads",
+          "4",
+          "--python-exit-code",
+          "2",
+          "--python",
+          "/workspace/apex-game-studio-multi-agent/scripts/game_graphics/studio/inspect_asset.py",
+          "--",
+          "--input",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/revision-01/asset.glb",
+          "--report",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/revision-01/glb-inspection.json"
+        ],
+        "pid": 208142,
+        "process_stopped_verified": true,
+        "execution": "trusted_local_catalog",
+        "model_code_executed": false,
+        "script_sha256": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+        "sample_interval_s": 0.25,
+        "timeout_s": 120,
+        "rss_limit_mib": 12000,
+        "sources": {
+          "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+          "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+          "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+          "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+          "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+          "assemble_garage.py": "8a6275719205e3cdea45709e30525f50f286fa66c4f8c81472cba95253c71d99"
+        }
+      }
+    }
+  ]
+}

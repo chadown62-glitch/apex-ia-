@@ -22,6 +22,7 @@ from uuid import UUID, uuid4
 
 from apex.artifacts.provider import ArtifactStoreProvider, get_default_provider
 from apex.config.schema import RecoveryPolicy
+from apex.errors import TimeoutExceeded
 from apex.game_graphics.contract import QualityCriteria
 from apex.game_graphics.models import CoderSession
 from apex.game_graphics.resources import resource_lease
@@ -52,6 +53,14 @@ MIME = {
     ".json": "application/json",
     ".log": "text/plain",
 }
+
+
+def _validate_topology_repair(plan: dict[str, Any], *, target: str) -> None:
+    edits = [
+        op for op in plan["operations"] if op["op"] not in ("inspect_scene", "save_revision_and_render")
+    ]
+    if edits != [{"op": "repair_degenerate_topology", "target": target, "params": {}}]:
+        raise ValueError("correction_outside_measured_topology_defect")
 
 
 def _utc() -> str:
@@ -401,9 +410,12 @@ class GameStudioService:
                     for previous in completed:
                         verified_manifest(folder / f"revision-{previous['number']:02d}")
                     passing = [item for item in completed if item["verdict"] == "pass"]
-                    if not passing:
+                    if not passing and (not request["automatic_corrections"] or len(completed) >= budget):
                         raise RuntimeError("no_verified_parent_revision_to_resume")
-                    root = folder / f"revision-{passing[-1]['number']:02d}"
+                    root = (
+                        folder / f"revision-{passing[-1]['number']:02d}"
+                        if passing else folder / "revision-01"
+                    )
                     latest = folder / f"revision-{completed[-1]['number']:02d}"
                     judge = json.loads((latest / "judge-report.json").read_text())
                     if (latest != root and judge["defects"]
@@ -434,6 +446,7 @@ class GameStudioService:
                         )
                     correction_target = None
                     correction_reference = None
+                    repair_target = None
                     if (request["automatic_corrections"] and judge["defects"]
                             and all(d["id"] == "paired_component_alignment" for d in judge["defects"])):
                         targets = {d["object"] for d in judge["defects"]}
@@ -452,10 +465,22 @@ class GameStudioService:
                                 + json.dumps(correction_reference)
                                 + ". Preserve all other objects and materials."
                             )
+                    if (request["automatic_corrections"] and judge["defects"]
+                            and all(d["id"] == "invalid_geometry" for d in judge["defects"])):
+                        targets = {d["object"] for d in judge["defects"]}
+                        if len(targets) == 1:
+                            repair_target = targets.pop()
+                            instruction = (
+                                "Correct ONLY the measured degenerate geometry of " + repair_target
+                                + ". Use EXACTLY one repair_degenerate_topology operation on that object, "
+                                "between inspect_scene and save_revision_and_render. "
+                                "Do not edit materials or any other mesh."
+                            )
                     plan_args = {
                         "family": family, "instruction": instruction,
                         "hierarchy": compact_hierarchy(root / "hierarchy.json"),
-                        "feedback": judge if request["judges_all_tasks"] or correction_target else None,
+                        "feedback": judge if request["judges_all_tasks"] or correction_target
+                        or repair_target else None,
                         "output": folder / f"controller-{number}/plan.json",
                         "protected_topology": ("chassis",) if family == "vehicle" else (),
                         "timeout_s": min(300, max(1, int(remaining - 60))),
@@ -465,6 +490,10 @@ class GameStudioService:
                             validate_correction_scope,
                             target=correction_target,
                             expected_location=correction_reference,
+                        )
+                    elif repair_target is not None:
+                        plan_args["plan_validator"] = partial(
+                            _validate_topology_repair, target=repair_target,
                         )
                     try:
                         if request.get("resolved_controller_model", "pinned_7b") == "apex_native":
@@ -497,7 +526,7 @@ class GameStudioService:
                                     if active:
                                         self._active[job_id] = (active[0], active[1], None)
                             lifecycle = session.facts
-                    except (ValueError, TimeoutError) as exc:
+                    except (ValueError, TimeoutError, TimeoutExceeded) as exc:
                         for path in sorted(controller_root.glob("*.json")):
                             item = self.artifacts.put(
                                 path.read_bytes(), content_type="application/json"
@@ -509,13 +538,31 @@ class GameStudioService:
                                 "role": "rejected_controller_plan",
                                 "bytes": path.stat().st_size,
                             })
-                        record["limitations"].append(
-                            "The local controller could not produce a permitted artistic plan. "
-                            "A verified earlier revision remains selected."
-                        )
                         self._event(record, "controller_plan_rejected", iteration=number,
                                     reason=f"{type(exc).__name__}: {exc}")
-                        break
+                        if repair_target is None or cancel.is_set():
+                            record["limitations"].append(
+                                "The local controller could not produce a permitted artistic plan. "
+                                "A verified earlier revision remains selected when available."
+                            )
+                            break
+                        # Measured invalid geometry has one trusted, target-scoped
+                        # catalog repair. Keep the rejected model traces and label
+                        # this recovery as deterministic, never as a Qwen plan.
+                        plan = {"family": family, "operations": [
+                            {"op": "inspect_scene", "target": "scene", "params": {}},
+                            {"op": "repair_degenerate_topology", "target": repair_target, "params": {}},
+                            {"op": "save_revision_and_render", "target": "scene", "params": {}},
+                        ]}
+                        _validate_topology_repair(plan, target=repair_target)
+                        controller_root.mkdir(parents=True, exist_ok=True)
+                        (controller_root / "deterministic-repair.json").write_text(
+                            json.dumps({"source": "measured_invalid_geometry", "plan": plan}, indent=2)
+                        )
+                        lifecycle = {"model": None, "strategy": "deterministic_catalog_repair",
+                                     "rejected_controller": f"{type(exc).__name__}: {exc}"}
+                        self._event(record, "deterministic_topology_recovery", iteration=number,
+                                    target=repair_target)
                     (folder / f"controller-{number}/lifecycle.json").write_text(
                         json.dumps(lifecycle, indent=2)
                     )

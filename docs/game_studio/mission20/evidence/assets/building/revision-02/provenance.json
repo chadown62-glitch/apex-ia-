@@ -1,0 +1,15 @@
+{
+  "family": "building",
+  "method": "trusted_procedural_blender",
+  "neural_geometry": false,
+  "parent_sha256": "8b0dd270029af778123f5bf6d4fb26231037b7ac2c8b3832bab7bd496e3ef9e5",
+  "plan_sha256": "e3ae4dd148626dd9e41ac3d9846cecb678ee596d5e3b7373afe57f3a681f952a",
+  "source_scripts": {
+    "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+    "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+    "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+    "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+    "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+    "assemble_garage.py": "8a6275719205e3cdea45709e30525f50f286fa66c4f8c81472cba95253c71d99"
+  }
+}

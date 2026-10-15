@@ -1,0 +1,417 @@
+[
+  {
+    "path": "api-artifact-check.json",
+    "bytes": 1012,
+    "sha256": "e3b87cfb565dd64251dea4d67230cc1ce56f35a486c48928c587980349f14e82"
+  },
+  {
+    "path": "api-project.json",
+    "bytes": 227197,
+    "sha256": "ccdf9ffd11488cba86e38f15aa44414876c7bc9ea1e9bbbde9a6478a22ee821c"
+  },
+  {
+    "path": "assets/building/controller-2/lifecycle.json",
+    "bytes": 471,
+    "sha256": "939dcb928bcba3c8617f35562175d4148e9c1c815983fce0767b19b7bc94481c"
+  },
+  {
+    "path": "assets/building/controller-2/plan.json",
+    "bytes": 6455,
+    "sha256": "e942ea939abcd342adafc67df74177d22f6104e4c3f06286898917bc6f3dced8"
+  },
+  {
+    "path": "assets/building/revision-01/asset.blend",
+    "bytes": 3318380,
+    "sha256": "8b0dd270029af778123f5bf6d4fb26231037b7ac2c8b3832bab7bd496e3ef9e5"
+  },
+  {
+    "path": "assets/building/revision-01/asset.glb",
+    "bytes": 1855360,
+    "sha256": "5e340511b3cdb4929e2f0b2e9687b59041fa0c3608f94ef56f48444d9ec85536"
+  },
+  {
+    "path": "assets/building/revision-01/build.log",
+    "bytes": 170201,
+    "sha256": "c0f7f4cc449115c6d809d8a4a5ba9047e7fada285e046942a14d5307fded903a"
+  },
+  {
+    "path": "assets/building/revision-01/build.resources.json",
+    "bytes": 90732,
+    "sha256": "a97cf157573627006d5a75c43cde0fc083d9e4f4a13c7b6e394aa2b48fcb9415"
+  },
+  {
+    "path": "assets/building/revision-01/front_three_quarter.png",
+    "bytes": 1118158,
+    "sha256": "d3283d0b5a7ea91628410fa1820e7c767ddc1c579919d5176c6eebaa69d8c7b6"
+  },
+  {
+    "path": "assets/building/revision-01/judge-report.json",
+    "bytes": 3796,
+    "sha256": "0599e9e71661541758d92a17756bed4f253c6c2ff1f2384d2466941d27d48e17"
+  },
+  {
+    "path": "assets/building/revision-01/operation-trace.json",
+    "bytes": 2,
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "path": "assets/building/revision-01/provenance.json",
+    "bytes": 717,
+    "sha256": "46f1553cdf04b8f9c7c6373bf3d09aa41c7316411a38b4bf844928d8ba1cd9d5"
+  },
+  {
+    "path": "assets/building/revision-01/rear_three_quarter.png",
+    "bytes": 954272,
+    "sha256": "115ffea6193058a0bfb0c6f3098a6f408e41389befcbe34356a07f514225c67c"
+  },
+  {
+    "path": "assets/building/revision-01/side.png",
+    "bytes": 990707,
+    "sha256": "2938d35d0d335792f838704fdd0fcfa7bbb6881925cec87fd1f34d4c7ce81adc"
+  },
+  {
+    "path": "assets/building/revision-01/verdict.json",
+    "bytes": 17515,
+    "sha256": "9903bf1811c27632a3d2f0c64b1bff38a8f805c86d418124af47fb7bc90fa4cc"
+  },
+  {
+    "path": "assets/building/revision-02/asset.blend",
+    "bytes": 3291020,
+    "sha256": "ca4554fe83f53c11c8fbc425bc27537777a20cc1539eac47ca45bee31dd7306f"
+  },
+  {
+    "path": "assets/building/revision-02/asset.glb",
+    "bytes": 1854976,
+    "sha256": "edacb2ed0041d072b9670ea14af0f6825a98e686d74b196df8eae97c32e5e5ca"
+  },
+  {
+    "path": "assets/building/revision-02/build.log",
+    "bytes": 172930,
+    "sha256": "da4fd7e111359773b043060c3b205a233f224b9cee6da4d5f71858b4e615bec7"
+  },
+  {
+    "path": "assets/building/revision-02/build.resources.json",
+    "bytes": 91569,
+    "sha256": "3c05008892dff13f89d1a0a7dc3509b699f7e721be7f7547acf801b4ff329d3a"
+  },
+  {
+    "path": "assets/building/revision-02/front_three_quarter.png",
+    "bytes": 1118309,
+    "sha256": "28b6b8b3fc70bd985cf69506aeb09d800e3e1ae4b7f041ee1a05a5ecf52f498f"
+  },
+  {
+    "path": "assets/building/revision-02/judge-report.json",
+    "bytes": 2491,
+    "sha256": "eca5ac18fbe1e141ca359b1167af1822ad1d3f088ae9e7178044171029d0669e"
+  },
+  {
+    "path": "assets/building/revision-02/operation-trace.json",
+    "bytes": 2618,
+    "sha256": "8d80826c272b14da62c10f27b368793254a9cc38292d70107c84c0b0b953a32b"
+  },
+  {
+    "path": "assets/building/revision-02/provenance.json",
+    "bytes": 841,
+    "sha256": "ba0c1a65ab0a9430f15d3fb8bf81cb2f0d32ef306281c2027872721740a7fd2a"
+  },
+  {
+    "path": "assets/building/revision-02/rear_three_quarter.png",
+    "bytes": 954399,
+    "sha256": "c2733763a526de5019e115b8335cf9008c0f2ebb0df4f8da29807ea9867665d9"
+  },
+  {
+    "path": "assets/building/revision-02/side.png",
+    "bytes": 990834,
+    "sha256": "f7327004c041d4af3846b8d034792368ff840c9672901c138311b273bcbf61ef"
+  },
+  {
+    "path": "assets/building/revision-02/verdict.json",
+    "bytes": 16087,
+    "sha256": "12ffa31a30ba5431bff49dbc017efa36279a8bdf126e2442540c75055e7369df"
+  },
+  {
+    "path": "assets/furniture/controller-2/lifecycle.json",
+    "bytes": 471,
+    "sha256": "20b98fd12fe62f90e6e04fc16949dc6f507159a67db25c5c5d68af512feaaba3"
+  },
+  {
+    "path": "assets/furniture/controller-2/plan.json",
+    "bytes": 5636,
+    "sha256": "2e69cc67a357751f14cb09a32194bf0cd2c1aba0b7b65933b363540b76f52328"
+  },
+  {
+    "path": "assets/furniture/revision-02/asset.blend",
+    "bytes": 2192436,
+    "sha256": "c50d52c4c421b3fc37ab499e6a6eb07bd838943505c096c5f236a69221a8bcf4"
+  },
+  {
+    "path": "assets/furniture/revision-02/asset.glb",
+    "bytes": 502844,
+    "sha256": "0e02e3fb67a4eb18c176ea53478f0672881d6e11f4d0836612f17ac44e36821d"
+  },
+  {
+    "path": "assets/furniture/revision-02/build.log",
+    "bytes": 78264,
+    "sha256": "69074a618f5eac2a8d841e250f6a65bc75b650f78450bff6ab98405c374b077f"
+  },
+  {
+    "path": "assets/furniture/revision-02/build.resources.json",
+    "bytes": 93932,
+    "sha256": "f5dec588743b6f3a7f1dd81055a2e50767169465232c96c53f3a0687357ec991"
+  },
+  {
+    "path": "assets/furniture/revision-02/front_three_quarter.png",
+    "bytes": 1050670,
+    "sha256": "3d1072d356e82b3c60cf3f0a34bb434573dd732f772c86603efcd4b2daf0695c"
+  },
+  {
+    "path": "assets/furniture/revision-02/judge-report.json",
+    "bytes": 6527,
+    "sha256": "fc64054c9468a29139767e22889fe765501c8241d13a683766b6e1882de04b6c"
+  },
+  {
+    "path": "assets/furniture/revision-02/operation-trace.json",
+    "bytes": 4878,
+    "sha256": "061280f4dc76c2219f3da281292ae3cb94a5925301ba0c2462a38768e35f39e0"
+  },
+  {
+    "path": "assets/furniture/revision-02/provenance.json",
+    "bytes": 838,
+    "sha256": "113c3bf437788222b8f003b9b72a2b4e278e3dbb0f144f6b7507854a772d1ab8"
+  },
+  {
+    "path": "assets/furniture/revision-02/rear_three_quarter.png",
+    "bytes": 1031470,
+    "sha256": "d3b0068cf864dad9f6ad3131145c9781b56dcb5d5893eca09e0603b40fd3ab03"
+  },
+  {
+    "path": "assets/furniture/revision-02/side.png",
+    "bytes": 978878,
+    "sha256": "372bd949d330bdd8b4fe848c7468e716ec117c4a7bda2463fc948843f134a2d8"
+  },
+  {
+    "path": "assets/furniture/revision-02/verdict.json",
+    "bytes": 14571,
+    "sha256": "1d6fcd1163f56a4ef71cd84f062fb520a04413dc76c37ff8258e92676ad985a9"
+  },
+  {
+    "path": "assets/vehicle/controller-2/lifecycle.json",
+    "bytes": 471,
+    "sha256": "42c9012473775aeee31aa7231f08e16bb607a8b9d955399b8383480ee6596f0d"
+  },
+  {
+    "path": "assets/vehicle/controller-2/plan.json",
+    "bytes": 5607,
+    "sha256": "c9f5d7a937505440336cec779dad150b2f3758816885e5545386438917be3a37"
+  },
+  {
+    "path": "assets/vehicle/revision-02/asset.blend",
+    "bytes": 3767004,
+    "sha256": "e16c199c85df46d885c1c4905a8009fea51696676c275ab6675464b5a1485676"
+  },
+  {
+    "path": "assets/vehicle/revision-02/asset.glb",
+    "bytes": 1109316,
+    "sha256": "4b01dc06b14fe0742ea8170c7e4030b60010544f8e9efa590f6479922673f494"
+  },
+  {
+    "path": "assets/vehicle/revision-02/build.log",
+    "bytes": 169806,
+    "sha256": "d945913e8913ee1f476fbb3ac3a0c6a51ba819be123dff967806623245095779"
+  },
+  {
+    "path": "assets/vehicle/revision-02/build.resources.json",
+    "bytes": 89355,
+    "sha256": "f52d3577cc76667b0fb46ebae94cfe917fb876b4312127d743ee1971a73198c3"
+  },
+  {
+    "path": "assets/vehicle/revision-02/front_three_quarter.png",
+    "bytes": 967928,
+    "sha256": "05bb8dd557b4d87c5966101456fc54b4fd43fe3fb47bbf9c9aa2032f1f7fc07d"
+  },
+  {
+    "path": "assets/vehicle/revision-02/judge-report.json",
+    "bytes": 2519,
+    "sha256": "19a383b9516cd2c09cdfd349101e9a55813d29ae5edd9886e56980575aeb7a24"
+  },
+  {
+    "path": "assets/vehicle/revision-02/operation-trace.json",
+    "bytes": 16998,
+    "sha256": "f66d9cf44ca66f7838d7b684d5a6fa45062d5e97a1bccf3471b061142d162a3c"
+  },
+  {
+    "path": "assets/vehicle/revision-02/provenance.json",
+    "bytes": 840,
+    "sha256": "5fd8daea720bf9bb0eb264f45622064f913735b6f13f6fc693a531fb2bb7450f"
+  },
+  {
+    "path": "assets/vehicle/revision-02/rear_three_quarter.png",
+    "bytes": 965548,
+    "sha256": "f4aead5d905bf3e071f5e6f718e97c2295d4b1d0e9b9464d80b63391b18c9146"
+  },
+  {
+    "path": "assets/vehicle/revision-02/side.png",
+    "bytes": 934273,
+    "sha256": "2b7aef59c441d2c834b029ede3ddc03389f5142ed3470a7c3335eb9970ff7de4"
+  },
+  {
+    "path": "assets/vehicle/revision-02/verdict.json",
+    "bytes": 16193,
+    "sha256": "53d117f8cee9aa22ef734d64830c2aea6f621febd27897ceeb3ff63b1be62250"
+  },
+  {
+    "path": "backend-ui.log",
+    "bytes": 9228,
+    "sha256": "4c9b3872ae65005ed6d3109857c7acb3e4d20ddcb5e2a07943d13acb302e46db"
+  },
+  {
+    "path": "scene/assembly/assembly.json",
+    "bytes": 281,
+    "sha256": "0c7dcbd9e83e341042451e61e5bf27bbeac36112d5a3b13e806d12e33c6412e4"
+  },
+  {
+    "path": "scene/assembly/engineer-handoff.json",
+    "bytes": 632,
+    "sha256": "24d4726bedb8979a6df52df19673004c75865fbcf1a5f57d2c5ef032bccaf312"
+  },
+  {
+    "path": "scene/assembly/front_three_quarter.png",
+    "bytes": 1034294,
+    "sha256": "a1c63287440c9566b8ce84b2da91a090fb97d0698cf42be30314c57b0921bfa0"
+  },
+  {
+    "path": "scene/assembly/garage.blend",
+    "bytes": 10609316,
+    "sha256": "c5e72c0aa3feee498e1d95a87ae885514d47fe205a3b4408d292e56dc67b8248"
+  },
+  {
+    "path": "scene/assembly/garage.glb",
+    "bytes": 3476500,
+    "sha256": "6001f4d127fe2708acf9391230d3645c6c187496ca18a97468cfe8ec0600e559"
+  },
+  {
+    "path": "scene/assembly/judge-report.json",
+    "bytes": 1060,
+    "sha256": "b30d915c6e7d85aef2c01b0228cfd22628bb434eea264613112a4f3a560c922c"
+  },
+  {
+    "path": "scene/assembly/manifest.json",
+    "bytes": 1685,
+    "sha256": "dd465188854c0bd19178e8a7a1b019907757f2d53b9c02f666695c35eadb8e90"
+  },
+  {
+    "path": "scene/assembly/rear_three_quarter.png",
+    "bytes": 947779,
+    "sha256": "4caa62b540cb0c8dc01c61fa6a57dcb1d6b44f652359ab2c4b27d0f51bcb779a"
+  },
+  {
+    "path": "scene/assembly/reopen-report.json",
+    "bytes": 292,
+    "sha256": "f93fcd08521842877be5f651a91af9a1464d92a6056e7c1fdeb459839c9400db"
+  },
+  {
+    "path": "scene/assembly/side.png",
+    "bytes": 1007594,
+    "sha256": "e39d20e17c820338ec63d50a5f1631be61206466816eb12729778ab63b582560"
+  },
+  {
+    "path": "scene/assembly/top.png",
+    "bytes": 1085358,
+    "sha256": "d21b3b5ac6c6c2899879144c57ca84716f38ccc18fad4d73c05a820ccca75df7"
+  },
+  {
+    "path": "scene/assembly-build.log",
+    "bytes": 221091,
+    "sha256": "5a3a0787b2f438cf559f3dcdc81cf3c7dc28dd1228e42f3f0317ac0462a86a68"
+  },
+  {
+    "path": "scene/assembly-build.resources.json",
+    "bytes": 73361,
+    "sha256": "ecd84fdfd0217e994082332bf14401a84d3fe82d1ec55e5335000ea703bf10ef"
+  },
+  {
+    "path": "scene/assembly-reopen.log",
+    "bytes": 187,
+    "sha256": "20bcd0b43657146734401e29e72586014f1d5b3551032e115a303a71c00f74d3"
+  },
+  {
+    "path": "scene/assembly-reopen.resources.json",
+    "bytes": 2898,
+    "sha256": "b746cb9898eb2e6475c564c71460f3fdde05e4b17066d20d788f45e23de0008e"
+  },
+  {
+    "path": "scene/assembly-version-01/assembly.json",
+    "bytes": 281,
+    "sha256": "0c7dcbd9e83e341042451e61e5bf27bbeac36112d5a3b13e806d12e33c6412e4"
+  },
+  {
+    "path": "scene/assembly-version-01/engineer-handoff.json",
+    "bytes": 632,
+    "sha256": "24d4726bedb8979a6df52df19673004c75865fbcf1a5f57d2c5ef032bccaf312"
+  },
+  {
+    "path": "scene/assembly-version-01/front_three_quarter.png",
+    "bytes": 1164027,
+    "sha256": "a1fb6a87f45f4e7de15d5c0d8fcc669a8e21cfe07e351e895755443096944e72"
+  },
+  {
+    "path": "scene/assembly-version-01/garage.blend",
+    "bytes": 10609316,
+    "sha256": "2a7b6c1978b69896c966c0941daa27e7a90fa0668e0517875e97ccde1f4da2f8"
+  },
+  {
+    "path": "scene/assembly-version-01/garage.glb",
+    "bytes": 3476500,
+    "sha256": "6001f4d127fe2708acf9391230d3645c6c187496ca18a97468cfe8ec0600e559"
+  },
+  {
+    "path": "scene/assembly-version-01/judge-report.json",
+    "bytes": 1060,
+    "sha256": "b30d915c6e7d85aef2c01b0228cfd22628bb434eea264613112a4f3a560c922c"
+  },
+  {
+    "path": "scene/assembly-version-01/manifest.json",
+    "bytes": 1685,
+    "sha256": "7f6d0284ae4064814a016dea635800a5add297516bf3965c8d50c74402f54128"
+  },
+  {
+    "path": "scene/assembly-version-01/rear_three_quarter.png",
+    "bytes": 1052243,
+    "sha256": "34664c283b546ae52e3283fbaa69d90c8ffacf388a6a2b89fc86858fbb49e7ce"
+  },
+  {
+    "path": "scene/assembly-version-01/reopen-report.json",
+    "bytes": 292,
+    "sha256": "f93fcd08521842877be5f651a91af9a1464d92a6056e7c1fdeb459839c9400db"
+  },
+  {
+    "path": "scene/assembly-version-01/side.png",
+    "bytes": 1110798,
+    "sha256": "3d6b076975dd7eff059561bee31e5f7424e5227b23328e523eeb41084d14a667"
+  },
+  {
+    "path": "scene/assembly-version-01/top.png",
+    "bytes": 1212629,
+    "sha256": "ba9b4bcb7a7a06bdefa1056c05957c5b7ec9f112109aafc58a9ec6d4b5e913b1"
+  },
+  {
+    "path": "ui-browser-check.json",
+    "bytes": 1684,
+    "sha256": "5f59d67a38f7232b4336e5621ca1eb891921475db16da739463d5bd834fb6f1c"
+  },
+  {
+    "path": "ui-game-studio.png",
+    "bytes": 241187,
+    "sha256": "c283c8a0ad2abda549e7789960d0b9fce240e27a23a69a83a73c3339eec63ccb"
+  },
+  {
+    "path": "ui-project-detail.png",
+    "bytes": 189974,
+    "sha256": "094a3fac9013db7b4e06d8cc81e923191e4058a7924cf2b24839638c3a31b5c5"
+  },
+  {
+    "path": "ui-scene.png",
+    "bytes": 216707,
+    "sha256": "4e87b67bb59477240fcfaf37632c776d9258f8c36ed9a6f03cf0be1584459931"
+  }
+]

@@ -1,0 +1,205 @@
+[
+  {
+    "operation": {
+      "op": "inspect_scene",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  },
+  {
+    "operation": {
+      "op": "set_material_pbr",
+      "target": "chair_saddle_leather",
+      "params": {
+        "base_color": [
+          0.8,
+          0.6,
+          0.4
+        ],
+        "roughness": 0.3,
+        "metallic": 0
+      }
+    },
+    "changed_objects": [
+      "seat_cushion",
+      "back_cushion"
+    ],
+    "before": {
+      "seat_cushion": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          -0.06499999761581421,
+          0.47600001096725464
+        ],
+        "dimensions_m": [
+          0.800000011920929,
+          0.7599999904632568,
+          0.17000000178813934
+        ],
+        "materials": [
+          "chair_saddle_leather"
+        ],
+        "pbr": {
+          "chair_saddle_leather": {
+            "Base Color": {
+              "value": [
+                0.20999999344348907,
+                0.06599999964237213,
+                0.027000000700354576,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.5600000023841858,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 530,
+        "geometry_sha256": "83b2e72175ac47ccb02cca3e050eb6bad329c567991761800c780785e883a2b0"
+      },
+      "back_cushion": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.3700000047683716,
+          0.8349999785423279
+        ],
+        "dimensions_m": [
+          0.7649999856948853,
+          0.7149999737739563,
+          0.1550000011920929
+        ],
+        "materials": [
+          "chair_saddle_leather"
+        ],
+        "pbr": {
+          "chair_saddle_leather": {
+            "Base Color": {
+              "value": [
+                0.20999999344348907,
+                0.06599999964237213,
+                0.027000000700354576,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.5600000023841858,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 530,
+        "geometry_sha256": "43b8dea29881184c6bfa41a2286fd10c490caf9a51d335fd3d42a68404391b6d"
+      }
+    },
+    "after": {
+      "seat_cushion": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          -0.06499999761581421,
+          0.47600001096725464
+        ],
+        "dimensions_m": [
+          0.800000011920929,
+          0.7599999904632568,
+          0.17000000178813934
+        ],
+        "materials": [
+          "chair_saddle_leather"
+        ],
+        "pbr": {
+          "chair_saddle_leather": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.6000000238418579,
+                0.4000000059604645,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 530,
+        "geometry_sha256": "83b2e72175ac47ccb02cca3e050eb6bad329c567991761800c780785e883a2b0"
+      },
+      "back_cushion": {
+        "type": "MESH",
+        "parent": null,
+        "location_m": [
+          0.0,
+          0.3700000047683716,
+          0.8349999785423279
+        ],
+        "dimensions_m": [
+          0.7649999856948853,
+          0.7149999737739563,
+          0.1550000011920929
+        ],
+        "materials": [
+          "chair_saddle_leather"
+        ],
+        "pbr": {
+          "chair_saddle_leather": {
+            "Base Color": {
+              "value": [
+                0.800000011920929,
+                0.6000000238418579,
+                0.4000000059604645,
+                1.0
+              ],
+              "linked": false
+            },
+            "Roughness": {
+              "value": 0.30000001192092896,
+              "linked": false
+            },
+            "Metallic": {
+              "value": 0.0,
+              "linked": false
+            }
+          }
+        },
+        "vertices": 530,
+        "geometry_sha256": "43b8dea29881184c6bfa41a2286fd10c490caf9a51d335fd3d42a68404391b6d"
+      }
+    }
+  },
+  {
+    "operation": {
+      "op": "save_revision_and_render",
+      "target": "scene",
+      "params": {}
+    },
+    "changed_objects": [],
+    "before": {},
+    "after": {}
+  }
+]

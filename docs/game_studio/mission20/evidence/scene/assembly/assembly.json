@@ -1,0 +1,15 @@
+{
+  "source_mesh_counts": {
+    "vehicle": 136,
+    "building": 143,
+    "furniture": 32
+  },
+  "native_blender_render_views": [
+    "front_three_quarter",
+    "rear_three_quarter",
+    "side",
+    "top"
+  ],
+  "unreal_import_executed": false,
+  "visual_quality_certified": false
+}

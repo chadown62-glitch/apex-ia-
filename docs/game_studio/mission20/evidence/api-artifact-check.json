@@ -1,0 +1,38 @@
+[
+  {
+    "version": 1,
+    "name": "front_three_quarter.png",
+    "bytes": 1164027,
+    "sha256": "sha256:a1fb6a87f45f4e7de15d5c0d8fcc669a8e21cfe07e351e895755443096944e72"
+  },
+  {
+    "version": 1,
+    "name": "garage.blend",
+    "bytes": 10609316,
+    "sha256": "sha256:2a7b6c1978b69896c966c0941daa27e7a90fa0668e0517875e97ccde1f4da2f8"
+  },
+  {
+    "version": 1,
+    "name": "garage.glb",
+    "bytes": 3476500,
+    "sha256": "sha256:6001f4d127fe2708acf9391230d3645c6c187496ca18a97468cfe8ec0600e559"
+  },
+  {
+    "version": 2,
+    "name": "front_three_quarter.png",
+    "bytes": 1034294,
+    "sha256": "sha256:a1c63287440c9566b8ce84b2da91a090fb97d0698cf42be30314c57b0921bfa0"
+  },
+  {
+    "version": 2,
+    "name": "garage.blend",
+    "bytes": 10609316,
+    "sha256": "sha256:c5e72c0aa3feee498e1d95a87ae885514d47fe205a3b4408d292e56dc67b8248"
+  },
+  {
+    "version": 2,
+    "name": "garage.glb",
+    "bytes": 3476500,
+    "sha256": "sha256:6001f4d127fe2708acf9391230d3645c6c187496ca18a97468cfe8ec0600e559"
+  }
+]
