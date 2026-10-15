@@ -186,7 +186,7 @@ pas accès à Internet ni à des informations en temps réel… » (juste) ; « 
 37 × 20 + 37 × 4 = 1960 + 37 / 37 × 24 = 2856. » (faux : 888) ; « Qui es-tu ? » → la même phrase sur l'accès à
 Internet (hors sujet).
 
-## 9 bis. Calcul exact et fonctions composées (12/10/2026, 0.5.1) — Cerveau livré
+## 9 bis. Calcul exact et fonctions composées (12/10/2026, 0.5.1) — Cerveau livré en 0.5.1
 
 Objectif de l'utilisateur : une IA « extrêmement bonne en code, maths, calculs ». Un modèle de 15,7 M
 paramètres ne calcule pas de tête (7,5 % mesuré) : il **délègue**. Deux leviers, mesurés sur le **même**
@@ -227,6 +227,53 @@ dans APEX, « 1234 × 5678 » → 7006652, l'appel `1234*5678` figurant dans les
 **Limites mesurées** : le code n'est réussi que si la demande ressemble aux gabarits appris — « somme des
 carrés des nombres impairs » formulée librement donne une fonction fausse ; une fonction écrite à la main jamais
 montrée : 0/20. Prochain levier : formulations variées des exercices, et vérification du code par exécution.
+
+## 9 ter. Dix langages et demandes 3D (12/10/2026, 0.6.0) — Cerveau livré
+
+Même pré-entraînement, nouvelle instruction (2 500 étapes, CPU, float32 choisi par mesure) avec, en plus des
+données de 0.5.1 :
+
+- **le même code dans 10 langages** (`apex/neural/polyglot.py`) : Python, C#, C++, JavaScript, TypeScript,
+  Java, Rust, Go, PHP, Ruby — 2 500 exercices par langage, fonctions composées comme en §9 bis ; chaque
+  référence d'évaluation est **compilée et exécutée par le vrai compilateur** (csc, g++, tsc, javac, rustc,
+  go, php, ruby, node, python) avant d'être gardée, et chaque réponse du modèle aussi ;
+- **8 000 demandes de modélisation 3D** en français et en anglais (`apex/neural/model3d_tasks.py`), traduites
+  en appel de l'atelier 3D (`vehicle(…)`, `weapon(…)`, `character(…)`) ; deux formulations par langue et
+  ≈ 15 % des combinaisons de paramètres sont réservées à l'évaluation.
+
+Comparaison sur les **mêmes 1 220 exercices jamais vus** (le Cerveau 0.5.1 a été réévalué sur cet ensemble, ici,
+le 15/10/2026) :
+
+| Famille | 0.5.1 | **0.6.0** |
+|---|---|---|
+| code C++, C#, Java, JavaScript, TypeScript, Rust, PHP (combinaisons vues / jamais vues) | 0 % | **95 à 100 %** |
+| code Go / Ruby (vues / jamais vues) | 0 % | 90 / 65 % · 85 / 90 % |
+| code Python (vues / jamais vues) | 60 / 45 % | **100 / 100 %** |
+| fonctions composées Python (combinaisons jamais montrées) | 82,5 % | **95 %** |
+| demandes 3D (formulations vues sur combinaisons nouvelles / formulations jamais vues) | 0 % | **95 / 87,5 %** |
+| fonction écrite (gabarits vus / jamais vue) | 57,5 / 0 % | 67,5 / 5 % |
+| honnêteté / logique / traduction | 80 / 82,5 / 37,5 % | 90 / 85 / 42,5 % |
+| sortie de programme | 35 % | 30 % (14 → 12 sur 40) |
+| connaissances (commandes, Python) | 5 / 10 % | 5 / 10 % |
+| **ensemble des 1 220 exercices** | **46,3 %** | **83,3 %** |
+| dont les 740 exercices de 0.5.1 | 73,5 % | 75,5 % |
+
+Inchangé : 100 générations sans erreur, refus abusif 0,08 % (0,51 % avant), bits par octet servis 0,9881
+(0,9867), vitesse comparable mesurée sur la même machine (même architecture ; médianes de 136–143 jetons/s
+pour 0.5.1 et 195–223 pour 0.6.0 sur trois réponses courtes de longueurs différentes, donc sans conclusion de
+gain). Seule baisse : sortie de programme, 2 exercices sur 40.
+
+**Essais réels dans APEX** (assistant, moteur « Cerveau », mode 3D, 15/10/2026) : « Modélise un char de 8 m de
+long, kaki » → appel `vehicle("tank", length=8, color="kaki")`, fichiers `.glb`, `.obj`, script Blender,
+scripts Unity et Unreal écrits ; « Create a 3D model of a red sports car 4.5 meters long » → voiture rouge de
+4,5 m ; « Génère une épée de 1,2 m pour Unity » → épée de 1,2 m.
+
+**Limites mesurées, dites telles quelles** : le code n'est fiable que pour des fonctions de la forme apprise
+(signature donnée, filtre × transformation × agrégat). Demandée librement (« écris une fonction Rust
+somme_pairs… » sans signature), la réponse est du Python faux dans un bloc Rust ; avec la signature, le code
+compile (rustc) mais ajoute une valeur absolue : `somme_pairs(&[1, 2, 3, 4, -6])` rend 12 au lieu de 0. Une
+fonction écrite à la main jamais montrée : 1/20. Prochain levier : faire exécuter et tester son code au
+Cerveau, et corriger d'après le résultat (outils `code.run`/`tests.run` existants).
 
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 

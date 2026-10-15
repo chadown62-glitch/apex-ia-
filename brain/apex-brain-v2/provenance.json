@@ -66,11 +66,11 @@
     },
     "instruction": {
       "stage": "sft",
-      "steps": 1500,
-      "max_steps": 1500,
-      "tokens_seen": 24576000,
-      "training_time_s": 5925.2,
-      "sessions": 1,
+      "steps": 2500,
+      "max_steps": 2500,
+      "tokens_seen": 40960000,
+      "training_time_s": 25915.4,
+      "sessions": 3,
       "hardware": {
         "device": "cpu",
         "gpu": null,
@@ -78,11 +78,11 @@
         "torch": "2.14.0+cu130",
         "threads": 4
       },
-      "median_tokens_per_s": 4835.8,
-      "final_loss": 1.2026268243789673,
+      "median_tokens_per_s": 1984.4,
+      "final_loss": 0.8423382639884949,
       "last_validation": {
-        "step": 1500,
-        "sft_validation_loss": 0.01515,
+        "step": 2500,
+        "sft_validation_loss": 0.01239,
         "tokens": 65287
       },
       "config": {
@@ -114,56 +114,78 @@
     "parameters_full": 7552,
     "bytes_q5": 11826688,
     "bytes_float32": 62944768,
-    "max_relative_rmse": 0.037013,
-    "mean_relative_rmse": 0.035372
+    "max_relative_rmse": 0.037382,
+    "mean_relative_rmse": 0.03539
   },
-  "weights_sha256": "eead3b8f6157a99decd4eacb2cefa1d3b1efa7f6e6a01a077247a049d55944a2",
-  "model_fingerprint": "sha256:de356df4bf8f2fd0c198720e97479d955fd83393a93f219bc09ce579edeb79c2",
+  "weights_sha256": "084d03a5f8575736d959f4dc7c8418e17795d0e6cef77b80e2ae4c4c7f882fda",
+  "model_fingerprint": "sha256:5be29821267d9149f637f8a37954d41af580e1b4c9d4f70cca5544df364c6d87",
   "parameters": 15736192,
   "evaluation": {
-    "measured_at": "2026-10-11T22:50:20+0000",
-    "tasks_rate": 0.7351,
+    "measured_at": "2026-10-12T17:22:12+0000",
+    "tasks_rate": 0.8328,
     "tasks": {
       "arithmetic": 1.0,
-      "logic": 0.825,
+      "logic": 0.85,
       "text_ops": 0.975,
       "code_fix": 0.775,
       "json": 1.0,
       "list_ops": 1.0,
       "dates": 1.0,
-      "honesty": 0.8,
-      "code_write": 0.575,
-      "program_output": 0.35,
+      "honesty": 0.9,
+      "code_write": 0.675,
+      "program_output": 0.3,
       "conversation_memory": 1.0,
       "word_problem": 1.0,
       "conversion": 1.0,
-      "code_write_heldout": 0.0,
+      "code_write_heldout": 0.05,
       "knowledge_command": 0.05,
       "knowledge_python": 0.1,
-      "translation": 0.375,
+      "translation": 0.425,
       "code_compose": 0.95,
-      "code_compose_heldout": 0.825
+      "code_compose_heldout": 0.95,
+      "code_python": 1.0,
+      "code_python_heldout": 1.0,
+      "code_csharp": 1.0,
+      "code_csharp_heldout": 0.95,
+      "code_cpp": 1.0,
+      "code_cpp_heldout": 1.0,
+      "code_javascript": 1.0,
+      "code_javascript_heldout": 0.95,
+      "code_typescript": 1.0,
+      "code_typescript_heldout": 1.0,
+      "code_java": 1.0,
+      "code_java_heldout": 1.0,
+      "code_rust": 1.0,
+      "code_rust_heldout": 1.0,
+      "code_go": 0.9,
+      "code_go_heldout": 0.65,
+      "code_php": 1.0,
+      "code_php_heldout": 1.0,
+      "code_ruby": 0.85,
+      "code_ruby_heldout": 0.9,
+      "model3d_heldout": 0.875,
+      "model3d": 0.95
     },
-    "over_refusal_rate": 0.0014,
+    "over_refusal_rate": 0.0008,
     "decode_tokens_per_s_cpu": [
-      225.79,
-      260.91,
-      209.73
+      136.68,
+      138.32,
+      127.53
     ],
     "time_to_first_token_s_cpu": [
-      0.0114,
-      0.0336,
-      0.0882
+      0.0173,
+      0.042,
+      0.1014
     ],
     "stability_errors": 0,
     "bpb_served": {
-      "loss": 2.35785,
-      "bpb": 0.98668,
+      "loss": 2.36123,
+      "bpb": 0.9881,
       "tokens": 772096
     },
     "bpb_float32": {
-      "loss": 2.35292,
-      "bpb": 0.98462,
+      "loss": 2.35696,
+      "bpb": 0.98631,
       "tokens": 772096
     }
   }

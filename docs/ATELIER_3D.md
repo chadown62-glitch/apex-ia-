@@ -113,7 +113,7 @@ Tests : `tests/test_studio3d.py`. Le test Khronos s'exécute quand `APEX_GLTF_VA
 Ses données d'instruction : des demandes en français et en anglais, traduites en appel (`apex/neural/model3d_tasks.py`). Le
 score exige que le résumé de l'atelier pour l'appel attendu figure dans la réponse. Deux familles d'évaluation :
 `model3d` (formulations vues, combinaisons de paramètres jamais montrées) et `model3d_heldout` (formulations
-jamais montrées). Mesures : `docs/CERVEAU_APEX_V2.md`.
+jamais montrées). Mesuré sur le Cerveau livré en 0.6.0 : **95 %** et **87,5 %** (40 exercices chacune) ; essais réels dans APEX en mode 3D : char, voiture et épée construits, fichiers écrits (`docs/CERVEAU_APEX_V2.md` §9 ter).
 
 ## 5. Ce que l'atelier ne fait pas
 
