@@ -71,6 +71,18 @@ def probe() -> dict[str, Any]:
         cuda_devices = torch.cuda.device_count() if cuda else 0
     except ImportError:
         cuda, cuda_devices = False, 0
+    neural_paths = {}
+    for name, variable in (
+        ("source", "APEX_TRIPOSR_SOURCE"),
+        ("weights", "APEX_TRIPOSR_WEIGHTS"),
+        ("config", "APEX_TRIPOSR_CONFIG"),
+        ("dino_config", "APEX_TRIPOSR_DINO_CONFIG"),
+    ):
+        value = os.environ.get(variable)
+        neural_paths[name] = bool(
+            value and (Path(value).is_dir() if name == "source" else Path(value).is_file())
+        )
+    neural_inputs_present = all(neural_paths.values())
     return {
         "vehicle_blender": {
             "status": "available_validated"
@@ -113,10 +125,27 @@ def probe() -> dict[str, Any]:
             "reason": "No TripoSR CUDA performance or memory qualification yet",
         },
         "neural_3d": {
-            "status": "blocked_dependency" if not cuda else "available_unqualified",
+            "status": "not_implemented" if cuda and neural_inputs_present else "blocked_dependency",
             "default_device": "cuda",
             "cpu_requires_explicit_choice": True,
-            "reason": "TripoSR CUDA path requires actual host qualification and pinned weights",
+            "configured_inputs_present": neural_paths,
+            "required_configuration": {
+                "source": "APEX_TRIPOSR_SOURCE",
+                "weights": "APEX_TRIPOSR_WEIGHTS",
+                "config": "APEX_TRIPOSR_CONFIG",
+                "dino_config": "APEX_TRIPOSR_DINO_CONFIG",
+            },
+            "reason": (
+                "TripoSR needs configured local inputs, actual CUDA qualification, "
+                "and Game Studio mission dispatch"
+            ),
+        },
+        "game_engineer": {
+            "status": "not_implemented",
+            "reason": (
+                "Game Engineer contract exists, but Game Studio does not dispatch "
+                "an engineer mission yet"
+            ),
         },
         "environment": {"status": "not_implemented"},
         "open_world": {"status": "not_implemented"},
