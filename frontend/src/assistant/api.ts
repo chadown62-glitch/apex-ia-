@@ -60,7 +60,7 @@ export interface MessageMeta {
   tools_offered?: string[];
   tools_notes?: string[];
   /** Mode automatique : le Cerveau APEX, pas assez sûr de sa réponse, l'a confiée à un autre moteur (ou l'a gardée). */
-  delegation?: { from: string; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
+  delegation?: { from: string; reason?: "low_confidence" | "cannot_know"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
 }
 
 export interface Message {

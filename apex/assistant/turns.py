@@ -159,33 +159,38 @@ def parse_tool_call(text: str) -> tuple[str, dict[str, Any]] | None:
     return value["tool"], arguments
 
 
-def _brain_unsure(result: Any, threshold: float) -> str | None:
-    """Raison de confier la question au moteur suivant : une réponse du Cerveau APEX dont la confiance
-    mesurée est sous le seuil. Les autres moteurs ne sont jamais déclinés (ils ne mesurent pas leur
-    confiance ici)."""
+def _brain_unsure(result: Any, threshold: float) -> tuple[str, str] | None:
+    """(motif, raison écrite) de confier la question au moteur suivant : le Cerveau APEX répond par sa
+    phrase apprise « je ne peux pas le savoir » (`apex.brain.chat.says_cannot_know`), ou sa confiance
+    mesurée est sous le seuil. Seuil 0 : jamais. Les autres moteurs ne sont jamais déclinés (ils ne
+    mesurent pas leur confiance ici)."""
     facts = getattr(result, "facts", None) or {}
+    if threshold <= 0 or facts.get("backend") != "apex_brain":
+        return None
+    if facts.get("cannot_know"):
+        return "cannot_know", "le Cerveau APEX dit ne pas pouvoir le savoir"
     confidence = facts.get("confidence")
-    if threshold <= 0 or facts.get("backend") != "apex_brain" or confidence is None:
+    if confidence is None or confidence >= threshold:
         return None
-    if confidence >= threshold:
-        return None
-    return f"confiance du Cerveau APEX {confidence:.3f} sous le seuil {threshold:.2f}"
+    return "low_confidence", f"confiance du Cerveau APEX {confidence:.3f} sous le seuil {threshold:.2f}"
 
 
 def _generate(ranked: list[Any], *, delegate_below: float, deadline: float, cancel: threading.Event,
               **request: Any) -> tuple[Any, dict[str, Any] | None]:
     """`generate_with_fallback` (inchangé) sur les candidats classés. Mode automatique : une réponse du
-    Cerveau APEX peu sûre d'elle est confiée aux candidats suivants, par un second appel. La réponse
-    déclinée reste dans la trace (tentative non retenue, raison écrite) ; si aucun suivant ne répond, elle
-    est gardée, et c'est dit. Rend la génération et ce qui a été délégué (None : rien)."""
+    Cerveau APEX peu sûre d'elle, ou qui dit ne pas pouvoir savoir, est confiée aux candidats suivants, par
+    un second appel. La réponse déclinée reste dans la trace (tentative non retenue, raison écrite) ; si
+    aucun suivant ne répond, elle est gardée, et c'est dit. Rend la génération et ce qui a été délégué
+    (None : rien)."""
     from apex.routing.generation import FallbackResult, GenerationAttempt, generate_with_fallback
 
     first = generate_with_fallback(ranked, timeout_s=deadline - time.monotonic(), cancel_event=cancel,
                                    **request)
     brain, answer = first.succeeded_with, first.result
-    reason = _brain_unsure(answer, delegate_below)
-    if brain is None or answer is None or reason is None:
+    unsure = _brain_unsure(answer, delegate_below)
+    if brain is None or answer is None or unsure is None:
         return first, None
+    motive, reason = unsure
     declined = GenerationAttempt(candidate=brain, succeeded=False, error=f"déclinée : {reason}",
                                  result=answer)
     later = ranked[ranked.index(brain) + 1:]
@@ -194,7 +199,7 @@ def _generate(ranked: list[Any], *, delegate_below: float, deadline: float, canc
         second = generate_with_fallback(later, timeout_s=deadline - time.monotonic(), cancel_event=cancel,
                                         **request)
     attempts = (*first.attempts[:-1], declined, *(second.attempts if second is not None else ()))
-    delegation = {"from": brain.ref.id, "confidence": answer.facts.get("confidence"),
+    delegation = {"from": brain.ref.id, "reason": motive, "confidence": answer.facts.get("confidence"),
                   "threshold": delegate_below}
     if second is not None and second.result is not None and second.succeeded_with is not None:
         return (FallbackResult(result=second.result, succeeded_with=second.succeeded_with,

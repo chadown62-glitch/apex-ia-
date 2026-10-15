@@ -34,6 +34,49 @@ TOOL_RESULT = "<|tool_result|>"
 CALL, RESULT, CALL_END = "\ue000", "\ue001", "\ue002"
 
 
+#: Réponses apprises par lesquelles le Cerveau dit ne pas pouvoir répondre : pas d'accès au temps réel, ou
+#: information manquante (données d'instruction, famille « honnêteté », `apex.neural.tasks.honesty`). Un
+#: autre modèle peut savoir ou répondre : l'assistant, en mode automatique, lui confie alors la question.
+#: Les réponses sur la vie privée de l'utilisateur ou sur des actions jamais faites n'en font pas partie :
+#: elles sont justes par construction, un autre modèle ne pourrait que deviner.
+CANNOT_KNOW_REALTIME = {
+    "fr": (
+        "Je n'ai pas accès à Internet ni à des informations en temps réel : je ne peux pas le savoir. "
+        "Je fonctionne uniquement en local avec ce que j'ai appris pendant mon entraînement.",
+        "Je ne peux pas le savoir : je n'ai aucun accès à des données en temps réel ni à Internet.",
+    ),
+    "en": (
+        "I have no access to the Internet or to real-time information, so I cannot know that. "
+        "I run locally with only what I learned during training.",
+        "I cannot know that: I have no access to real-time data or to the Internet.",
+    ),
+}
+CANNOT_KNOW_MISSING = {
+    "fr": (
+        "Il me manque une information pour répondre : peux-tu me donner le contenu concerné "
+        "(le code, le texte ou le message d'erreur) ?",
+        "Je n'ai pas assez d'informations. Peux-tu me montrer le code ou le texte en question, et "
+        "ce que tu attends ?",
+    ),
+    "en": (
+        "I am missing information to answer: can you share the content involved (the code, "
+        "the text or the error message)?",
+        "I do not have enough information. Can you show me the code or text in question, and "
+        "what you expect?",
+    ),
+}
+_CANNOT_KNOW = frozenset(
+    answer for table in (CANNOT_KNOW_REALTIME, CANNOT_KNOW_MISSING) for answers in table.values()
+    for answer in answers
+)
+
+
+def says_cannot_know(text: str) -> bool:
+    """La réponse est-elle exactement l'une des phrases apprises « je ne peux pas le savoir » (espaces
+    normalisés) ? Une réponse qui en diffère, même un peu, n'est pas comptée : rien n'est deviné."""
+    return " ".join(text.split()) in _CANNOT_KNOW
+
+
 @dataclass(frozen=True)
 class Message:
     role: str

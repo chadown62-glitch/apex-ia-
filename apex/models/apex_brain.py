@@ -222,7 +222,7 @@ class ApexBrainProvider(ModelProvider):
         )
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
-        from apex.brain.chat import Message
+        from apex.brain.chat import Message, says_cannot_know
         from apex.brain.inference import GenerationCancelled, GenerationTimeout, SamplingSettings
         from apex.errors import ModelErrorCategory, ModelProviderError, TimeoutExceeded
         from apex.obs.status import Measurement
@@ -360,6 +360,9 @@ class ApexBrainProvider(ModelProvider):
                 # interprétée ici (voir docs/CERVEAU_APEX_V2.md pour ce qu'elle prédit).
                 "confidence": stats.confidence,
                 "min_token_prob": stats.min_token_prob,
+                # Réponse apprise « je ne peux pas le savoir » (temps réel, information manquante) : un
+                # autre modèle peut savoir (`apex.brain.chat.CANNOT_KNOW_REALTIME`/`CANNOT_KNOW_MISSING`).
+                "cannot_know": says_cannot_know(result.text),
                 "prompt_used": prompt_used,
             },
         )

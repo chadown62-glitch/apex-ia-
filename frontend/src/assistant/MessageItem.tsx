@@ -69,9 +69,10 @@ function MetaLine({ message }: { message: Message }) {
   const delegation = meta?.delegation;
   if (delegation) {
     const confidence = typeof delegation.confidence === "number" ? delegation.confidence.toFixed(2) : "?";
+    const why = delegation.reason === "cannot_know" ? "il dit ne pas pouvoir le savoir" : `confiance ${confidence}`;
     parts.push(delegation.status === "delegated"
-      ? `confié par le Cerveau APEX (confiance ${confidence})`
-      : `Cerveau APEX peu sûr (confiance ${confidence}), aucun autre moteur disponible`);
+      ? `confié par le Cerveau APEX (${why})`
+      : `Cerveau APEX peu sûr (${why}), aucun autre moteur disponible`);
   }
   if (parts.length === 0) return null;
   return <div className="ax-msg__meta">{parts.join(" · ")}</div>;

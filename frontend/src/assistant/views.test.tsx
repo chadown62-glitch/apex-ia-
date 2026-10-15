@@ -330,9 +330,11 @@ describe("MessageItem", () => {
     const { MessageItem } = await import("./MessageItem");
     const delegated = message({ id: "d", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.623, threshold: 0.97, to: "qwen", status: "delegated" } } });
     const kept = message({ id: "k", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.5, threshold: 0.97, to: null, status: "kept" } } });
-    renderAt("/", [{ path: "/", element: <><MessageItem message={delegated as never} /><MessageItem message={kept as never} /></> }]);
+    const unknown = message({ id: "u", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", reason: "cannot_know", confidence: 0.99, threshold: 0.97, to: "qwen", status: "delegated" } } });
+    renderAt("/", [{ path: "/", element: <><MessageItem message={delegated as never} /><MessageItem message={kept as never} /><MessageItem message={unknown as never} /></> }]);
     expect(screen.getByText(/confié par le Cerveau APEX \(confiance 0\.62\)/)).toBeInTheDocument();
     expect(screen.getByText(/Cerveau APEX peu sûr \(confiance 0\.50\), aucun autre moteur disponible/)).toBeInTheDocument();
+    expect(screen.getByText(/confié par le Cerveau APEX \(il dit ne pas pouvoir le savoir\)/)).toBeInTheDocument();
   });
 });
 

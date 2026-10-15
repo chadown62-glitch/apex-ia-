@@ -697,10 +697,12 @@ class _UnsureBrainProvider(_ScriptedProvider):
     """Premier appel : une réponse du Cerveau APEX avec sa confiance mesurée ; les appels suivants (le
     moteur suivant du mode automatique) répondent normalement, ou échouent tous si `offline`."""
 
-    def __init__(self, replies: list[str], *, confidence: float, offline: bool = False) -> None:
+    def __init__(self, replies: list[str], *, confidence: float, offline: bool = False,
+                 cannot_know: bool = False) -> None:
         super().__init__(replies)
         self.confidence = confidence
         self.offline = offline
+        self.cannot_know = cannot_know
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
         from apex.errors import ModelProviderError
@@ -716,7 +718,8 @@ class _UnsureBrainProvider(_ScriptedProvider):
                                 tokens_prompt=result.tokens_prompt,
                                 tokens_completion=result.tokens_completion,
                                 finish_reason="stop", elapsed_s=0.01,
-                                facts={"backend": "apex_brain", "confidence": self.confidence})
+                                facts={"backend": "apex_brain", "confidence": self.confidence,
+                                       "cannot_know": self.cannot_know})
 
 
 def _brain_turn(env, provider, settings=None):
@@ -740,7 +743,19 @@ def test_an_unsure_brain_hands_the_question_to_the_next_engine_and_says_so(env) 
     assert answer.content == "réponse du moteur suivant"
     delegation = answer.meta["delegation"]
     assert delegation["status"] == "delegated" and delegation["confidence"] == 0.62
+    assert delegation["reason"] == "low_confidence"
     assert delegation["threshold"] == 0.97 and delegation["to"] == answer.model_id != delegation["from"]
+
+
+def test_a_brain_that_says_it_cannot_know_hands_the_question_over_even_when_confident(env) -> None:
+    """Sa phrase apprise « je n'ai pas accès à Internet… » à une question de culture générale : confiance
+    0,988 mesurée, réponse inutile ; un autre moteur peut savoir."""
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "Canberra."], confidence=0.988,
+                                    cannot_know=True)
+    _, answer = _brain_turn(env, provider)
+    assert answer.content == "Canberra." and len(provider.requests) == 2
+    assert answer.meta["delegation"]["reason"] == "cannot_know"
+    assert answer.meta["delegation"]["status"] == "delegated"
 
 
 def test_a_confident_brain_keeps_the_question(env) -> None:

@@ -399,7 +399,9 @@ class BrainEngine:
     def _sample(
         logits: torch.Tensor, produced: list[int], settings: SamplingSettings, generator: torch.Generator
     ) -> int:
-        logits = logits.cpu()
+        # Copie : la pénalité ci-dessous modifie les valeurs, et l'appelant mesure la confiance sur la
+        # distribution BRUTE du modèle (sans copie, un tenseur CPU float32 était modifié sur place).
+        logits = logits.to("cpu", copy=True)
         if settings.repetition_penalty != 1.0 and produced:
             seen = torch.tensor(sorted(set(produced[-256:])), dtype=torch.long)
             values = logits[seen]

@@ -33,6 +33,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
+from apex.brain.chat import CANNOT_KNOW_MISSING, CANNOT_KNOW_REALTIME
 from apex.brain.chat import calc_markup as _c
 
 SYSTEM_FR = (
@@ -1590,14 +1591,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
     if lang == "fr":
         if kind == "realtime":
             user = _pick(rng, _REALTIME_FR).format(**fill)
-            answer = _pick(
-                rng,
-                (
-                    "Je n'ai pas accès à Internet ni à des informations en temps réel : je ne peux pas le savoir. "
-                    "Je fonctionne uniquement en local avec ce que j'ai appris pendant mon entraînement.",
-                    "Je ne peux pas le savoir : je n'ai aucun accès à des données en temps réel ni à Internet.",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_REALTIME["fr"])
         elif kind == "action":
             user = _pick(rng, _ACTIONS_FR).format(**fill)
             answer = _pick(
@@ -1610,15 +1604,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
             )
         elif kind == "missing":
             user = _pick(rng, _MISSING_FR)
-            answer = _pick(
-                rng,
-                (
-                    "Il me manque une information pour répondre : peux-tu me donner le contenu concerné "
-                    "(le code, le texte ou le message d'erreur) ?",
-                    "Je n'ai pas assez d'informations. Peux-tu me montrer le code ou le texte en question, et "
-                    "ce que tu attends ?",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_MISSING["fr"])
         else:
             user = _pick(rng, _PRIVATE_FR).format(**fill)
             answer = _pick(
@@ -1631,14 +1617,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
     else:
         if kind == "realtime":
             user = _pick(rng, _REALTIME_EN).format(**fill)
-            answer = _pick(
-                rng,
-                (
-                    "I have no access to the Internet or to real-time information, so I cannot know that. "
-                    "I run locally with only what I learned during training.",
-                    "I cannot know that: I have no access to real-time data or to the Internet.",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_REALTIME["en"])
         elif kind == "action":
             user = _pick(rng, _ACTIONS_EN).format(**fill)
             answer = _pick(
@@ -1651,15 +1630,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
             )
         elif kind == "missing":
             user = _pick(rng, _MISSING_EN)
-            answer = _pick(
-                rng,
-                (
-                    "I am missing information to answer: can you share the content involved (the code, "
-                    "the text or the error message)?",
-                    "I do not have enough information. Can you show me the code or text in question, and "
-                    "what you expect?",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_MISSING["en"])
         else:
             user = _pick(rng, _PRIVATE_EN).format(**fill)
             answer = _pick(

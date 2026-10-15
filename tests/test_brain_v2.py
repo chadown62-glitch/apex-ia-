@@ -287,6 +287,28 @@ def test_provider_serves_v2_as_a_structured_conversation(tiny_brain, monkeypatch
     )
     assert result.facts["conversational"] and "4 message(s)" in result.facts["prompt_used"]
     assert result.tokens_completion.value <= 8
+    assert 0 < result.facts["confidence"] <= 1 and result.facts["cannot_know"] is False
+
+
+def test_the_brain_saying_it_cannot_know_is_recognized_exactly() -> None:
+    """Seules ses phrases apprises « temps réel » et « information manquante » comptent, telles quelles
+    (espaces normalisés). Une variante n'est pas devinée. Les refus sur la vie privée et les actions n'en
+    font pas partie : ils sont justes par construction."""
+    import random
+
+    from apex.brain.chat import CANNOT_KNOW_MISSING, CANNOT_KNOW_REALTIME, says_cannot_know
+    from apex.neural.tasks import honesty
+
+    for answers in (*CANNOT_KNOW_REALTIME.values(), *CANNOT_KNOW_MISSING.values()):
+        for answer in answers:
+            assert says_cannot_know(answer) and says_cannot_know(f"  {answer.replace(' ', '\n', 1)}\n")
+    assert not says_cannot_know("Je ne peux pas le savoir : c'est Canberra.")
+    assert not says_cannot_know("Canberra.")
+    # Les données d'instruction utilisent exactement ces phrases (source unique), et rien d'autre ne compte.
+    for seed in range(200):
+        example = honesty(random.Random(seed), "fr" if seed % 2 else "en")
+        expected = example.check["kind"] in ("realtime", "missing")
+        assert says_cannot_know(example.assistant) is expected, example
 
 
 def test_brain_reinstalled_while_apex_runs_is_reloaded(tiny_brain, tokenizer, monkeypatch) -> None:
@@ -885,6 +907,19 @@ def test_the_engine_runs_the_calculation_the_model_asks_for(tiny_brain) -> None:
     # résultat fourni par la calculatrice n'y entre pas.
     assert result.stats.scored_tokens == len(script) and result.stats.confidence == 1.0
     assert result.stats.to_dict()["confidence"] == 1.0
+
+
+def test_sampling_never_alters_the_distribution_the_confidence_is_measured_on() -> None:
+    """La pénalité de répétition travaille sur une copie : la confiance se mesure sur la distribution brute
+    du modèle. Défaut corrigé le 15/10/2026 : le tenseur CPU float32 était modifié sur place."""
+    from apex.brain.inference import BrainEngine, SamplingSettings
+
+    logits = torch.tensor([2.0, 1.0, -1.0, 0.5])
+    before = logits.clone()
+    sampled = SamplingSettings(repetition_penalty=1.3, temperature=0.4, top_k=2, top_p=0.95, seed=1)
+    for settings in (SamplingSettings(repetition_penalty=1.3), sampled):
+        token = BrainEngine._sample(logits, [0, 2], settings, torch.Generator().manual_seed(1))
+        assert torch.equal(logits, before) and token in (0, 1)
 
 
 def test_the_engine_builds_the_3d_model_the_brain_asks_for(tiny_brain) -> None:
