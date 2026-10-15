@@ -26,6 +26,9 @@ db  = ["sqlalchemy>=2.0", "alembic>=1.13", "psycopg[binary]>=3.2", "pgvector>=0.
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "pydantic>=2.9"]
 # Inférence NATIVE en processus (apex.models.native) : le Runtime exécute un vrai modèle sans serveur.
 native = ["torch>=2.4", "transformers>=4.45,<5", "safetensors>=0.4", "huggingface_hub>=0.25"]
+# Game Studio is optional so missing Blender/graphics libraries never prevent
+# the launcher or core API from opening. Weights are intentionally excluded.
+game_studio = ["psutil>=5.9", "numpy>=1.26", "pillow>=10", "llama-cpp-python>=0.3"]
 
 [project.scripts]
 apex = "apex.cli.main:main"

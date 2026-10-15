@@ -30,7 +30,11 @@ def check_external_workloads() -> None:
                 or record.get("phase") not in PHASES
             ):
                 raise RuntimeError("core_state_unverified")
-            if record.get("phase") in ("starting", "serving") and alive(record["pid"]):
+            # The API may itself be the caller of Game Studio.  This is a
+            # verified same-process handoff, not permission to ignore a
+            # different running backend or a resident model process below.
+            if (record.get("phase") in ("starting", "serving")
+                    and alive(record["pid"]) and record["pid"] != os.getpid()):
                 raise RuntimeError("core_active_handoff_required")
     for process in psutil.process_iter(["pid", "name", "cmdline"]):
         name = (process.info["name"] or "").lower()

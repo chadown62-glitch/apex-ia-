@@ -127,8 +127,8 @@ def visual_alignment(root, calibration):
     return visual
 
 
-def judge_revision(root, family, criteria, benchmark, *, calibration=None):
-    runs = inspect_revision(root)
+def judge_revision(root, family, criteria, benchmark, *, calibration=None, cancel_event=None):
+    runs = inspect_revision(root, cancel_event=cancel_event)
     visual = visual_alignment(root, calibration) if family == "chair" and calibration else None
     case = next(c for c in benchmark["cases"] if c["family"] == family)
     manifest = manifest_revision(root, family, case["id"])

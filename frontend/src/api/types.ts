@@ -1098,3 +1098,70 @@ export interface RuntimeModelStatus {
   status?: string;
   detail: string;
 }
+export interface GameStudioReferenceInput {
+  content_type: "image/png" | "image/jpeg" | "text/plain";
+  data_base64: string;
+  provenance: string;
+}
+
+export interface GameStudioRequest {
+  creation_type: "vehicule" | "batiment" | "objet_3d" | "environnement" | "monde_ouvert" | "autre";
+  creation_other?: string | null;
+  style: "photorealiste" | "realiste" | "stylise" | "cartoon_anime" | "low_poly" | "autre";
+  style_other?: string | null;
+  quality: "prototype" | "jouable" | "soigne" | "photorealiste";
+  tool: "auto" | "blender" | "unreal" | "hybride";
+  compute_backend: "auto" | "cuda" | "cpu";
+  controller_model: "auto" | "pinned_7b" | "apex_native";
+  description: string;
+  judges_all_tasks: boolean;
+  automatic_corrections: boolean;
+  max_time_s: number;
+  max_rss_mib: number;
+  max_attempts: number;
+  criteria: Record<string, number | boolean>;
+  references: GameStudioReferenceInput[];
+}
+
+export interface GameStudioArtifact {
+  name: string;
+  hash: string;
+  content_type: string;
+  role: string;
+  bytes: number;
+}
+
+export interface GameStudioRevision {
+  number: number;
+  artifacts: GameStudioArtifact[];
+  verdict: string;
+  defects: Record<string, unknown>[];
+  unavailable: Record<string, unknown>[];
+  created_at: string;
+}
+
+export interface GameStudioMission {
+  id: string;
+  mission_id: string;
+  mission_history: string[];
+  mission_state: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  current_task: string;
+  specialist: string;
+  model: string;
+  request: Omit<GameStudioRequest, "references">;
+  references: { hash: string; content_type: string; provenance: string; used_as_visual_judge: boolean }[];
+  revisions: GameStudioRevision[];
+  controller_attempts?: GameStudioArtifact[];
+  selected_revision_number?: number;
+  events: { at: string; kind: string; [key: string]: unknown }[];
+  error: string | null;
+  resource_measurements: Record<string, unknown>[];
+  limitations: string[];
+}
+
+export interface GameStudioCapabilities {
+  [capability: string]: unknown;
+}

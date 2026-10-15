@@ -1,0 +1,19 @@
+{
+  "after/asset.blend": "b2ff52bbfa5f5f485433c61b1eda4f78322e519b970eaeb0c99f94d60ecc1728",
+  "after/asset.glb": "9f30ab7729b1ce5f04e8e040d58330863e31ded0eb881d19fbb0e2a3eb55d38a",
+  "after/execution.json": "143ef9a0b005134633f85876b390fec3d54213f7c9aedf08a1271d64d6df86ae",
+  "after/front.png": "dc53314c2392cb52e9b2284a93f9329c6f110576f35063ddc4a256ab1b28432e",
+  "after/front_three_quarter.png": "e0286c3ee60e55fe1c11749824da4b2e9d74d88bf46c7baa2c21553b6be0fb16",
+  "after/judge-report.json": "de0dab1c83d3300bed816d1333d78abed94923587e8c6b45949ed9260ca5236c",
+  "after/manifest.json": "144aabbb131c6b75381dc82681977b1248ab43af121909748c99375ffbbdb7f6",
+  "after/rear_three_quarter.png": "06a190ae83b85a94cac39e99af32cfdf67a68e180fe1cdcc4d7bd335c3abadf7",
+  "after/side.png": "bc43e757cce5b8507d8c293a25581944078ac8bc1f6ce263a18b7397553c7e3d",
+  "before/asset.blend": "5aa2bb159f06aeb7cbbf8ea596c45e41abb24bdf5ccc602b82549108ff1ff34b",
+  "before/asset.glb": "38beee0e332c8f9e58f908d407b6b9c800cde3076228c427dbae963acdb80f62",
+  "before/front_three_quarter.png": "cc56532e129a99ec2961d415763c1e2a7c44521d295bf34a734bde8d01dcae57",
+  "before/judge-report.json": "b418bc58189dbf0d7278dbcf3af355b71e5be4f6d2fb1685ef203b92780c61af",
+  "final-api-result.json": "9539fb6fabfc2fc1309e0c40279c47524d70cd7a74463aa99e567fb181a97e77",
+  "game-studio-selected.png": "0e7bd50bc753ec5c7dc0596b2b52c55ba97b3c8703c9748f58cdf3278d60239b",
+  "lifecycle.json": "90ab39744ec6883c0c6621099a00c01a223d1eadb945dd0a4a9b25ae9caad243",
+  "plan.json": "0503ba41e9043b730a1733ba18e3f8adf8782404abd4a003a8345c789f2b7639"
+}

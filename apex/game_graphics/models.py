@@ -9,6 +9,7 @@ import signal
 import subprocess
 import sys
 import time
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 from urllib.request import urlopen
@@ -74,8 +75,12 @@ def file_sha256(path: Path) -> str:
 
 
 class CoderSession:
-    def __init__(self, manifest: Path, log_dir: Path, *, port: int = 8082) -> None:
+    def __init__(self, manifest: Path, log_dir: Path, *, port: int = 8082,
+                 compute_backend: str = "cpu") -> None:
         self.manifest, self.log_dir, self.port = manifest, log_dir, port
+        if compute_backend not in ("auto", "cuda", "cpu"):
+            raise ValueError("unknown_coder_compute_backend")
+        self.compute_backend = compute_backend
         self.process: subprocess.Popen[bytes] | None = None
         self.log: Any = None
         self.facts: dict[str, Any] = {}
@@ -88,6 +93,17 @@ class CoderSession:
         )
 
     def __enter__(self) -> CoderSession:
+        from llama_cpp import llama_cpp
+
+        gpu_supported = bool(llama_cpp.llama_supports_gpu_offload())
+        if self.compute_backend in ("auto", "cuda"):
+            import torch
+
+            if not torch.cuda.is_available() or not gpu_supported:
+                raise RuntimeError("cuda_coder_unavailable_choose_cpu_explicitly")
+            layers, device = "-1", "cuda"
+        else:
+            layers, device = "0", "cpu_explicit"
         if not self.manifest.is_file():
             raise RuntimeError("coder_model_missing")
         model = json.loads(self.manifest.read_text())
@@ -124,7 +140,7 @@ class CoderSession:
                 "--n_threads",
                 "4",
                 "--n_gpu_layers",
-                "0",
+                layers,
             ],
             stdout=self.log,
             stderr=subprocess.STDOUT,
@@ -141,7 +157,8 @@ class CoderSession:
                 "commit": CODER_COMMIT,
                 "sha256": CODER_SHA256,
                 "quantization": "Q5_K_M",
-                "device": "cpu",
+                "device": device,
+                "llama_gpu_offload_supported": gpu_supported,
                 "load_s": time.monotonic() - started,
                 "pid": self.process.pid,
                 "rss_after_load_bytes": psutil.Process(self.process.pid).memory_info().rss,
@@ -158,7 +175,15 @@ class CoderSession:
     def __exit__(self, kind: Any, value: Any, tb: Any) -> None:
         if self.process and self.process.poll() is None:
             if os.name == "nt":
-                self.process.terminate()
+                owned = psutil.Process(self.process.pid)
+                tree = [*owned.children(recursive=True), owned]
+                for item in tree:
+                    with suppress(psutil.NoSuchProcess):
+                        item.terminate()
+                _, survivors = psutil.wait_procs(tree, timeout=10)
+                for item in survivors:
+                    with suppress(psutil.NoSuchProcess):
+                        item.kill()
             else:
                 os.killpg(self.process.pid, signal.SIGTERM)
             try:

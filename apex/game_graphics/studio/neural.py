@@ -122,8 +122,15 @@ def stop_owned(process: subprocess.Popen[Any]) -> None:
     process.wait(timeout=10)
 
 
-def run_cpu(args: argparse.Namespace, *, worker: Path | None = None) -> dict[str, Any]:
+def run_device(args: argparse.Namespace, *, device: str, worker: Path | None = None) -> dict[str, Any]:
     """Run the fixed worker, never Python supplied by a generated plan."""
+    if device not in ("cpu", "cuda"):
+        raise ValueError("neural_device_must_be_explicit")
+    if device == "cuda":
+        import torch
+
+        if not torch.cuda.is_available():
+            raise RuntimeError("cuda_required_no_implicit_cpu_fallback")
     source = args.source.resolve(strict=True)
     weights = args.weights.resolve(strict=True)
     if weights.is_dir():
@@ -183,10 +190,12 @@ def run_cpu(args: argparse.Namespace, *, worker: Path | None = None) -> dict[str
         str(output),
         "--resolution",
         str(args.resolution),
+        "--device",
+        device,
     ]
     receipt: dict[str, Any] = {
-        "method": "neural_triposr_cpu",
-        "device": "cpu",
+        "method": "neural_triposr_" + device,
+        "device": device,
         "threads": 4,
         "resolution": args.resolution,
         "timeout_seconds": args.timeout,
@@ -264,9 +273,19 @@ def run_cpu(args: argparse.Namespace, *, worker: Path | None = None) -> dict[str
     return receipt
 
 
+def run_cpu(args: argparse.Namespace, *, worker: Path | None = None) -> dict[str, Any]:
+    """PR17 CPU evidence path, retained only when CPU is chosen explicitly."""
+    return run_device(args, device="cpu", worker=worker)
+
+
+def run_gpu(args: argparse.Namespace, *, worker: Path | None = None) -> dict[str, Any]:
+    """GPU-first path; its performance remains unqualified until an actual CUDA run."""
+    return run_device(args, device="cuda", worker=worker)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Pinned TripoSR CPU qualification; no automatic downloads."
+        description="Pinned TripoSR; CUDA default, CPU requires explicit choice; no downloads."
     )
     for name in ("source", "weights", "config", "input", "output", "runtime"):
         parser.add_argument("--" + name, type=Path, required=True)
@@ -281,7 +300,9 @@ def main() -> int:
     parser.add_argument("--resolution", type=int, default=64)
     parser.add_argument("--timeout", type=float, default=720)
     parser.add_argument("--rss", type=float, default=20480, help="Sampled RSS cap in MiB")
-    result = run_cpu(parser.parse_args())
+    parser.add_argument("--device", choices=("cuda", "cpu"), default="cuda")
+    args = parser.parse_args()
+    result = run_device(args, device=args.device)
     print(
         json.dumps(
             {key: value for key, value in result.items() if key not in ("samples", "provenance")},

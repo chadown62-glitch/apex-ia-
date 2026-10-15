@@ -150,6 +150,16 @@ export const SPECIALTY_DEFINITIONS: SpecialtyDefinition[] = [
     },
   },
   {
+    id: "game-studio",
+    label: "Game Studio",
+    icon: "🎮",
+    description: "Modélisation Blender et suivi des missions graphiques avec jugements et versions vérifiées.",
+    path: "/game-studio",
+    status: "real",
+    devStage: "connected",
+    category: "creative",
+  },
+  {
     id: "images",
     label: "Images",
     icon: "🖼️",

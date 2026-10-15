@@ -70,7 +70,8 @@ def store_plan(plan: dict, directory: Path, *, caller: str = "studio-controller"
     return directory / "plan.json"
 
 
-def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, rss_limit_mib=12000):
+def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, rss_limit_mib=12000,
+                cancel_event=None):
     if script not in ("render_asset.py", "inspect_asset.py"):
         raise ValueError("untrusted_script")
     executable = shutil.which("blender")
@@ -112,6 +113,9 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
                     samples.append({"elapsed_s": round(elapsed, 3), "rss_bytes": rss})
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
+                if cancel_event is not None and cancel_event.is_set():
+                    reason = "cancelled"
+                    break
                 if elapsed > timeout_s or peak > rss_limit_mib * 1024**2:
                     reason = "timeout" if elapsed > timeout_s else "sampled_memory_limit"
                     break
@@ -119,7 +123,19 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
         finally:
             if child.poll() is None:
                 if os.name == "nt":
-                    child.terminate()
+                    owned = psutil.Process(child.pid)
+                    tree = [*owned.children(recursive=True), owned]
+                    for item in tree:
+                        try:
+                            item.terminate()
+                        except psutil.NoSuchProcess:
+                            pass
+                    _, survivors = psutil.wait_procs(tree, timeout=5)
+                    for item in survivors:
+                        try:
+                            item.kill()
+                        except psutil.NoSuchProcess:
+                            pass
                 else:
                     os.killpg(child.pid, signal.SIGTERM)
                 try:
@@ -171,7 +187,8 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
     return result
 
 
-def create_revision(root: Path, family: str, *, parent: Path | None = None, plan: dict | None = None):
+def create_revision(root: Path, family: str, *, parent: Path | None = None, plan: dict | None = None,
+                    cancel_event=None, timeout_s=600, rss_limit_mib=12000):
     refuse_personal_project(root)
     if parent:
         refuse_personal_project(parent)
@@ -189,7 +206,8 @@ def create_revision(root: Path, family: str, *, parent: Path | None = None, plan
             raise ValueError("plan_family_mismatch")
         plan_file = store_plan(plan, root / "plan")
         args += ["--plan", str(plan_file.resolve())]
-    result = run_blender("render_asset.py", args, root / "build.log")
+    result = run_blender("render_asset.py", args, root / "build.log", cancel_event=cancel_event,
+                         timeout_s=timeout_s, rss_limit_mib=rss_limit_mib)
     if parent and file_sha256(parent) != parent_sha:
         raise ValueError("parent_modified_during_execution")
     (root / "execution.json").write_text(json.dumps(result.to_dict(), indent=2))
@@ -209,7 +227,7 @@ def create_revision(root: Path, family: str, *, parent: Path | None = None, plan
     return result
 
 
-def inspect_revision(root: Path):
+def inspect_revision(root: Path, *, cancel_event=None):
     runs = []
     for ext in ("blend", "glb"):
         report = root / (ext + "-inspection.json")
@@ -218,6 +236,7 @@ def inspect_revision(root: Path):
             ["--input", str((root / ("asset." + ext)).resolve()), "--report", str(report.resolve())],
             root / (ext + "-inspection.log"),
             timeout_s=120,
+            cancel_event=cancel_event,
         )
         runs.append(result)
     return runs

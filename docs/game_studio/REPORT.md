@@ -1,0 +1,38 @@
+# Game Studio dans APEX — qualification cloud de la mission #18
+
+Le parcours Game Studio est maintenant accessible dans la navigation du frontend APEX existant. Il crée une vraie mission `MissionService`, exécute les scripts Blender de Game Graphics avec le modèle local, archive chaque version dans `ArtifactStore` et affiche les jugements et les fichiers. Le build runtime copie le frontend, les modules et les scripts dans la distribution utilisée par le launcher. **Le launcher Windows lui-même n'a pas été exécuté dans ce cloud Linux.**
+
+La branche réservée #18 est empilée dans l'ordre sur les commits de #11 (orchestration), #12 (Game Graphics), #13 (Game Engineer), #16 (connecteur graphique UE5) et #17 (opérations Blender, familles et TripoSR). Aucune de ces PR n'a été fusionnée vers `apex/integration` ou `main`, et les fichiers du cerveau Claude n'ont pas été modifiés.
+
+## Parcours observé le 15 octobre 2026
+
+Depuis l'API APEX du profil standalone, une demande de voiture réaliste a créé le job stable `768e1b04-665d-444d-bebc-7c692ff98325`. Le premier processus a produit une version de référence, puis le modèle a proposé des opérations qui dégradaient la géométrie. La reprise du même job, avec une nouvelle mission APEX liée, a conservé la version vérifiée et exécuté un plan corrigé. L'historique des deux missions et les réponses API sont dans [final-api-result.json](evidence/vehicle/final-api-result.json). Le navigateur Chromium a réellement affiché huit rendus, les deux verdicts et les téléchargements : [capture de la version retenue](evidence/vehicle/game-studio-selected.png).
+
+| Étape | Résultat réel |
+| --- | --- |
+| Blender | 4.3.2, deux fichiers `.blend` sauvegardés, deux `.glb` exportés |
+| Modèle | Qwen2.5-Coder-7B-Instruct Q5_K_M, poids GGUF SHA-256 `586844eac4d6d6321689f0192c8aa8e69cd8625974a5cc2d925b1a03366e4d16`, CPU choisi explicitement |
+| Plan exécuté | `inspect_scene`, `set_material_pbr` sur `petrol_paint`, `add_component` pour `rear_spoiler`, `save_revision_and_render` |
+| Opérations refusées | `subdivide_surface` et `bevel_edges` sur le châssis protégé ; `set_location` sur un objet absent de la hiérarchie initiale. Réponse brute et projections conservées dans [plan.json](evidence/vehicle/plan.json). |
+| Juge technique | Version 1 : PASS, 0 défaut ; version 2 : PASS, 0 défaut. Les contrôles géométriques et les quatre vues sont réels ; aucune note esthétique décisive n'est déduite de ce PASS. |
+| Mesures Blender | Version 1 : 85,26 s, pic RSS échantillonné 366,21 Mio ; version 2 : 134,85 s, pic RSS 358,02 Mio. Voir [execution.json](evidence/vehicle/after/execution.json). |
+| Mesures modèle | 6,04 Go RSS après chargement, 7,51 Go après génération ; processus arrêté et vérifié. Voir [lifecycle.json](evidence/vehicle/lifecycle.json). Aucune mesure CUDA n'a été effectuée. |
+| API et navigateur | Création/reprise HTTP 200 ; téléchargement authentifié du `.blend` HTTP 200, octets vérifiés par SHA-256 ; appel sans jeton HTTP 401 ; huit images chargées sans échec réseau. |
+
+Le changement visuel constaté est un matériau blanc et un aileron. La géométrie principale du véhicule reste celle du constructeur #17. Les rendus [avant](evidence/vehicle/before/front_three_quarter.png) et [après](evidence/vehicle/after/front_three_quarter.png) permettent de juger ce changement ; **ce n'est pas une amélioration esthétique calibrée ni une correction de défaut détecté par le juge**. La démonstration de correction géométrique réelle de #17 reste distincte, dans `docs/game_graphics/studio/evidence/benchmark/correction-demo.json`. L'intégration d'une correction déclenchée par un défaut pendant une mission Game Studio est encore à qualifier.
+
+Une mission de fauteuil `a1933f4e-9776-4ca3-99c0-e05f6cef51f5` a aussi été annulée via HTTP pendant Blender : état final `cancelled`, processus enfant arrêté et vérifié dans `execution.json`. Le job de voiture a été repris après interruption avec le même identifiant stable et une nouvelle entrée `mission_history`.
+
+## Contrats intégrés
+
+`GET /api/v1/game-studio/capabilities` expose les dépendances observées et les états `available_validated`, `available_unqualified`, `blocked_dependency` ou `not_implemented`. `POST /api/v1/game-studio/missions` accepte le type, style, niveau, outil, modèle, backend de calcul, description, deux options indépendantes de juges/corrections, budgets, critères et références avec provenance. `GET /missions`, `GET /missions/{id}`, `POST /missions/{id}/cancel`, `POST /missions/{id}/resume` et `GET /missions/{id}/artifacts/{hash}` exposent l'état, les versions et les octets. Toutes ces routes réutilisent l'authentification uniforme de l'API APEX ; les références PNG/JPEG/texte sont limitées et validées avant stockage. Le chemin `C:\GameProject` reste refusé.
+
+Le spécialiste utilise `ModelProvider` pour la génération locale, le catalogue autorisé et `ToolEngine` pour enregistrer les plans, `MissionService` pour le cycle de vie, `ArtifactStore` pour les preuves, le juge Game Graphics et `RecoveryPolicy` pour les rejets bornés. Il ne crée pas de second jugement généraliste. `TaskLoop` et `Scheduler` n'exécutent pas encore la mission Blender ; le connecteur de #11 concerne un autre type de tâche. Les projets et Workspaces APEX ne sont pas encore associés à chaque job Game Studio : le stockage actuel est le dossier standalone `.apex/game-studio/missions` avec contrôle de chemin.
+
+## Vérifications et limites
+
+La construction frontend et ses 173 tests passent. Les tests backend ciblés couvrent authentification, validation des références et critères, contrats Blender/UE, et filtrage du plan Qwen. Le build runtime et `runtime_build.verify` passent ; les scripts Game Graphics et leur benchmark sont inclus. La capture Chromium vérifie le frontend rendu et les images issues de l'API authentifiée. Le binaire `apex.exe`, son installation, CUDA, TripoSR GPU et UE5.8 restent non qualifiés faute d'accès à Windows/GPU/éditeur. Le connecteur UE5 de #16 garde l'état BLOCKED ; aucune scène Unreal n'est annoncée.
+
+Les styles autres que « réaliste », les environnements, le monde ouvert et l'hybride restent non implémentés dans le parcours intégré. Les références image sont archivées mais le contrôleur texte ne lit pas leurs pixels. Les niveaux « Jouable », « Soigné » et « Photoréaliste » conservent leurs contrats et leurs contrôles, sans qualification artistique complète. La case « juges sur toutes les tâches » transmet le verdict au contrôleur et juge chaque révision ; elle ne constitue pas encore une inspection spécialisée de chaque sous-opération. Les corrections automatiques sont bornées et indépendantes de cette case, mais le cas de correction d'un défaut nouvellement détecté dans une mission intégrée reste à démontrer. Le modèle natif APEX est détecté via `ModelProvider`, sans qualification de qualité dans ce lot. Aucune adaptation de poids n'a été exécutée.
+
+Prochaine expérience utile : dans une mission de fauteuil isolée, injecter un décalage mesurable de l'accoudoir gauche, vérifier les vues et le défaut par le juge, faire proposer à Qwen une correction locale via le même endpoint, puis prouver le PASS, la portée limitée et l'affichage avant/après dans Game Studio. Ensuite seulement, qualifier le parcours `apex.exe` et la voie CUDA sur le PC Windows disponible.

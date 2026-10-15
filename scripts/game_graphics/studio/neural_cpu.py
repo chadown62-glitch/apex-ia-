@@ -40,10 +40,11 @@ def peak_rss_bytes() -> int | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fixed CPU-only TripoSR worker")
+    parser = argparse.ArgumentParser(description="Fixed TripoSR worker; device selected explicitly")
     for name in ("source", "weights", "config", "dino-config", "input", "output"):
         parser.add_argument("--" + name, type=Path, required=True)
     parser.add_argument("--resolution", type=int, choices=(32, 64, 128), default=64)
+    parser.add_argument("--device", choices=("cpu", "cuda"), required=True)
     args = parser.parse_args()
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -53,7 +54,7 @@ def main() -> int:
     report: dict[str, Any] = {
         "status": "RUNNING",
         "method": "neural_single_image_to_triplane_to_mesh",
-        "device": "cpu",
+        "device": args.device,
         "cuda_used": False,
         "threads": 4,
         "resolution": args.resolution,
@@ -104,7 +105,16 @@ def main() -> int:
         torch.set_num_interop_threads(1)
         torch.manual_seed(42)
         report["torch_cuda_available"] = torch.cuda.is_available()
-        report["cpu_selected_even_if_cuda_available"] = True
+        if args.device == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("cuda_requested_but_unavailable")
+        report["cpu_explicitly_selected"] = args.device == "cpu"
+        if args.device == "cuda":
+            free, total = torch.cuda.mem_get_info()
+            report["cuda_device_name"] = torch.cuda.get_device_name()
+            report["cuda_initial_free_bytes"] = free
+            report["cuda_total_bytes"] = total
+            if free < 6 * 1024**3:
+                raise RuntimeError("cuda_free_vram_below_preflight_6_gib")
         report["packages"] = {
             name: importlib.metadata.version(name)
             for name in (
@@ -154,12 +164,13 @@ def main() -> int:
         state = torch.load(args.weights, map_location="cpu", weights_only=True)
         model.load_state_dict(state, strict=True)
         del state
-        model = model.to("cpu").eval()
+        model = model.to(args.device).eval()
+        report["cuda_used"] = args.device == "cuda"
         model.renderer.set_chunk_size(4096)
         stage("model_load", began)
         began = time.monotonic()
         with torch.inference_mode():
-            codes = model([image], device="cpu")
+            codes = model([image], device=args.device)
         torch.save(codes.detach().cpu(), output / "scene-codes.pt")
         stage("neural_forward", began)
         began = time.monotonic()
@@ -182,6 +193,16 @@ def main() -> int:
             "ply_sha256": sha256(output / "neural-mesh.ply"),
         }
         report["status"] = "INFERENCE_EXECUTED_QUALITY_UNQUALIFIED"
+        if args.device == "cuda":
+            torch.cuda.synchronize()
+            report["cuda_peak_allocated_bytes"] = torch.cuda.max_memory_allocated()
+            report["cuda_peak_reserved_bytes"] = torch.cuda.max_memory_reserved()
+            del model, codes
+            import gc
+
+            gc.collect()
+            torch.cuda.empty_cache()
+            report["cuda_after_release_free_bytes"] = torch.cuda.mem_get_info()[0]
         report["limitations"] = [
             "Single image hides back-side geometry; no fidelity guarantee",
             "Vertex colours only, no predicted PBR or baked UV textures",
@@ -200,6 +221,19 @@ def main() -> int:
         report["status"] = "FAILED"
         report["error"] = type(exc).__name__ + ": " + str(exc)
         report["traceback"] = traceback.format_exc()
+        if "torch" in locals() and args.device == "cuda" and torch.cuda.is_available():
+            report["cuda_peak_allocated_bytes"] = torch.cuda.max_memory_allocated()
+            report["cuda_peak_reserved_bytes"] = torch.cuda.max_memory_reserved()
+            report["cuda_oom"] = isinstance(exc, torch.cuda.OutOfMemoryError)
+            if "model" in locals():
+                del model
+            if "codes" in locals():
+                del codes
+            import gc
+
+            gc.collect()
+            torch.cuda.empty_cache()
+            report["cuda_after_release_free_bytes"] = torch.cuda.mem_get_info()[0]
         raise
     finally:
         save()

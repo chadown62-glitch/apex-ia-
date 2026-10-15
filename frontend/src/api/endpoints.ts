@@ -4,7 +4,7 @@
  * modifier un composant existant.
  */
 
-import { fetchEnvelope } from "./client";
+import { fetchArtifactBlob, fetchEnvelope } from "./client";
 import type {
   BrainEvent,
   RuntimeModelStatus,
@@ -60,7 +60,25 @@ import type {
   TaskRunStartInput,
   FunctionTaskCreateInput,
   WeaknessReport,
+  GameStudioMission,
+  GameStudioRequest,
+  GameStudioCapabilities,
 } from "./types";
+
+export const gameStudioCapabilities = (): Promise<DataEnvelope<GameStudioCapabilities>> =>
+  fetchEnvelope<GameStudioCapabilities>("/game-studio/capabilities");
+export const listGameStudioMissions = (): Promise<DataEnvelope<GameStudioMission[]>> =>
+  fetchEnvelope<GameStudioMission[]>("/game-studio/missions");
+export const getGameStudioMission = (id: string): Promise<DataEnvelope<GameStudioMission>> =>
+  fetchEnvelope<GameStudioMission>(`/game-studio/missions/${encodeURIComponent(id)}`);
+export const submitGameStudioMission = (input: GameStudioRequest): Promise<DataEnvelope<GameStudioMission>> =>
+  fetchEnvelope<GameStudioMission>("/game-studio/missions", { method: "POST", body: JSON.stringify(input) });
+export const cancelGameStudioMission = (id: string): Promise<DataEnvelope<GameStudioMission>> =>
+  fetchEnvelope<GameStudioMission>(`/game-studio/missions/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+export const resumeGameStudioMission = (id: string): Promise<DataEnvelope<GameStudioMission>> =>
+  fetchEnvelope<GameStudioMission>(`/game-studio/missions/${encodeURIComponent(id)}/resume`, { method: "POST" });
+export const getGameStudioArtifact = (id: string, digest: string): Promise<Blob> =>
+  fetchArtifactBlob(`/game-studio/missions/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(digest)}`);
 
 export function getHealth(): Promise<DataEnvelope<Health>> {
   return fetchEnvelope<Health>("/health");

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import asdict
 from pathlib import Path
 from urllib.parse import urlparse
@@ -27,9 +28,16 @@ CATALOG = {
 
 
 def propose_once(
-    endpoint, *, family: str, instruction: str, hierarchy: dict, feedback: dict | None, output: Path
+    endpoint, *, family: str, instruction: str, hierarchy: dict, feedback: dict | None, output: Path,
+    protected_topology: tuple[str, ...] = (),
+    timeout_s: int = 300,
 ) -> dict:
-    if urlparse(endpoint.url).hostname not in ("127.0.0.1", "localhost", "::1"):
+    parsed = urlparse(endpoint.url)
+    local_http = parsed.scheme in ("http", "https") and parsed.hostname in (
+        "127.0.0.1", "localhost", "::1"
+    )
+    local_native = endpoint.runtime == "transformers" and parsed.scheme == "file" and bool(parsed.path)
+    if not (local_http or local_native):
         raise ValueError("local_inference_required")
     if output.exists():
         raise ValueError("controller_record_must_be_new")
@@ -47,7 +55,7 @@ def propose_once(
         temperature=0,
         seed=14,
         max_tokens=700,
-        timeout_s=300,
+        timeout_s=timeout_s,
         system=(
             "You control Blender using strictly valid JSON data only. No Markdown or code. "
             "Every plan MUST start with inspect_scene and end with save_revision_and_render. "
@@ -107,16 +115,31 @@ def propose_once(
         if plan["family"] != family:
             raise ValueError("family_mismatch")
         # Scene-independent grammar and scene-dependent target authorization are separate gates.
+        # Keep safe operations from a mixed proposal; record every discarded
+        # operation so the executed plan is never misrepresented as raw LLM output.
         materials = {m for obj in hierarchy.values() for m in obj.get("materials", [])}
+        authorized = []
+        discarded = []
         for op in plan["operations"]:
-            if (
+            reason = None
+            if op["op"] in ("bevel_edges", "subdivide_surface") and op["target"] in protected_topology:
+                reason = "topology_operation_on_protected_mesh"
+            elif (
                 op["op"]
                 in ("set_location", "bevel_edges", "subdivide_surface", "repair_degenerate_topology")
                 and op["target"] not in hierarchy
             ):
-                raise ValueError("unknown_mesh")
-            if op["op"] == "set_material_pbr" and op["target"] not in materials:
-                raise ValueError("unknown_material")
+                reason = "unknown_mesh"
+            elif op["op"] == "set_material_pbr" and op["target"] not in materials:
+                reason = "unknown_material"
+            if reason:
+                discarded.append({"operation": op, "reason": reason})
+            else:
+                authorized.append(op)
+        if len(authorized) < 3:
+            raise ValueError("no_authorized_artistic_operation")
+        plan = parse_plan({**plan, "operations": authorized})
+        record["discarded_operations"] = discarded
         record.update(accepted=True, plan=plan)
         return plan
     except (ValueError, TypeError, KeyError) as exc:
@@ -129,14 +152,21 @@ def propose_once(
 def propose_plan(endpoint, *, output, **kwargs):
     """At most three generated plans; preserve every rejected response, never patch model JSON."""
     instruction = kwargs["instruction"]
+    deadline = time.monotonic() + kwargs.get("timeout_s", 300)
     for attempt in range(1, 4):
+        remaining = deadline - time.monotonic()
+        if remaining < 1:
+            raise TimeoutError("controller_plan_time_budget_exhausted")
         target = (
             output
             if attempt == 1
             else output.with_name(output.stem + "-retry-" + str(attempt) + output.suffix)
         )
         try:
-            return propose_once(endpoint, output=target, **{**kwargs, "instruction": instruction})
+            return propose_once(
+                endpoint, output=target,
+                **{**kwargs, "instruction": instruction, "timeout_s": max(1, int(remaining))},
+            )
         except (ValueError, TypeError, KeyError) as exc:
             if attempt == 3:
                 raise
