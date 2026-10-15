@@ -44,17 +44,18 @@ def probe() -> dict[str, Any]:
     pinned = manifest.is_file() and llama_available
     ready = bool(blender and script_ready and all(python_dependencies.values()) and (pinned or native))
     home = Path(os.environ.get("APEX_HOME", str(Path.cwd()))).resolve()
-    validated_here = False
+    validated_here = {"vehicule": False, "batiment": False, "objet_3d": False}
     for receipt in (home / ".apex/game-studio/missions").glob("*/receipt.json"):
         try:
             import json
 
             data = json.loads(receipt.read_text())
-            if data.get("status") == "review" and any(
+            family = data.get("request", {}).get("creation_type")
+            if (isinstance(family, str) and family in validated_here
+                    and data.get("status") == "review" and any(
                 revision.get("verdict") == "pass" for revision in data.get("revisions", [])
-            ):
-                validated_here = True
-                break
+            )):
+                validated_here[family] = True
         except (OSError, ValueError):
             continue
     try:
@@ -73,7 +74,7 @@ def probe() -> dict[str, Any]:
     return {
         "vehicle_blender": {
             "status": "available_validated"
-            if ready and validated_here
+            if ready and validated_here["vehicule"]
             else "available_unqualified"
             if ready
             else "blocked_dependency",
@@ -84,18 +85,19 @@ def probe() -> dict[str, Any]:
             "apex_native_coder_present": native is not None,
             "python_dependencies": python_dependencies,
             "qualification": (
-                "A saved mission on this host passed the technical judge" if validated_here
+                "A saved vehicle mission on this host passed the technical judge"
+                if validated_here["vehicule"]
                 else "PR17 cloud Blender 4.3.2; this host awaits a successful mission"
             ),
         },
         "building_blender": {
-            "status": "available_unqualified"
-            if ready
+            "status": "available_validated" if ready and validated_here["batiment"]
+            else "available_unqualified" if ready
             else "blocked_dependency"
         },
         "chair_blender": {
-            "status": "available_unqualified"
-            if ready
+            "status": "available_validated" if ready and validated_here["objet_3d"]
+            else "available_unqualified" if ready
             else "blocked_dependency"
         },
         "unreal": {

@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from apex.game_graphics.studio.controller import propose_once
+from apex.game_graphics.studio.contract import validate_correction_scope
+from apex.game_graphics.studio.controller import propose_once, propose_plan
 
 
 def test_protected_chassis_edits_are_removed_and_recorded(tmp_path):
@@ -40,3 +41,39 @@ def test_protected_chassis_edits_are_removed_and_recorded(tmp_path):
     persisted = json.loads(out.read_text())
     assert persisted["raw_response"] == raw
     assert persisted["discarded_operations"][0]["reason"] == "topology_operation_on_protected_mesh"
+
+
+def test_targeted_correction_retries_instead_of_expanding_scope(tmp_path):
+    @dataclass
+    class Result:
+        text: str
+
+    def response(op):
+        return json.dumps({"family": "chair", "operations": [
+            {"op": "inspect_scene", "target": "scene", "params": {}}, op,
+            {"op": "save_revision_and_render", "target": "scene", "params": {}},
+        ]})
+
+    responses = iter([
+        response({"op": "set_material_pbr", "target": "fabric", "params": {
+            "base_color": [0.2, 0.3, 0.4], "roughness": 0.6, "metallic": 0,
+        }}),
+        response({"op": "set_location", "target": "arm_left", "params": {
+            "location_m": [0.5, 0.2, 0.6],
+        }}),
+    ])
+    provider = SimpleNamespace(generate=lambda _request: Result(next(responses)))
+    endpoint = SimpleNamespace(url="http://127.0.0.1:9999", runtime="llama_cpp")
+    output = tmp_path / "plan.json"
+    with patch("apex.game_graphics.studio.controller.get_default_provider", return_value=provider):
+        plan = propose_plan(
+            endpoint, family="chair", instruction="Fix arm_left only",
+            hierarchy={"arm_left": {"materials": ["fabric"], "location_m": [0.5, 0.2, 0.72]}},
+            feedback=None, output=output,
+            plan_validator=lambda candidate: validate_correction_scope(
+                candidate, "arm_left", [0.5, 0.2, 0.6]
+            ),
+        )
+    assert plan["operations"][1]["op"] == "set_location"
+    assert json.loads(output.read_text())["accepted"] is False
+    assert "correction_outside_authorized_scope" in json.loads(output.read_text())["rejection"]

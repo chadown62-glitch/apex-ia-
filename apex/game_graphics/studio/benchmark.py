@@ -42,11 +42,14 @@ def dump(path, value):
     path.write_text(json.dumps(value, indent=2, default=str))
 
 
-def calibrate(root):
+def calibrate(root, *, cancel_event=None, timeout_s=600, rss_limit_mib=12000):
     execution = run_blender(
         "render_asset.py",
         ["--calibration", "--family", "chair", "--output", str(root)],
         root / "calibration.log",
+        cancel_event=cancel_event,
+        timeout_s=timeout_s,
+        rss_limit_mib=rss_limit_mib,
     )
     if execution.status is not ExecutionStatus.SUCCESS:
         raise RuntimeError("calibration_render_failed")

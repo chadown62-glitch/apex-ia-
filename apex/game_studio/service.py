@@ -14,6 +14,7 @@ import threading
 import time
 from contextlib import suppress
 from datetime import UTC, datetime
+from functools import partial
 from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
@@ -24,7 +25,13 @@ from apex.config.schema import RecoveryPolicy
 from apex.game_graphics.contract import QualityCriteria
 from apex.game_graphics.models import CoderSession
 from apex.game_graphics.resources import resource_lease
-from apex.game_graphics.studio.benchmark import compact_hierarchy, compare_studio_defects, judge_revision
+from apex.game_graphics.studio.benchmark import (
+    calibrate,
+    compact_hierarchy,
+    compare_studio_defects,
+    judge_revision,
+)
+from apex.game_graphics.studio.contract import validate_correction_scope
 from apex.game_graphics.studio.controller import propose_plan
 from apex.game_graphics.studio.execution import ROOT, create_revision, refuse_personal_project
 from apex.missions.service import MissionService
@@ -352,6 +359,20 @@ class GameStudioService:
             with resource_lease(folder / "resource.lock"):
                 if cancel.is_set():
                     raise InterruptedError("user_cancelled")
+                calibration = None
+                if family == "chair":
+                    calibration = folder / "calibration"
+                    report_file = calibration / "calibration.json"
+                    if not report_file.is_file():
+                        self._event(record, "calibrate_visual_judge")
+                        remaining = request["max_time_s"] - int(time.monotonic() - started)
+                        calibrate(
+                            calibration, cancel_event=cancel,
+                            timeout_s=min(600, max(1, remaining)),
+                            rss_limit_mib=request["max_rss_mib"],
+                        )
+                    if json.loads(report_file.read_text())["status"] != "pass_in_observed_scope":
+                        raise RuntimeError("chair_visual_judge_calibration_failed")
                 completed = record["revisions"]
                 if not completed:
                     root = folder / "revision-01"
@@ -369,7 +390,10 @@ class GameStudioService:
                     if execution.status is not ExecutionStatus.SUCCESS:
                         raise RuntimeError("blender_baseline_failed:" + str(execution.error_detail))
                     self._event(record, "mandatory_integrity_judge")
-                    judge = judge_revision(root, family, criteria, benchmark, cancel_event=cancel)
+                    judge = judge_revision(
+                        root, family, criteria, benchmark,
+                        calibration=calibration, cancel_event=cancel,
+                    )
                     self._archive(root, record, judge)
                 else:
                     from apex.game_graphics.studio.judge import verified_manifest
@@ -382,6 +406,9 @@ class GameStudioService:
                     root = folder / f"revision-{passing[-1]['number']:02d}"
                     latest = folder / f"revision-{completed[-1]['number']:02d}"
                     judge = json.loads((latest / "judge-report.json").read_text())
+                    if (latest != root and judge["defects"]
+                            and all(d["id"] == "paired_component_alignment" for d in judge["defects"])):
+                        root = latest
                 for number in range(len(record["revisions"]) + 1, budget + 1):
                     if cancel.is_set():
                         raise InterruptedError("user_cancelled")
@@ -405,14 +432,40 @@ class GameStudioService:
                         instruction += "Corrige localement ces défauts mesurés: " + json.dumps(
                             judge["defects"][:3]
                         )
+                    correction_target = None
+                    correction_reference = None
+                    if (request["automatic_corrections"] and judge["defects"]
+                            and all(d["id"] == "paired_component_alignment" for d in judge["defects"])):
+                        targets = {d["object"] for d in judge["defects"]}
+                        prior_passes = [r for r in record["revisions"] if r["verdict"] == "pass"]
+                        if len(targets) == 1 and prior_passes:
+                            correction_target = targets.pop()
+                            verified_root = folder / f"revision-{prior_passes[-1]['number']:02d}"
+                            correction_reference = compact_hierarchy(
+                                verified_root / "hierarchy.json"
+                            )[correction_target]["location_m"]
+                            instruction = (
+                                "Correct ONLY " + correction_target + " height according to the judge. "
+                                "Use EXACTLY one set_location and no other artistic operation. "
+                                "set_location takes a FINAL ABSOLUTE location_m, never a displacement. "
+                                "The accepted location_m is EXACTLY "
+                                + json.dumps(correction_reference)
+                                + ". Preserve all other objects and materials."
+                            )
                     plan_args = {
                         "family": family, "instruction": instruction,
                         "hierarchy": compact_hierarchy(root / "hierarchy.json"),
-                        "feedback": judge if request["judges_all_tasks"] else None,
+                        "feedback": judge if request["judges_all_tasks"] or correction_target else None,
                         "output": folder / f"controller-{number}/plan.json",
                         "protected_topology": ("chassis",) if family == "vehicle" else (),
                         "timeout_s": min(300, max(1, int(remaining - 60))),
                     }
+                    if correction_target is not None:
+                        plan_args["plan_validator"] = partial(
+                            validate_correction_scope,
+                            target=correction_target,
+                            expected_location=correction_reference,
+                        )
                     try:
                         if request.get("resolved_controller_model", "pinned_7b") == "apex_native":
                             endpoint = native_coder_endpoint()
@@ -482,7 +535,10 @@ class GameStudioService:
                     if execution.status is not ExecutionStatus.SUCCESS:
                         raise RuntimeError("blender_revision_failed:" + str(execution.error_detail))
                     self._event(record, "mandatory_integrity_judge", iteration=number)
-                    next_judge = judge_revision(next_root, family, criteria, benchmark, cancel_event=cancel)
+                    next_judge = judge_revision(
+                        next_root, family, criteria, benchmark,
+                        calibration=calibration, cancel_event=cancel,
+                    )
                     self._archive(next_root, record, next_judge)
                     if number > 2 and compare_studio_defects(judge["defects"], next_judge["defects"]):
                         self._event(record, "correction_stagnated")
@@ -503,6 +559,10 @@ class GameStudioService:
                         self._event(record, "recovery_decided", **decision.to_dict())
                         if decision.action is not RecoveryAction.RETRY:
                             break
+                        if (next_judge["defects"] and all(
+                            d["id"] == "paired_component_alignment" for d in next_judge["defects"]
+                        )):
+                            root = next_root
                         judge = next_judge
                 if cancel.is_set():
                     raise InterruptedError("user_cancelled")

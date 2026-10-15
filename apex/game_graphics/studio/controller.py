@@ -149,7 +149,7 @@ def propose_once(
         output.write_text(json.dumps(record, indent=2, default=str))
 
 
-def propose_plan(endpoint, *, output, **kwargs):
+def propose_plan(endpoint, *, output, plan_validator=None, **kwargs):
     """At most three generated plans; preserve every rejected response, never patch model JSON."""
     instruction = kwargs["instruction"]
     deadline = time.monotonic() + kwargs.get("timeout_s", 300)
@@ -163,11 +163,18 @@ def propose_plan(endpoint, *, output, **kwargs):
             else output.with_name(output.stem + "-retry-" + str(attempt) + output.suffix)
         )
         try:
-            return propose_once(
+            plan = propose_once(
                 endpoint, output=target,
                 **{**kwargs, "instruction": instruction, "timeout_s": max(1, int(remaining))},
             )
+            if plan_validator is not None:
+                plan_validator(plan)
+            return plan
         except (ValueError, TypeError, KeyError) as exc:
+            if target.is_file():
+                record = json.loads(target.read_text())
+                record.update(accepted=False, rejection=f"{type(exc).__name__}: {exc}")
+                target.write_text(json.dumps(record, indent=2, default=str))
             if attempt == 3:
                 raise
             previous = json.loads(target.read_text()).get("raw_response", "")

@@ -1,0 +1,130 @@
+{
+  "scope": "isolated_paired_component_alignment",
+  "required": true,
+  "calibrated": true,
+  "status": "pass",
+  "calibration": {
+    "evidence_path": "calibration.json"
+  },
+  "measurements": [
+    {
+      "method": "native_id_centroid_alignment_v1",
+      "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/revision-03/id_front.png",
+      "view": "front",
+      "reference": "original-lounge-chair-v1",
+      "objects": {
+        "red": "arm_left",
+        "green": "arm_right"
+      },
+      "criteria": {
+        "max_centroid_y_difference_pixels": 4.0,
+        "minimum_visible_pixels_per_component": 12
+      },
+      "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+      "measurement_status": "pass",
+      "decisive": false,
+      "defects": [],
+      "limits": [
+        "paired component projected alignment only; no aesthetic quality score",
+        "centroids depend on shape, occlusion, clipping and camera pose",
+        "caller must bind PNG SHA to native renderer and frozen camera receipts"
+      ],
+      "sha256": "84867e669648ea0d982a46deda0bb038c2408154fc2d5edeacf5d3b766b657ca",
+      "resolution": [
+        960,
+        720
+      ],
+      "components": {
+        "red": {
+          "pixels": 963,
+          "centroid_xy": [
+            279.7019730010384,
+            303.8577362409138
+          ],
+          "bbox_xyxy": [
+            259,
+            289,
+            301,
+            319
+          ]
+        },
+        "green": {
+          "pixels": 963,
+          "centroid_xy": [
+            679.2980269989616,
+            303.8577362409138
+          ],
+          "bbox_xyxy": [
+            659,
+            289,
+            701,
+            319
+          ]
+        }
+      },
+      "signed_red_minus_green_y_pixels": 0.0,
+      "absolute_y_delta_pixels": 0.0,
+      "reason": "projected_alignment_measured"
+    },
+    {
+      "method": "native_id_centroid_alignment_v1",
+      "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/revision-03/id_rear.png",
+      "view": "rear",
+      "reference": "original-lounge-chair-v1",
+      "objects": {
+        "red": "arm_left",
+        "green": "arm_right"
+      },
+      "criteria": {
+        "max_centroid_y_difference_pixels": 4.0,
+        "minimum_visible_pixels_per_component": 12
+      },
+      "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+      "measurement_status": "pass",
+      "decisive": false,
+      "defects": [],
+      "limits": [
+        "paired component projected alignment only; no aesthetic quality score",
+        "centroids depend on shape, occlusion, clipping and camera pose",
+        "caller must bind PNG SHA to native renderer and frozen camera receipts"
+      ],
+      "sha256": "36bcf796083765f4e6f87fe687779e18d872f724099bc44f5586e793e5cc7de8",
+      "resolution": [
+        960,
+        720
+      ],
+      "components": {
+        "red": {
+          "pixels": 963,
+          "centroid_xy": [
+            679.2980269989616,
+            303.8577362409138
+          ],
+          "bbox_xyxy": [
+            659,
+            289,
+            701,
+            319
+          ]
+        },
+        "green": {
+          "pixels": 963,
+          "centroid_xy": [
+            279.7019730010384,
+            303.8577362409138
+          ],
+          "bbox_xyxy": [
+            259,
+            289,
+            301,
+            319
+          ]
+        }
+      },
+      "signed_red_minus_green_y_pixels": 0.0,
+      "absolute_y_delta_pixels": 0.0,
+      "reason": "projected_alignment_measured"
+    }
+  ],
+  "defects": []
+}

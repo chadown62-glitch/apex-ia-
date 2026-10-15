@@ -1,0 +1,921 @@
+{
+  "id": "836f8046-aac5-45db-9b89-1b851ad82811",
+  "mission_id": "56cc84ef-71ab-44a6-9e09-78afdccde2ad",
+  "mission_history": [
+    "dac165d0-c5c3-4495-921a-55d6d7b0eb0a",
+    "56cc84ef-71ab-44a6-9e09-78afdccde2ad"
+  ],
+  "created_at": "2026-10-15T19:25:04.786307+00:00",
+  "updated_at": "2026-10-15T19:31:44.599371+00:00",
+  "status": "review",
+  "current_task": "completed_for_review",
+  "specialist": "Game Graphics",
+  "model": "Qwen2.5-Coder-7B-Instruct Q5_K_M (pinned local)",
+  "request": {
+    "creation_type": "objet_3d",
+    "creation_other": null,
+    "style": "realiste",
+    "style_other": null,
+    "quality": "prototype",
+    "tool": "blender",
+    "compute_backend": "cpu",
+    "controller_model": "pinned_7b",
+    "description": "Cr\u00e9e un fauteuil de salon r\u00e9aliste avec accoudoirs sym\u00e9triques et quatre rendus.",
+    "judges_all_tasks": true,
+    "automatic_corrections": true,
+    "max_time_s": 1200,
+    "max_rss_mib": 12000,
+    "max_attempts": 3,
+    "criteria": {},
+    "resolved_controller_model": "pinned_7b"
+  },
+  "references": [],
+  "revisions": [
+    {
+      "number": 1,
+      "artifacts": [
+        {
+          "name": "asset.blend",
+          "hash": "sha256:e3f009db3ea28f7e1e844c73cb87e78487a67828881186ec2a6c83d756b8805a",
+          "content_type": "application/octet-stream",
+          "role": "blender_project",
+          "bytes": 2219796
+        },
+        {
+          "name": "asset.glb",
+          "hash": "sha256:3651fffc9d9f14bf031687412821592116fa6f68fac8209dd01b182d2afb0ff4",
+          "content_type": "model/gltf-binary",
+          "role": "exchange",
+          "bytes": 502848
+        },
+        {
+          "name": "blend-inspection.json",
+          "hash": "sha256:d99395db3d12917d3ce39305f2e2fc11b10bd18fb2757f312943d2b3ad3e5c1a",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 25134
+        },
+        {
+          "name": "blend-inspection.log",
+          "hash": "sha256:5c1c312796c5c756871baf38c2394912507775fc8121cb5ee8f52d1f846851fd",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 189
+        },
+        {
+          "name": "blend-inspection.resources.json",
+          "hash": "sha256:72e0576fc0aa3fb3144b4a45af29c6e7f752774432bc119937cbf664e42cb9b3",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2909
+        },
+        {
+          "name": "build.log",
+          "hash": "sha256:6364ef89d058b7fc6f5f4878be4adce933d93a698c66a52e5298868fa51616a5",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 78877
+        },
+        {
+          "name": "build.resources.json",
+          "hash": "sha256:533c644fb3229274ea6fce7ac3ecfc8fd0107f548effd2d0c692049fdbd51faa",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 94645
+        },
+        {
+          "name": "calibration.json",
+          "hash": "sha256:611a58eac8f8a1bc6badab79da98625126d61ffafb629861d81a9fd6f983d717",
+          "content_type": "application/json",
+          "role": "calibration",
+          "bytes": 92283
+        },
+        {
+          "name": "execution.json",
+          "hash": "sha256:cd884520b0a5e9bee747fd61784377ef2f972f16b8de5a41b8238cf62484025d",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 68121
+        },
+        {
+          "name": "front.png",
+          "hash": "sha256:fe1acec59cf0d4eebb72bd5ebc83cf6f50dfd496114011c60402c86df7b752b0",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 781986
+        },
+        {
+          "name": "front_three_quarter.png",
+          "hash": "sha256:fc0f60299b614cbb2571b94bb49b655e926def08dded7c8237678476bc27eb1e",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 1061776
+        },
+        {
+          "name": "glb-inspection.json",
+          "hash": "sha256:b66858af0bf5ffe5fbd3a9c61693daf84f6df1f334cffe73c929de2b1890e534",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 25109
+        },
+        {
+          "name": "glb-inspection.log",
+          "hash": "sha256:b8d6b71d7e74f26c71f9c8e9c74500887a4628b6237caf6bb109fa5588c3a12c",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 1803
+        },
+        {
+          "name": "glb-inspection.resources.json",
+          "hash": "sha256:a6d160f12a06d7a11ccd43a30d91f864f4d9dead44c676444a97f7f9ca10708c",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4621
+        },
+        {
+          "name": "hierarchy-before.json",
+          "hash": "sha256:6df82eef9ca2c4a56fe61cee949a60f9419e6806d4a07dcbb15932e93ff2da5a",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 28459
+        },
+        {
+          "name": "hierarchy.json",
+          "hash": "sha256:6df82eef9ca2c4a56fe61cee949a60f9419e6806d4a07dcbb15932e93ff2da5a",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 28459
+        },
+        {
+          "name": "id_front.png",
+          "hash": "sha256:213deb285c5072ba0f50d01c3a86e27726ca114b192073aadec80e52fea0fba6",
+          "content_type": "image/png",
+          "role": "evidence",
+          "bytes": 344297
+        },
+        {
+          "name": "id_rear.png",
+          "hash": "sha256:9dea69c92a70a0c0f152196b452965fc96edc058a3459366b7c390927b2b037a",
+          "content_type": "image/png",
+          "role": "evidence",
+          "bytes": 344350
+        },
+        {
+          "name": "operation-trace.json",
+          "hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2
+        },
+        {
+          "name": "provenance.json",
+          "hash": "sha256:4fbb8b54ae522c8a1c918fc63d4712f47ba295ef271096403a452e3983e5a766",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 620
+        },
+        {
+          "name": "rear_three_quarter.png",
+          "hash": "sha256:3b210254258ca55f982a00bc74a3ed56b905485d5e472a8d10104d665be8121f",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 1022434
+        },
+        {
+          "name": "render-settings.json",
+          "hash": "sha256:473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4845
+        },
+        {
+          "name": "side.png",
+          "hash": "sha256:6a548c1cce0cdd7ae9ddfbe8b218a88d9b603da1fca08a784395fe6922e10550",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 981551
+        },
+        {
+          "name": "silhouette_front.png",
+          "hash": "sha256:e39d09b8e6adb052948ce2dc413edc60f8a8403f5431c2f0f7214c5a5bf709fd",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 290783
+        },
+        {
+          "name": "silhouette_front_three_quarter.png",
+          "hash": "sha256:5b78a8f9ec21bcb9ecc8251f9629e73982b7838fa868f00f3d2cc74e1cb6478a",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 276183
+        },
+        {
+          "name": "silhouette_rear_three_quarter.png",
+          "hash": "sha256:63a574df09419cafbaa532aa0b6e51f1dcdbf9de4aaa6f6e240b36ee2faf6a13",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 298730
+        },
+        {
+          "name": "silhouette_side.png",
+          "hash": "sha256:240f742cc6b1986a0ecc86b406e1fa143a78e09e9b45fbc83472d42269a7fb30",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 309597
+        },
+        {
+          "name": "visual-alignment.json",
+          "hash": "sha256:34d3ea40db1fecc71d6e069c8349ba537095e3c454fe7bdca641a079cce1e4a0",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 3757
+        },
+        {
+          "name": "manifest.json",
+          "hash": "sha256:0129ec973c0a9a580a358d41c8e10bbfd1b4862500889e7a128e4f447129c99c",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 5578
+        },
+        {
+          "name": "judge-report.json",
+          "hash": "sha256:0addd0f560ab9c19d623587147f9a3bf11e92d3744602616853fea4b9f9a6bd0",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 6545
+        },
+        {
+          "name": "verdict.json",
+          "hash": "sha256:d9a6e591fa4ae60b4d04f8d9aab972e77a148a58bde836107464fba335c0798b",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 14433
+        }
+      ],
+      "verdict": "pass",
+      "defects": [],
+      "unavailable": [],
+      "created_at": "2026-10-15T19:26:49.041386+00:00"
+    },
+    {
+      "number": 2,
+      "artifacts": [
+        {
+          "name": "asset.blend",
+          "hash": "sha256:3758951a05e48705ea8e8eb6c709069353c23aa04bf61fd78ac4d1a26e0e1802",
+          "content_type": "application/octet-stream",
+          "role": "blender_project",
+          "bytes": 2192436
+        },
+        {
+          "name": "asset.glb",
+          "hash": "sha256:812db368872820a7675dafc12e23eaa4adcb4941dbaccf2be6774ac26577ad51",
+          "content_type": "model/gltf-binary",
+          "role": "exchange",
+          "bytes": 502888
+        },
+        {
+          "name": "blend-inspection.json",
+          "hash": "sha256:ead18aba8ce8e42013fe77d0be7f88f9a9a742fa3613a065757bdc5d367c42c0",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 25150
+        },
+        {
+          "name": "blend-inspection.log",
+          "hash": "sha256:8ecaf7496af4c83d99790adcd3a2172af2d362a7195b2645dcebf89183d71a6c",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 189
+        },
+        {
+          "name": "blend-inspection.resources.json",
+          "hash": "sha256:2dfe726b1ca353d75f46d60ab4fba30274c17d3b176744d14248d2d45fafe4e9",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2912
+        },
+        {
+          "name": "build.log",
+          "hash": "sha256:e273cee63749f079a4ab3885f9aba726cc43a582144dd4e2834eab5209ee932f",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 78467
+        },
+        {
+          "name": "build.resources.json",
+          "hash": "sha256:780bd229a4438f1e03d858c7e41a330a50624dee3ea7057cb0fae0cd0767206e",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 94403
+        },
+        {
+          "name": "calibration.json",
+          "hash": "sha256:611a58eac8f8a1bc6badab79da98625126d61ffafb629861d81a9fd6f983d717",
+          "content_type": "application/json",
+          "role": "calibration",
+          "bytes": 92283
+        },
+        {
+          "name": "execution.json",
+          "hash": "sha256:7dcf12c0a9904d29d64521eb5f7750d9be5af4abec19227066d23061cfc2e37e",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 68564
+        },
+        {
+          "name": "front.png",
+          "hash": "sha256:d94088f28bbe5445e3f9349cdb1a7aaa8e7fa37f377fb8910221d1d8000f0fdb",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 788278
+        },
+        {
+          "name": "front_three_quarter.png",
+          "hash": "sha256:b7a95f5072747e9b7f3c8eaba403dabe8cebcf8d849d59744d823e156bd25779",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 1069548
+        },
+        {
+          "name": "glb-inspection.json",
+          "hash": "sha256:5a57486c06f9a6231692497d7d17d8a39a67e71092075891fc8349781c7911f9",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 25125
+        },
+        {
+          "name": "glb-inspection.log",
+          "hash": "sha256:7dd85150b284da3427e2da120502cccf9361d5e0f2ec702347c1a5a046977b71",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 1803
+        },
+        {
+          "name": "glb-inspection.resources.json",
+          "hash": "sha256:e1432f61df46333bc1db27fde644996e0d7756f192ee9a5536b1ae5fa199d5af",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4687
+        },
+        {
+          "name": "hierarchy-before.json",
+          "hash": "sha256:6df82eef9ca2c4a56fe61cee949a60f9419e6806d4a07dcbb15932e93ff2da5a",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 28459
+        },
+        {
+          "name": "hierarchy.json",
+          "hash": "sha256:40e1a19d1764269d39e3c495c518b438b85698bad39d174eb3cd7586d2b31b55",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 28475
+        },
+        {
+          "name": "id_front.png",
+          "hash": "sha256:19cb351b7216fd6a44a4b2140bca90035eb5d5e9932324318749df35beb759d3",
+          "content_type": "image/png",
+          "role": "evidence",
+          "bytes": 344669
+        },
+        {
+          "name": "id_rear.png",
+          "hash": "sha256:f7114eaaf36d58728e9135dd901e9156d71ce545319be375facc29d7eff0c18a",
+          "content_type": "image/png",
+          "role": "evidence",
+          "bytes": 344662
+        },
+        {
+          "name": "operation-trace.json",
+          "hash": "sha256:a43520e81a290ef1c2c200aed6bfb82e51b33870dccc801e2748c4738ed32272",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2463
+        },
+        {
+          "name": "plan/plan.json",
+          "hash": "sha256:ca495330c602fdaa7613af2e9c4acaca7ac194c7e3c39f9a93fff8abb93c1fe3",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 316
+        },
+        {
+          "name": "plan/tool-result.json",
+          "hash": "sha256:9d71ee56d0b85f3ea0431d47b4e916b6d6684d72448d83dde26251b9a7daf416",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 378
+        },
+        {
+          "name": "provenance.json",
+          "hash": "sha256:85dafbe129ccc1a90d8dfac0fc5a33f46e498889995a6883a03c9481b79d5744",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 744
+        },
+        {
+          "name": "rear_three_quarter.png",
+          "hash": "sha256:de0e3e864409e259e8696fbd3e8287f694b8c03358b6c2e37378258adef9de28",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 1026718
+        },
+        {
+          "name": "render-settings.json",
+          "hash": "sha256:473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4845
+        },
+        {
+          "name": "side.png",
+          "hash": "sha256:9242df8f45684a211c800216147bf473e171fc57fe921fd97b21d02fcb56ca14",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 985802
+        },
+        {
+          "name": "silhouette_front.png",
+          "hash": "sha256:93238de281b98330a3ada44f82ce44925c1fe968bb6dd47f555d000fa37bef71",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 290817
+        },
+        {
+          "name": "silhouette_front_three_quarter.png",
+          "hash": "sha256:4af785f7cd64b4bf3a58a4af80da988c8003524fad577b58d31100c562117916",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 276204
+        },
+        {
+          "name": "silhouette_rear_three_quarter.png",
+          "hash": "sha256:4ba1a6b70f3690507fefa0489bc2be8ebbbc64ab568125ebbab968aad0b1e77d",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 298158
+        },
+        {
+          "name": "silhouette_side.png",
+          "hash": "sha256:c0a8d4671e97f3c4dacf74bae0ae56ab07a95509655351bef2df4a300ea26638",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 309566
+        },
+        {
+          "name": "visual-alignment.json",
+          "hash": "sha256:9131d86fe148f48ef1b212c969212fa6f953938f01892dffb21ceaf08d57c1dc",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 7666
+        },
+        {
+          "name": "manifest.json",
+          "hash": "sha256:0c497696a896777c10e2cd9f325037d5a77bd5a2e6b909645eb0f11bae7e6590",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 5936
+        },
+        {
+          "name": "judge-report.json",
+          "hash": "sha256:85c3285382719f3101766a0bc655238095c35a3e284a825a23a4cd9a4018327c",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 12481
+        },
+        {
+          "name": "verdict.json",
+          "hash": "sha256:4293dc1dc6c3b4e1b86050c1342a5827bd2b353210fbc9921b009a0c305fedc2",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 20884
+        }
+      ],
+      "verdict": "fail",
+      "defects": [
+        {
+          "id": "paired_component_alignment",
+          "object": "arm_left",
+          "reference_object": "arm_right",
+          "view": "front",
+          "reference": "original-lounge-chair-v1",
+          "observed_defect": "Target is projected higher than its paired reference.",
+          "measured_y_delta_pixels": 48.841138730540365,
+          "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+          "suggested_operation": "set_location",
+          "confidence": {
+            "kind": "small_native_fixture_calibration",
+            "calibrated": true,
+            "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+          },
+          "verification": {
+            "views": [
+              "front",
+              "rear"
+            ],
+            "max_y_delta_pixels": 4.0,
+            "minimum_pixels_per_component": 12
+          },
+          "distance_m": 0.12006779937924507
+        },
+        {
+          "id": "paired_component_alignment",
+          "object": "arm_left",
+          "reference_object": "arm_right",
+          "view": "rear",
+          "reference": "original-lounge-chair-v1",
+          "observed_defect": "Target is projected higher than its paired reference.",
+          "measured_y_delta_pixels": 48.841138730540365,
+          "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+          "suggested_operation": "set_location",
+          "confidence": {
+            "kind": "small_native_fixture_calibration",
+            "calibrated": true,
+            "scope": "isolated mirrored pair, level orthographic cameras; not general beauty"
+          },
+          "verification": {
+            "views": [
+              "front",
+              "rear"
+            ],
+            "max_y_delta_pixels": 4.0,
+            "minimum_pixels_per_component": 12
+          },
+          "distance_m": 0.12006779937924507
+        }
+      ],
+      "unavailable": [],
+      "created_at": "2026-10-15T19:28:27.357375+00:00"
+    },
+    {
+      "number": 3,
+      "artifacts": [
+        {
+          "name": "asset.blend",
+          "hash": "sha256:e21c98919a85f053d63bf861de4e7c987e030776424e0c3336e80f6508ba1532",
+          "content_type": "application/octet-stream",
+          "role": "blender_project",
+          "bytes": 2192436
+        },
+        {
+          "name": "asset.glb",
+          "hash": "sha256:3651fffc9d9f14bf031687412821592116fa6f68fac8209dd01b182d2afb0ff4",
+          "content_type": "model/gltf-binary",
+          "role": "exchange",
+          "bytes": 502848
+        },
+        {
+          "name": "blend-inspection.json",
+          "hash": "sha256:f684d27118a302c312da407d4d5f8467f645cda5eebc2618226eeac288d4dfff",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 25134
+        },
+        {
+          "name": "blend-inspection.log",
+          "hash": "sha256:56fd25f7aa72677faaf5109dafdfcd380cdb029815d26989b6145b29f003f140",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 189
+        },
+        {
+          "name": "blend-inspection.resources.json",
+          "hash": "sha256:c069ae3e7b31b905bf535441948e59bccf4e9cc859c4d3aa4d70aff249028dd6",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2981
+        },
+        {
+          "name": "build.log",
+          "hash": "sha256:3975869074487514a98ff80bbeddd3d561828bb82265bfa3b536b1105cf4ac6c",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 79142
+        },
+        {
+          "name": "build.resources.json",
+          "hash": "sha256:7a5a881c4e3e52fe3bc21bbd68ac93ef2a15c326792addfa45af9184fc2730cf",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 95102
+        },
+        {
+          "name": "calibration.json",
+          "hash": "sha256:611a58eac8f8a1bc6badab79da98625126d61ffafb629861d81a9fd6f983d717",
+          "content_type": "application/json",
+          "role": "calibration",
+          "bytes": 92283
+        },
+        {
+          "name": "execution.json",
+          "hash": "sha256:a80a73bdce339ec02d77a8a8af53edefa65d70f2b996120ce2edf5704fd00136",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 68565
+        },
+        {
+          "name": "front.png",
+          "hash": "sha256:4b5bf3f882d86fadbf5a8b7c1791f9ef6ed6c30456e4c69332998dbfa38d9005",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 782122
+        },
+        {
+          "name": "front_three_quarter.png",
+          "hash": "sha256:e97a47a596c206b70cc82aeef0fd5cfe4017a91ffa8ce8a48dba49b28f246d54",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 1061912
+        },
+        {
+          "name": "glb-inspection.json",
+          "hash": "sha256:b66858af0bf5ffe5fbd3a9c61693daf84f6df1f334cffe73c929de2b1890e534",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 25109
+        },
+        {
+          "name": "glb-inspection.log",
+          "hash": "sha256:dc9ae56ed0309d1adc8350fc165ad74766f8242f5c2b882591f1391c6db61d98",
+          "content_type": "text/plain",
+          "role": "evidence",
+          "bytes": 1803
+        },
+        {
+          "name": "glb-inspection.resources.json",
+          "hash": "sha256:250cce1da1321fd102573c3846bb992b60ac91ec2f534ef60fc0bf5e462d397e",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4621
+        },
+        {
+          "name": "hierarchy-before.json",
+          "hash": "sha256:40e1a19d1764269d39e3c495c518b438b85698bad39d174eb3cd7586d2b31b55",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 28475
+        },
+        {
+          "name": "hierarchy.json",
+          "hash": "sha256:6df82eef9ca2c4a56fe61cee949a60f9419e6806d4a07dcbb15932e93ff2da5a",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 28459
+        },
+        {
+          "name": "id_front.png",
+          "hash": "sha256:84867e669648ea0d982a46deda0bb038c2408154fc2d5edeacf5d3b766b657ca",
+          "content_type": "image/png",
+          "role": "evidence",
+          "bytes": 344433
+        },
+        {
+          "name": "id_rear.png",
+          "hash": "sha256:36bcf796083765f4e6f87fe687779e18d872f724099bc44f5586e793e5cc7de8",
+          "content_type": "image/png",
+          "role": "evidence",
+          "bytes": 344486
+        },
+        {
+          "name": "operation-trace.json",
+          "hash": "sha256:32c49eed9a0bda31d1fb2515259ad73533016df720c9add1a4d74337b9fcd928",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 2631
+        },
+        {
+          "name": "plan/plan.json",
+          "hash": "sha256:d0161bab98f59f8fd56a96348ec445fd0b00ebc6158e316e5f68455dc2440014",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 401
+        },
+        {
+          "name": "plan/tool-result.json",
+          "hash": "sha256:4e80f2d31b44dc95fd83b285a94c1973fa4302230e18c01b4f951b329d199a28",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 378
+        },
+        {
+          "name": "provenance.json",
+          "hash": "sha256:fe05913028a7e01341d4f718583accb347c7e2044f25e0fa8321fc52f59dacaa",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 744
+        },
+        {
+          "name": "rear_three_quarter.png",
+          "hash": "sha256:8309a5fcc794f517d8b18fe930145d1bc440583ce45db3ee8328956540832d73",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 1022570
+        },
+        {
+          "name": "render-settings.json",
+          "hash": "sha256:473dde9107d4198a8178cda9123b753340c157dbaf78d68a53c8f774236565e4",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 4845
+        },
+        {
+          "name": "side.png",
+          "hash": "sha256:df3baf1bc328b63225124efef719f68be4339cc9aaf265a1189aa17005aba88f",
+          "content_type": "image/png",
+          "role": "view",
+          "bytes": 981687
+        },
+        {
+          "name": "silhouette_front.png",
+          "hash": "sha256:a7bbb894b281fae531348298e4a22932b05bd522adff091f7725c788d5cefd34",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 290919
+        },
+        {
+          "name": "silhouette_front_three_quarter.png",
+          "hash": "sha256:1d086e0332404fe09a12b05e021261d14508c5c1bf8adabd5e1b992d1e7de1c8",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 276319
+        },
+        {
+          "name": "silhouette_rear_three_quarter.png",
+          "hash": "sha256:33708ca0d29a4b881072c310905726b6acae01c9b155c3820a5649250f3590c4",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 298866
+        },
+        {
+          "name": "silhouette_side.png",
+          "hash": "sha256:70c9a40ff20e6d5d30f7d3ededdf504f37e3a69c2eb55edc6daccd2db5b06ace",
+          "content_type": "image/png",
+          "role": "silhouette",
+          "bytes": 309733
+        },
+        {
+          "name": "visual-alignment.json",
+          "hash": "sha256:8e98384243f96829f46e1633bb84f68d73c68ba26b5f23ca33b75a73d77815ed",
+          "content_type": "application/json",
+          "role": "evidence",
+          "bytes": 3757
+        },
+        {
+          "name": "manifest.json",
+          "hash": "sha256:13cd7a9d0e985af64504080b05a1d1db27a9e01199586e330480db30661ba5ac",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 5936
+        },
+        {
+          "name": "judge-report.json",
+          "hash": "sha256:dabea60a2180180d88be83f892c4aa7ab0ceb97a86a699cbe0468a4fc81e4ea5",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 6545
+        },
+        {
+          "name": "verdict.json",
+          "hash": "sha256:cfee44e6908045b84522f011d0ba643798d85eba1ac2ffe3d5a54700ff020057",
+          "content_type": "application/json",
+          "role": "report",
+          "bytes": 14435
+        },
+        {
+          "name": "controller/lifecycle.json",
+          "hash": "sha256:a2dde45f9d7750d9108a29c0ae805812695df9ea4ff8f42632e94d4af6b2278d",
+          "content_type": "application/json",
+          "role": "controller",
+          "bytes": 471
+        },
+        {
+          "name": "controller/plan.json",
+          "hash": "sha256:fbcb812349a951085ba526abe26ba9c2243b8a754f6354a909766c8ed0fef9f6",
+          "content_type": "application/json",
+          "role": "controller",
+          "bytes": 6878
+        }
+      ],
+      "verdict": "pass",
+      "defects": [],
+      "unavailable": [],
+      "created_at": "2026-10-15T19:31:44.595452+00:00"
+    }
+  ],
+  "controller_attempts": [],
+  "events": [
+    {
+      "at": "2026-10-15T19:25:04.793275+00:00",
+      "kind": "dependency_check"
+    },
+    {
+      "at": "2026-10-15T19:25:04.809070+00:00",
+      "kind": "calibrate_visual_judge"
+    },
+    {
+      "at": "2026-10-15T19:25:09.272015+00:00",
+      "kind": "blender_baseline"
+    },
+    {
+      "at": "2026-10-15T19:26:46.009306+00:00",
+      "kind": "mandatory_integrity_judge"
+    },
+    {
+      "at": "2026-10-15T19:26:49.044956+00:00",
+      "kind": "completed_for_review",
+      "elapsed_s": 104.26
+    },
+    {
+      "kind": "diagnostic_real_blender_defect_injected",
+      "at": "2026-10-15",
+      "offset_z_m": 0.12,
+      "target": "arm_left"
+    },
+    {
+      "at": "2026-10-15T19:28:27.366524+00:00",
+      "kind": "resume",
+      "mission_id": "56cc84ef-71ab-44a6-9e09-78afdccde2ad"
+    },
+    {
+      "at": "2026-10-15T19:28:27.372483+00:00",
+      "kind": "dependency_check"
+    },
+    {
+      "at": "2026-10-15T19:28:27.401363+00:00",
+      "kind": "qwen_artistic_plan",
+      "iteration": 3
+    },
+    {
+      "at": "2026-10-15T19:30:04.541674+00:00",
+      "kind": "blender_artistic_revision",
+      "iteration": 3
+    },
+    {
+      "at": "2026-10-15T19:31:41.242495+00:00",
+      "kind": "mandatory_integrity_judge",
+      "iteration": 3
+    },
+    {
+      "at": "2026-10-15T19:31:44.599318+00:00",
+      "kind": "completed_for_review",
+      "elapsed_s": 197.23
+    }
+  ],
+  "error": null,
+  "resource_measurements": [
+    {
+      "revision": 1,
+      "elapsed_s": {
+        "value": 96.73339769605082,
+        "status": "real"
+      },
+      "sampled_memory_peak_mb": {
+        "value": 325.5390625,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 376.1,
+        "status": "real"
+      },
+      "process_stopped_verified": true
+    },
+    {
+      "revision": 2,
+      "elapsed_s": {
+        "value": 94.098935824004,
+        "status": "real"
+      },
+      "sampled_memory_peak_mb": {
+        "value": 315.8828125,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 365.18,
+        "status": "real"
+      },
+      "process_stopped_verified": true
+    },
+    {
+      "revision": 3,
+      "elapsed_s": {
+        "value": 96.6919306779746,
+        "status": "real"
+      },
+      "sampled_memory_peak_mb": {
+        "value": 329.1171875,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 373.83,
+        "status": "real"
+      },
+      "process_stopped_verified": true
+    }
+  ],
+  "limitations": [
+    "Image references are archived with provenance; the text-only controller does not interpret their pixels."
+  ],
+  "selected_revision_number": 3,
+  "mission_state": "review"
+}

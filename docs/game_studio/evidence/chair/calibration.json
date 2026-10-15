@@ -1,0 +1,792 @@
+{
+  "method": "native_id_centroid_alignment_v1",
+  "predeclared_manifest_sha256": "e502e493adbe65c5db35856b8c20b2975953061449e9712e3928098a3f78cb39",
+  "threshold_pixels": 4.0,
+  "minimum_visible_pixels": 12,
+  "counts": {
+    "true_positive": 4,
+    "true_negative": 4,
+    "false_positive": 0,
+    "false_negative": 0,
+    "unknown": 0
+  },
+  "cases": [
+    {
+      "id": "aligned:front",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "7c9884d7f475605f0a9beb386a7e8934dcf0c524be9c34cc763f53d788a555e7",
+      "expected_misaligned": false,
+      "measurement_status": "pass",
+      "absolute_y_delta_pixels": 0.0
+    },
+    {
+      "id": "aligned:rear",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "32e41e90a5782b27f740b524f829b673aa1945d791cd8bacf09e75452e7d03c4",
+      "expected_misaligned": false,
+      "measurement_status": "pass",
+      "absolute_y_delta_pixels": 0.0
+    },
+    {
+      "id": "subthreshold:front",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "f65d81225e1dc705b29b3479463410b54ee335fad013ae0a99786eaf768a8bf5",
+      "expected_misaligned": false,
+      "measurement_status": "pass",
+      "absolute_y_delta_pixels": 1.6345773795358127
+    },
+    {
+      "id": "subthreshold:rear",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "9ab81f4b1be901cc30a0aea50ff3bd5ed3c34f99993c03c44312c8982d1edb4c",
+      "expected_misaligned": false,
+      "measurement_status": "pass",
+      "absolute_y_delta_pixels": 1.6345773795358127
+    },
+    {
+      "id": "raised:front",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "f5607ad7256ebba6227f73743fe24a4b682e02d4d12b5e9e6f86a8d8d763e80c",
+      "expected_misaligned": true,
+      "measurement_status": "fail",
+      "absolute_y_delta_pixels": 12.167700048412769
+    },
+    {
+      "id": "raised:rear",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "264fd73688e8a5e088ba72df90581a9e31f2d85f8c2d09b6f67a29b629cafcad",
+      "expected_misaligned": true,
+      "measurement_status": "fail",
+      "absolute_y_delta_pixels": 12.167700048412769
+    },
+    {
+      "id": "lowered:front",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "61c3639c1a88720775d7a6182e2f3293111fb3772429c243491069bcce2e2159",
+      "expected_misaligned": true,
+      "measurement_status": "fail",
+      "absolute_y_delta_pixels": 48.83229995158723
+    },
+    {
+      "id": "lowered:rear",
+      "family": "calibration_curved_beams",
+      "native_render_verified": true,
+      "sha256": "2ff46cd8ef16de6bcb1df473d6a9b7ef4cc3f6f548fa07e492bc0871ed17731d",
+      "expected_misaligned": true,
+      "measurement_status": "fail",
+      "absolute_y_delta_pixels": 48.83229995158723
+    }
+  ],
+  "families_observed": [
+    "calibration_curved_beams"
+  ],
+  "empirical_false_positive_rate": 0.0,
+  "empirical_false_negative_rate": 0.0,
+  "status": "pass_in_observed_scope",
+  "decisive_scope": "same ID renderer, camera contract and paired shape class only",
+  "limits": [
+    "small calibration sample; no probability of correctness or aesthetic score",
+    "unseen camera, occlusion or shape classes remain unqualified",
+    "do not retune the fixed threshold on validation or heldout results"
+  ],
+  "false_positives": 0,
+  "false_negatives": 0,
+  "accepted_cases": 4,
+  "rejected_cases": 4,
+  "native_execution": {
+    "mission_id": "game-graphics-studio",
+    "clone_id": "trusted-catalog-worker",
+    "status": "success",
+    "isolation_level": "none",
+    "exit_code": {
+      "value": 0,
+      "status": "real"
+    },
+    "signal": {
+      "value": null,
+      "status": "unknown"
+    },
+    "elapsed_s": {
+      "value": 4.3050867120036855,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 9.07,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 288.14453125,
+      "status": "real"
+    },
+    "pids_peak": {
+      "value": 1,
+      "status": "real"
+    },
+    "stdout": "(Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.63M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:44.93M (Peak 66.03M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:44.93M (Peak 66.03M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/subthreshold/id_front.png'\nTime: 00:00.11 (Saving: 00:00.05)\n\nFra:1 Mem:10.79M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:10.79M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:10.79M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.50M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.50M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.50M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.50M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.58M (Peak 10.79M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.59M (Peak 10.79M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.63M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.63M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.64M (Peak 10.79M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:44.93M (Peak 66.03M) | Time:00:00.07 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:44.93M (Peak 66.03M) | Time:00:00.07 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/subthreshold/id_rear.png'\nTime: 00:00.13 (Saving: 00:00.05)\n\nFra:1 Mem:10.99M (Peak 10.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:10.99M (Peak 10.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.09 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.09 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/silhouette_front_three_quarter.png'\nTime: 00:00.14 (Saving: 00:00.04)\n\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/silhouette_rear_three_quarter.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/silhouette_side.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.00M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.68M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.76M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.77M (Peak 11.00M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.82M (Peak 11.00M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/silhouette_front.png'\nTime: 00:00.09 (Saving: 00:00.04)\n\nFra:1 Mem:10.97M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:10.97M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:10.97M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.81M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.81M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/id_front.png'\nTime: 00:00.10 (Saving: 00:00.04)\n\nFra:1 Mem:10.97M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:10.97M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:10.97M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.68M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.76M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.77M (Peak 10.97M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.81M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.81M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:10.82M (Peak 10.97M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.11M (Peak 66.21M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/id_rear.png'\nTime: 00:00.09 (Saving: 00:00.04)\n\nFra:1 Mem:11.16M (Peak 11.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.17M (Peak 11.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/silhouette_front_three_quarter.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/silhouette_rear_three_quarter.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nFra:1 Mem:11.17M (Peak 11.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/silhouette_side.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor\nFra:1 Mem:11.18M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.86M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.94M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.02M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.95M (Peak 11.18M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.99M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:11.00M (Peak 11.18M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.29M (Peak 66.39M) | Time:00:00.05 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/silhouette_front.png'\nTime: 00:00.10 (Saving: 00:00.04)\n\nFra:1 Mem:11.14M (Peak 11.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.15M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:11.15M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.99M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.99M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.29M (Peak 66.38M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.29M (Peak 66.38M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/id_front.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nFra:1 Mem:11.15M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_left\nFra:1 Mem:11.15M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arm_right\nFra:1 Mem:11.15M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene\nFra:1 Mem:10.86M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Applying Static Transformations\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Computing attributes\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene BVH | Building BVH\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device\nFra:1 Mem:10.94M (Peak 11.15M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Computing normals\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.02M, Peak:0.02M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects Flags\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Primitive Offsets\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Images\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Camera Volume\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights\nFra:1 Mem:10.95M (Peak 11.15M) | Time:00:00.00 | Mem:0.11M, Peak:0.11M | Scene, ViewLayer | Updating Lights | Computing tree\nFra:1 Mem:10.99M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Integrator\nFra:1 Mem:10.99M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Film\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.07M, Peak:0.15M | Scene, ViewLayer | Updating Lookup Tables\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Baking\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Updating Device | Writing constant memory\nFra:1 Mem:11.00M (Peak 11.15M) | Time:00:00.00 | Mem:0.15M, Peak:0.15M | Scene, ViewLayer | Sample 0/1\nFra:1 Mem:45.29M (Peak 66.38M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Sample 1/1\nFra:1 Mem:45.29M (Peak 66.38M) | Time:00:00.06 | Mem:23.88M, Peak:23.88M | Scene, ViewLayer | Finished\nSaved: '/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/id_rear.png'\nTime: 00:00.11 (Saving: 00:00.04)\n\nInfo: Saved \"fixture.blend\"\nInfo: Saved \"fixture.blend\"\nInfo: Saved \"fixture.blend\"\nInfo: Saved \"fixture.blend\"\n\nBlender quit\n",
+    "stderr": "",
+    "stdout_truncated": true,
+    "stderr_truncated": false,
+    "error_detail": null,
+    "facts": {
+      "command": [
+        "/usr/bin/blender",
+        "--background",
+        "--factory-startup",
+        "--disable-autoexec",
+        "--threads",
+        "4",
+        "--python-exit-code",
+        "2",
+        "--python",
+        "/workspace/apex-game-studio-integration/scripts/game_graphics/studio/render_asset.py",
+        "--",
+        "--calibration",
+        "--family",
+        "chair",
+        "--output",
+        "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration"
+      ],
+      "pid": 197219,
+      "process_stopped_verified": true,
+      "execution": "trusted_local_catalog",
+      "model_code_executed": false,
+      "script_sha256": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+      "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+      "sample_interval_s": 0.25,
+      "timeout_s": 600,
+      "rss_limit_mib": 12000,
+      "sources": {
+        "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+        "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+        "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+        "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e"
+      }
+    }
+  },
+  "measurements": [
+    {
+      "id": "aligned:front",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": false,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/aligned/id_front.png",
+        "view": "front",
+        "reference": "aligned",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "pass",
+        "decisive": false,
+        "defects": [],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "7c9884d7f475605f0a9beb386a7e8934dcf0c524be9c34cc763f53d788a555e7",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 761,
+            "centroid_xy": [
+              282.3455978975033,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              271,
+              285,
+              295,
+              323
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              676.6544021024968,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              665,
+              285,
+              689,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": 0.0,
+        "absolute_y_delta_pixels": 0.0,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "aligned:rear",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": false,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/aligned/id_rear.png",
+        "view": "rear",
+        "reference": "aligned",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "pass",
+        "decisive": false,
+        "defects": [],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "32e41e90a5782b27f740b524f829b673aa1945d791cd8bacf09e75452e7d03c4",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 761,
+            "centroid_xy": [
+              676.6544021024968,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              665,
+              285,
+              689,
+              323
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              282.3455978975033,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              271,
+              285,
+              295,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": 0.0,
+        "absolute_y_delta_pixels": 0.0,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "subthreshold:front",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": false,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/subthreshold/id_front.png",
+        "view": "front",
+        "reference": "subthreshold",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "pass",
+        "decisive": false,
+        "defects": [],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "f65d81225e1dc705b29b3479463410b54ee335fad013ae0a99786eaf768a8bf5",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 762,
+            "centroid_xy": [
+              282.37532808398953,
+              301.9133858267717
+            ],
+            "bbox_xyxy": [
+              271,
+              283,
+              295,
+              322
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              676.6544021024968,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              665,
+              285,
+              689,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": -1.6345773795358127,
+        "absolute_y_delta_pixels": 1.6345773795358127,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "subthreshold:rear",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": false,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/subthreshold/id_rear.png",
+        "view": "rear",
+        "reference": "subthreshold",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "pass",
+        "decisive": false,
+        "defects": [],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "9ab81f4b1be901cc30a0aea50ff3bd5ed3c34f99993c03c44312c8982d1edb4c",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 762,
+            "centroid_xy": [
+              676.6246719160105,
+              301.9133858267717
+            ],
+            "bbox_xyxy": [
+              665,
+              283,
+              689,
+              322
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              282.3455978975033,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              271,
+              285,
+              295,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": -1.6345773795358127,
+        "absolute_y_delta_pixels": 1.6345773795358127,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "raised:front",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": true,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/id_front.png",
+        "view": "front",
+        "reference": "raised",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "fail",
+        "decisive": false,
+        "defects": [
+          {
+            "id": "paired_component_alignment",
+            "object": "fixture_left",
+            "reference_object": "fixture_right",
+            "view": "front",
+            "reference": "raised",
+            "observed_defect": "Target is projected higher than its paired reference.",
+            "measured_y_delta_pixels": 12.167700048412769,
+            "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+            "suggested_operation": "set_location",
+            "confidence": {
+              "kind": "uncalibrated_objective_measurement",
+              "calibrated": false
+            },
+            "verification": {
+              "views": [
+                "front",
+                "rear"
+              ],
+              "max_y_delta_pixels": 4.0,
+              "minimum_pixels_per_component": 12
+            }
+          }
+        ],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "f5607ad7256ebba6227f73743fe24a4b682e02d4d12b5e9e6f86a8d8d763e80c",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 760,
+            "centroid_xy": [
+              282.34605263157897,
+              291.3802631578947
+            ],
+            "bbox_xyxy": [
+              271,
+              273,
+              295,
+              311
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              676.6544021024968,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              665,
+              285,
+              689,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": -12.167700048412769,
+        "absolute_y_delta_pixels": 12.167700048412769,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "raised:rear",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": true,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/raised/id_rear.png",
+        "view": "rear",
+        "reference": "raised",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "fail",
+        "decisive": false,
+        "defects": [
+          {
+            "id": "paired_component_alignment",
+            "object": "fixture_left",
+            "reference_object": "fixture_right",
+            "view": "rear",
+            "reference": "raised",
+            "observed_defect": "Target is projected higher than its paired reference.",
+            "measured_y_delta_pixels": 12.167700048412769,
+            "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+            "suggested_operation": "set_location",
+            "confidence": {
+              "kind": "uncalibrated_objective_measurement",
+              "calibrated": false
+            },
+            "verification": {
+              "views": [
+                "front",
+                "rear"
+              ],
+              "max_y_delta_pixels": 4.0,
+              "minimum_pixels_per_component": 12
+            }
+          }
+        ],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "264fd73688e8a5e088ba72df90581a9e31f2d85f8c2d09b6f67a29b629cafcad",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 760,
+            "centroid_xy": [
+              676.6539473684211,
+              291.3802631578947
+            ],
+            "bbox_xyxy": [
+              665,
+              273,
+              689,
+              311
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              282.3455978975033,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              271,
+              285,
+              295,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": -12.167700048412769,
+        "absolute_y_delta_pixels": 12.167700048412769,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "lowered:front",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": true,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/id_front.png",
+        "view": "front",
+        "reference": "lowered",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "fail",
+        "decisive": false,
+        "defects": [
+          {
+            "id": "paired_component_alignment",
+            "object": "fixture_left",
+            "reference_object": "fixture_right",
+            "view": "front",
+            "reference": "lowered",
+            "observed_defect": "Target is projected lower than its paired reference.",
+            "measured_y_delta_pixels": 48.83229995158723,
+            "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+            "suggested_operation": "set_location",
+            "confidence": {
+              "kind": "uncalibrated_objective_measurement",
+              "calibrated": false
+            },
+            "verification": {
+              "views": [
+                "front",
+                "rear"
+              ],
+              "max_y_delta_pixels": 4.0,
+              "minimum_pixels_per_component": 12
+            }
+          }
+        ],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "61c3639c1a88720775d7a6182e2f3293111fb3772429c243491069bcce2e2159",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 760,
+            "centroid_xy": [
+              282.34605263157897,
+              352.3802631578947
+            ],
+            "bbox_xyxy": [
+              271,
+              334,
+              295,
+              372
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              676.6544021024968,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              665,
+              285,
+              689,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": 48.83229995158723,
+        "absolute_y_delta_pixels": 48.83229995158723,
+        "reason": "projected_alignment_measured"
+      }
+    },
+    {
+      "id": "lowered:rear",
+      "family": "calibration_curved_beams",
+      "expected_misaligned": true,
+      "native_render_verified": true,
+      "measurement": {
+        "method": "native_id_centroid_alignment_v1",
+        "path": "/workspace/game-studio-output/integrated18/correction-home/.apex/game-studio/missions/836f8046-aac5-45db-9b89-1b851ad82811/calibration/lowered/id_rear.png",
+        "view": "rear",
+        "reference": "lowered",
+        "objects": {
+          "red": "fixture_left",
+          "green": "fixture_right"
+        },
+        "criteria": {
+          "max_centroid_y_difference_pixels": 4.0,
+          "minimum_visible_pixels_per_component": 12
+        },
+        "color_rule": "alpha>=128; channel>=200; other channels<=64; Standard/Raw emission ID",
+        "measurement_status": "fail",
+        "decisive": false,
+        "defects": [
+          {
+            "id": "paired_component_alignment",
+            "object": "fixture_left",
+            "reference_object": "fixture_right",
+            "view": "rear",
+            "reference": "lowered",
+            "observed_defect": "Target is projected lower than its paired reference.",
+            "measured_y_delta_pixels": 48.83229995158723,
+            "expected_improvement": "Restore the agreed paired component height; preserve geometry, materials and camera.",
+            "suggested_operation": "set_location",
+            "confidence": {
+              "kind": "uncalibrated_objective_measurement",
+              "calibrated": false
+            },
+            "verification": {
+              "views": [
+                "front",
+                "rear"
+              ],
+              "max_y_delta_pixels": 4.0,
+              "minimum_pixels_per_component": 12
+            }
+          }
+        ],
+        "limits": [
+          "paired component projected alignment only; no aesthetic quality score",
+          "centroids depend on shape, occlusion, clipping and camera pose",
+          "caller must bind PNG SHA to native renderer and frozen camera receipts"
+        ],
+        "sha256": "2ff46cd8ef16de6bcb1df473d6a9b7ef4cc3f6f548fa07e492bc0871ed17731d",
+        "resolution": [
+          960,
+          720
+        ],
+        "components": {
+          "red": {
+            "pixels": 760,
+            "centroid_xy": [
+              676.6539473684211,
+              352.3802631578947
+            ],
+            "bbox_xyxy": [
+              665,
+              334,
+              689,
+              372
+            ]
+          },
+          "green": {
+            "pixels": 761,
+            "centroid_xy": [
+              282.3455978975033,
+              303.5479632063075
+            ],
+            "bbox_xyxy": [
+              271,
+              285,
+              295,
+              323
+            ]
+          }
+        },
+        "signed_red_minus_green_y_pixels": 48.83229995158723,
+        "absolute_y_delta_pixels": 48.83229995158723,
+        "reason": "projected_alignment_measured"
+      }
+    }
+  ]
+}
