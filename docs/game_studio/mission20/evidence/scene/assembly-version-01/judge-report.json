@@ -1,0 +1,33 @@
+{
+  "verdict": "pass_technical",
+  "scope": "file_integrity_native_reopen_and_source_presence",
+  "source_mesh_counts": {
+    "vehicle": 136,
+    "building": 143,
+    "furniture": 32
+  },
+  "source_artifacts": {
+    "vehicle": {
+      "mission_id": "129b2de5-c572-44c8-8281-a60ae3f61526",
+      "job_id": "eb3888e3-6f30-4aa8-ab30-a8a764d6bf86",
+      "hash": "sha256:4b01dc06b14fe0742ea8170c7e4030b60010544f8e9efa590f6479922673f494"
+    },
+    "building": {
+      "mission_id": "1b246a43-56ea-4177-bb73-246b5d295af6",
+      "job_id": "c40f99ef-c578-416c-a6d6-b37c6b30b8df",
+      "hash": "sha256:edacb2ed0041d072b9670ea14af0f6825a98e686d74b196df8eae97c32e5e5ca"
+    },
+    "furniture": {
+      "mission_id": "f1451d27-89ad-4b9a-9eee-f8cfd6733094",
+      "job_id": "0aac4516-a89b-492e-82fc-551031f9b27b",
+      "hash": "sha256:0e02e3fb67a4eb18c176ea53478f0672881d6e11f4d0836612f17ac44e36821d"
+    }
+  },
+  "native_renders": 4,
+  "unavailable": [
+    "aesthetic_quality_calibration",
+    "unreal_import",
+    "vehicle_physics",
+    "target_gpu_performance"
+  ]
+}

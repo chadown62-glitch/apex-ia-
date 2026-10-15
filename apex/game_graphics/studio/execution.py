@@ -72,7 +72,7 @@ def store_plan(plan: dict, directory: Path, *, caller: str = "studio-controller"
 
 def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, rss_limit_mib=12000,
                 cancel_event=None):
-    if script not in ("render_asset.py", "inspect_asset.py"):
+    if script not in ("render_asset.py", "inspect_asset.py", "assemble_garage.py"):
         raise ValueError("untrusted_script")
     executable = shutil.which("blender")
     if not executable:

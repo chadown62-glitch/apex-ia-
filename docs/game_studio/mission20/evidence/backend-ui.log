@@ -1,0 +1,72 @@
+INFO:     Started server process [214069]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:59003 (Press CTRL+C to quit)
+INFO:     127.0.0.1:40666 - "POST /api/v1/ui/launch-code HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /ui/login?code=cOs9fADjc_uYLxwb4VQHKCdcITRgQzi4PhtKMUjG3xw HTTP/1.1" 303 See Other
+INFO:     127.0.0.1:40680 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /theme-init.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /assets/index-Cqq1hC8b.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /assets/index-D09eh2Ki.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/assistant/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/assistant/modes HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:40710 - "GET /api/v1/assistant/conversations HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/assistant/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /game-studio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /assets/index-D09eh2Ki.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /assets/index-Cqq1hC8b.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /theme-init.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/gate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/assistant/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/agents HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/game-studio/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/game-studio/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /api/v1/assistant/engines HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/capabilities HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3A14d9d6715c5ef78c3f244c012ae1d7ce96bc2f228bdfb7a6d8bf027580f67654 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3Ab0cd8d76b64fbf2c90ebde2a83e18c3136477a68024f9f982d3544384c1aa0f6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3Ac4929e21f23f3362c06470014e1584d56d238944671eeb93dbe52f16d8f94a3a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3A1d090038b0393391ed80b3d0fc237717585c418f9aff100972a6b9f1e97b023b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3A0d80937150ecdc82a43dbfca3d553b5d4baf19f3344f8f8004efb72a5f9ac8e4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3A05bb8dd557b4d87c5966101456fc54b4fd43fe3fb47bbf9c9aa2032f1f7fc07d HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3Af4aead5d905bf3e071f5e6f718e97c2295d4b1d0e9b9464d80b63391b18c9146 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/artifacts/sha256%3A2b7aef59c441d2c834b029ede3ddc03389f5142ed3470a7c3335eb9970ff7de4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3A6ab1add568bca05fcde206a19a87a968be4eba8241d13827149d25d13f02e2ee HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3A2938d35d0d335792f838704fdd0fcfa7bbb6881925cec87fd1f34d4c7ce81adc HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3Ad3283d0b5a7ea91628410fa1820e7c767ddc1c579919d5176c6eebaa69d8c7b6 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3A115ffea6193058a0bfb0c6f3098a6f408e41389befcbe34356a07f514225c67c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3A2199031e7beac3c3b621e40b2ffb8fa7ca7ccb3a37b021ff62bd88f7ff31fc8b HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3Aa0ee35fbe3dcb6bd17d1f57998eeba39abafd227586db5f8da66237611f70805 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3Af7327004c041d4af3846b8d034792368ff840c9672901c138311b273bcbf61ef HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3A2e39d4223752800e20061dc060e78c23a988ecead685f68ab3ee855516ba8d99 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3Ac2733763a526de5019e115b8335cf9008c0f2ebb0df4f8da29807ea9867665d9 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/missions/c40f99ef-c578-416c-a6d6-b37c6b30b8df/artifacts/sha256%3A28b6b8b3fc70bd985cf69506aeb09d800e3e1ae4b7f041ee1a05a5ecf52f498f HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3A3d1072d356e82b3c60cf3f0a34bb434573dd732f772c86603efcd4b2daf0695c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3A45ce285eb6a6a87caf89556a95d25d53594eab5bfa513b5ee4b266540db064f4 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3A372bd949d330bdd8b4fe848c7468e716ec117c4a7bda2463fc948843f134a2d8 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3A1a72415237f9820227570ef657e66b46e95b02a222763822b3e4b56d2dd8ec89 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3A7a264bf0ed39326935d0b1f3275a02e2ce5b26d0a5d1b141022b44315c0b956e HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/game-studio/missions/0aac4516-a89b-492e-82fc-551031f9b27b/artifacts/sha256%3Ad3b0068cf864dad9f6ad3131145c9781b56dcb5d5893eca09e0603b40fd3ab03 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3Aa1c63287440c9566b8ce84b2da91a090fb97d0698cf42be30314c57b0921bfa0 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3A4caa62b540cb0c8dc01c61fa6a57dcb1d6b44f652359ab2c4b27d0f51bcb779a HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40730 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3Ae39d20e17c820338ec63d50a5f1631be61206466816eb12729778ab63b582560 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40680 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3Aa1fb6a87f45f4e7de15d5c0d8fcc669a8e21cfe07e351e895755443096944e72 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40712 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3Ad21b3b5ac6c6c2899879144c57ca84716f38ccc18fad4d73c05a820ccca75df7 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40710 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3A34664c283b546ae52e3283fbaa69d90c8ffacf388a6a2b89fc86858fbb49e7ce HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3A3d6b076975dd7eff059561bee31e5f7424e5227b23328e523eeb41084d14a667 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40722 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067/artifacts/sha256%3Aba9b4bcb7a7a06bdefa1056c05957c5b7ec9f112109aafc58a9ec6d4b5e913b1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/missions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/projects HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40694 - "GET /api/v1/game-studio/projects/f5a269ae-4a72-4646-b900-a39221984067 HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [214069]

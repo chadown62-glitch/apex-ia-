@@ -147,7 +147,11 @@ def probe() -> dict[str, Any]:
                 "an engineer mission yet"
             ),
         },
-        "environment": {"status": "not_implemented"},
+        "environment": {
+            "status": "available_unqualified" if ready else "blocked_dependency",
+            "recipe": "garage-v1",
+            "scope": "Three sequential Blender assets, per-asset technical judging and native Blender scene assembly",
+        },
         "open_world": {"status": "not_implemented"},
         "supported_styles": ["realiste"],
         "quality_certification": ["prototype"],

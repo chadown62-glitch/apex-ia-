@@ -1,0 +1,90 @@
+{
+  "family": "building",
+  "case_id": "street_building",
+  "criteria": {
+    "level": "prototype",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 0,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "benchmark_version": 1,
+  "scope": "measured_geometry_export_and_render_rules",
+  "defects": [],
+  "unavailable": [],
+  "facts": {
+    "render_settings": {
+      "engine": "CYCLES",
+      "device": "CPU",
+      "samples": 64,
+      "seed": 14,
+      "denoising": false
+    },
+    "distinct_camera_transforms": 4,
+    "blend": {
+      "triangles": 26150,
+      "dimensions": [
+        5.0,
+        4.335000038146973,
+        7.049999713897705
+      ],
+      "objects": 143,
+      "materials": 6
+    },
+    "glb": {
+      "triangles": 26150,
+      "dimensions": [
+        5.0,
+        4.335000038146973,
+        7.049999713897705
+      ],
+      "objects": 143,
+      "materials": 6
+    },
+    "images": {
+      "front_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 54.92819022681048,
+        "subject_fraction": 0.34661024305555554,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "rear_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 56.904670940205925,
+        "subject_fraction": 0.34327546296296296,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "side": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 62.977606998607364,
+        "subject_fraction": 0.2413252314814815,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "front": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 58.129134236595,
+        "subject_fraction": 0.2596614583333333,
+        "subject_pixels_at_image_boundary": 0
+      }
+    }
+  },
+  "advisory": [
+    "Shader parameters and material count do not certify convincing PBR appearance."
+  ],
+  "aesthetic_certification": false,
+  "limits": [
+    "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+    "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+    "Unreal import and runtime performance have not been measured by this oracle."
+  ],
+  "manifest_sha256": "f8a2072e17313303fefc309e3aa6c399dcdcd7bf9fbe98ffbe2f68dc2266f78d",
+  "verdict": "pass"
+}

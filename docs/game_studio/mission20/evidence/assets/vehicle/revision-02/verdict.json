@@ -1,0 +1,155 @@
+{
+  "verdict": "pass",
+  "judge": {
+    "tier": "tier_0",
+    "oracle_result": {
+      "verdict": "pass",
+      "detail": "{\n  \"family\": \"vehicle\",\n  \"case_id\": \"sports_car\",\n  \"criteria\": {\n    \"level\": \"prototype\",\n    \"max_triangles\": 100000,\n    \"dimension_tolerance_m\": 0.04,\n    \"pivot_tolerance_m\": 0.002,\n    \"max_distinct_defect_attempts\": 3,\n    \"minimum_views\": 4,\n    \"required_lods\": 0,\n    \"required_texture_size\": 0,\n    \"require_calibrated_visual_reference\": false\n  },\n  \"benchmark_version\": 1,\n  \"scope\": \"measured_geometry_export_and_render_rules\",\n  \"defects\": [],\n  \"unavailable\": [],\n  \"facts\": {\n    \"render_settings\": {\n      \"engine\": \"CYCLES\",\n      \"device\": \"CPU\",\n      \"samples\": 64,\n      \"seed\": 14,\n      \"denoising\": false\n    },\n    \"distinct_camera_transforms\": 4,\n    \"blend\": {\n      \"triangles\": 32604,\n      \"dimensions\": [\n        4.924999952316284,\n        2.2399998903274536,\n        1.2888213781673201\n      ],\n      \"objects\": 136,\n      \"materials\": 9\n    },\n    \"glb\": {\n      \"triangles\": 32604,\n      \"dimensions\": [\n        4.924999952316284,\n        2.2399998903274536,\n        1.2888214147975106\n      ],\n      \"objects\": 136,\n      \"materials\": 9\n    },\n    \"images\": {\n      \"front_three_quarter\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 37.2087651665728,\n        \"subject_fraction\": 0.17352719907407407,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"rear_three_quarter\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 33.63246481517402,\n        \"subject_fraction\": 0.16786458333333334,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"side\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 66.05274034051713,\n        \"subject_fraction\": 0.15002025462962962,\n        \"subject_pixels_at_image_boundary\": 0\n      },\n      \"front\": {\n        \"width\": 960,\n        \"height\": 720,\n        \"channel_stddev\": 33.182495909489674,\n        \"subject_fraction\": 0.05859664351851852,\n        \"subject_pixels_at_image_boundary\": 0\n      }\n    }\n  },\n  \"advisory\": [\n    \"Shader parameters and material count do not certify convincing PBR appearance.\"\n  ],\n  \"aesthetic_certification\": false,\n  \"limits\": [\n    \"Geometry and image statistics do not certify aesthetic quality or reference fidelity.\",\n    \"Isolated component ID passes measure alignment, not visibility in the beauty render.\",\n    \"Unreal import and runtime performance have not been measured by this oracle.\"\n  ],\n  \"manifest_sha256\": \"eb8761d4e30990db4afefa92a721af521a3c3495fe9c2fa0f79cbd1701a82fd0\",\n  \"verdict\": \"pass\"\n}"
+    },
+    "notes": "tier 0 objectif seul (ExitCodeOracle) \u2014 TIER_1 (Verifier \u00e9tendu) et TIER_2 (Critic Clone, consultatif) restent PLANNED, jamais tent\u00e9s."
+  },
+  "inspection_runs": [
+    {
+      "mission_id": "game-graphics-studio",
+      "clone_id": "trusted-catalog-worker",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.2631253720028326,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 1.01,
+        "status": "real"
+      },
+      "memory_peak_mb": {
+        "value": 266.64453125,
+        "status": "real"
+      },
+      "pids_peak": {
+        "value": 1,
+        "status": "real"
+      },
+      "stdout": "Blender 4.3.2\nRead blend: \"/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/asset.blend\"\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "command": [
+          "/usr/bin/blender",
+          "--background",
+          "--factory-startup",
+          "--disable-autoexec",
+          "--threads",
+          "4",
+          "--python-exit-code",
+          "2",
+          "--python",
+          "/workspace/apex-game-studio-multi-agent/scripts/game_graphics/studio/inspect_asset.py",
+          "--",
+          "--input",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/asset.blend",
+          "--report",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/blend-inspection.json"
+        ],
+        "pid": 208008,
+        "process_stopped_verified": true,
+        "execution": "trusted_local_catalog",
+        "model_code_executed": false,
+        "script_sha256": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+        "sample_interval_s": 0.25,
+        "timeout_s": 120,
+        "rss_limit_mib": 12000,
+        "sources": {
+          "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+          "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+          "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+          "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+          "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+          "assemble_garage.py": "8a6275719205e3cdea45709e30525f50f286fa66c4f8c81472cba95253c71d99"
+        }
+      }
+    },
+    {
+      "mission_id": "game-graphics-studio",
+      "clone_id": "trusted-catalog-worker",
+      "status": "success",
+      "isolation_level": "none",
+      "exit_code": {
+        "value": 0,
+        "status": "real"
+      },
+      "signal": {
+        "value": null,
+        "status": "unknown"
+      },
+      "elapsed_s": {
+        "value": 1.7670133180217817,
+        "status": "real"
+      },
+      "cpu_time_s": {
+        "value": 1.81,
+        "status": "real"
+      },
+      "memory_peak_mb": {
+        "value": 249.30859375,
+        "status": "real"
+      },
+      "pids_peak": {
+        "value": 1,
+        "status": "real"
+      },
+      "stdout": "21:23:45 | INFO: Data are loaded, start creating Blender stuff\n21:23:45 | INFO: Blender create Mesh node curved_chassis\n21:23:45 | INFO: Blender create Mesh node Torus\n21:23:45 | INFO: Blender create Mesh node Torus.001\n21:23:45 | INFO: Blender create Mesh node Cylinder.001\n21:23:45 | INFO: Blender create Mesh node Cylinder.002\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_0\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_1\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_2\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_3\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_4\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_5\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_6\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_7\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_8\n21:23:45 | INFO: Blender create Mesh node spoke_front_left_9\n21:23:45 | INFO: Blender create Mesh node Cube.001\n21:23:45 | INFO: Blender create Mesh node arch_lip_front_left\n21:23:45 | INFO: Blender create Mesh node Torus.002\n21:23:45 | INFO: Blender create Mesh node Torus.003\n21:23:45 | INFO: Blender create Mesh node Cylinder.004\n21:23:45 | INFO: Blender create Mesh node Cylinder.005\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_0\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_1\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_2\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_3\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_4\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_5\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_6\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_7\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_8\n21:23:45 | INFO: Blender create Mesh node spoke_front_right_9\n21:23:45 | INFO: Blender create Mesh node Cube.002\n21:23:45 | INFO: Blender create Mesh node arch_lip_front_right\n21:23:45 | INFO: Blender create Mesh node Torus.004\n21:23:45 | INFO: Blender create Mesh node Torus.005\n21:23:45 | INFO: Blender create Mesh node Cylinder.007\n21:23:45 | INFO: Blender create Mesh node Cylinder.008\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_0\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_1\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_2\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_3\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_4\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_5\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_6\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_7\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_8\n21:23:45 | INFO: Blender create Mesh node spoke_rear_left_9\n21:23:45 | INFO: Blender create Mesh node Cube.003\n21:23:45 | INFO: Blender create Mesh node arch_lip_rear_left\n21:23:45 | INFO: Blender create Mesh node Torus.006\n21:23:45 | INFO: Blender create Mesh node Torus.007\n21:23:45 | INFO: Blender create Mesh node Cylinder.010\n21:23:45 | INFO: Blender create Mesh node Cylinder.011\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_0\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_1\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_2\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_3\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_4\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_5\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_6\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_7\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_8\n21:23:45 | INFO: Blender create Mesh node spoke_rear_right_9\n21:23:45 | INFO: Blender create Mesh node Cube.004\n21:23:45 | INFO: Blender create Mesh node arch_lip_rear_right\n21:23:45 | INFO: Blender create Mesh node windshield\n21:23:45 | INFO: Blender create Mesh node rear_glass\n21:23:45 | INFO: Blender create Mesh node roof\n21:23:45 | INFO: Blender create Mesh node window_left\n21:23:45 | INFO: Blender create Mesh node a_pillar_left\n21:23:45 | INFO: Blender create Mesh node c_pillar_left\n21:23:45 | INFO: Blender create Mesh node window_seal_left\n21:23:45 | INFO: Blender create Mesh node door_seam_left\n21:23:45 | INFO: Blender create Mesh node Cube.005\n21:23:45 | INFO: Blender create Mesh node Cube.006\n21:23:45 | INFO: Blender create Mesh node mirror_stem_left\n21:23:45 | INFO: Blender create Mesh node Sphere\n21:23:45 | INFO: Blender create Mesh node Sphere.001\n21:23:45 | INFO: Blender create Mesh node Cube.007\n21:23:45 | INFO: Blender create Mesh node Cube.008\n21:23:45 | INFO: Blender create Mesh node Cube.009\n21:23:45 | INFO: Blender create Mesh node Cube.010\n21:23:45 | INFO: Blender create Mesh node Cube.011\n21:23:45 | INFO: Blender create Mesh node Cube.012\n21:23:45 | INFO: Blender create Mesh node window_right\n21:23:45 | INFO: Blender create Mesh node a_pillar_right\n21:23:45 | INFO: Blender create Mesh node c_pillar_right\n21:23:45 | INFO: Blender create Mesh node window_seal_right\n21:23:45 | INFO: Blender create Mesh node door_seam_right\n21:23:45 | INFO: Blender create Mesh node Cube.013\n21:23:45 | INFO: Blender create Mesh node Cube.014\n21:23:45 | INFO: Blender create Mesh node mirror_stem_right\n21:23:45 | INFO: Blender create Mesh node Sphere.002\n21:23:45 | INFO: Blender create Mesh node Sphere.003\n21:23:45 | INFO: Blender create Mesh node Cube.015\n21:23:45 | INFO: Blender create Mesh node Cube.016\n21:23:45 | INFO: Blender create Mesh node Cube.017\n21:23:45 | INFO: Blender create Mesh node Cube.018\n21:23:45 | INFO: Blender create Mesh node Cube.019\n21:23:45 | INFO: Blender create Mesh node Cube.020\n21:23:45 | INFO: Blender create Mesh node Cube.021\n21:23:45 | INFO: Blender create Mesh node Cube.022\n21:23:45 | INFO: Blender create Mesh node Cube.023\n21:23:45 | INFO: Blender create Mesh node Cube.024\n21:23:45 | INFO: Blender create Mesh node Cube.025\n21:23:45 | INFO: Blender create Mesh node Cube.026\n21:23:45 | INFO: Blender create Mesh node Cube.027\n21:23:45 | INFO: Blender create Mesh node Cube.028\n21:23:45 | INFO: Blender create Mesh node Cube.029\n21:23:45 | INFO: Blender create Mesh node Cube.030\n21:23:45 | INFO: Blender create Mesh node Cube.031\n21:23:45 | INFO: Blender create Mesh node Cube.032\n21:23:45 | INFO: Blender create Mesh node Cube.033\n21:23:45 | INFO: Blender create Mesh node Cube.034\n21:23:45 | INFO: Blender create Mesh node Cube.035\n21:23:45 | INFO: Blender create Mesh node Cube.036\n21:23:45 | INFO: Blender create Mesh node Cube.037\n21:23:45 | INFO: Blender create Mesh node Cube.038\n21:23:45 | INFO: Blender create Mesh node Cube.039\n21:23:45 | INFO: Blender create Mesh node Cube.040\n21:23:45 | INFO: Blender create Mesh node Cube.041\n21:23:45 | INFO: Blender create Mesh node Cube.042\n21:23:45 | INFO: Blender create Mesh node Cube.043\n21:23:45 | INFO: Blender create Mesh node Cube.044\n21:23:45 | INFO: Blender create Mesh node Cube.045\n21:23:45 | INFO: Blender create Mesh node Cylinder.012\n21:23:45 | INFO: Blender create Mesh node Cylinder.013\n21:23:45 | INFO: Blender create Mesh node Cube.046\n21:23:45 | INFO: Blender create Mesh node Cube.047\n21:23:45 | INFO: Blender create Mesh node Cube.048\n21:23:45 | INFO: Blender create Mesh node Cube.049\n21:23:45 | INFO: Blender create Mesh node Cube.050\n21:23:45 | INFO: Blender create Mesh node Cube.051\n21:23:45 | INFO: Blender create Mesh node Cube.052\n21:23:45 | INFO: Blender create Mesh node Torus.008\n21:23:45 | INFO: Blender create Mesh node Cube.053\n21:23:45 | INFO: glTF import finished in 0.14s\nBlender 4.3.2\n\nBlender quit\n",
+      "stderr": "",
+      "stdout_truncated": false,
+      "stderr_truncated": false,
+      "error_detail": null,
+      "facts": {
+        "command": [
+          "/usr/bin/blender",
+          "--background",
+          "--factory-startup",
+          "--disable-autoexec",
+          "--threads",
+          "4",
+          "--python-exit-code",
+          "2",
+          "--python",
+          "/workspace/apex-game-studio-multi-agent/scripts/game_graphics/studio/inspect_asset.py",
+          "--",
+          "--input",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/asset.glb",
+          "--report",
+          "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/glb-inspection.json"
+        ],
+        "pid": 208029,
+        "process_stopped_verified": true,
+        "execution": "trusted_local_catalog",
+        "model_code_executed": false,
+        "script_sha256": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+        "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+        "sample_interval_s": 0.25,
+        "timeout_s": 120,
+        "rss_limit_mib": 12000,
+        "sources": {
+          "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+          "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+          "render_asset.py": "bb7a03b90946c92796b48e7dfae7ce18354c4bca30c0ec3edd27372a2d7b07b6",
+          "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+          "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+          "assemble_garage.py": "8a6275719205e3cdea45709e30525f50f286fa66c4f8c81472cba95253c71d99"
+        }
+      }
+    }
+  ]
+}

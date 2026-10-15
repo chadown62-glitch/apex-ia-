@@ -1,0 +1,32 @@
+{
+  "method": "trusted_blender_assembly",
+  "source_artifacts": {
+    "vehicle": {
+      "mission_id": "129b2de5-c572-44c8-8281-a60ae3f61526",
+      "job_id": "eb3888e3-6f30-4aa8-ab30-a8a764d6bf86",
+      "hash": "sha256:4b01dc06b14fe0742ea8170c7e4030b60010544f8e9efa590f6479922673f494"
+    },
+    "building": {
+      "mission_id": "1b246a43-56ea-4177-bb73-246b5d295af6",
+      "job_id": "c40f99ef-c578-416c-a6d6-b37c6b30b8df",
+      "hash": "sha256:edacb2ed0041d072b9670ea14af0f6825a98e686d74b196df8eae97c32e5e5ca"
+    },
+    "furniture": {
+      "mission_id": "f1451d27-89ad-4b9a-9eee-f8cfd6733094",
+      "job_id": "0aac4516-a89b-492e-82fc-551031f9b27b",
+      "hash": "sha256:0e02e3fb67a4eb18c176ea53478f0672881d6e11f4d0836612f17ac44e36821d"
+    }
+  },
+  "files": {
+    "assembly.json": "0c7dcbd9e83e341042451e61e5bf27bbeac36112d5a3b13e806d12e33c6412e4",
+    "engineer-handoff.json": "24d4726bedb8979a6df52df19673004c75865fbcf1a5f57d2c5ef032bccaf312",
+    "front_three_quarter.png": "a1c63287440c9566b8ce84b2da91a090fb97d0698cf42be30314c57b0921bfa0",
+    "garage.blend": "c5e72c0aa3feee498e1d95a87ae885514d47fe205a3b4408d292e56dc67b8248",
+    "garage.glb": "6001f4d127fe2708acf9391230d3645c6c187496ca18a97468cfe8ec0600e559",
+    "judge-report.json": "b30d915c6e7d85aef2c01b0228cfd22628bb434eea264613112a4f3a560c922c",
+    "rear_three_quarter.png": "4caa62b540cb0c8dc01c61fa6a57dcb1d6b44f652359ab2c4b27d0f51bcb779a",
+    "reopen-report.json": "f93fcd08521842877be5f651a91af9a1464d92a6056e7c1fdeb459839c9400db",
+    "side.png": "e39d20e17c820338ec63d50a5f1631be61206466816eb12729778ab63b582560",
+    "top.png": "d21b3b5ac6c6c2899879144c57ca84716f38ccc18fad4d73c05a820ccca75df7"
+  }
+}

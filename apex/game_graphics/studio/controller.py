@@ -54,20 +54,22 @@ def propose_once(
         endpoint=endpoint,
         temperature=0,
         seed=14,
-        max_tokens=700,
+        max_tokens=384,
         timeout_s=timeout_s,
         system=(
             "You control Blender using strictly valid JSON data only. No Markdown or code. "
-            "Every plan MUST start with inspect_scene and end with save_revision_and_render. "
+            "Every plan MUST contain EXACTLY THREE operations: inspect_scene, ONE artistic edit, "
+            "then save_revision_and_render. Additional operations invalidate the plan. "
             "set_material_pbr.target MUST be a material ID, never an object ID. "
             "set_location.params.location_m is the FINAL ABSOLUTE object location, never a displacement."
         ),
         prompt='Return exactly {"family":'
         + json.dumps(family)
         + ',"operations":[{"op":"...","target":"...","params":{}}]}. '
-        "Maximum 8 operations. Begin inspect_scene, end exactly one save_revision_and_render. "
+        "Exactly 3 operations total. Begin inspect_scene, choose only ONE artistic edit, "
+        "end exactly one save_revision_and_render. "
         "Use only existing identifiers. Preserve unrelated geometry, materials, lighting and cameras. "
-        "Choose the smallest change satisfying the request. Operation catalog: "
+        "Choose one smallest change satisfying the request. Operation catalog: "
         + json.dumps(CATALOG)
         + ". REQUIRED plan skeleton (insert edits between its two operations): "
         + json.dumps(template)

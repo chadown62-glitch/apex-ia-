@@ -1,0 +1,1517 @@
+ERROR Draco mesh compression is not available because library could not be found at /usr/bin/4.3/python/lib/python3.13/site-packages/libextern_draco.so
+21:22:30 | INFO: Starting glTF 2.0 export
+21:22:30 | INFO: Extracting primitive: curved_chassis
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.001
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.001
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.002
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_0
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_1
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_2
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_3
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_4
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_5
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_6
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_7
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_8
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_left_9
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.001
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: arch_lip_front_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.002
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.003
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.004
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.005
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_0
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_1
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_2
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_3
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_4
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_5
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_6
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_7
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_8
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_front_right_9
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.002
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: arch_lip_front_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.004
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.005
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.007
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.008
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_0
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_1
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_2
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_3
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_4
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_5
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_6
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_7
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_8
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_left_9
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.003
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: arch_lip_rear_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.006
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.007
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.010
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.011
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_0
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_1
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_2
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_3
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_4
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_5
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_6
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_7
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_8
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: spoke_rear_right_9
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.004
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: arch_lip_rear_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: windshield
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: rear_glass
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: roof
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: window_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: a_pillar_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: c_pillar_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: window_seal_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: door_seam_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.005
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.006
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: mirror_stem_left
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Sphere
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Sphere.001
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.007
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.008
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.009
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.010
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.011
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.012
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: window_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: a_pillar_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: c_pillar_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: window_seal_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: door_seam_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.013
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.014
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: mirror_stem_right
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Sphere.002
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Sphere.003
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.015
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.016
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.017
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.018
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.019
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.020
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.021
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.022
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.023
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.024
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.025
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.026
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.027
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.028
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.029
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.030
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.031
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.032
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.033
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.034
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.035
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.036
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.037
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.038
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.039
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.040
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.041
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.042
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.043
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.044
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.045
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.012
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cylinder.013
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.046
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.047
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.048
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.049
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.050
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.051
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.052
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Torus.008
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Extracting primitive: Cube.053
+21:22:30 | INFO: Primitives created: 1
+21:22:30 | INFO: Finished glTF 2.0 export in 0.19205594062805176 s
+Blender 4.3.2
+Read blend: "/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-01/asset.blend"
+Fra:1 Mem:28.02M (Peak 28.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:28.03M (Peak 28.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:28.24M (Peak 28.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:28.25M (Peak 28.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_left
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:28.26M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:28.26M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_3
+Fra:1 Mem:28.26M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:28.27M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:28.27M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_left
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:28.30M (Peak 28.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:28.39M (Peak 28.39M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_0
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_4
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_6
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_7
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_right
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_left
+Fra:1 Mem:28.48M (Peak 28.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:28.51M (Peak 28.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:28.55M (Peak 28.55M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_left
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_6
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_left
+Fra:1 Mem:28.62M (Peak 28.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:28.67M (Peak 28.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:28.70M (Peak 28.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:28.70M (Peak 28.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:28.72M (Peak 28.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:28.72M (Peak 28.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:28.72M (Peak 28.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_2
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_5
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_right
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:28.77M (Peak 28.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:28.78M (Peak 28.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:28.78M (Peak 28.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:28.79M (Peak 28.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:28.79M (Peak 28.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:28.79M (Peak 28.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:28.82M (Peak 28.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_left
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_left
+Fra:1 Mem:28.85M (Peak 28.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_left
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_left
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_0
+Fra:1 Mem:28.90M (Peak 28.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:28.90M (Peak 28.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_2
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_right
+Fra:1 Mem:28.93M (Peak 28.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:28.93M (Peak 28.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:28.96M (Peak 28.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_right
+Fra:1 Mem:28.96M (Peak 28.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | steering_wheel
+Fra:1 Mem:28.96M (Peak 28.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:28.97M (Peak 28.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:28.99M (Peak 28.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_right
+Fra:1 Mem:29.04M (Peak 29.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:29.07M (Peak 29.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | dashboard
+Fra:1 Mem:29.06M (Peak 29.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_0
+Fra:1 Mem:29.07M (Peak 29.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:29.09M (Peak 29.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_headrest
+Fra:1 Mem:29.10M (Peak 29.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_2
+Fra:1 Mem:29.10M (Peak 29.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_right
+Fra:1 Mem:29.11M (Peak 29.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:29.11M (Peak 29.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:29.12M (Peak 29.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:29.13M (Peak 29.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_2
+Fra:1 Mem:29.15M (Peak 29.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_3
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_4
+Fra:1 Mem:29.17M (Peak 29.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:29.17M (Peak 29.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_7
+Fra:1 Mem:29.20M (Peak 29.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_8
+Fra:1 Mem:29.20M (Peak 29.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:29.21M (Peak 29.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:29.22M (Peak 29.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_11
+Fra:1 Mem:29.23M (Peak 29.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:29.25M (Peak 29.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_15
+Fra:1 Mem:29.26M (Peak 29.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:29.28M (Peak 29.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_61
+Fra:1 Mem:29.30M (Peak 29.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:29.30M (Peak 29.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_139
+Fra:1 Mem:29.30M (Peak 29.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:29.31M (Peak 29.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:29.32M (Peak 29.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:29.34M (Peak 29.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:24.49M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:24.49M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:24.49M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:24.49M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:24.49M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:24.49M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:25.03M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:25.24M (Peak 29.34M) | Time:00:00.01 | Mem:0.05M, Peak:0.05M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:25.22M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:1.23M, Peak:1.23M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.53M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Sample 0/64
+Fra:1 Mem:50.11M (Peak 50.11M) | Time:00:00.42 | Remaining:00:25.40 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 1/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:21.94 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 64/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:21.94 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/front_three_quarter.png'
+Time: 00:22.13 (Saving: 00:00.19)
+
+Fra:1 Mem:28.03M (Peak 28.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:28.06M (Peak 28.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:28.24M (Peak 28.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:28.25M (Peak 28.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_left
+Fra:1 Mem:28.26M (Peak 28.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_2
+Fra:1 Mem:28.27M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_3
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_9
+Fra:1 Mem:28.30M (Peak 28.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:28.30M (Peak 28.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_left
+Fra:1 Mem:28.34M (Peak 28.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:28.37M (Peak 28.37M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_2
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_4
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_6
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_7
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_9
+Fra:1 Mem:28.45M (Peak 28.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:28.48M (Peak 28.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_left
+Fra:1 Mem:28.52M (Peak 28.52M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_left
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_6
+Fra:1 Mem:28.60M (Peak 28.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:28.60M (Peak 28.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:28.60M (Peak 28.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_left
+Fra:1 Mem:28.64M (Peak 28.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:28.67M (Peak 28.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:28.68M (Peak 28.68M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | steering_wheel
+Fra:1 Mem:28.77M (Peak 28.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:28.78M (Peak 28.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:28.78M (Peak 28.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:28.78M (Peak 28.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:28.79M (Peak 28.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_headrest
+Fra:1 Mem:28.79M (Peak 28.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:28.82M (Peak 28.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:28.82M (Peak 28.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_9
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_right
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:28.84M (Peak 28.84M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:28.87M (Peak 28.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:28.88M (Peak 28.88M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:28.90M (Peak 28.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:28.90M (Peak 28.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_154
+Fra:1 Mem:28.90M (Peak 28.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_left
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:28.95M (Peak 28.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_left
+Fra:1 Mem:28.98M (Peak 28.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_139
+Fra:1 Mem:28.98M (Peak 28.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_left
+Fra:1 Mem:28.99M (Peak 28.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_0
+Fra:1 Mem:29.00M (Peak 29.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:29.00M (Peak 29.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:29.03M (Peak 29.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:29.05M (Peak 29.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_right
+Fra:1 Mem:29.05M (Peak 29.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:29.05M (Peak 29.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_right
+Fra:1 Mem:29.06M (Peak 29.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_right
+Fra:1 Mem:29.07M (Peak 29.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_right
+Fra:1 Mem:29.08M (Peak 29.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:29.08M (Peak 29.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:29.10M (Peak 29.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_right
+Fra:1 Mem:29.12M (Peak 29.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:29.14M (Peak 29.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_right
+Fra:1 Mem:29.15M (Peak 29.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:29.17M (Peak 29.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_2
+Fra:1 Mem:29.17M (Peak 29.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:29.20M (Peak 29.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:29.21M (Peak 29.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:29.22M (Peak 29.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_3
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:29.25M (Peak 29.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_7
+Fra:1 Mem:29.28M (Peak 29.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:29.29M (Peak 29.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:29.31M (Peak 29.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_11
+Fra:1 Mem:29.32M (Peak 29.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:29.32M (Peak 29.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:29.34M (Peak 29.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:25.03M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:25.24M (Peak 29.34M) | Time:00:00.01 | Mem:0.05M, Peak:0.05M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:25.22M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:1.23M, Peak:1.23M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.53M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Sample 0/64
+Fra:1 Mem:50.11M (Peak 50.11M) | Time:00:00.38 | Remaining:00:23.21 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 1/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:20.87 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 64/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:20.87 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/rear_three_quarter.png'
+Time: 00:20.95 (Saving: 00:00.07)
+
+Fra:1 Mem:28.03M (Peak 28.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:28.03M (Peak 28.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:28.24M (Peak 28.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:28.24M (Peak 28.24M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_left
+Fra:1 Mem:28.26M (Peak 28.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_2
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_3
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:28.30M (Peak 28.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_left
+Fra:1 Mem:28.32M (Peak 28.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:28.36M (Peak 28.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_0
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_2
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_4
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_6
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_7
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_9
+Fra:1 Mem:28.45M (Peak 28.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:28.45M (Peak 28.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_left
+Fra:1 Mem:28.45M (Peak 28.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_left
+Fra:1 Mem:28.57M (Peak 28.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_2
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_6
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_left
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:28.67M (Peak 28.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:28.71M (Peak 28.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:28.72M (Peak 28.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_2
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_9
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | windshield
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_left
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:28.82M (Peak 28.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:28.82M (Peak 28.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:28.85M (Peak 28.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_left
+Fra:1 Mem:28.88M (Peak 28.88M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_left
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | steering_wheel
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_0
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_2
+Fra:1 Mem:28.97M (Peak 28.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:28.97M (Peak 28.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_right
+Fra:1 Mem:28.99M (Peak 28.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:28.99M (Peak 28.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:29.01M (Peak 29.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_right
+Fra:1 Mem:29.01M (Peak 29.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:29.02M (Peak 29.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_right
+Fra:1 Mem:29.02M (Peak 29.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:29.03M (Peak 29.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:29.05M (Peak 29.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:29.07M (Peak 29.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:29.08M (Peak 29.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:29.10M (Peak 29.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_0
+Fra:1 Mem:29.12M (Peak 29.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:29.12M (Peak 29.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_2
+Fra:1 Mem:29.13M (Peak 29.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_right
+Fra:1 Mem:29.13M (Peak 29.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:29.15M (Peak 29.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_154
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_2
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_3
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:29.22M (Peak 29.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:29.22M (Peak 29.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_8
+Fra:1 Mem:29.23M (Peak 29.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:29.23M (Peak 29.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_139
+Fra:1 Mem:29.23M (Peak 29.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:29.25M (Peak 29.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:29.25M (Peak 29.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_61
+Fra:1 Mem:29.28M (Peak 29.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:29.28M (Peak 29.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:29.30M (Peak 29.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_42
+Fra:1 Mem:29.31M (Peak 29.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_15
+Fra:1 Mem:29.31M (Peak 29.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:29.31M (Peak 29.31M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:29.34M (Peak 29.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:25.03M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:25.24M (Peak 29.34M) | Time:00:00.01 | Mem:0.05M, Peak:0.05M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:25.22M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:1.23M, Peak:1.23M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.53M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Sample 0/64
+Fra:1 Mem:50.11M (Peak 50.11M) | Time:00:00.45 | Remaining:00:27.62 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 1/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:21.99 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 64/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:21.99 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/side.png'
+Time: 00:22.09 (Saving: 00:00.09)
+
+Fra:1 Mem:28.03M (Peak 28.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:28.03M (Peak 28.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_left
+Fra:1 Mem:28.21M (Peak 28.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:28.25M (Peak 28.25M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:28.26M (Peak 28.26M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_left
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_2
+Fra:1 Mem:28.27M (Peak 28.27M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_3
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:28.28M (Peak 28.28M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_9
+Fra:1 Mem:28.29M (Peak 28.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:28.30M (Peak 28.30M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_left
+Fra:1 Mem:28.32M (Peak 28.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:28.37M (Peak 28.37M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:28.41M (Peak 28.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:28.42M (Peak 28.42M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_2
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:28.43M (Peak 28.43M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_4
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_6
+Fra:1 Mem:28.44M (Peak 28.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:28.45M (Peak 28.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_9
+Fra:1 Mem:28.45M (Peak 28.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:28.46M (Peak 28.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_right
+Fra:1 Mem:28.49M (Peak 28.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_left
+Fra:1 Mem:28.53M (Peak 28.53M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:28.58M (Peak 28.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_2
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:28.59M (Peak 28.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:28.60M (Peak 28.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_6
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:28.61M (Peak 28.61M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:28.62M (Peak 28.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_left
+Fra:1 Mem:28.65M (Peak 28.65M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:28.69M (Peak 28.69M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:28.73M (Peak 28.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:28.74M (Peak 28.74M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_2
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:28.75M (Peak 28.75M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_5
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_9
+Fra:1 Mem:28.76M (Peak 28.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_right
+Fra:1 Mem:28.77M (Peak 28.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | windshield
+Fra:1 Mem:28.80M (Peak 28.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:28.81M (Peak 28.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_left
+Fra:1 Mem:28.82M (Peak 28.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:28.83M (Peak 28.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:28.84M (Peak 28.84M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:28.85M (Peak 28.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_left
+Fra:1 Mem:28.85M (Peak 28.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:28.87M (Peak 28.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_left
+Fra:1 Mem:28.89M (Peak 28.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_left
+Fra:1 Mem:28.90M (Peak 28.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_left
+Fra:1 Mem:28.91M (Peak 28.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_0
+Fra:1 Mem:28.91M (Peak 28.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:28.92M (Peak 28.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_2
+Fra:1 Mem:28.93M (Peak 28.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:28.93M (Peak 28.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_right
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:28.94M (Peak 28.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_right
+Fra:1 Mem:28.95M (Peak 28.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_right
+Fra:1 Mem:28.96M (Peak 28.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:28.96M (Peak 28.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:29.00M (Peak 29.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_right
+Fra:1 Mem:29.00M (Peak 29.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_right
+Fra:1 Mem:29.02M (Peak 29.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:29.02M (Peak 29.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_0
+Fra:1 Mem:29.07M (Peak 29.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:29.08M (Peak 29.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | dashboard
+Fra:1 Mem:29.09M (Peak 29.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_2
+Fra:1 Mem:29.09M (Peak 29.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:29.11M (Peak 29.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:29.12M (Peak 29.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:29.13M (Peak 29.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_3
+Fra:1 Mem:29.13M (Peak 29.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_4
+Fra:1 Mem:29.15M (Peak 29.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:29.16M (Peak 29.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_7
+Fra:1 Mem:29.17M (Peak 29.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_8
+Fra:1 Mem:29.17M (Peak 29.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_11
+Fra:1 Mem:29.19M (Peak 29.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:29.21M (Peak 29.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:29.21M (Peak 29.21M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:29.22M (Peak 29.22M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:29.23M (Peak 29.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:29.24M (Peak 29.24M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_15
+Fra:1 Mem:29.26M (Peak 29.26M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:29.27M (Peak 29.27M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_154
+Fra:1 Mem:29.29M (Peak 29.29M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:29.29M (Peak 29.29M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_61
+Fra:1 Mem:29.30M (Peak 29.30M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:29.32M (Peak 29.32M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:29.33M (Peak 29.33M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_139
+Fra:1 Mem:29.34M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:24.41M (Peak 29.34M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:24.50M (Peak 29.34M) | Time:00:00.01 | Mem:0.01M, Peak:0.01M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:24.53M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:25.03M (Peak 29.34M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:25.24M (Peak 29.34M) | Time:00:00.01 | Mem:0.05M, Peak:0.05M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:25.22M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:0.24M, Peak:0.24M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:1.23M, Peak:1.23M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:25.23M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:2.32M, Peak:3.31M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.45M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:26.35M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.53M, Peak:3.53M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.45M, Peak:3.53M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:26.36M (Peak 29.34M) | Time:00:00.01 | Mem:3.54M, Peak:3.54M | Scene, ViewLayer | Sample 0/64
+Fra:1 Mem:50.11M (Peak 50.11M) | Time:00:00.14 | Remaining:00:08.11 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 1/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:05.48 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Sample 64/64
+Fra:1 Mem:60.65M (Peak 81.75M) | Time:00:05.48 | Mem:27.27M, Peak:27.27M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/front.png'
+Time: 00:05.55 (Saving: 00:00.07)
+
+Fra:1 Mem:25.14M (Peak 25.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:25.15M (Peak 25.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:25.32M (Peak 25.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:25.32M (Peak 25.32M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:25.33M (Peak 25.33M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_2
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_3
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:25.36M (Peak 25.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:25.36M (Peak 25.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_left
+Fra:1 Mem:25.36M (Peak 25.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:25.39M (Peak 25.39M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:25.44M (Peak 25.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_0
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_6
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_7
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:25.49M (Peak 25.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_9
+Fra:1 Mem:25.49M (Peak 25.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:25.49M (Peak 25.49M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_right
+Fra:1 Mem:25.50M (Peak 25.50M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | steering_wheel
+Fra:1 Mem:25.62M (Peak 25.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:25.62M (Peak 25.62M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | dashboard
+Fra:1 Mem:25.64M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_2
+Fra:1 Mem:25.63M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:25.64M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:25.64M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:25.64M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_6
+Fra:1 Mem:25.64M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:25.64M (Peak 25.64M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:25.65M (Peak 25.65M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:25.66M (Peak 25.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:25.66M (Peak 25.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:25.67M (Peak 25.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:25.67M (Peak 25.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:25.67M (Peak 25.67M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:25.78M (Peak 25.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_2
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_154
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:25.80M (Peak 25.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:25.81M (Peak 25.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_5
+Fra:1 Mem:25.81M (Peak 25.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:25.81M (Peak 25.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:25.82M (Peak 25.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_9
+Fra:1 Mem:25.82M (Peak 25.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:25.83M (Peak 25.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_61
+Fra:1 Mem:25.83M (Peak 25.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:25.87M (Peak 25.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | windshield
+Fra:1 Mem:25.87M (Peak 25.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:25.87M (Peak 25.87M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:25.88M (Peak 25.88M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:25.88M (Peak 25.88M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:25.89M (Peak 25.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:25.89M (Peak 25.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:25.89M (Peak 25.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:25.91M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_15
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_left
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:25.97M (Peak 25.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_left
+Fra:1 Mem:25.98M (Peak 25.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_2
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:26.00M (Peak 26.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_right
+Fra:1 Mem:26.00M (Peak 26.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_right
+Fra:1 Mem:26.01M (Peak 26.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:26.01M (Peak 26.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_right
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_right
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_right
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_right
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:26.06M (Peak 26.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_11
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_right
+Fra:1 Mem:26.10M (Peak 26.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:26.11M (Peak 26.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:26.11M (Peak 26.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_2
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_right
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_2
+Fra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_4
+Fra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:26.20M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:22.27M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:1.03M, Peak:1.03M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.25M, Peak:9.33M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Sample 0/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.16 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Sample 1/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.16 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/silhouette_front_three_quarter.png'
+Time: 00:00.21 (Saving: 00:00.04)
+
+Fra:1 Mem:25.14M (Peak 25.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:25.23M (Peak 25.23M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:25.32M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:25.33M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:25.33M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_2
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_9
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:25.36M (Peak 25.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_left
+Fra:1 Mem:25.38M (Peak 25.38M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:25.41M (Peak 25.41M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:25.44M (Peak 25.44M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:25.45M (Peak 25.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_0
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_2
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_4
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_6
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_9
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_right
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_left
+Fra:1 Mem:25.53M (Peak 25.53M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:25.57M (Peak 25.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_2
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:25.66M (Peak 25.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:25.66M (Peak 25.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:25.70M (Peak 25.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:25.70M (Peak 25.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_9
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | windshield
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:25.78M (Peak 25.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:25.78M (Peak 25.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:25.78M (Peak 25.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_left
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:25.83M (Peak 25.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_left
+Fra:1 Mem:25.84M (Peak 25.84M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_left
+Fra:1 Mem:25.84M (Peak 25.84M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_0
+Fra:1 Mem:25.85M (Peak 25.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:25.86M (Peak 25.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_2
+Fra:1 Mem:25.88M (Peak 25.88M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_right
+Fra:1 Mem:25.90M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:25.90M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | dashboard
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_right
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_right
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_right
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_right
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_right
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:25.97M (Peak 25.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_right
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_0
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_right
+Fra:1 Mem:26.01M (Peak 26.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:26.03M (Peak 26.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_2
+Fra:1 Mem:26.03M (Peak 26.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_4
+Fra:1 Mem:26.06M (Peak 26.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:26.06M (Peak 26.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:26.06M (Peak 26.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_8
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:26.09M (Peak 26.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:26.10M (Peak 26.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_11
+Fra:1 Mem:26.10M (Peak 26.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:26.11M (Peak 26.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_15
+Fra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_42
+Fra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_61
+Fra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:26.16M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_139
+Fra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_154
+Fra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:26.20M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:22.27M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.25M, Peak:9.33M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Sample 0/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.15 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Sample 1/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.15 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/silhouette_rear_three_quarter.png'
+Time: 00:00.20 (Saving: 00:00.04)
+
+Fra:1 Mem:25.14M (Peak 25.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:25.14M (Peak 25.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_left
+Fra:1 Mem:25.29M (Peak 25.29M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:25.33M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_left
+Fra:1 Mem:25.33M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:25.33M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_2
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_3
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:25.34M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_9
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:25.36M (Peak 25.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:25.39M (Peak 25.39M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:25.45M (Peak 25.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:25.44M (Peak 25.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_right
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_0
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_2
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_7
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_9
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_right
+Fra:1 Mem:25.51M (Peak 25.51M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_left
+Fra:1 Mem:25.54M (Peak 25.54M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:25.57M (Peak 25.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:25.57M (Peak 25.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_left
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_6
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_left
+Fra:1 Mem:25.63M (Peak 25.63M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:25.66M (Peak 25.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:25.70M (Peak 25.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:25.69M (Peak 25.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_2
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_5
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_9
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_right
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | windshield
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | roof
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_left
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:25.78M (Peak 25.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_left
+Fra:1 Mem:25.78M (Peak 25.78M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:25.80M (Peak 25.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_left
+Fra:1 Mem:25.80M (Peak 25.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:25.80M (Peak 25.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:25.81M (Peak 25.81M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_left
+Fra:1 Mem:25.82M (Peak 25.82M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:25.85M (Peak 25.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | steering_wheel
+Fra:1 Mem:25.85M (Peak 25.85M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:25.89M (Peak 25.89M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_2
+Fra:1 Mem:25.90M (Peak 25.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:25.90M (Peak 25.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_right
+Fra:1 Mem:25.90M (Peak 25.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_right
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_right
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_seam_right
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_right
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_right
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_stem_right
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_right
+Fra:1 Mem:25.96M (Peak 25.96M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:25.97M (Peak 25.97M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_right
+Fra:1 Mem:25.98M (Peak 25.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_0
+Fra:1 Mem:25.98M (Peak 25.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_headrest
+Fra:1 Mem:26.00M (Peak 26.00M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_right
+Fra:1 Mem:26.01M (Peak 26.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:26.03M (Peak 26.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_2
+Fra:1 Mem:26.03M (Peak 26.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_3
+Fra:1 Mem:26.03M (Peak 26.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_4
+Fra:1 Mem:26.04M (Peak 26.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:26.06M (Peak 26.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_8
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:26.10M (Peak 26.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:26.10M (Peak 26.10M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:26.11M (Peak 26.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:26.13M (Peak 26.13M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_42
+Fra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_154
+Fra:1 Mem:26.19M (Peak 26.19M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:26.20M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.00 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:22.27M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:1.03M, Peak:1.03M | Scene, ViewLayer | Updating Scene BVH | Building BVH 0%
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.25M, Peak:9.33M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.06 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Sample 0/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.16 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Sample 1/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.16 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/silhouette_side.png'
+Time: 00:00.21 (Saving: 00:00.04)
+
+Fra:1 Mem:25.14M (Peak 25.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | chassis
+Fra:1 Mem:25.14M (Peak 25.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_left
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_left
+Fra:1 Mem:25.33M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_front_left
+Fra:1 Mem:25.33M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_0
+Fra:1 Mem:25.33M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_1
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_4
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_5
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_6
+Fra:1 Mem:25.34M (Peak 25.34M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_7
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_8
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_left_9
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_left
+Fra:1 Mem:25.35M (Peak 25.35M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_front_right
+Fra:1 Mem:25.36M (Peak 25.36M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_front_right
+Fra:1 Mem:25.45M (Peak 25.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_front_right
+Fra:1 Mem:25.45M (Peak 25.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_0
+Fra:1 Mem:25.45M (Peak 25.45M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_1
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_2
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_3
+Fra:1 Mem:25.46M (Peak 25.46M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_4
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_5
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_7
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_front_right_8
+Fra:1 Mem:25.47M (Peak 25.47M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_front_right
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_front_right
+Fra:1 Mem:25.48M (Peak 25.48M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_left
+Fra:1 Mem:25.57M (Peak 25.57M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_left
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_0
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_1
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_2
+Fra:1 Mem:25.58M (Peak 25.58M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_3
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_4
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_5
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_7
+Fra:1 Mem:25.59M (Peak 25.59M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_8
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_left_9
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_left
+Fra:1 Mem:25.60M (Peak 25.60M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tyre_rear_right
+Fra:1 Mem:25.66M (Peak 25.66M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rim_rear_right
+Fra:1 Mem:25.69M (Peak 25.69M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | brake_rear_right
+Fra:1 Mem:25.69M (Peak 25.69M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | hub_rear_right
+Fra:1 Mem:25.70M (Peak 25.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_0
+Fra:1 Mem:25.70M (Peak 25.70M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_1
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_3
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_4
+Fra:1 Mem:25.71M (Peak 25.71M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_6
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_7
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | spoke_rear_right_8
+Fra:1 Mem:25.72M (Peak 25.72M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | caliper_rear_right
+Fra:1 Mem:25.73M (Peak 25.73M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | arch_lip_rear_right
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | windshield
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_glass
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_left
+Fra:1 Mem:25.76M (Peak 25.76M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_left
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_left
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_left
+Fra:1 Mem:25.77M (Peak 25.77M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_left
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_left
+Fra:1 Mem:25.79M (Peak 25.79M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_left
+Fra:1 Mem:25.80M (Peak 25.80M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_left
+Fra:1 Mem:25.83M (Peak 25.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | studio_floor
+Fra:1 Mem:25.83M (Peak 25.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_left
+Fra:1 Mem:25.83M (Peak 25.83M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | console
+Fra:1 Mem:25.84M (Peak 25.84M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_left_1
+Fra:1 Mem:25.86M (Peak 25.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | steering_wheel
+Fra:1 Mem:25.86M (Peak 25.86M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_left
+Fra:1 Mem:25.90M (Peak 25.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | side_glass_right
+Fra:1 Mem:25.90M (Peak 25.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | dashboard
+Fra:1 Mem:25.90M (Peak 25.90M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | a_pillar_right
+Fra:1 Mem:25.91M (Peak 25.91M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | c_pillar_right
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_headrest
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | window_seal_right
+Fra:1 Mem:25.92M (Peak 25.92M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | door_handle_right
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat_back
+Fra:1 Mem:25.93M (Peak 25.93M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | sill_right
+Fra:1 Mem:25.94M (Peak 25.94M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | passenger_seat
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_right
+Fra:1 Mem:25.95M (Peak 25.95M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_headrest
+Fra:1 Mem:25.98M (Peak 25.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat_back
+Fra:1 Mem:25.98M (Peak 25.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | mirror_insert_right
+Fra:1 Mem:25.98M (Peak 25.98M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_right
+Fra:1 Mem:25.99M (Peak 25.99M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | driver_seat
+Fra:1 Mem:26.01M (Peak 26.01M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | headlamp_surround_right
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_1
+Fra:1 Mem:26.02M (Peak 26.02M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | led_right_2
+Fra:1 Mem:26.03M (Peak 26.03M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | tail_lamp_right
+Fra:1 Mem:26.04M (Peak 26.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_grille
+Fra:1 Mem:26.04M (Peak 26.04M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_0
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_1
+Fra:1 Mem:26.05M (Peak 26.05M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | exhaust_46
+Fra:1 Mem:26.06M (Peak 26.06M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_158
+Fra:1 Mem:26.07M (Peak 26.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_139
+Fra:1 Mem:26.07M (Peak 26.07M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_3
+Fra:1 Mem:26.08M (Peak 26.08M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_100
+Fra:1 Mem:26.09M (Peak 26.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_5
+Fra:1 Mem:26.09M (Peak 26.09M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | diffuser_fin_61
+Fra:1 Mem:26.11M (Peak 26.11M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_6
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_7
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_8
+Fra:1 Mem:26.12M (Peak 26.12M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_9
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_10
+Fra:1 Mem:26.14M (Peak 26.14M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_11
+Fra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | rear_diffuser
+Fra:1 Mem:26.15M (Peak 26.15M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_12
+Fra:1 Mem:26.16M (Peak 26.16M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_13
+Fra:1 Mem:26.17M (Peak 26.17M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_14
+Fra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | front_splitter
+Fra:1 Mem:26.18M (Peak 26.18M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Synchronizing object | grille_fin_16
+Fra:1 Mem:26.20M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Initializing
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Waiting for render to start
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Loading render kernels (may take a few minutes the first time)
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Scene
+Fra:1 Mem:21.64M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Shaders
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Procedurals
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Background
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Camera
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.00 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Meshes Flags
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects
+Fra:1 Mem:21.72M (Peak 26.20M) | Time:00:00.01 | Mem:0.00M, Peak:0.00M | Scene, ViewLayer | Updating Objects | Copying Transformations to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Objects | Applying Static Transformations
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Particle Systems | Copying Particles to device
+Fra:1 Mem:21.75M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Meshes
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.03M, Peak:0.03M | Scene, ViewLayer | Updating Mesh | Computing attributes
+Fra:1 Mem:22.27M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Mesh | Copying Attributes to device
+Fra:1 Mem:22.25M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:0.04M, Peak:0.04M | Scene, ViewLayer | Updating Scene BVH | Building BVH
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Scene BVH | Copying BVH to device
+Fra:1 Mem:22.26M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Computing normals
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:2.12M, Peak:3.11M | Scene, ViewLayer | Updating Mesh | Copying Mesh to device
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Objects Flags
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Primitive Offsets
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Images
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Camera Volume
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.25M, Peak:3.25M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights
+Fra:1 Mem:23.38M (Peak 26.20M) | Time:00:00.01 | Mem:3.33M, Peak:3.33M | Scene, ViewLayer | Updating Lights | Computing tree
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Integrator
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.33M, Peak:9.33M | Scene, ViewLayer | Updating Film
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.25M, Peak:9.33M | Scene, ViewLayer | Updating Lookup Tables
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Baking
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Updating Device | Writing constant memory
+Fra:1 Mem:29.39M (Peak 33.42M) | Time:00:00.05 | Mem:9.34M, Peak:9.34M | Scene, ViewLayer | Sample 0/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.13 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Sample 1/1
+Fra:1 Mem:63.69M (Peak 84.78M) | Time:00:00.13 | Mem:33.07M, Peak:33.07M | Scene, ViewLayer | Finished
+Saved: '/workspace/game-studio-output/mission20-qualified/.apex/game-studio/missions/eb3888e3-6f30-4aa8-ab30-a8a764d6bf86/revision-02/silhouette_front.png'
+Time: 00:00.18 (Saving: 00:00.04)
+
+
+Info: Saved "asset.blend"
+
+Blender quit

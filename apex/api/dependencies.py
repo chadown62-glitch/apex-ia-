@@ -181,6 +181,21 @@ def get_game_studio_service() -> Any:
     return _game_studio_service
 
 
+_game_studio_project_service: Any = None
+_game_studio_project_lock = threading.Lock()
+
+
+def get_game_studio_project_service() -> Any:
+    global _game_studio_project_service
+    if _game_studio_project_service is None:
+        with _game_studio_project_lock:
+            if _game_studio_project_service is None:
+                from apex.game_studio.project import GameStudioProjectService
+
+                _game_studio_project_service = GameStudioProjectService(get_game_studio_service())
+    return _game_studio_project_service
+
+
 def get_design_service() -> "DesignService":
     """Construit — UNE SEULE FOIS par processus — le Design Engine
     applicatif et le retourne. Même double-checked locking que
