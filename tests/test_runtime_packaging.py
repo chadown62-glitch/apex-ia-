@@ -232,7 +232,9 @@ class TestAntiLeakVerification(_BuiltArtifactTestCase):
 
     def test_only_a_declared_optional_package_may_be_absent(self) -> None:
         """`apex.game_studio` (import gardé de l'assistant) peut manquer ; tout autre paquet absent reste une
-        violation, même importé de la même façon."""
+        violation, même importé de la même façon. Une fois classé Runtime par son propriétaire
+        (`runtime_build/selection.py`), Game Studio est livré : son absence redevient une violation."""
+        from runtime_build.selection import RUNTIME_PACKAGES
         from runtime_build.verify import OPTIONAL_PACKAGES
 
         self.assertEqual(OPTIONAL_PACKAGES, frozenset({"game_studio"}))
@@ -245,7 +247,11 @@ class TestAntiLeakVerification(_BuiltArtifactTestCase):
                                "    delegation = None\ntry:\n    from apex.not_shipped import x\n"
                                "except ImportError:\n    x = None\n", encoding="utf-8")
             report = verify_runtime_artifact(poisoned)
-            self.assertFalse(any("apex.game_studio" in v for v in report.violations), report.render())
+            missing_studio = [v for v in report.violations if "game_studio" in v]
+            if "game_studio" in RUNTIME_PACKAGES:
+                self.assertTrue(missing_studio, report.render())
+            else:
+                self.assertEqual(missing_studio, [], report.render())
             self.assertTrue(any("apex.not_shipped" in v and "absent" in v for v in report.violations))
 
 

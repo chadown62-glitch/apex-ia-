@@ -15,7 +15,6 @@ import importlib.util
 import io
 import json
 import subprocess
-import sys
 import threading
 import zipfile
 from pathlib import Path
@@ -102,14 +101,15 @@ def _install(home, app, machine, **kwargs):
     return gpu.install(home, root=app, run=machine, smi=SMI, python="python-apex", **kwargs)
 
 
-def _activate(home, app, machine, path):
-    return gpu.activate(home, root=app, run=machine, smi=SMI, sys_path=path)
+def _activate(home, app, machine, path, *, torch_loaded=False):
+    """L'activation se fait avant tout import de torch ; ce processus de test, lui, l'a peut-être chargé :
+    l'état « déjà chargé » est donc fourni, jamais obtenu en retirant torch de `sys.modules`."""
+    return gpu.activate(home, root=app, run=machine, smi=SMI, sys_path=path,
+                        torch_loaded=lambda: torch_loaded)
 
 
 @pytest.fixture
 def no_torch(monkeypatch):
-    """L'activation se fait avant tout import de torch : ce processus de test, lui, l'a peut-être chargé."""
-    monkeypatch.delitem(sys.modules, "torch", raising=False)
     monkeypatch.delenv(gpu.OVERLAY_ENV, raising=False)
 
 
@@ -278,10 +278,8 @@ def test_activation_falls_back_to_the_cpu_and_says_why(home, app, no_torch, monk
         machine = _Machine(probe=_ok_probe(cuda_available=False))
     elif change == "deleted":
         shutil.rmtree(gpu.gpu_home(home) / "torch-2.14.0-cu128")
-    else:
-        monkeypatch.setitem(sys.modules, "torch", object())
     path = ["base"]
-    result = _activate(home, app, machine, path)
+    result = _activate(home, app, machine, path, torch_loaded=change == "torch_loaded")
     assert result["state"] == state and reason in result["reason"], result
     assert path == ["base"] and gpu.OVERLAY_ENV not in gpu.os.environ
     assert gpu.last_activation(home)["state"] == state
@@ -492,7 +490,7 @@ def test_the_lock_generator_never_fetches_over_plain_http_elsewhere() -> None:
         _lock_gpu()._check_url("http://download.pytorch.org/whl/cu128/torch/")
 
 
-def test_the_api_reports_what_the_last_start_measured(profile, no_torch) -> None:
+def test_the_api_reports_what_the_last_start_measured(profile) -> None:
     from fastapi.testclient import TestClient
 
     from apex.api.app import create_app

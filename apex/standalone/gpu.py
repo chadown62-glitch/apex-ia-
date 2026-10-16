@@ -10,8 +10,8 @@ install`) :
 - **roue `torch` CUDA figée** par adresse et empreinte SHA-256 (`runtime/gpu/torch-<variante>.lock`,
   produite par `setup/packaging/runtime/gpu/lock_gpu.py` là où download.pytorch.org est joignable),
   installée par pip en mode `--require-hashes --no-deps --only-binary=:all:` dans un dossier À PART
-  (`APEX_HOME/python/gpu/torch-<version>-<variante>`), jamais dans le runtime de base : la retirer rend exactement
-  l'état d'avant ;
+  (`APEX_HOME/python/gpu/torch-<version>-<variante>`), jamais dans le runtime de base : la retirer rend
+  exactement l'état d'avant ;
 - **espace disque** vérifié avant ; installation dans un dossier provisoire, gardé seulement après une
   **sonde réussie** dans un processus séparé : `torch` importé depuis la surcouche (jamais celui de base),
   `torch.cuda.is_available()`, nom, capacité et mémoire du GPU, multiplication de matrices sur le GPU
@@ -361,13 +361,18 @@ def probe_verdict(result: dict[str, Any]) -> str | None:
 # -- activation au démarrage ----------------------------------------------------------------------------
 
 
+def _torch_loaded() -> bool:
+    return "torch" in sys.modules
+
+
 def activate(home: Path | None = None, *, root: Path | None = None, run: Runner = subprocess.run,
-             smi: str | None = None, sys_path: list[str] | None = None) -> dict[str, Any]:
+             smi: str | None = None, sys_path: list[str] | None = None,
+             torch_loaded: Callable[[], bool] = _torch_loaded) -> dict[str, Any]:
     """Au démarrage de `serve`, AVANT tout import de torch : met la surcouche GPU en tête de `sys.path`
     si — et seulement si — tout est vérifié sur ce PC. Ne lève jamais : APEX démarre toujours, au pire sur
     le processeur, et la raison est écrite."""
     try:
-        result = _activation(home, root=root, run=run, smi=smi,
+        result = _activation(home, root=root, run=run, smi=smi, torch_loaded=torch_loaded,
                              sys_path=sys.path if sys_path is None else sys_path)
     except Exception as exc:  # une surcouche cassée n'empêche jamais APEX de démarrer
         result = {"state": "failed", "reason": f"erreur interne : {exc.__class__.__name__}: {exc}"[:400]}
@@ -378,7 +383,7 @@ def activate(home: Path | None = None, *, root: Path | None = None, run: Runner 
 
 
 def _activation(home: Path | None, *, root: Path | None, run: Runner, smi: str | None,
-                sys_path: list[str]) -> dict[str, Any]:
+                sys_path: list[str], torch_loaded: Callable[[], bool]) -> dict[str, Any]:
     marker = _read(marker_path(home))
     if marker is None:
         return {"state": "absent", "reason": "accélération GPU non installée : calcul sur le processeur"}
@@ -401,7 +406,7 @@ def _activation(home: Path | None, *, root: Path | None, run: Runner, smi: str |
         return {**base, "state": "inactive",
                 "reason": "APEX a été mis à jour depuis l'installation de l'accélération GPU : "
                           "réinstallez-la"}
-    if "torch" in sys.modules:
+    if torch_loaded():
         return {**base, "state": "failed",
                 "reason": "torch déjà chargé avant l'activation : surcouche non appliquée"}
     driver = detect_driver(smi=smi, run=run)
