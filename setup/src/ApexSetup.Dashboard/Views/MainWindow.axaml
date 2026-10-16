@@ -80,7 +80,10 @@
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8" IsVisible="{Binding IsNative}">
                 <Button Name="PrepareButton" Content="Préparer APEX" Command="{Binding PrepareCommand}" FontWeight="SemiBold" />
                 <Button Name="InstallModelButton" Content="Installer le modèle" Command="{Binding InstallModelCommand}" />
+                <Button Name="InstallGpuButton" Content="Accélération GPU (facultatif)" Command="{Binding InstallGpuCommand}"
+                        ToolTip.Tip="PyTorch CUDA pour une carte NVIDIA : environ 2,5 Go, installé à part, gardé seulement si la sonde du GPU réussit sur ce PC." />
                 <ProgressBar IsIndeterminate="True" Width="120" IsVisible="{Binding IsBusyPreparing}" VerticalAlignment="Center" />
+                <TextBlock Name="GpuText" Text="{Binding GpuDetail}" VerticalAlignment="Center" TextWrapping="Wrap" Opacity="0.75" />
             </StackPanel>
 
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">

@@ -371,17 +371,17 @@ describe("Game Studio in the 3D workshop", () => {
   it("asks before launching: the user launches a proposed mission once, with its missing dependencies shown", async () => {
     api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
     api.on("GET", "/assistant/game-studio/availability", {
-      installed: true, ready: false, missing: ["Aucun GPU CUDA : choisissez « Processeur »."], notes: [], auto_launch: false, compute: "auto",
+      installed: true, ready: false, missing: ["Aucun GPU CUDA : choisissez « Processeur »."], notes: [], launch: "human", compute: "auto",
     });
     api.on("POST", "/assistant/conversations/c1/game-studio/launch", (body) => real({ message_id: "l1", content: "Mission lancée.", meta: { echo: body } }));
     const messages = [
       message({ id: "u1", role: "user", content: "Crée une scène de forêt avec une rivière." }),
-      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1", reason: "le lancement automatique des missions n'est pas activé : confirmez pour lancer" } } }),
+      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1", reason: "à lancer par vous : une mission n'est jamais lancée sans votre clic" } } }),
     ];
     renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
     expect(await screen.findByText(/Le Cerveau propose de confier à Game Studio : « Crée une scène de forêt avec une rivière\. »/)).toBeInTheDocument();
     expect(await screen.findByText("Aucun GPU CUDA : choisissez « Processeur ».")).toBeInTheDocument();
-    expect(screen.getByText(/Le Cerveau propose les missions ; vous les lancez\./)).toBeInTheDocument();
+    expect(screen.getByText(/Le Cerveau propose les missions ; vous seul les lancez ou les annulez\./)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Lancer la mission" }));
     await waitFor(() => expect(api.calls.find((c) => c.path === "/assistant/conversations/c1/game-studio/launch")?.body).toEqual({ message_id: "a1" }));
   });

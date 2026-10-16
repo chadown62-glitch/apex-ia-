@@ -54,6 +54,12 @@ cp -r "$REPO_ROOT/frontend/dist" "$APP_DIR/frontend_dist"
 [[ -f "$APP_DIR/frontend_dist/index.html" ]] || { log "ERREUR : interface web non construite"; exit 1; }
 mkdir -p "$APP_DIR/runtime"
 cp "$SCRIPT_DIR/runtime/python-runtime.json" "$SCRIPT_DIR/runtime/requirements-windows.lock" "$APP_DIR/runtime/"
+# Accélération GPU FACULTATIVE : seulement sa description et ses listes figées (quelques Ko) — jamais torch CUDA
+# lui-même (~2,5 Go), installé à part, sur demande, par `python -m apex.standalone gpu install`.
+mkdir -p "$APP_DIR/runtime/gpu"
+cp "$SCRIPT_DIR/runtime/gpu/gpu-runtime.json" "$APP_DIR/runtime/gpu/"
+find "$SCRIPT_DIR/runtime/gpu" -maxdepth 1 -name 'torch-cu*.lock' -exec cp {} "$APP_DIR/runtime/gpu/" \;
+log "accélération GPU facultative : $(find "$APP_DIR/runtime/gpu" -name 'torch-cu*.lock' | wc -l) liste(s) figée(s) PyTorch CUDA"
 (cd "$REPO_ROOT" && "$PY" -m runtime_build.verify "$APP_DIR") || { log "ERREUR : artefact Runtime refusé par runtime_build.verify"; exit 1; }
 find "$APP_DIR" -name __pycache__ -prune -exec rm -rf {} +
 find "$APP_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +

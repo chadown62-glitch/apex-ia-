@@ -94,7 +94,8 @@ export interface GameStudioAvailability {
   ready: boolean;
   missing: string[];
   notes: string[];
-  auto_launch: boolean;
+  /** Toujours « human » : une mission n'est lancée que par un clic de l'utilisateur. */
+  launch: "human";
   compute: "auto" | "cpu";
   cuda_available?: boolean;
   /** Partage du GPU avec les modèles principaux : bail tenu, prêté à un spécialiste. */
@@ -170,7 +171,6 @@ export interface AppSettings {
     workspace_write: boolean;
     code_execution: boolean;
     max_tool_steps: number;
-    game_studio_missions: boolean;
     game_studio_compute: "auto" | "cpu";
   };
   privacy: { index_conversations: boolean; attachments_enabled: boolean };

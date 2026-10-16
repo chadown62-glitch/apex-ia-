@@ -1,5 +1,6 @@
-"""Le Cerveau APEX et Game Studio (mode 3D) : analyse d'intention, lancement automatique ou proposé, suivi,
-aperçus, annulation, disponibilité expliquée. Les outils sont ceux de Game Studio
+"""Le Cerveau APEX et Game Studio (mode 3D) : analyse d'intention, mission PROPOSÉE puis lancée par un clic
+de l'utilisateur (jamais par un modèle : règle HUMAN-only de `PolicyEngine`), suivi, aperçus, annulation,
+disponibilité expliquée. Les outils sont ceux de Game Studio
 (`apex.game_studio.delegation`, propriété de Codex), enregistrés côté assistant.
 
 Deux parties :
@@ -207,7 +208,7 @@ def test_without_game_studio_nothing_is_offered_or_announced_and_it_is_said(env,
     assert problems == [GAME_STUDIO_ABSENT] and not names & set(GAME_STUDIO_TOOLS)
     assert "model3d.create" in names and "fs.read" in names
     assert not set(MODES["3d"].describe(names)["tools"]) & set(GAME_STUDIO_TOOLS)
-    _settings(env, game_studio_missions=True)
+    _settings(env)
     provider = _Brain3D(["Voiture prête."], [_SCENE_CALL])
     turn, answer, _ = _turn(env, provider, SCENE)
     assert turn.status == "done" and turn.steps == []  # une voiture pour une forêt : rien d'écrit
@@ -220,7 +221,7 @@ def test_without_game_studio_nothing_is_offered_or_announced_and_it_is_said(env,
 
 
 def test_a_question_leaves_no_game_studio_trace(env, without_game_studio) -> None:
-    _settings(env, game_studio_missions=True)
+    _settings(env)
     _, answer, _ = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), "Comment exporter un .glb vers Unity ?")
     assert "game_studio" not in answer.meta
 
@@ -251,13 +252,25 @@ def test_following_launching_or_cancelling_without_game_studio_is_refused(env, w
     assert report["missing"] == [GAME_STUDIO_ABSENT]
 
 
-def test_auto_launch_is_off_by_default_and_cpu_is_only_an_explicit_choice(env) -> None:
+def test_autonomous_launch_cannot_be_turned_on_and_cpu_is_only_an_explicit_choice(env) -> None:
+    """HUMAN-only : l'ancien réglage de lancement automatique est relu, mais toujours sans effet."""
     from apex.assistant.settings import SettingsService
 
     settings, _ = SettingsService(env).load()
     assert settings.tools.game_studio_missions is False and settings.tools.game_studio_compute == "auto"
+    SettingsService(env).update({"tools": {"game_studio_missions": True}})
+    settings, _ = SettingsService(env).load()
+    assert settings.tools.game_studio_missions is False
     with pytest.raises(ValueError, match="game_studio_compute"):
         SettingsService(env).update({"tools": {"game_studio_compute": "gpu-ou-cpu"}})
+
+
+def test_no_mode_ever_grants_a_model_the_right_to_launch_or_cancel_a_mission() -> None:
+    from apex.assistant.modes import GAME_STUDIO_HUMAN_ONLY, MODES
+
+    for mode in MODES.values():
+        assert not mode.permissions & GAME_STUDIO_HUMAN_ONLY, mode.id
+        assert not {"game_studio.create", "game_studio.cancel"} & set(mode.tools), mode.id
 
 
 # -- avec Game Studio ------------------------------------------------------------------------------------
@@ -268,37 +281,47 @@ def studio_tools():
     pytest.importorskip("apex.game_studio.delegation", reason="Game Studio absent de cette installation")
 
 
-def test_the_real_game_studio_tools_are_registered_and_offered_in_3d_mode_only(env,
-                                                                             studio_tools) -> None:
-    from apex.assistant.modes import GAME_STUDIO_PERMISSIONS, MODES
+def _proposed_then_launched(env, studio, *, compute="auto"):
+    """Le parcours prévu : le Cerveau propose, l'utilisateur lance d'un clic."""
+    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), SCENE, studio=studio)
+    assert answer.meta["game_studio"]["state"] == "proposed" and studio.created == []
+    launched = game_studio.launch_proposed(env, conversation.id, answer.id, compute=compute, service=studio)
+    return launched, answer, conversation
+
+
+def test_the_real_game_studio_tools_are_registered_and_only_following_is_offered(env, studio_tools) -> None:
+    from apex.assistant.modes import GAME_STUDIO_HUMAN_ONLY, GAME_STUDIO_READ, MODES
     from apex.tools.model import Permission
 
     registry = assistant_registry()
     assert {spec.name for spec in registry.specs()} >= set(GAME_STUDIO_TOOLS)
     assert {Permission.GAME_STUDIO_CREATE} == registry.get("game_studio.create")[0].permissions
-    assert MODES["3d"].permissions >= GAME_STUDIO_PERMISSIONS
+    assert MODES["3d"].permissions >= GAME_STUDIO_READ
+    assert not MODES["3d"].permissions & GAME_STUDIO_HUMAN_ONLY
     assert not any(t.startswith("game_studio.") for m in MODES.values() if m.id != "3d" for t in m.tools)
-    # Lancement automatique non permis (défaut) : suivre, oui ; lancer ou annuler, non (le modèle).
-    _settings(env)
+    _settings(env, game_studio_missions=True)  # l'ancien réglage : sans effet
     provider = _ScriptedProvider(["Bonjour."])
     _, answer, _ = _turn(env, provider, "Bonjour")
     offered = answer.meta["tools_offered"]
     assert "game_studio.status" in offered and "game_studio.results" in offered
     assert "game_studio.create" not in offered and "game_studio.cancel" not in offered
-    assert "GAME STUDIO" not in provider.requests[0].system
+    system = provider.requests[0].system
+    assert "GAME STUDIO" in system and "Tu ne lances ni n'annules jamais une mission" in system
+    assert not any("GAME STUDIO" in n for n in answer.meta.get("tools_notes", []))  # consigne, pas une note
 
 
-def test_without_auto_launch_the_brain_proposes_and_the_user_launches_once(env, studio_tools) -> None:
+def test_the_brain_only_proposes_and_the_user_launches_once(env, studio_tools) -> None:
     from apex.assistant.workspace import conversation_workspace
 
     studio = _Studio()
-    _settings(env)
+    _settings(env, game_studio_missions=True)
     provider = _Brain3D(["Voiture prête."], [_SCENE_CALL])
     turn, answer, conversation = _turn(env, provider, SCENE, studio=studio)
     assert studio.created == [] and turn.steps == []
     proposal = answer.meta["game_studio"]
     assert proposal["state"] == "proposed" and proposal["launched"] is False
-    assert "lancement automatique" in proposal["reason"] and proposal["brain_3d_call"] is True
+    assert "jamais lancée sans votre clic" in proposal["reason"] and proposal["brain_3d_call"] is True
+    assert "authorization" not in proposal
     # Le clic de l'utilisateur : la demande d'origine, le calcul des Paramètres, une seule mission.
     launched = game_studio.launch_proposed(env, conversation.id, answer.id, compute="cpu", service=studio)
     [(request, owner)] = studio.created
@@ -306,6 +329,7 @@ def test_without_auto_launch_the_brain_proposes_and_the_user_launches_once(env, 
     assert owner == conversation_workspace(conversation.id, None).id
     record = launched["meta"]["game_studio"]
     assert record["state"] == "launched" and record["proposal_of"] == answer.id
+    assert record["authorization"] == "confirmée par l'utilisateur"
     assert record["trigger"] == "utilisateur" and launched["meta"]["steps"][0]["source"] == "utilisateur"
     assert _messages(env, conversation.id)[-1].id == launched["message_id"]  # enregistré, jamais réécrit
     with pytest.raises(game_studio.AlreadyLaunched):
@@ -326,27 +350,11 @@ def test_a_proposal_cannot_be_launched_from_another_conversation(env, studio_too
     assert studio.created == []
 
 
-def test_with_auto_launch_the_brain_hands_a_clear_request_over_and_it_is_followed(env,
-                                                                                studio_tools) -> None:
-    from apex.assistant.workspace import conversation_workspace
-
+def test_a_launched_mission_is_followed_and_cancelled_only_in_its_conversation(env, studio_tools) -> None:
     studio = _Studio()
-    _settings(env, game_studio_missions=True)
-    provider = _Brain3D(["Voiture prête."], [_SCENE_CALL])
-    turn, answer, conversation = _turn(env, provider, SCENE, studio=studio)
-    assert turn.status == "done" and answer.content == "Voiture prête."
-    assert "GAME STUDIO" in provider.requests[0].system  # consigne pour le modèle…
-    assert not any("GAME STUDIO" in n for n in answer.meta["tools_notes"])  # … jamais montrée comme note
-    [(request, owner)] = studio.created
-    assert request["description"] == SCENE and request["compute_backend"] == "auto"
-    assert owner == conversation_workspace(conversation.id, None).id
-    step = turn.steps[-1]
-    assert step["tool"] == "game_studio.create" and step["source"] == "cerveau" and step["ok"]
-    project_id = step["observation"]["output"]["project_id"]
-    delegation = answer.meta["game_studio"]
-    assert delegation["state"] == "launched" and delegation["project_id"] == project_id
-    assert delegation["authorization"] == "lancement automatique permis"
-    # Suivi par les outils de Game Studio, dans l'espace de travail de CETTE conversation seulement.
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
     followed = game_studio.follow(env, conversation.id, project_id, service=studio)
     assert followed["status"]["status"] == "queued" and followed["results"]["ready"] is False
     other = _conversation(env, mode="3d")
@@ -360,92 +368,108 @@ def test_with_auto_launch_the_brain_hands_a_clear_request_over_and_it_is_followe
     assert studio.cancelled == [project_id]
 
 
-def test_with_auto_launch_an_ambiguous_message_is_only_proposed(env, studio_tools) -> None:
+def test_launching_and_cancelling_are_refused_to_anyone_but_a_human(env, studio_tools, monkeypatch) -> None:
+    """Le moteur de politique est consulté à chaque geste : un sujet autre qu'humain n'obtient rien."""
+    from apex.policy.engine import PolicyDenied, PolicyEngine
+    from apex.policy.model import Action, Subject
+
+    for subject in (Subject.CORE, Subject.RESEARCH):
+        assert not PolicyEngine().check(subject, Action.CREATE_MISSION).allowed, subject
+    assert not PolicyEngine().check(Subject.RESEARCH, Action.CANCEL_MISSION).allowed
+    assert PolicyEngine().check(Subject.HUMAN, Action.CREATE_MISSION).allowed
+    studio = _Studio()
+    _settings(env)
+    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), SCENE, studio=studio)
+    real = PolicyEngine.authorize
+
+    def as_core(self, _subject, action):  # le même geste, demandé par le CORE au lieu d'un humain
+        return real(self, Subject.CORE, action)
+
+    monkeypatch.setattr(PolicyEngine, "authorize", as_core)
+    with pytest.raises(PolicyDenied):
+        game_studio.launch_proposed(env, conversation.id, answer.id, compute="auto", service=studio)
+    assert studio.created == []
+
+
+def test_an_ambiguous_message_is_only_proposed_as_to_confirm(env, studio_tools) -> None:
     studio = _Studio()
     _settings(env, game_studio_missions=True)
     _, answer, _ = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), "Sais-tu modéliser des personnages ?",
                          studio=studio)
     assert studio.created == [] and answer.meta["game_studio"]["state"] == "proposed"
     assert answer.meta["game_studio"]["intent"] == "ambiguous"
+    assert answer.meta["game_studio"]["reason"].startswith("demande à confirmer")
 
 
 def test_a_question_never_launches_or_proposes_even_if_the_brain_made_a_3d_call(env, studio_tools) -> None:
     studio = _Studio()
-    _settings(env, game_studio_missions=True)
+    _settings(env)
     question = "Explique-moi ce qu'est une carte de normales."  # mesuré : le Cerveau y fait un appel 3D
     turn, answer, _ = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), question, studio=studio)
     assert studio.created == [] and "game_studio" not in answer.meta
     assert "game_studio.create" not in [s["tool"] for s in turn.steps]
 
 
-def test_a_clear_request_the_brain_did_not_recognize_is_still_handed_over(env, studio_tools) -> None:
+def test_a_clear_request_the_brain_did_not_recognize_is_still_proposed(env, studio_tools) -> None:
     studio = _Studio()
-    _settings(env, game_studio_missions=True)
+    _settings(env)
     _, answer, _ = _turn(env, _Brain3D(["Je ne sais pas."], []), "Dessine-moi une maison en 3D.",
                          studio=studio)
-    assert len(studio.created) == 1 and answer.meta["game_studio"]["brain_3d_call"] is False
+    assert studio.created == [] and answer.meta["game_studio"]["state"] == "proposed"
+    assert answer.meta["game_studio"]["brain_3d_call"] is False
 
 
-def test_the_launch_is_decided_by_the_analysis_whatever_engine_wrote_the_text(env, studio_tools) -> None:
+def test_the_proposal_is_decided_by_the_analysis_whatever_engine_wrote_the_text(env, studio_tools) -> None:
     studio = _Studio()
-    _settings(env, game_studio_missions=True)
+    _settings(env)
     _, answer, _ = _turn(env, _ScriptedProvider(["Voici une idée de scène."]), SCENE, studio=studio)
-    assert len(studio.created) == 1 and answer.meta["game_studio"]["state"] == "launched"
+    assert studio.created == [] and answer.meta["game_studio"]["state"] == "proposed"
     assert answer.meta["game_studio"]["served_by_brain"] is False
 
 
-def test_compute_is_the_users_choice_never_the_models(env, studio_tools) -> None:
+@pytest.mark.parametrize("tool", ["game_studio.create", "game_studio.cancel"])
+def test_a_model_calling_launch_or_cancel_is_refused_and_nothing_happens(env, studio_tools, tool) -> None:
     studio = _Studio()
     _settings(env, game_studio_missions=True, game_studio_compute="cpu")
-    call = json.dumps({"tool": "game_studio.create",
-                       "arguments": {"description": "Une arène circulaire avec des colonnes.",
-                                     "compute_backend": "cuda"}})
-    turn, _, _ = _turn(env, _ScriptedProvider([call, "Mission lancée."]), "Fais une arène.", studio=studio)
-    assert [request["compute_backend"] for request, _ in studio.created] == ["cpu"]
-    assert turn.steps[0]["arguments"]["compute_backend"] == "cpu"
-
-
-def test_a_looping_model_never_launches_more_than_one_mission_per_turn(env, studio_tools) -> None:
-    studio = _Studio()
-    _settings(env, game_studio_missions=True)
-    call = json.dumps({"tool": "game_studio.create",
-                       "arguments": {"description": "Une arène circulaire avec des colonnes."}})
+    arguments = ({"description": "Une arène circulaire avec des colonnes.", "compute_backend": "cuda"}
+                 if tool == "game_studio.create" else {"project_id": str(uuid4())})
+    call = json.dumps({"tool": tool, "arguments": arguments})
     turn, answer, _ = _turn(env, _ScriptedProvider([call, call, "Mission lancée."]), "Fais une arène.",
                             studio=studio)
-    assert len(studio.created) == 1
-    assert [s["ok"] for s in turn.steps] == [True, False]
-    assert turn.steps[1]["observation"]["error"]["code"] == "limit"
-    assert "game_studio" not in answer.meta  # la mission du modèle suffit : rien de plus n'est proposé
+    assert studio.created == [] and studio.cancelled == []
+    assert turn.steps and all(s["tool"] == tool and s["ok"] is False for s in turn.steps)
+    assert {s["observation"]["error"]["code"] for s in turn.steps} == {"not_offered"}
+    assert "game_studio" not in answer.meta or answer.meta["game_studio"]["state"] == "proposed"
 
 
 @pytest.mark.parametrize("failure", [RuntimeError("cuda_unavailable_choose_cpu_explicitly"),
                                      OSError("connexion à Game Studio perdue")])
 def test_game_studio_refusals_and_failures_are_shown_as_they_are(env, studio_tools, failure) -> None:
     studio = _Studio(refuse=failure)
-    _settings(env, game_studio_missions=True)
-    turn, answer, _ = _turn(env, _Brain3D(["Voiture prête."], [_SCENE_CALL]), SCENE, studio=studio)
-    assert turn.status == "done" and answer.content == "Voiture prête."  # la réponse reste servie
-    step = turn.steps[-1]
+    _settings(env)
+    launched, answer, conversation = _proposed_then_launched(env, studio)
+    assert answer.content == "…"  # la réponse du tour reste servie
+    step = launched["meta"]["steps"][0]
     assert step["tool"] == "game_studio.create" and step["ok"] is False
-    delegation = answer.meta["game_studio"]
-    assert delegation["state"] == "refused" and delegation["project_id"] is None
-    assert str(failure) in delegation["error"]["message"]
+    record = launched["meta"]["game_studio"]
+    assert record["state"] == "refused" and record["project_id"] is None
+    assert str(failure) in record["error"]["message"]
+    assert _messages(env, conversation.id)[-1].id == launched["message_id"]
 
 
 def test_a_refused_user_launch_is_recorded_with_its_explanation(env, studio_tools) -> None:
     studio = _Studio(refuse=RuntimeError("local_planner_model_missing"))
     _settings(env)
-    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), SCENE, studio=studio)
-    launched = game_studio.launch_proposed(env, conversation.id, answer.id, compute="auto", service=studio)
+    launched, _, _ = _proposed_then_launched(env, studio)
     assert launched["meta"]["game_studio"]["state"] == "refused"
     assert "planificateur" in launched["content"]
 
 
 def test_previews_are_served_only_for_this_conversations_rendered_images(env, studio_tools) -> None:
     studio = _Studio()
-    _settings(env, game_studio_missions=True)
-    turn, _, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), SCENE, studio=studio)
-    project_id = turn.steps[-1]["observation"]["output"]["project_id"]
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
     png = b"\x89PNG\r\n\x1a\nfake"
     studio.finish(project_id, [("scene.png", "h-view", "view", "image/png", png),
                                ("scene.blend", "h-blend", "blender_project", "application/x-blender",
@@ -464,9 +488,9 @@ def test_previews_are_served_only_for_this_conversations_rendered_images(env, st
 
 def test_a_follow_up_failure_is_unavailable_never_a_fake_state(env, studio_tools) -> None:
     studio = _Studio()
-    _settings(env, game_studio_missions=True)
-    turn, _, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), SCENE, studio=studio)
-    project_id = turn.steps[-1]["observation"]["output"]["project_id"]
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
 
     def broken(_project_id):
         raise OSError("disque de Game Studio illisible")

@@ -135,6 +135,29 @@ public static class HeadlessActions
         return code;
     }
 
+    /// <summary>
+    /// <c>APEX.exe --install-gpu</c> : « Accélération GPU (facultatif) » sans fenêtre — même service, même lanceur ;
+    /// code de sortie = celui de <c>apex.standalone gpu install</c> (0 installée et sondée, 2 refusée, 3 échec de
+    /// l'installation, 4 sonde du GPU en échec).
+    /// </summary>
+    public static async Task<int> InstallGpuAsync()
+    {
+        var composition = PanelComposition.Create();
+        if (composition.Preparer is null || composition.Status.NativeRuntime is not { } native)
+        {
+            Console.Error.WriteLine("--install-gpu : sans objet (APEX n'est pas installé en mode Windows natif à côté de ce Panel).");
+            return 3;
+        }
+        composition.Log.Log("[--install-gpu] installation de l'accélération GPU facultative.");
+        var result = await composition.Preparer.InstallGpuAsync().ConfigureAwait(false);
+        var code = !result.Started ? 98 : result.TimedOut ? 97 : result.ExitCode ?? 98;
+        var reason = native.LastGpuInstallReason() ?? "voir gpu-install.log";
+        composition.Log.Log($"[--install-gpu] terminé (code {code}) : {reason}.");
+        Program.Emit(code == 0 ? $"Accélération GPU installée : {reason}." : $"Accélération GPU non installée (code {code}) : {reason}.",
+            Console.IsOutputRedirected, Console.OpenStandardOutput, Console.Out);
+        return code;
+    }
+
     private sealed class ConsoleProgress(PanelComposition composition) : IProgress<string>
     {
         public void Report(string value)

@@ -20,14 +20,18 @@ _COMMON = (
 
 
 #: Permissions des outils de Game Studio (`apex.tools.model`, ajoutées avec Game Studio) : absentes d'une
-#: installation sans Game Studio, et alors rien n'est demandé. Lancer ou annuler une mission n'est en plus
-#: accordé que si l'utilisateur l'a permis (Paramètres > Outils > Missions Game Studio).
+#: installation sans Game Studio, et alors rien n'est demandé.
 def _permissions(*names: str) -> frozenset[Permission]:
     return frozenset(p for name in names if (p := getattr(Permission, name, None)) is not None)
 
 
-GAME_STUDIO_LAUNCH = _permissions("GAME_STUDIO_CREATE", "GAME_STUDIO_CANCEL")
-GAME_STUDIO_PERMISSIONS = GAME_STUDIO_LAUNCH | _permissions("GAME_STUDIO_READ")
+#: Lancer ou annuler une mission : actes HUMAINS seulement (`PolicyEngine` : CREATE_MISSION et
+#: CANCEL_MISSION, jamais le CORE seul). Jamais accordés à un modèle, dans aucun mode : le Cerveau PROPOSE,
+#: l'utilisateur lance ou annule d'un clic (`apex.assistant.game_studio`).
+GAME_STUDIO_HUMAN_ONLY = _permissions("GAME_STUDIO_CREATE", "GAME_STUDIO_CANCEL")
+#: Suivre une mission et lire ses résultats : permis au modèle du mode 3D.
+GAME_STUDIO_READ = _permissions("GAME_STUDIO_READ")
+GAME_STUDIO_PERMISSIONS = GAME_STUDIO_HUMAN_ONLY | GAME_STUDIO_READ
 
 
 @dataclass(frozen=True)
@@ -125,14 +129,14 @@ MODES: dict[str, Mode] = {
             "script Blender, script Unity C#, classe Unreal C++. Tu peux lire et adapter ces scripts avec fs.read "
             "et fs.write. Dis clairement que ce sont des modèles low-poly de base, et que les scripts Unity et "
             "Unreal n'ont été vérifiés que pour la syntaxe."),
-        tools=("model3d.create", "game_studio.create", "game_studio.status", "game_studio.results",
-               "game_studio.cancel", "fs.list", "fs.read", "fs.search", "fs.write", "fs.edit"),
+        tools=("model3d.create", "game_studio.status", "game_studio.results",
+               "fs.list", "fs.read", "fs.search", "fs.write", "fs.edit"),
         permissions=(frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE})
-                     | GAME_STUDIO_PERMISSIONS),
+                     | GAME_STUDIO_READ),
         view="studio3d",
         limits=("Modèles paramétriques low-poly (véhicule, arme, personnage), pas de sculpture ni de textures.",
                 "Scripts Unity et Unreal de départ : syntaxe vérifiée, non exécutés dans les moteurs.",
-                "Missions Game Studio (si installé) : proposées, ou lancées seules si vous le permettez.",
+                "Missions Game Studio (si installé) : proposées, lancées ou annulées par vous seul.",
                 "Accès limité à l'espace de travail de la conversation ou du projet."),
     ),
 }

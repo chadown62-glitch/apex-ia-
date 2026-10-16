@@ -351,10 +351,7 @@ export function SettingsView() {
           <Row label="Étapes d'outils par réponse" hint="1 à 40 : davantage pour un gros projet (lire, écrire, tester, corriger), au prix d'une réponse plus longue.">
             <NumberField label="Étapes maximum" value={t.max_tool_steps} min={1} max={40} onChange={(n) => toolsSection.update({ max_tool_steps: n })} />
           </Row>
-          <Row label="Lancement automatique des missions Game Studio (mode 3D)" hint="Activé : le Cerveau lance lui-même une mission pour une demande de création claire. Désactivé : il la propose dans l'Atelier 3D et vous la lancez d'un clic. Une mission dure des minutes et occupe le GPU.">
-            <Switch label="Lancement automatique des missions Game Studio" checked={t.game_studio_missions} onChange={(v) => toolsSection.update({ game_studio_missions: v })} />
-          </Row>
-          <Row label="Calcul des missions Game Studio" hint="Automatique : GPU CUDA, refusé par Game Studio sans GPU. Processeur : à choisir explicitement, beaucoup plus lent.">
+          <Row label="Calcul des missions Game Studio" hint="Missions proposées par le Cerveau et lancées par vous seul, d'un clic dans l'Atelier 3D. Automatique : GPU CUDA, refusé par Game Studio sans GPU. Processeur : à choisir explicitement, beaucoup plus lent.">
             <select aria-label="Calcul des missions Game Studio" value={t.game_studio_compute} onChange={(e) => toolsSection.update({ game_studio_compute: e.target.value as "auto" | "cpu" })}>
               <option value="auto">Automatique (GPU)</option>
               <option value="cpu">Processeur (explicite)</option>

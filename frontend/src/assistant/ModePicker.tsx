@@ -17,10 +17,8 @@ export const TOOL_LABELS: Record<string, string> = {
   "finance.projection": "projection d'épargne",
   "finance.loan": "mensualités de prêt",
   "model3d.create": "modèles 3D (Blender, Unity, Unreal)",
-  "game_studio.create": "lancer une mission Game Studio",
   "game_studio.status": "suivre une mission Game Studio",
   "game_studio.results": "résultats Game Studio",
-  "game_studio.cancel": "annuler une mission Game Studio",
 };
 
 const GLYPHS: Record<ModeId, string> = { normal: "◌", code: "</>", design: "◐", finance: "∑", "3d": "◇" };

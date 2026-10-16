@@ -228,15 +228,13 @@ def model3d_mismatch(facts: dict[str, Any], question: str) -> str | None:
         return None
     return "le modèle 3D construit par le Cerveau ne correspond pas à l'objet demandé"
 
-#: Ajouté aux consignes quand `game_studio.create` est offert (Game Studio installé, missions permises).
-_GAME_STUDIO_NOTE = ("GAME STUDIO. Pour une création 3D complète (objet détaillé, scène), appelle "
-                     "game_studio.create avec la demande de l'utilisateur : la mission se poursuit en "
-                     "arrière-plan, pendant des minutes. Ne dis jamais qu'elle est terminée, ni ce "
-                     "qu'elle a produit, sans l'avoir lu avec game_studio.status ou game_studio.results.")
+#: Ajouté aux consignes quand le suivi de Game Studio est offert (Game Studio installé, mode 3D).
+_GAME_STUDIO_NOTE = ("GAME STUDIO. Tu ne lances ni n'annules jamais une mission : APEX la propose, et "
+                     "seul l'utilisateur la lance ou l'annule d'un clic. Ne dis jamais qu'une mission est "
+                     "lancée, terminée, ni ce qu'elle a produit, sans l'avoir lu avec game_studio.status "
+                     "ou game_studio.results.")
 #: Bornes de `description` de `game_studio.create` (contrat de Game Studio).
 _GAME_STUDIO_DESCRIPTION = (20, 4000)
-#: Missions lancées au plus par tour (appel du modèle ou délégation du Cerveau).
-_GAME_STUDIO_LAUNCHES_PER_TURN = 1
 
 
 def _kind(expression: str) -> str:
@@ -758,16 +756,16 @@ class TurnManager:
         la machine ne permet pas (sandbox non vérifiée) — chaque retrait est dit au modèle et à l'interface."""
         if not mode.tools:
             return None
-        from apex.assistant.modes import GAME_STUDIO_LAUNCH
+        from apex.assistant.modes import GAME_STUDIO_HUMAN_ONLY
         from apex.assistant.tools import assistant_registry
         from apex.assistant.workspace import conversation_workspace
         from apex.tools.engine import ToolContext, ToolEngine
         from apex.tools.model import Permission
 
-        granted = set(mode.permissions)
+        # Lancer ou annuler une mission Game Studio : actes humains seulement, jamais accordés à un modèle
+        # (retirés même d'un mode qui les déclarerait).
+        granted = set(mode.permissions) - GAME_STUDIO_HUMAN_ONLY
         notes: list[str] = []
-        if not settings.tools.game_studio_missions:
-            granted -= GAME_STUDIO_LAUNCH  # lancer/annuler : seulement si l'utilisateur l'a permis
         if Permission.WRITE_WORKSPACE in granted and not settings.tools.workspace_write:
             granted.discard(Permission.WRITE_WORKSPACE)
             notes.append("L'écriture de fichiers est désactivée dans les Paramètres : propose les modifications "
@@ -802,11 +800,9 @@ class TurnManager:
         if any(name.startswith("game_studio.") for name in mode.tools):
             # Appartenance des missions : l'espace de travail de la conversation (ou du projet), contrôlée
             # par Game Studio lui-même ; calcul : le choix de l'utilisateur, imposé à chaque lancement.
-            game_studio = {"absent": problems[0] if problems else None,
-                           "missions": settings.tools.game_studio_missions,
-                           "compute": settings.tools.game_studio_compute}
+            game_studio = {"absent": problems[0] if problems else None}
         # Consignes pour le modèle seulement (les `notes` sont aussi montrées à l'utilisateur).
-        guidance = [_GAME_STUDIO_NOTE] if "game_studio.create" in offered else []
+        guidance = [_GAME_STUDIO_NOTE] if "game_studio.status" in offered else []
         return {"engine": engine, "context": context, "offered": offered, "notes": notes,
                 "guidance": guidance, "game_studio": game_studio}
 
@@ -920,25 +916,22 @@ class TurnManager:
                                  steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str, *,
                                  brain_served: bool, brain_3d: bool, user_message_id: str) -> None:
         """Ce que le Cerveau fait d'un message du mode 3D quand Game Studio fait partie du mode. Son analyse
-        d'intention (`apex.assistant.creation`) décide, jamais une intention devinée :
+        d'intention (`apex.assistant.creation`) décide, jamais une intention devinée (et quel que soit le
+        moteur qui a rédigé la réponse) :
 
-        - demande de création claire, lancement automatique permis par l'utilisateur (Paramètres >
-          Outils) : mission lancée par `game_studio.create`, la demande de l'utilisateur pour description
-          (quel que soit le moteur qui a rédigé la réponse : la décision est celle de l'analyse) ;
-        - demande claire sans cette autorisation, ou demande ambiguë : mission PROPOSÉE ; l'utilisateur
-          la lance d'un clic (`apex.assistant.game_studio.launch_proposed`, acte humain) ;
+        - demande de création claire ou ambiguë : mission PROPOSÉE, jamais lancée ici. Seul l'utilisateur
+          la lance, d'un clic (`apex.assistant.game_studio.launch_proposed` : `PolicyEngine` vérifie
+          CREATE_MISSION pour un HUMAIN, une mission par proposition) ;
         - Game Studio absent : rien n'est proposé, et la raison est dite ;
         - sinon (question, commande sur l'existant…) : rien.
 
         L'appel 3D appris du Cerveau est rapporté comme indice, sans décider : seul, il se déclenche aussi
-        sur des questions (docs/CERVEAU_APEX_V2.md §9 septies). Une mission au plus par tour."""
+        sur des questions (docs/CERVEAU_APEX_V2.md §9 septies)."""
         from apex.assistant.creation import analyze
 
         info = (tools or {}).get("game_studio")
         if tools is None or info is None:
             return
-        if any(s.get("tool") == "game_studio.create" for s in steps):
-            return  # déjà confiée pendant ce tour (par un modèle qui appelle les outils)
         intent = analyze(request)
         if intent.kind == "none":
             return
@@ -951,34 +944,10 @@ class TurnManager:
                     f"{info['absent']}.")
             meta["tools_notes"] = [*meta.get("tools_notes", []), note]
             return
-        if intent.kind == "ambiguous":
-            meta["game_studio"] = {**record, "state": "proposed",
-                                   "reason": f"demande à confirmer ({intent.reason})"}
-            return
-        record["served_by_brain"] = brain_served
-        if "game_studio.create" not in tools["offered"]:
-            reason = ("le lancement automatique des missions n'est pas activé : confirmez pour lancer"
-                      if not info["missions"]
-                      else "lancement non offert dans ce tour : confirmez pour lancer")
-            meta["game_studio"] = {**record, "state": "proposed", "reason": reason}
-            return
-        arguments = {"description": game_studio_description(request)}
-        step = self._run_tool(tools, "game_studio.create", arguments, len(steps) + 1, turn_id)
-        step["source"] = "cerveau"
-        steps.append(step)
-        self._update(turn_id, steps=steps)
-        from apex.assistant.game_studio import explain
-
-        observation = step["observation"]
-        output = observation.get("output") or {}
-        error = observation.get("error")
-        if error:
-            record["explanation"] = explain(error.get("message"))
-        meta["game_studio"] = {**record, "state": "launched" if step["ok"] else "refused",
-                               "launched": step["ok"], "authorization": "lancement automatique permis",
-                               "project_id": output.get("project_id"),
-                               "mission_id": output.get("mission_id"), "status": output.get("status"),
-                               "error": error}
+        reason = (f"demande à confirmer ({intent.reason})" if intent.kind == "ambiguous"
+                  else "à lancer par vous : une mission n'est jamais lancée sans votre clic")
+        meta["game_studio"] = {**record, "state": "proposed", "served_by_brain": brain_served,
+                               "reason": reason}
 
     @staticmethod
     def _run_tool(tools: dict[str, Any] | None, name: str, arguments: dict[str, Any], number: int,
@@ -991,17 +960,6 @@ class TurnManager:
                                                   "message": f"outil « {name} » non disponible dans ce tour"}}
             return {"step": number, "tool": name, "arguments": arguments, "ok": False, "observation": observation,
                     "duration_s": 0.0}
-        if name == "game_studio.create" and tools.get("game_studio"):
-            info = tools["game_studio"]
-            if info.get("launches", 0) >= _GAME_STUDIO_LAUNCHES_PER_TURN:
-                # Une mission coûte des minutes de GPU : un modèle qui boucle n'en lance jamais plusieurs.
-                observation = {"ok": False, "error": {"code": "limit", "message": (
-                    "une seule mission Game Studio par tour : suivez-la avec game_studio.status")}}
-                return {"step": number, "tool": name, "arguments": arguments, "ok": False,
-                        "observation": observation, "duration_s": 0.0}
-            info["launches"] = info.get("launches", 0) + 1
-            # Le calcul est le choix de l'utilisateur (Paramètres > Outils), jamais celui du modèle.
-            arguments = {**arguments, "compute_backend": info["compute"]}
         result = tools["engine"].execute(ToolCall(tool=name, arguments=arguments, call_id=str(uuid.uuid4()),
                                                   requested_by=f"assistant:{turn_id}"), tools["context"])
         observation = {"ok": result.ok, "output": result.output,

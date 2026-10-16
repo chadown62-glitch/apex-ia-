@@ -213,7 +213,8 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
     compute = settings.tools.game_studio_compute
     gpu = {k: v for k, v in gpu_status().items() if k in ("lease_held", "lent_to", "admissions_open",
                                                           "cuda_available", "cuda_residents")}
-    base = {"auto_launch": settings.tools.game_studio_missions, "compute": compute, "gpu": gpu}
+    # Lancement : toujours par l'utilisateur (acte humain), jamais par le Cerveau.
+    base = {"launch": "human", "compute": compute, "gpu": gpu}
     absent = register_game_studio(ToolRegistry())
     if absent is not None:
         return {**base, "installed": False, "ready": False, "missing": [absent], "notes": []}

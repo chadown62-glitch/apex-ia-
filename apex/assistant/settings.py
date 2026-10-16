@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 
 class _Section(BaseModel):
@@ -55,15 +55,20 @@ class ToolSettings(_Section):
     workspace_write: bool = True
     code_execution: bool = True
     max_tool_steps: int = Field(default=6, ge=1, le=40)
-    #: Mode 3D : le Cerveau LANCE lui-même (et le modèle peut annuler) les missions Game Studio d'une
-    #: demande de création claire. Désactivé (défaut) : il les propose, et l'utilisateur les lance d'un
-    #: clic. Une mission dure des minutes et occupe le GPU ; le suivi et l'annulation par l'utilisateur
-    #: restent permis.
+    #: OBSOLÈTE, sans effet : gardé pour relire les paramètres déjà enregistrés. Lancer ou annuler une
+    #: mission Game Studio est un acte HUMAIN (`PolicyEngine`, CREATE_MISSION / CANCEL_MISSION) : le Cerveau
+    #: propose, l'utilisateur lance d'un clic. Toujours relu `False`, quoi qu'on enregistre. Une exécution
+    #: autonome viendra avec ses propres autorisations explicites et budgets, jamais par ce champ.
     game_studio_missions: bool = False
-    #: Calcul des missions lancées par l'assistant : `auto` (GPU CUDA, refusé par Game Studio sans GPU) ou
+    #: Calcul des missions lancées d'un clic : `auto` (GPU CUDA, refusé par Game Studio sans GPU) ou
     #: `cpu` (choisi explicitement, plus lent). Jamais un repli implicite sur le processeur ; le modèle ne
     #: peut pas le changer.
     game_studio_compute: Literal["auto", "cpu"] = "auto"
+
+    @field_validator("game_studio_missions")
+    @classmethod
+    def _never_autonomous(cls, _value: bool) -> bool:
+        return False
 
 
 class Privacy(_Section):

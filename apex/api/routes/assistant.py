@@ -428,10 +428,12 @@ def game_studio_availability() -> DataEnvelope[dict[str, Any]]:
 @router.get("/assistant/gpu", response_model=DataEnvelope[dict[str, Any]])
 def gpu_sharing() -> DataEnvelope[dict[str, Any]]:
     """Partage du GPU entre les modèles principaux et les spécialistes (`apex.models.gpu_handoff`) :
-    bail, prêt en cours, dernier accusé de réception."""
+    bail, prêt en cours, dernier accusé de réception ; et l'accélération GPU facultative telle que le
+    dernier démarrage l'a mesurée (`apex.standalone.gpu` : active, absente, ou pourquoi inactive)."""
     from apex.models.gpu_handoff import gpu_status
+    from apex.standalone import gpu
 
-    return DataEnvelope(status="real", data=gpu_status())
+    return DataEnvelope(status="real", data={**gpu_status(), "component": gpu.last_activation()})
 
 
 @router.post("/assistant/conversations/{conversation_id}/game-studio/launch",

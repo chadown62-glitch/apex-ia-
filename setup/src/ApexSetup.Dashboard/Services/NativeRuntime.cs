@@ -52,6 +52,12 @@ public enum RuntimeState
 public sealed record RuntimeInspection(RuntimeState State, string Detail, bool ModelInstalled, string ModelDetail);
 
 /// <summary>
+/// Accélération GPU facultative (<c>apex.standalone.gpu</c>) telle que le disque la décrit : installée ou non, et
+/// ce que le dernier démarrage d'APEX a MESURÉ (active, ou pourquoi inactive). Jamais « compatible » sans sonde.
+/// </summary>
+public sealed record GpuInspection(bool Installed, string Detail);
+
+/// <summary>
 /// APEX AUTONOME sur ce poste (mode « Windows natif », sans WSL ni Docker) : où est l'application installée, où
 /// vivent les données, quel Python l'exécute. Rien n'est lu ailleurs que dans ces dossiers :
 /// <list type="bullet">
@@ -104,6 +110,53 @@ public sealed class NativeRuntime
 
     /// <summary>Fichier <c>.pth</c> qui rend le paquet <c>apex</c> de l'installation importable par CE Python, sans PYTHONPATH.</summary>
     public string PthFile(RuntimeSpec spec) => Path.Combine(PythonRoot(spec), "Lib", "site-packages", PthName);
+
+    /// <summary>Marqueur écrit par <c>apex.standalone gpu install</c> après une sonde GPU réussie.</summary>
+    public string GpuMarker => Path.Combine(Home, "python", "gpu", "installed.json");
+
+    /// <summary>Ce que le dernier démarrage d'APEX a décidé pour la surcouche GPU (<c>apex.standalone.gpu.activate</c>).</summary>
+    public string GpuActivation => Path.Combine(Home, ".apex", "runtime", "gpu-activation.json");
+
+    /// <summary>Compte rendu de la dernière installation GPU demandée (réussie ou refusée, et pourquoi).</summary>
+    public string GpuLastInstall => Path.Combine(Home, "python", "gpu", "last-install.json");
+
+    public GpuInspection InspectGpu()
+    {
+        if (!File.Exists(GpuMarker))
+        {
+            return new GpuInspection(false, "Accélération GPU : non installée (facultative) — calcul sur le processeur.");
+        }
+        var (state, reason) = ReadState(GpuActivation);
+        if (state is null || File.GetLastWriteTimeUtc(GpuActivation) < File.GetLastWriteTimeUtc(GpuMarker))
+        {
+            return new GpuInspection(true, "Accélération GPU : installée et vérifiée ; utilisée au prochain « Démarrer APEX » si la sonde réussit encore.");
+        }
+        var label = state switch
+        {
+            "active" => "active",
+            "disabled" => "désactivée",
+            _ => "inactive (calcul sur le processeur)",
+        };
+        return new GpuInspection(true, $"Accélération GPU : {label} — {reason}");
+    }
+
+    /// <summary>Raison écrite par la dernière installation GPU, ou null.</summary>
+    public string? LastGpuInstallReason() => ReadState(GpuLastInstall).Reason;
+
+    private static (string? State, string? Reason) ReadState(string path)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(File.ReadAllText(path));
+            var root = doc.RootElement;
+            string? Text(string name) => root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+            return (Text("state"), Text("reason"));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return (null, null);
+        }
+    }
 
     public RuntimeSpec? TryReadSpec(out string problem)
     {

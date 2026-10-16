@@ -36,6 +36,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _stopping;
     private bool _preparing;
     private bool _installingModel;
+    private bool _installingGpu;
     private bool _closeConfirmed;
     private bool _isClosePromptVisible;
     private string? _actionMessage;
@@ -114,6 +115,7 @@ public sealed class MainWindowViewModel : ObservableObject
         CloseSettingsCommand = new RelayCommand(() => IsSettingsVisible = false);
         PrepareCommand = new AsyncRelayCommand(_ => PrepareAsync(), () => CanPrepare);
         InstallModelCommand = new AsyncRelayCommand(_ => InstallModelAsync(), () => CanInstallModel);
+        InstallGpuCommand = new AsyncRelayCommand(_ => InstallGpuAsync(), () => CanInstallGpu);
         StopAndQuitCommand = new AsyncRelayCommand(_ => StopAndQuitAsync());
         QuitLeavingRunningCommand = new RelayCommand(() =>
         {
@@ -124,7 +126,7 @@ public sealed class MainWindowViewModel : ObservableObject
         });
         CancelCloseCommand = new RelayCommand(() => IsClosePromptVisible = false);
         foreach (var command in new[] { RefreshCommand, CopyDiagnosticCommand, StartCommand, StopCommand, OpenUiCommand, ShowLaunchLogCommand,
-                     PrepareCommand, InstallModelCommand, StopAndQuitCommand, OpenInBrowserCommand, ShowAssistantCommand, RetryEmbeddedCommand })
+                     PrepareCommand, InstallModelCommand, InstallGpuCommand, StopAndQuitCommand, OpenInBrowserCommand, ShowAssistantCommand, RetryEmbeddedCommand })
         {
             command.Faulted += (_, ex) => _log.Log($"Erreur inattendue : {ex.Message}");
         }
@@ -234,17 +236,31 @@ public sealed class MainWindowViewModel : ObservableObject
 
     /// <summary>« Préparer APEX » : télécharge et vérifie Python et les bibliothèques d'APEX — jamais pendant qu'APEX tourne.</summary>
     public bool CanPrepare =>
-        _preparer is not null && IsNative && !_preparing && !_installingModel && !_stopping && _launch is not { Running: true }
+        _preparer is not null && IsNative && !_preparing && !_installingModel && !_installingGpu && !_stopping && _launch is not { Running: true }
         && _snapshot is { } s && s.Verdict is not (PanelVerdict.Ready or PanelVerdict.Degraded)
         && s.Cause is not (NotReadyCause.BackendStarting or NotReadyCause.BackendUnresponsive or NotReadyCause.ApiTimeout);
 
     /// <summary>« Installer le modèle » : runtime prêt et modèle absent ; une seule installation à la fois.</summary>
     public bool CanInstallModel =>
-        _preparer is not null && IsNative && !_preparing && !_installingModel
+        _preparer is not null && IsNative && !_preparing && !_installingModel && !_installingGpu
         && _snapshot?.Get(ComponentKey.Runtime) is { Status: ComponentStatus.Ready }
         && _statusService.NativeRuntime?.Inspect() is { State: RuntimeState.Ready, ModelInstalled: false };
 
-    public bool IsBusyPreparing => _preparing || _installingModel;
+    /// <summary>
+    /// « Accélération GPU (facultatif) » : runtime prêt, APEX arrêté (ses bibliothèques seraient en cours d'usage),
+    /// surcouche pas encore installée ; une seule installation à la fois. Le pilote est vérifié par le lanceur.
+    /// </summary>
+    public bool CanInstallGpu =>
+        _preparer is not null && IsNative && !_preparing && !_installingModel && !_installingGpu && !_stopping && _launch is not { Running: true }
+        && _snapshot is { } s && s.Verdict is not (PanelVerdict.Ready or PanelVerdict.Degraded)
+        && s.Cause is not (NotReadyCause.BackendStarting or NotReadyCause.BackendUnresponsive or NotReadyCause.ApiTimeout)
+        && _statusService.NativeRuntime is { } native && native.Inspect() is { State: RuntimeState.Ready }
+        && native.InspectGpu() is { Installed: false };
+
+    /// <summary>État de l'accélération GPU tel que le disque et le dernier démarrage le décrivent (mode natif).</summary>
+    public string GpuDetail => _statusService.NativeRuntime?.InspectGpu().Detail ?? string.Empty;
+
+    public bool IsBusyPreparing => _preparing || _installingModel || _installingGpu;
 
     /// <summary>Fermeture demandée alors qu'APEX tourne (mode natif) : l'arrêter, le laisser tourner, ou annuler.</summary>
     public bool IsClosePromptVisible
@@ -504,6 +520,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public AsyncRelayCommand ShowLaunchLogCommand { get; }
     public AsyncRelayCommand PrepareCommand { get; }
     public AsyncRelayCommand InstallModelCommand { get; }
+
+    public AsyncRelayCommand InstallGpuCommand { get; }
     public AsyncRelayCommand StopAndQuitCommand { get; }
     public RelayCommand QuitLeavingRunningCommand { get; }
     public RelayCommand CancelCloseCommand { get; }
@@ -824,11 +842,14 @@ public sealed class MainWindowViewModel : ObservableObject
         OpenUiCommand.NotifyCanExecuteChanged();
         PrepareCommand.NotifyCanExecuteChanged();
         InstallModelCommand.NotifyCanExecuteChanged();
+        InstallGpuCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanStart));
         OnPropertyChanged(nameof(CanStop));
         OnPropertyChanged(nameof(CanOpen));
         OnPropertyChanged(nameof(CanPrepare));
         OnPropertyChanged(nameof(CanInstallModel));
+        OnPropertyChanged(nameof(CanInstallGpu));
+        OnPropertyChanged(nameof(GpuDetail));
         OnPropertyChanged(nameof(IsBusyPreparing));
         OnPropertyChanged(nameof(IsNative));
         OnPropertyChanged(nameof(IsWslSettingsVisible));
@@ -895,6 +916,36 @@ public sealed class MainWindowViewModel : ObservableObject
             await watching.CancelAsync().ConfigureAwait(false);
             await watcher.ConfigureAwait(false);
             _installingModel = false;
+            RaiseActionsChangedOnUi();
+        }
+        await RefreshAsync().ConfigureAwait(false);
+    }
+
+    private async Task InstallGpuAsync()
+    {
+        if (_preparer is null || !CanInstallGpu || _statusService.NativeRuntime is not { } native)
+        {
+            return;
+        }
+        _installingGpu = true;
+        RaiseActionsChangedOnUi();
+        _log.Log("Installation de l'accélération GPU demandée (PyTorch CUDA, environ 2,5 Go ; variante choisie d'après le pilote NVIDIA).");
+        _ui(() => ActionMessage = "Accélération GPU : vérification du pilote, téléchargement vérifié puis sonde du GPU — plusieurs minutes…");
+        try
+        {
+            var result = await _preparer.InstallGpuAsync().ConfigureAwait(false);
+            var reason = native.LastGpuInstallReason();
+            var message = !result.Started ? $"Accélération GPU impossible à installer : {result.FailureReason}"
+                : result.TimedOut ? "Installation de l'accélération GPU interrompue (délai dépassé) : relancez-la."
+                : result.ExitCode == 0 && native.InspectGpu().Installed
+                    ? $"Accélération GPU installée : {reason}. Elle sera vérifiée de nouveau et utilisée au prochain « Démarrer APEX »."
+                : $"Accélération GPU non installée (code {result.ExitCode}) : {reason ?? "voir gpu-install.log"}. APEX reste sur le processeur.";
+            _log.Log(message);
+            _ui(() => ActionMessage = message);
+        }
+        finally
+        {
+            _installingGpu = false;
             RaiseActionsChangedOnUi();
         }
         await RefreshAsync().ConfigureAwait(false);

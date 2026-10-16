@@ -586,7 +586,7 @@ function GameStudioMissions({ conversationId, messages, steps }: { conversationI
       {report && (
         <p className="ax-muted">
           {report.ready ? "Prêt sur ce PC." : "Pas encore prêt sur ce PC."}{" "}
-          {report.auto_launch ? "Le Cerveau lance lui-même les demandes de création claires." : "Le Cerveau propose les missions ; vous les lancez."}
+          Le Cerveau propose les missions ; vous seul les lancez ou les annulez.
         </p>
       )}
       {report && !report.ready && proposals.length === 0 && report.missing.length > 0 && (
