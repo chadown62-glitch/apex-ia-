@@ -406,10 +406,12 @@ def _lock_gpu():
     return module
 
 
-def _wheel(requires: list[str]) -> bytes:
+def _wheel(requires: list[str], *, padding: int = 0) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         archive.writestr("torch/__init__.py", "x" * 1000)
+        if padding:  # une grosse bibliothèque, stockée sans compression, en tête de l'archive
+            archive.writestr("torch/lib/torch_cuda.dll", bytes(range(256)) * (padding // 256))
         archive.writestr("torch-2.14.0+cu128.dist-info/METADATA",
                          "Metadata-Version: 2.1\nName: torch\nVersion: 2.14.0+cu128\n"
                          + "".join(f"Requires-Dist: {r}\n" for r in requires))
@@ -418,13 +420,33 @@ def _wheel(requires: list[str]) -> bytes:
 
 @pytest.fixture
 def index(monkeypatch):
-    """Un index PyTorch local (HTTP sur 127.0.0.1) : une roue Windows cu128, rien pour cu130."""
+    """Un index PyTorch local (HTTP sur 127.0.0.1) : une roue Windows cu128, rien pour cu130. Il sert HEAD
+    et les plages (Range), comme download.pytorch.org ; `ranges["on"] = False` les refuse."""
     files: dict[str, bytes] = {}
+    ranges = {"on": True, "served": 0}
 
     class Handler(http.server.BaseHTTPRequestHandler):
-        def do_GET(self):
+        def do_HEAD(self):
             body = files.get(self.path)
             self.send_response(200 if body is not None else 404)
+            self.send_header("Content-Length", str(len(body or b"")))
+            self.end_headers()
+
+        def do_GET(self):
+            body = files.get(self.path)
+            wanted = self.headers.get("Range")
+            if body is not None and wanted and ranges["on"]:
+                start, end = (int(x) for x in wanted.removeprefix("bytes=").split("-"))
+                part = body[start:end + 1]
+                ranges["served"] += len(part)
+                self.send_response(206)
+                self.send_header("Content-Range", f"bytes {start}-{start + len(part) - 1}/{len(body)}")
+                self.send_header("Content-Length", str(len(part)))
+                self.end_headers()
+                self.wfile.write(part)
+                return
+            self.send_response(200 if body is not None else 404)
+            self.send_header("Content-Length", str(len(body or b"")))
             self.end_headers()
             self.wfile.write(body or b"")
 
@@ -439,13 +461,15 @@ def index(monkeypatch):
     def publish(wheel: bytes, *, sha: str | None = None):
         name = "torch-2.14.0%2Bcu128-cp312-cp312-win_amd64.whl"
         files[f"/files/{name}"] = wheel
-        digest = sha or hashlib.sha256(wheel).hexdigest()
-        files["/cu128/torch/"] = (f'<a href="/files/{name}#sha256={digest}">torch-2.14.0+cu128-cp312-cp312-'
+        digest = hashlib.sha256(wheel).hexdigest() if sha is None else sha
+        fragment = f"#sha256={digest}" if digest else ""
+        files["/cu128/torch/"] = (f'<a href="/files/{name}{fragment}">torch-2.14.0+cu128-cp312-cp312-'
                                   'win_amd64.whl</a>\n<a href="/files/torch-2.14.0%2Bcu128-cp312-cp312-'
                                   'manylinux_2_28_x86_64.whl">linux</a>').encode()
         files["/cu130/torch/"] = b'<a href="/files/torch-2.14.0%2Bcu130-cp313-cp313-win_amd64.whl">x</a>'
         files["/cu126/torch/"] = b""
 
+    publish.ranges = ranges
     yield f"http://127.0.0.1:{server.server_address[1]}", publish
     server.shutdown()
 
@@ -459,9 +483,10 @@ def _spec_dir(tmp_path) -> Path:
 
 
 def test_the_lock_generator_pins_only_a_verified_windows_wheel(tmp_path, index, capsys) -> None:
+    """Mode léger (défaut) : la roue n'est pas téléchargée, seuls sa fin et son METADATA sont lus."""
     url, publish = index
     wheel = _wheel(["filelock", "sympy>=1.13.3", 'nvidia-cudnn-cu12==9.0; platform_system == "Linux"',
-                    'optree>=0.13.0; extra == "optree"'])
+                    'optree>=0.13.0; extra == "optree"'], padding=4 << 20)
     publish(wheel)
     folder = _spec_dir(tmp_path)
     code = _lock_gpu().main(["--spec-dir", str(folder), "--base-lock",
@@ -474,22 +499,48 @@ def test_the_lock_generator_pins_only_a_verified_windows_wheel(tmp_path, index, 
     assert f"--hash=sha256:{hashlib.sha256(wheel).hexdigest()}" in lock and "win_amd64.whl" in lock
     spec = json.loads((folder / "gpu-runtime.json").read_text(encoding="utf-8"))
     cu128 = next(v for v in spec["variants"] if v["id"] == "cu128")
-    assert cu128["wheel_bytes"] == len(wheel) and cu128["installed_bytes"] > 1000
+    assert cu128["wheel_bytes"] == len(wheel) and cu128["installed_bytes"] > 4 << 20
+    assert cu128["sha256_source"] == "index"
+    assert report["cu128"]["fetched_bytes"] < len(wheel) // 4 and publish.ranges["served"] < len(wheel) // 4
     assert [v["prepared"] for v in gpu.variants(spec, folder)] == [False, True, False]
 
 
-@pytest.mark.parametrize(("requires", "sha", "reason"), [
-    (["unpaquet-inconnu>=1"], None, "dépendances non satisfaites"),
-    (["sympy>=99"], None, "dépendances non satisfaites"),
-    (["filelock"], "0" * 64, "empreinte de l'index"),
+def test_the_full_mode_downloads_the_wheel_and_recomputes_its_hash(tmp_path, index, capsys) -> None:
+    url, publish = index
+    wheel = _wheel(["filelock"])
+    publish(wheel)
+    folder = _spec_dir(tmp_path)
+    code = _lock_gpu().main(["cu128", "--full", "--spec-dir", str(folder), "--base-lock", str(BASE_LOCK),
+                             "--index", url])
+    [result] = json.loads(capsys.readouterr().out)
+    assert code == 0 and result["sha256_source"] == "download" and result["fetched_bytes"] == len(wheel)
+    assert result["sha256"] == hashlib.sha256(wheel).hexdigest()
+
+
+def test_the_light_mode_refuses_what_it_cannot_read_by_ranges(tmp_path, index, capsys) -> None:
+    url, publish = index
+    publish(_wheel(["filelock"]))
+    publish.ranges["on"] = False
+    folder = _spec_dir(tmp_path)
+    code = _lock_gpu().main(["cu128", "--spec-dir", str(folder), "--base-lock", str(BASE_LOCK),
+                             "--index", url])
+    [result] = json.loads(capsys.readouterr().out)
+    assert code == 1 and "--full" in result["reason"] and not (folder / "torch-cu128.lock").exists()
+
+
+@pytest.mark.parametrize(("requires", "sha", "mode", "reason"), [
+    (["unpaquet-inconnu>=1"], None, [], "dépendances non satisfaites"),
+    (["sympy>=99"], None, [], "dépendances non satisfaites"),
+    (["filelock"], "0" * 64, ["--full"], "empreinte de l'index"),
+    (["filelock"], "", [], "empreinte absente de l'index"),
 ])
 def test_the_lock_generator_refuses_a_wheel_it_cannot_vouch_for(tmp_path, index, capsys, requires, sha,
-                                                                reason) -> None:
+                                                                mode, reason) -> None:
     url, publish = index
     publish(_wheel(requires), sha=sha)
     folder = _spec_dir(tmp_path)
     before = (folder / "gpu-runtime.json").read_text(encoding="utf-8")
-    code = _lock_gpu().main(["cu128", "--spec-dir", str(folder), "--base-lock",
+    code = _lock_gpu().main(["cu128", *mode, "--spec-dir", str(folder), "--base-lock",
                              str(BASE_LOCK), "--index", url])
     [result] = json.loads(capsys.readouterr().out)
     assert code == 1 and result["ok"] is False and reason in result["reason"]

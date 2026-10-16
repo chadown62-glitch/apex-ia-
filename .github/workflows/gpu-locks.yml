@@ -1,0 +1,135 @@
+# Listes figées de l'accélération GPU FACULTATIVE d'APEX.exe (torch CUDA pour Windows x64, CPython 3.12),
+# produites par setup/packaging/runtime/gpu/lock_gpu.py là où download.pytorch.org est joignable.
+#
+# Déclenchement MANUEL seulement :
+#   - « Run workflow » (workflow_dispatch) — disponible dès que ce fichier est sur la branche par défaut ;
+#   - ou un commit qui modifie setup/packaging/runtime/gpu/request.json (variantes, mode), sur la branche
+#     de développement de Claude — même convention que validation/request.json.
+#
+# Mode « light » (défaut) : AUCUNE roue téléchargée. Pour chaque variante, l'index, la taille (HEAD), le
+# répertoire central et le METADATA de la roue (requêtes HTTP Range, quelques Mo) ; empreinte = celle de
+# l'index, que pip revérifie sur chaque octet à l'installation. Mode « full » : chaque roue entière (~2,5 Go),
+# empreinte recalculée. `verify_install` (lourd, désactivé par défaut) installe en plus la roue retenue avec le
+# runtime de base sur ce Windows et importe torch : une preuve d'installation, PAS de fonctionnement GPU (le
+# runner n'a pas de GPU NVIDIA ; seule une exécution sur la carte de l'utilisateur qualifie le GPU).
+#
+# Rien n'est poussé : les listes produites sont imprimées (journal, annotations lisibles par l'API) et jointes
+# en artefact ; un humain ou Claude les relit avant de les committer.
+name: gpu-locks
+
+on:
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: "Variantes à figer, séparées par des espaces (vide = toutes)"
+        default: ""
+      mode:
+        description: "light (métadonnées seulement) ou full (télécharge chaque roue, ~2,5 Go)"
+        type: choice
+        options: [light, full]
+        default: light
+      verify_install:
+        description: "Installer la roue retenue avec le runtime de base et importer torch (lourd)"
+        type: boolean
+        default: false
+  push:
+    branches: [claude/apex-official-development-4kao8t]
+    paths:
+      - "setup/packaging/runtime/gpu/request.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpu-locks
+  cancel-in-progress: false
+
+jobs:
+  locks:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Request (inputs of the manual run, or request.json)
+        id: request
+        shell: bash
+        env:
+          INPUT_VARIANTS: ${{ inputs.variants }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_VERIFY: ${{ inputs.verify_install }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, pathlib, re
+          request = {}
+          path = pathlib.Path("setup/packaging/runtime/gpu/request.json")
+          if os.environ.get("GITHUB_EVENT_NAME") == "push" and path.is_file():
+              request = json.loads(path.read_text(encoding="utf-8"))
+          variants = os.environ.get("INPUT_VARIANTS") or " ".join(request.get("variants", []))
+          mode = os.environ.get("INPUT_MODE") or request.get("mode", "light")
+          verify = (os.environ.get("INPUT_VERIFY") or str(request.get("verify_install", False))).lower() == "true"
+          assert re.fullmatch(r"(cu\d{3}( cu\d{3})*)?", variants.strip()), variants
+          assert mode in ("light", "full"), mode
+          print(f"variants={variants.strip()}")
+          print(f"mode={mode}")
+          print(f"verify={'true' if verify else 'false'}")
+          PY
+      - name: Lock generator dependency (packaging, version of the base runtime)
+        shell: bash
+        run: |
+          pin=$(grep -oE '^packaging==[^ ]+' setup/packaging/runtime/requirements-windows.lock)
+          python -m pip install --disable-pip-version-check --no-input "$pin"
+      - name: Produce the locks
+        shell: bash
+        run: |
+          set +e
+          flags=()
+          [[ "${{ steps.request.outputs.mode }}" == "full" ]] && flags+=(--full)
+          python setup/packaging/runtime/gpu/lock_gpu.py ${{ steps.request.outputs.variants }} "${flags[@]}" \
+            > "$RUNNER_TEMP/report.json"
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/report.json"
+          # Annotations : lisibles par l'API (check-runs/<id>/annotations), sans accès au journal du runner.
+          python - "$RUNNER_TEMP/report.json" <<'PY'
+          import json, pathlib, sys
+          def note(kind, title, text):
+              text = text.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+              print(f"::{kind} title={title}::{text}")
+          report = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8") or "[]")
+          folder = pathlib.Path("setup/packaging/runtime/gpu")
+          for entry in report:
+              if entry.get("ok"):
+                  lock = folder / f"torch-{entry['id']}.lock"
+                  note("notice", f"{entry['id']} figée", lock.read_text(encoding="utf-8") + json.dumps(
+                      {k: entry.get(k) for k in ("wheel_bytes", "installed_bytes", "fetched_bytes", "sha256_source",
+                                                 "requires")}, ensure_ascii=False))
+              else:
+                  note("warning", f"{entry['id']} non figée", entry.get("reason", "?"))
+          note("notice", "gpu-runtime.json", (folder / "gpu-runtime.json").read_text(encoding="utf-8"))
+          PY
+          echo "lock_gpu.py : code $code"
+      - name: Install check on Windows (optional, heavy; no GPU on this runner)
+        if: steps.request.outputs.verify == 'true'
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check --no-input --require-hashes --only-binary=:all: --no-deps \
+            -r setup/packaging/runtime/requirements-windows.lock
+          for lock in setup/packaging/runtime/gpu/torch-cu*.lock; do
+            [[ -f "$lock" ]] || continue
+            target="$RUNNER_TEMP/overlay-$(basename "$lock" .lock)"
+            python -m pip install --disable-pip-version-check --no-input --no-cache-dir --require-hashes \
+              --only-binary=:all: --no-deps --target "$target" -r "$lock"
+            python -I -c "import sys; sys.path.insert(0, sys.argv[1]); import torch; print('::notice title=$(basename "$lock")::torch', torch.__version__, 'cuda', torch.version.cuda, 'from', torch.__file__, 'cuda.is_available', torch.cuda.is_available())" "$target"
+            rm -rf "$target"
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gpu-locks
+          path: |
+            setup/packaging/runtime/gpu/gpu-runtime.json
+            setup/packaging/runtime/gpu/torch-cu*.lock
+            ${{ runner.temp }}/report.json
