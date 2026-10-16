@@ -275,52 +275,81 @@ compile (rustc) mais ajoute une valeur absolue : `somme_pairs(&[1, 2, 3, 4, -6])
 fonction écrite à la main jamais montrée : 1/20. Prochain levier : faire exécuter et tester son code au
 Cerveau, et corriger d'après le résultat (outils `code.run`/`tests.run` existants).
 
-## 9 quater. Le Cerveau sait quand il n'est pas sûr de lui (15/10/2026)
+## 9 quater. Le Cerveau sait quand il n'est pas sûr de lui (15–16/10/2026)
 
 **Mesure.** Chaque réponse du Cerveau porte sa **confiance** : la moyenne géométrique des probabilités que le
-modèle donnait aux jetons qu'il a choisis (distribution brute, avant température), et la plus faible de ces
-probabilités. Les jetons écrits par la calculatrice ou l'atelier 3D sont exclus : ce ne sont pas des choix du
-modèle. Calcul fait pendant la génération, sans seconde passe (`GenerationStats.confidence`).
+modèle donnait aux jetons qu'il a choisis, et la plus faible de ces probabilités. Elle se calcule sur la
+distribution brute du modèle, avant température et pénalité de répétition. Les jetons écrits par la
+calculatrice ou l'atelier 3D sont exclus : ce ne sont pas des choix du modèle. Le calcul se fait pendant la
+génération, sans seconde passe (`GenerationStats.confidence`).
 
-**Calibration sur les 1 220 exercices jamais vus** (réponse gloutonne, 384 jetons au plus ; justesse donnée par
-l'évaluation, compilateurs réels pour le code) : 1 017 justes (83,4 %). L'AUROC de la confiance est de **0,960**
-(0,962 pour la plus faible probabilité) : une réponse juste a 96 % de chances d'avoir une confiance plus haute
+Défaut corrigé le 16/10/2026 : avec la pénalité de répétition (1,1 dans l'application), l'échantillonnage
+modifiait sur place les valeurs servant à la confiance. Elle était donc mesurée sur une distribution pénalisée.
+`BrainEngine._sample` travaille désormais sur une copie ; le texte généré est inchangé (test de non-régression).
+
+**Calibration sur les 1 220 exercices jamais vus**, mesurée deux fois. La justesse est celle de l'évaluation
+(compilateurs réels pour le code). L'AUROC est la probabilité qu'une réponse juste ait une confiance plus haute
 qu'une réponse fausse.
 
-| Seuil | Réponses gardées | Justes parmi les gardées | Erreurs confiées au moteur suivant | Réponses justes confiées |
+- **Conditions de l'application** : fournisseur réel (`ApexBrainProvider`), consignes du mode Normal,
+  température 0,4 (réglage par défaut), pénalité de répétition 1,1, une graine par exercice. 1 008 justes
+  (82,6 %), AUROC **0,957**. Un seul tirage : la justesse varie d'un tirage à l'autre.
+- **Réponse gloutonne** (sans température ni pénalité) : 1 017 justes (83,4 %), AUROC 0,960. Sur ce tirage, la
+  température par défaut coûte 9 exercices sur 1 220.
+
+| Seuil (conditions de l'application) | Réponses gardées | Justes parmi les gardées | Erreurs confiées au moteur suivant | Réponses justes confiées |
 |---|---|---|---|---|
-| 0,90 | 87,0 % | 93,3 % | 132 / 203 | 27 / 1 017 |
-| 0,95 | 82,5 % | 96,2 % | 165 / 203 | 48 / 1 017 |
-| **0,97** | **78,3 %** | **97,6 %** | **180 / 203** | **85 / 1 017** |
-| 0,98 | 75,3 % | 98,3 % | 187 / 203 | 114 / 1 017 |
+| 0,90 | 86,1 % | 93,2 % | 141 / 212 | 29 / 1 008 |
+| 0,95 | 81,4 % | 96,2 % | 174 / 212 | 53 / 1 008 |
+| **0,97** | **77,5 %** | **97,3 %** | **186 / 212** | **88 / 1 008** |
+| 0,98 | 74,3 % | 97,6 % | 190 / 212 | 124 / 1 008 |
 
-Les 23 erreurs qui passent le seuil de 0,97 sont presque toutes du code : Go 9, Ruby 4, autres exercices de
-code 7. S'y ajoutent deux demandes 3D et une sortie de programme. Le Cerveau peut donc se tromper **en étant sûr
-de lui**, surtout en code. À l'inverse, il doute beaucoup, que sa réponse soit juste ou non, en traduction
-(confiance moyenne 0,53 pour les justes, 0,49 pour les fausses) et en connaissances (0,67 à 0,83 pour les
-justes ; 0,57 à 0,66 pour les fausses).
+En glouton, au seuil 0,97 : 78,3 % gardées, 97,6 % justes parmi elles, 180 erreurs sur 203 et 85 réponses
+justes sur 1 017 confiées.
 
-**Hors des familles d'entraînement** (16 vraies demandes libres, justesse vérifiée par rustc, g++ ou Python,
-sinon par un critère écrit avant de voir la réponse ; script hors dépôt) : **16 réponses fausses sur 16**.
-13 sont sous 0,97. Passent quand même : la fonction Rust avec signature (code faux, confiance 0,985), et deux
-questions de culture générale (capitale de l'Australie, auteur des *Misérables*), auxquelles le Cerveau répond
-par sa phrase apprise « Je n'ai pas accès à Internet… » (0,988 et 0,974). Ces mesures confirment le §9 ter :
-hors de ce qu'il a appris, ce Cerveau de 15,7 M de paramètres se trompe presque toujours.
+Les 26 erreurs gardées au seuil 0,97 sont presque toutes du code : Go 10, Ruby 4, autres exercices de code 7.
+S'y ajoutent trois demandes 3D et deux sorties de programme. Le Cerveau peut donc se tromper **en étant sûr de lui**,
+surtout en code. À l'inverse, il doute beaucoup, que sa réponse soit juste ou non, en traduction et en
+connaissances (en glouton, confiance moyenne 0,53 pour les traductions justes, 0,49 pour les fausses).
+
+**« Je ne peux pas le savoir. »** Le Cerveau a appris deux familles de réponses toutes faites : pas d'accès au
+temps réel, et information manquante (`apex.brain.chat.CANNOT_KNOW_REALTIME`, `CANNOT_KNOW_MISSING`, source
+unique aussi utilisée par les données d'instruction). Il les donne avec une confiance élevée, y compris à des
+questions de culture générale qu'un autre modèle sait traiter. Une réponse identique à l'une de ces phrases
+(espaces normalisés, rien n'est deviné) est donc, elle aussi, confiée au moteur suivant. Ses refus sur la vie
+privée de l'utilisateur ou sur des actions jamais faites restent au Cerveau : ils sont justes par construction,
+et un autre modèle ne pourrait que deviner.
+
+Coût mesuré dans les conditions de l'application : sur les 1 220 exercices, 18 réponses sont ces phrases, toutes
+justes (famille honnêteté). La règle n'y attrape aucune erreur et confie 9 réponses justes de plus. Avec seuil et
+règle : 76,8 % gardées, 97,2 % justes parmi elles, 186 erreurs sur 212 et 97 réponses justes sur 1 008 confiées.
+
+**Hors des familles d'entraînement** : 16 vraies demandes libres, justesse vérifiée par rustc, g++ ou Python,
+sinon par un critère écrit avant de voir la réponse (script hors dépôt). **16 réponses fausses sur 16**, dans
+les deux conditions. Dans les conditions de l'application, 13 sont sous 0,97 ; la règle « je ne peux pas le
+savoir » en attrape 2 de plus (capitale de l'Australie, 0,986 ; auteur des *Misérables*, 0,978), soit **15 sur
+16** confiées au moteur suivant. Seule passe la fonction Rust avec signature : code faux, confiance 0,985. Ces
+mesures confirment le §9 ter : hors de ce qu'il a appris, ce Cerveau de 15,7 M de paramètres se trompe presque
+toujours.
 
 **Usage dans APEX** (moteur **Automatique** de l'assistant) : une réponse du Cerveau dont la confiance est sous
-le seuil (réglage « Le Cerveau passe la main sous cette confiance », 0,97 par défaut, 0 pour jamais) est confiée
-au moteur suivant (Ollama, moteur intégré). Sous la réponse, APEX l'écrit : « confié par le Cerveau APEX
-(confiance 0.62) ». Si aucun autre moteur ne répond, la réponse du Cerveau est gardée, et APEX l'écrit aussi.
-La décision se prend à la première étape du tour, qui choisit le modèle de tout le tour. La réponse déclinée
-reste dans la trace de la génération : `apex/assistant/turns.py` rappelle `generate_with_fallback`, inchangé,
-sur les moteurs suivants. Avec le moteur « Cerveau » choisi explicitement, rien n'est jamais confié ailleurs. Seuil 0,97 : il confie 89 % des
-erreurs en ne cédant que 8 % des réponses justes. Une délégation coûte une seconde génération.
+le seuil, ou qui est l'une de ses phrases « je ne peux pas le savoir », est confiée au moteur suivant (Ollama,
+moteur intégré). Le seuil se règle dans Paramètres > Modèles (« Le Cerveau passe la main sous cette
+confiance ») : 0,97 par défaut, 0 pour ne jamais passer la main. Sous la réponse, APEX écrit pourquoi :
+« confié par le Cerveau APEX (confiance 0.62) » ou « (il dit ne pas pouvoir le savoir) ». Si aucun autre moteur
+ne répond, la réponse du Cerveau est gardée, et APEX l'écrit aussi. La décision se prend à la première étape du
+tour, qui choisit le modèle de tout le tour. La réponse déclinée reste dans la trace de la génération :
+`apex/assistant/turns.py` rappelle `generate_with_fallback`, inchangé, sur les moteurs suivants. Avec le moteur
+« Cerveau » choisi explicitement, rien n'est jamais confié ailleurs. Une délégation coûte une seconde
+génération.
 
 **Ce qui n'est pas mesuré ici** : aucun autre moteur ne tourne dans cet environnement (Ollama et les poids du
 moteur intégré ne sont pas téléchargeables). La chaîne de délégation est vérifiée par des tests avec des doubles
-de test (`tests/test_assistant.py`). Le gain réel dépend de la qualité du moteur suivant sur le PC. Le seuil vaut pour **ce** Cerveau : chaque évaluation (`apex_brain_build.py evaluate`)
-mesure désormais la calibration (`tasks.calibration` dans `evaluation.json`, résumé dans la provenance). Pour un
-nouveau Cerveau, par exemple celui entraîné sur le GPU, le seuil se règle d'après sa propre mesure.
+de test (`tests/test_assistant.py`). Le gain réel dépend de la qualité du moteur suivant sur le PC. Pour une
+question vraiment en temps réel (la météo), le moteur suivant ne sait pas non plus : il peut le dire, ou
+inventer. Le seuil vaut pour **ce** Cerveau. Chaque évaluation (`apex_brain_build.py evaluate`) mesure désormais
+la calibration (`tasks.calibration` dans `evaluation.json`, résumé dans la provenance) : pour un nouveau
+Cerveau, par exemple celui entraîné sur le GPU, le seuil se règle d'après sa propre mesure.
 
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 
