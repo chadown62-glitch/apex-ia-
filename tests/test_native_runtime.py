@@ -196,6 +196,7 @@ def test_the_system_status_measures_whether_a_model_can_answer_not_whether_ollam
     from apex.obs import component_checks as cc
 
     monkeypatch.setenv("APEX_MODELS_DIR", str(tmp_path))
+    monkeypatch.setenv("APEX_BRAIN_DIR", str(tmp_path / "aucun-cerveau"))  # un Cerveau v2 répondrait seul
     absent = cc.check_models()
     assert absent.state == cc.OFFLINE and "apex models fetch" in absent.detail  # rien d'exécutable : dit
     (tmp_path / "qwen2.5-coder-1.5b-instruct").symlink_to(models_dir / "tiny-qwen2", target_is_directory=True)

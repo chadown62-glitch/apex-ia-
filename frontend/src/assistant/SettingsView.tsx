@@ -300,6 +300,12 @@ export function SettingsView() {
           <Row label="Longueur maximale d'une réponse" hint="En tokens (64 à 4096). Plus long = plus lent sur processeur.">
             <NumberField label="Tokens maximum" value={m.max_tokens} min={64} max={4096} step={64} onChange={(n) => modelSection.update({ max_tokens: n })} />
           </Row>
+          <Row
+            label="Le Cerveau passe la main sous cette confiance"
+            hint="Mode automatique : une réponse du Cerveau APEX moins sûre que ce seuil (0 à 1, mesuré sur ses propres mots) est confiée au moteur suivant. 0 : jamais."
+          >
+            <NumberField label="Seuil de confiance" value={m.brain_delegate_below} min={0} max={1} step={0.01} onChange={(n) => modelSection.update({ brain_delegate_below: n })} />
+          </Row>
           <SaveBar section={modelSection} />
         </Section>
       )}
@@ -335,15 +341,21 @@ export function SettingsView() {
       )}
 
       {t && (
-        <Section id="outils" title="Outils" lead="Ce que le modèle peut faire en mode Code (les autres modes n'ont que des calculs sans effet de bord).">
+        <Section id="outils" title="Outils" lead="Ce que le modèle peut faire en mode Code et en mode 3D (les autres modes n'ont que des calculs sans effet de bord).">
           <Row label="Écrire dans l'espace de travail" hint="Créer et modifier des fichiers, uniquement dans l'espace de la conversation ou du projet.">
             <Switch label="Écriture" checked={t.workspace_write} onChange={(v) => toolsSection.update({ workspace_write: v })} />
           </Row>
           <Row label="Exécuter du code" hint="Python dans la sandbox d'APEX, réseau coupé ; proposé seulement si la sandbox est vérifiée.">
             <Switch label="Exécution" checked={t.code_execution} onChange={(v) => toolsSection.update({ code_execution: v })} />
           </Row>
-          <Row label="Étapes d'outils par réponse" hint="1 à 12.">
-            <NumberField label="Étapes maximum" value={t.max_tool_steps} min={1} max={12} onChange={(n) => toolsSection.update({ max_tool_steps: n })} />
+          <Row label="Étapes d'outils par réponse" hint="1 à 40 : davantage pour un gros projet (lire, écrire, tester, corriger), au prix d'une réponse plus longue.">
+            <NumberField label="Étapes maximum" value={t.max_tool_steps} min={1} max={40} onChange={(n) => toolsSection.update({ max_tool_steps: n })} />
+          </Row>
+          <Row label="Calcul des missions Game Studio" hint="Missions proposées par le Cerveau et lancées par vous seul, d'un clic dans l'Atelier 3D. Automatique : GPU CUDA, refusé par Game Studio sans GPU. Processeur : à choisir explicitement, beaucoup plus lent.">
+            <select aria-label="Calcul des missions Game Studio" value={t.game_studio_compute} onChange={(e) => toolsSection.update({ game_studio_compute: e.target.value as "auto" | "cpu" })}>
+              <option value="auto">Automatique (GPU)</option>
+              <option value="cpu">Processeur (explicite)</option>
+            </select>
           </Row>
           <SaveBar section={toolsSection} />
         </Section>

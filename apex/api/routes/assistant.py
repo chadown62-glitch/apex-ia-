@@ -98,8 +98,10 @@ def _message_out(message: Any) -> dict[str, Any]:
 @router.get("/assistant/modes", response_model=DataEnvelope[list[dict[str, Any]]])
 def list_modes() -> DataEnvelope[list[dict[str, Any]]]:
     from apex.assistant.modes import MODES
+    from apex.assistant.tools import assistant_registry
 
-    return DataEnvelope(status="real", data=[mode.describe() for mode in MODES.values()])
+    available = {spec.name for spec in assistant_registry().specs()}  # Game Studio absent : non annoncé
+    return DataEnvelope(status="real", data=[mode.describe(available) for mode in MODES.values()])
 
 
 @router.get("/assistant/settings", response_model=DataEnvelope[dict[str, Any]])
@@ -392,6 +394,106 @@ def cancel_turn(turn_id: str) -> DataEnvelope[dict[str, Any]]:
     return DataEnvelope(status="real", data={"cancel_requested": requested})
 
 
+# -- missions Game Studio d'une conversation (mode 3D) -----------------------------------------------------
+
+
+def _game_studio_error(exc: Exception) -> HTTPException:
+    from apex.assistant.game_studio import AlreadyLaunched, GameStudioUnavailable
+    from apex.errors import PolicyDenied
+
+    if isinstance(exc, (PermissionError, PolicyDenied)):
+        return HTTPException(status_code=403, detail=str(exc))
+    if isinstance(exc, AlreadyLaunched):
+        return HTTPException(status_code=409, detail=str(exc))
+    if isinstance(exc, GameStudioUnavailable):
+        return HTTPException(status_code=503, detail=str(exc))
+    return _client_error(exc)
+
+
+class GameStudioLaunchIn(BaseModel):
+    #: Message de l'assistant qui PROPOSE la mission (sa demande d'origine est retrouvée côté serveur).
+    message_id: str = Field(min_length=1, max_length=64)
+
+
+@router.get("/assistant/game-studio/availability", response_model=DataEnvelope[dict[str, Any]])
+def game_studio_availability() -> DataEnvelope[dict[str, Any]]:
+    """Game Studio sur ce PC : installé, prêt, et ce qui manque, expliqué (sonde de Game Studio)."""
+    from apex.assistant import game_studio
+    from apex.assistant.settings import SettingsService
+
+    settings, _ = SettingsService(_factory()).load()
+    return DataEnvelope(status="real", data=game_studio.availability(settings))
+
+
+@router.get("/assistant/gpu", response_model=DataEnvelope[dict[str, Any]])
+def gpu_sharing() -> DataEnvelope[dict[str, Any]]:
+    """Partage du GPU entre les modèles principaux et les spécialistes (`apex.models.gpu_handoff`) :
+    bail, prêt en cours, dernier accusé de réception ; et l'accélération GPU facultative telle que le
+    dernier démarrage l'a mesurée (`apex.standalone.gpu` : active, absente, ou pourquoi inactive)."""
+    from apex.models.gpu_handoff import gpu_status
+    from apex.standalone import gpu
+
+    return DataEnvelope(status="real", data={**gpu_status(), "component": gpu.last_activation()})
+
+
+@router.post("/assistant/conversations/{conversation_id}/game-studio/launch",
+             response_model=DataEnvelope[dict[str, Any]])
+def launch_game_studio_mission(conversation_id: str,
+                               payload: GameStudioLaunchIn) -> DataEnvelope[dict[str, Any]]:
+    """L'utilisateur lance la mission que le Cerveau a proposée : une seule par proposition."""
+    from apex.assistant import game_studio
+    from apex.assistant.settings import SettingsService
+    from apex.errors import PolicyDenied
+
+    settings, _ = SettingsService(_factory()).load()
+    try:
+        return DataEnvelope(status="real", data=game_studio.launch_proposed(
+            _factory(), conversation_id, payload.message_id, compute=settings.tools.game_studio_compute))
+    except (LookupError, PermissionError, PolicyDenied, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+
+
+@router.get("/assistant/conversations/{conversation_id}/game-studio/{project_id}",
+            response_model=DataEnvelope[dict[str, Any]])
+def game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    """État et résultats (empreintes, jamais les octets) d'une mission que Game Studio exécute pour cette
+    conversation ; une mission d'un autre espace de travail est introuvable ici."""
+    from apex.assistant import game_studio
+
+    try:
+        return DataEnvelope(status="real", data=game_studio.follow(_factory(), conversation_id, project_id))
+    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+
+
+@router.get("/assistant/conversations/{conversation_id}/game-studio/{project_id}/preview/{digest}",
+            response_model=DataEnvelope[dict[str, Any]])
+def game_studio_preview(conversation_id: str, project_id: str, digest: str) -> DataEnvelope[dict[str, Any]]:
+    """Un aperçu (image) rendu par cette mission, en base64 ; les autres fichiers restent sur la page Game
+    Studio."""
+    from apex.assistant import game_studio
+
+    try:
+        data, mime = game_studio.preview(_factory(), conversation_id, project_id, digest)
+    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+    return DataEnvelope(status="real", data={"content_type": mime, "size": len(data),
+                                             "content_base64": base64.b64encode(data).decode("ascii")})
+
+
+@router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/cancel",
+             response_model=DataEnvelope[dict[str, Any]])
+def cancel_game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    """L'utilisateur annule une mission de cette conversation."""
+    from apex.assistant import game_studio
+    from apex.errors import PolicyDenied
+
+    try:
+        return DataEnvelope(status="real", data=game_studio.cancel(_factory(), conversation_id, project_id))
+    except (LookupError, PermissionError, PolicyDenied, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+
+
 # -- espace de travail (mode Code) ---------------------------------------------------------------------------
 
 
@@ -405,12 +507,18 @@ def workspace_files(conversation_id: str) -> DataEnvelope[dict[str, Any]]:
         raise HTTPException(status_code=404, detail=f"conversation « {conversation_id} » introuvable")
     workspace = conversation_workspace(conversation.id, conversation.project_id)
     files = [{"path": path, "size": size} for path, size in workspace.files()]
+    # Dossier RÉEL sur ce PC (l'utilisateur y ouvre les modèles 3D avec Blender, Unity, Unreal).
     return DataEnvelope(status="real", data={"scope": "project" if conversation.project_id else "conversation",
-                                             "files": files})
+                                             "root": str(workspace.root), "files": files})
+
+
+_BASE64_LIMIT = 4_000_000
 
 
 @router.get("/assistant/conversations/{conversation_id}/workspace/file", response_model=DataEnvelope[dict[str, Any]])
-def workspace_file(conversation_id: str, path: str) -> DataEnvelope[dict[str, Any]]:
+def workspace_file(conversation_id: str, path: str, encoding: str = "text") -> DataEnvelope[dict[str, Any]]:
+    """Contenu d'un fichier : texte (tronqué à 400 000 octets pour l'affichage) ou, avec `encoding=base64`, octets
+    exacts (aperçus PNG, modèles .glb à télécharger ; refusé au-delà de 4 Mo, jamais tronqué)."""
     from apex.assistant.workspace import conversation_workspace
     from apex.conversations.service import ConversationService
     from apex.tools.model import ToolFailure
@@ -423,6 +531,15 @@ def workspace_file(conversation_id: str, path: str) -> DataEnvelope[dict[str, An
         raw = workspace.read_bytes(path)
     except ToolFailure as exc:
         raise HTTPException(status_code=404 if exc.code.value == "not_found" else 422, detail=exc.message) from exc
+    if encoding == "base64":
+        if len(raw) > _BASE64_LIMIT:
+            raise HTTPException(status_code=422, detail=f"fichier trop gros pour être transmis ({len(raw)} octets)")
+        import base64
+
+        return DataEnvelope(status="real", data={"path": path, "size": len(raw), "truncated": False,
+                                                 "content_base64": base64.b64encode(raw).decode("ascii")})
+    if encoding != "text":
+        raise HTTPException(status_code=422, detail="encodage attendu : text ou base64")
     text = raw[:400_000].decode("utf-8", errors="replace")
     return DataEnvelope(status="real", data={"path": path, "size": len(raw), "truncated": len(raw) > 400_000,
                                              "content": text})

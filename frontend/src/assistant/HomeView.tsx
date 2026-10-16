@@ -109,6 +109,7 @@ export function HomeView() {
             code: "Décrivez le programme à écrire, le bug à corriger ou le code à analyser…",
             design: "Décrivez l'interface, la marque ou l'ambiance visuelle recherchée…",
             finance: "Budget, épargne, prêt, comparaison de scénarios…",
+            "3d": "Décrivez le véhicule, l'arme ou le personnage à modéliser (dimensions, couleur)…",
           }[selectedMode]
         }
         onSubmit={start}

@@ -1,0 +1,192 @@
+{
+  "name": "apex-brain-v2",
+  "description": "Cerveau APEX v2 : ApexLM, modèle de langage construit et entraîné de zéro par APEX (architecture, tokenizer, données et entraînement propres ; aucun poids externe)",
+  "generation": 2,
+  "tokenizer_fingerprint": "f52fff3de1979a5b7ee8df4f9fe5d29bc1120db922f246b6e3f8c86d2e8f165d",
+  "training": {
+    "pretrain": {
+      "stage": "pretrain",
+      "steps": 6000,
+      "max_steps": 6000,
+      "tokens_seen": 98304000,
+      "training_time_s": 21131.3,
+      "sessions": 3,
+      "hardware": {
+        "device": "cpu",
+        "gpu": null,
+        "vram_gb": null,
+        "torch": "2.14.0+cu130",
+        "threads": 4
+      },
+      "median_tokens_per_s": 5111.6,
+      "final_loss": 1.8256834745407104,
+      "last_validation": {
+        "step": 6000,
+        "code": {
+          "loss": 2.16703,
+          "bpb": 0.84636,
+          "tokens": 99328
+        },
+        "en": {
+          "loss": 2.73843,
+          "bpb": 1.12579,
+          "tokens": 99328
+        },
+        "fr": {
+          "loss": 1.40834,
+          "bpb": 0.62082,
+          "tokens": 99328
+        },
+        "translation": {
+          "loss": 2.25611,
+          "bpb": 1.04551,
+          "tokens": 99328
+        },
+        "all": {
+          "loss": 2.14248,
+          "bpb": 0.90983,
+          "tokens": 397312
+        }
+      },
+      "config": {
+        "window": 1024,
+        "batch_size": 16,
+        "grad_accumulation_steps": 1,
+        "lr": 0.003,
+        "warmup_steps": 300,
+        "min_lr_ratio": 0.1,
+        "weights": {
+          "en": 0.35,
+          "code": 0.3,
+          "fr": 0.25,
+          "translation": 0.1
+        },
+        "seed": 0
+      }
+    },
+    "instruction": {
+      "stage": "sft",
+      "steps": 2500,
+      "max_steps": 2500,
+      "tokens_seen": 40960000,
+      "training_time_s": 25915.4,
+      "sessions": 3,
+      "hardware": {
+        "device": "cpu",
+        "gpu": null,
+        "vram_gb": null,
+        "torch": "2.14.0+cu130",
+        "threads": 4
+      },
+      "median_tokens_per_s": 1984.4,
+      "final_loss": 0.8423382639884949,
+      "last_validation": {
+        "step": 2500,
+        "sft_validation_loss": 0.01239,
+        "tokens": 65287
+      },
+      "config": {
+        "window": 1024,
+        "batch_size": 16,
+        "grad_accumulation_steps": 1,
+        "lr": 0.001,
+        "warmup_steps": 50,
+        "min_lr_ratio": 0.1,
+        "weights": {
+          "en": 0.35,
+          "code": 0.3,
+          "fr": 0.25,
+          "translation": 0.1
+        },
+        "seed": 0
+      }
+    }
+  },
+  "data": {
+    "tokens_manifest_sha256": "ab8f453cd243eb10269c54ffa602f2175385a386b1a3e7a1affca3f4e3063793",
+    "corpus_manifest_sha256": "0d64017adcdc6bef2d0350defeebeeea20128e11db2e579c7e9b420e1195ca93"
+  },
+  "weights_file": "model.q5.safetensors",
+  "quantization": "apex-q5/1",
+  "quantization_report": {
+    "tensors": 41,
+    "parameters_q5": 15728640,
+    "parameters_full": 7552,
+    "bytes_q5": 11826688,
+    "bytes_float32": 62944768,
+    "max_relative_rmse": 0.037382,
+    "mean_relative_rmse": 0.03539
+  },
+  "weights_sha256": "084d03a5f8575736d959f4dc7c8418e17795d0e6cef77b80e2ae4c4c7f882fda",
+  "model_fingerprint": "sha256:5be29821267d9149f637f8a37954d41af580e1b4c9d4f70cca5544df364c6d87",
+  "parameters": 15736192,
+  "evaluation": {
+    "measured_at": "2026-10-12T17:22:12+0000",
+    "tasks_rate": 0.8328,
+    "tasks": {
+      "arithmetic": 1.0,
+      "logic": 0.85,
+      "text_ops": 0.975,
+      "code_fix": 0.775,
+      "json": 1.0,
+      "list_ops": 1.0,
+      "dates": 1.0,
+      "honesty": 0.9,
+      "code_write": 0.675,
+      "program_output": 0.3,
+      "conversation_memory": 1.0,
+      "word_problem": 1.0,
+      "conversion": 1.0,
+      "code_write_heldout": 0.05,
+      "knowledge_command": 0.05,
+      "knowledge_python": 0.1,
+      "translation": 0.425,
+      "code_compose": 0.95,
+      "code_compose_heldout": 0.95,
+      "code_python": 1.0,
+      "code_python_heldout": 1.0,
+      "code_csharp": 1.0,
+      "code_csharp_heldout": 0.95,
+      "code_cpp": 1.0,
+      "code_cpp_heldout": 1.0,
+      "code_javascript": 1.0,
+      "code_javascript_heldout": 0.95,
+      "code_typescript": 1.0,
+      "code_typescript_heldout": 1.0,
+      "code_java": 1.0,
+      "code_java_heldout": 1.0,
+      "code_rust": 1.0,
+      "code_rust_heldout": 1.0,
+      "code_go": 0.9,
+      "code_go_heldout": 0.65,
+      "code_php": 1.0,
+      "code_php_heldout": 1.0,
+      "code_ruby": 0.85,
+      "code_ruby_heldout": 0.9,
+      "model3d_heldout": 0.875,
+      "model3d": 0.95
+    },
+    "over_refusal_rate": 0.0008,
+    "decode_tokens_per_s_cpu": [
+      136.68,
+      138.32,
+      127.53
+    ],
+    "time_to_first_token_s_cpu": [
+      0.0173,
+      0.042,
+      0.1014
+    ],
+    "stability_errors": 0,
+    "bpb_served": {
+      "loss": 2.36123,
+      "bpb": 0.9881,
+      "tokens": 772096
+    },
+    "bpb_float32": {
+      "loss": 2.35696,
+      "bpb": 0.98631,
+      "tokens": 772096
+    }
+  }
+}

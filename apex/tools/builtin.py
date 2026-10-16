@@ -1,6 +1,10 @@
 """Outils réels pour une IA de code, tous bornés à UN espace de travail.
 
 - `fs.read`, `fs.list`, `fs.write` : fichiers de l'espace (jamais au-delà, voir `apex.tools.workspace`) ;
+- `fs.search` : chercher un texte dans les fichiers de l'espace (chemin, ligne, extrait) — naviguer dans un gros
+  projet sans tout lire ;
+- `fs.edit` : remplacer un passage EXACT d'un fichier (une seule occurrence, sauf demande explicite) — modifier un
+  gros fichier sans le réécrire entier ;
 - `project.inspect` : structure du projet (fichiers, tailles, lignes, extensions, tests, paquets Python) ;
 - `code.run` : exécute un fichier Python de l'espace dans la SANDBOX (copie de l'espace, réseau coupé, limites
   CPU/mémoire/temps/processus du backend), sortie structurée ;
@@ -56,6 +60,78 @@ def _write(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[str, 
     content = args["content"].encode("utf-8")
     created = ctx.workspace.write_bytes(args["path"], content)
     return {"path": args["path"], "size_bytes": len(content), "created": created}
+
+
+_SEARCH_MAX_FILE_BYTES = 1_000_000
+_SEARCH_MAX_TOTAL_BYTES = 20_000_000
+_SEARCH_LINE_CHARS = 240
+
+
+def _search(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[str, Any]:
+    """Texte LITTÉRAL (jamais une expression régulière : aucune recherche ne peut s'emballer), bornée en taille
+    lue et en résultats ; les fichiers binaires ou trop gros sont comptés, pas lus."""
+    import fnmatch
+
+    query = args["query"]
+    ignore_case = bool(args.get("ignore_case", False))
+    needle = query.lower() if ignore_case else query
+    prefix = (args.get("path") or "").strip("/")
+    pattern = args.get("glob")
+    limit = int(args.get("max_results", 50))
+    matches: list[dict[str, Any]] = []
+    scanned = skipped = read_bytes = 0
+    truncated = False
+    for rel, size in ctx.workspace.files():
+        if prefix and not (rel == prefix or rel.startswith(prefix + "/")):
+            continue
+        if pattern and not fnmatch.fnmatch(rel.rsplit("/", 1)[-1], pattern):
+            continue
+        if size > _SEARCH_MAX_FILE_BYTES or read_bytes + size > _SEARCH_MAX_TOTAL_BYTES:
+            skipped += 1
+            continue
+        raw = ctx.workspace.read_bytes(rel)
+        read_bytes += len(raw)
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            skipped += 1
+            continue
+        scanned += 1
+        for number, line in enumerate(text.splitlines(), start=1):
+            if needle in (line.lower() if ignore_case else line):
+                if len(matches) >= limit:
+                    truncated = True
+                    break
+                matches.append({"path": rel, "line": number, "text": line.strip()[:_SEARCH_LINE_CHARS]})
+        if truncated:
+            break
+    return {"query": query, "matches": matches, "match_count": len(matches), "truncated": truncated,
+            "files_scanned": scanned, "files_skipped": skipped}
+
+
+def _edit(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[str, Any]:
+    """Remplace `old` par `new` dans un fichier texte existant. `old` doit y figurer EXACTEMENT (espaces et
+    retours à la ligne compris) et une seule fois, sauf `replace_all` : jamais une modification devinée."""
+    path, old, new = args["path"], args["old"], args["new"]
+    if not old:
+        raise ToolFailure(ErrorCode.INVALID_INPUT, "« old » est vide : rien à remplacer")
+    raw = ctx.workspace.read_bytes(path)
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ToolFailure(ErrorCode.INVALID_INPUT, f"fichier non textuel : {path}") from exc
+    count = text.count(old)
+    if count == 0:
+        raise ToolFailure(ErrorCode.NOT_FOUND, f"passage introuvable dans {path} : relire le fichier (fs.read) et "
+                                               "recopier le passage exact")
+    if count > 1 and not args.get("replace_all", False):
+        raise ToolFailure(ErrorCode.INVALID_INPUT, f"passage présent {count} fois dans {path} : l'allonger pour "
+                                                   "qu'il soit unique, ou demander replace_all")
+    updated = text.replace(old, new) if args.get("replace_all", False) else text.replace(old, new, 1)
+    content = updated.encode("utf-8")
+    ctx.workspace.write_bytes(path, content)
+    return {"path": path, "replacements": count if args.get("replace_all", False) else 1,
+            "size_bytes": len(content), "lines": updated.count("\n") + (0 if updated.endswith("\n") else 1)}
 
 
 def _inspect(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[str, Any]:
@@ -284,6 +360,28 @@ def default_registry() -> ToolRegistry:
         permissions=frozenset({Permission.WRITE_WORKSPACE}),
         limits=ToolLimits(max_input_bytes=1_100_000),  # un fichier d'1 Mo doit pouvoir être écrit
     ), _write)
+    registry.register(ToolSpec(
+        name="fs.search",
+        description=("Chercher un texte (littéral) dans les fichiers de l'espace : chemin, ligne, extrait. Filtres "
+                     "facultatifs : dossier, motif de nom (*.cs), casse ignorée."),
+        input_schema={"type": "object", "required": ["query"], "properties": {
+            "query": {"type": "string", "minLength": 1, "maxLength": 200}, "path": _OPT_PATH,
+            "glob": {"type": "string", "maxLength": 64}, "ignore_case": {"type": "boolean"},
+            "max_results": {"type": "integer", "minimum": 1, "maximum": 200}}},
+        output_schema={"type": "object", "additionalProperties": True},
+        permissions=frozenset({Permission.READ_WORKSPACE}),
+    ), _search)
+    registry.register(ToolSpec(
+        name="fs.edit",
+        description=("Modifier un fichier sans le réécrire : remplacer un passage EXACT (unique, sauf replace_all) "
+                     "par un nouveau texte."),
+        input_schema={"type": "object", "required": ["path", "old", "new"], "properties": {
+            "path": _PATH, "old": {"type": "string", "maxLength": 200_000},
+            "new": {"type": "string", "maxLength": 1_000_000}, "replace_all": {"type": "boolean"}}},
+        output_schema={"type": "object", "additionalProperties": True},
+        permissions=frozenset({Permission.WRITE_WORKSPACE}),
+        limits=ToolLimits(max_input_bytes=1_300_000),
+    ), _edit)
     registry.register(ToolSpec(
         name="project.inspect",
         description="Structure du projet : fichiers, tailles, lignes, extensions, fichiers de tests, paquets.",

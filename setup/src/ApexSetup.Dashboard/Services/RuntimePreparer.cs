@@ -25,6 +25,7 @@ public sealed class RuntimePreparer(NativeRuntime runtime, HttpClient http, IPro
     public static readonly TimeSpan PipTimeout = TimeSpan.FromMinutes(90);
     public static readonly TimeSpan VerifyTimeout = TimeSpan.FromMinutes(5);
     public static readonly TimeSpan ModelTimeout = TimeSpan.FromHours(6);
+    public static readonly TimeSpan GpuTimeout = TimeSpan.FromHours(3);
 
     /// <summary>Ce que la vérification importe : le lanceur d'APEX et chaque bibliothèque dont il a besoin.</summary>
     public const string VerifyScript =
@@ -140,6 +141,19 @@ public sealed class RuntimePreparer(NativeRuntime runtime, HttpClient http, IPro
         return spec is null
             ? Task.FromResult(ProcessRunResult.NotStarted(problem))
             : runner.RunAsync(runtime.PythonExecutable(spec), ["-m", "apex.standalone", "model", "install", "--log"], ModelTimeout, cancellationToken);
+    }
+
+    /// <summary>
+    /// Accélération GPU FACULTATIVE (PyTorch CUDA, ~2,5 Go) — par le lanceur d'APEX lui-même, qui choisit la variante
+    /// d'après le pilote NVIDIA mesuré, vérifie l'espace disque, installe à part du runtime de base et ne garde la
+    /// surcouche qu'après une sonde GPU réussie. Journal dans <c>.apex\runtime\gpu-install.log</c>.
+    /// </summary>
+    public Task<ProcessRunResult> InstallGpuAsync(CancellationToken cancellationToken = default)
+    {
+        var spec = runtime.TryReadSpec(out var problem);
+        return spec is null
+            ? Task.FromResult(ProcessRunResult.NotStarted(problem))
+            : runner.RunAsync(runtime.PythonExecutable(spec), ["-m", "apex.standalone", "gpu", "install", "--log"], GpuTimeout, cancellationToken);
     }
 
     private static PrepareResult Fail(Action<string> step, string message)

@@ -10,14 +10,16 @@ intégré d'APEX, ou le Cerveau APEX (le réseau propre à APEX, expérimental).
 lumineuses. La version 0.4.3 corrige le lancement : la fenêtre s'ouvre toujours, et un lancement qui échoue le
 dit (voir « Si rien ne s'affiche au double-clic »). La version 0.4.4 corrige la fermeture d'APEX.exe juste
 après **Démarrer APEX** (« Call from invalid thread ») ; la version 0.4.5, sa fermeture à l'ouverture de
-l'assistant dans la fenêtre (Windows 10/11 déclarés dans APEX.exe). L'installateur dépose le
+l'assistant dans la fenêtre (Windows 10/11 déclarés dans APEX.exe). La version 0.5.0 livre le **Cerveau APEX
+v2** : un modèle de langage construit et entraîné **de zéro** par APEX (aucun poids externe), qui **converse** et
+répond en premier en mode Automatique — sa qualité mesurée est affichée à côté de son nom. L'installateur dépose le
 Panel (`APEX.exe`) et l'application APEX elle-même (le même Runtime, TaskLoop, outils, mémoire et Judge
 que dans WSL — l'artefact APEX Runtime, sans l'extension Recherche). Le Panel démarre, arrête et ouvre
 APEX, et affiche son état réel. Rien n'est démarré ni téléchargé sans votre clic.
 
 ## Récupérer l'installateur
 
-Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.4.5.exe`
+Dans le dépôt GitHub, dossier [`releases/windows/`](../releases/windows/) : `APEX-Setup-x64-v0.5.0.exe`
 (≈ 40 Mo), avec son empreinte `.sha256` et son manifeste (`manifest.json` : commit exact, contenu,
 empreintes). Sur la page du fichier, bouton **Download raw file**. Vérification facultative, dans
 PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.5.exe -Algorithm SHA256` (même valeur que le `.sha256`).
@@ -49,6 +51,11 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.5.exe -Algorithm SHA256` (même
    révision figée ; la progression affiche la taille réellement téléchargée. Sans modèle, APEX démarre
    (APEX DEGRADED) mais une tâche s'arrête « bloquée : aucun modèle disponible » — jamais une réponse
    simulée.
+   *Facultatif* — **Accélération GPU** (carte NVIDIA, environ 2,5 Go, APEX arrêté). Le Panel installe
+   PyTorch CUDA à part du runtime, choisi d'après le pilote, et ne le garde que si une sonde du GPU réussit
+   sur ce PC. À chaque démarrage, l'accélération n'est utilisée que si elle est de nouveau vérifiée ; sinon
+   APEX tourne sur le processeur, et le Panel dit pourquoi. Voir `docs/ACCELERATION_GPU.md`. Pas encore
+   disponible : ses listes figées ne sont pas produites, et aucun GPU n'a été qualifié.
 4. **Démarrer APEX** : le Panel lance APEX (base embarquée, `apex doctor`, **Startup Gate** — jamais
    contourné), sans fenêtre de console. Quelques secondes plus tard : **APEX READY**, ou **APEX
    DEGRADED** avec la ligne concernée (ex. modèle non installé).
@@ -69,13 +76,20 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.5.exe -Algorithm SHA256` (même
 
 - **Moteur de réponse** (0.4.1) : la liste **Moteur**, à gauche de la zone de saisie (et **Paramètres →
   Modèles**), choisit qui répond — l'état affiché est mesuré à l'instant par APEX :
-  - **Automatique** : Ollama s'il tourne avec un modèle déclaré, sinon le moteur intégré ; jamais le Cerveau.
+  - **Automatique** (0.5.0) : le **Cerveau APEX v2** répond en premier s'il est présent et ses poids intègres ;
+    Ollama (s'il tourne avec un modèle déclaré) puis le moteur intégré ne servent que si le Cerveau ne peut pas
+    répondre (absent, poids refusés, erreur). Le Cerveau v1, qui ne sait pas converser, n'est jamais pris.
   - **Ollama** : seulement les modèles servis par Ollama sur ce PC (Ollama démarré).
   - **APEX intégré** : Qwen2.5-Coder 1.5B exécuté directement par APEX (« Installer le modèle »), sans Ollama.
-  - **Cerveau APEX** (expérimental) : ApexLM, le réseau de neurones propre à APEX (1,9 M paramètres, tokenizer
-    d'APEX, aucun poids externe ; version promue `experiment-002:v1` du registre, poids vérifiés à chaque
-    chargement). Il est pré-entraîné à prédire la suite de textes techniques mais **n'a jamais été entraîné à
-    converser** : il continue le texte de votre message, et sa réponse n'a souvent pas de sens. L'interface le dit.
+  - **Cerveau APEX** : ApexLM, le modèle de langage propre à APEX — architecture, tokenizer, données,
+    entraînement et quantification APEX-Q5 écrits dans ce dépôt, aucun poids externe. Livré en 0.5.0 : le
+    **Cerveau v2** (15,7 M paramètres, poids APEX-Q5 de 11,8 Mo, entraîné à converser ; poids vérifiés à chaque
+    chargement). **0.5.1 : calcul exact** — le Cerveau écrit l'opération, APEX la calcule (arithmétique,
+    listes, texte, dates) : **72 % d'exercices jamais vus réussis** (48 % en 0.5.0), 100 % en calcul, dates et
+    listes ; faible en connaissances et sur du code qui ne ressemble pas à ce qu'il a appris ; détail dans
+    [`docs/CERVEAU_APEX_V2.md` §9 bis](CERVEAU_APEX_V2.md). C'est un modèle de validation entraîné sans GPU : le
+    vrai Cerveau (≈ 113 M paramètres) s'entraîne sur le GPU du PC (§10 du même document) et remplace celui-ci
+    automatiquement dès son installation, même APEX ouvert.
   Le moteur choisi répond, ou la réponse échoue avec la raison — jamais un autre moteur à sa place. Chaque réponse
   indique le modèle qui l'a produite.
 - **Accueil** : choisissez un mode, écrivez votre message, Entrée. La conversation est créée et la réponse
@@ -111,7 +125,8 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.5.exe -Algorithm SHA256` (même
 | `%LOCALAPPDATA%\APEX\data` | base (projets, conversations, réglages, tâches), espaces de travail (`workspaces\assistant\` pour l'assistant), artefacts (**conservés**) |
 | `%LOCALAPPDATA%\APEX\models` | modèle téléchargé (**conservé**) |
 | `%LOCALAPPDATA%\APEX\webview` | session et cache de l'affichage intégré de l'assistant (**conservés**) |
-| `%LOCALAPPDATA%\Programs\APEX\app\brain` | Cerveau APEX (poids, provenance), livré avec l'application |
+| `%LOCALAPPDATA%\Programs\APEX\app\brain` | Cerveaux APEX livrés avec l'application (v2 servi, v1) : poids, provenance, évaluation |
+| `%LOCALAPPDATA%\APEX\brain` | Cerveaux entraînés sur ce PC (**conservés** aux mises à jour, **prioritaires** sur ceux de l'application) |
 | `%LOCALAPPDATA%\APEX\.apex\runtime` | `launch.log` (démarrage), `prepare.log`, `model-install.log`, enregistrement du backend |
 
 ### Exécution de code isolée (sandbox Windows)
@@ -161,7 +176,7 @@ puis rouvrir APEX.
 |---|---|
 | « Aucun modèle disponible » | Panel : **Installer le modèle**, puis **Arrêter APEX** / **Démarrer APEX** |
 | « Moteur « Ollama » indisponible » | démarrez Ollama sur ce PC, ou choisissez **APEX intégré** dans la liste **Moteur** |
-| « Cerveau APEX — expérimental » | normal : le Cerveau ne sait pas encore converser ; choisissez **APEX intégré** ou Ollama pour une vraie réponse |
+| Réponse fausse du **Cerveau APEX** (code jamais vu, connaissances) | limite mesurée du Cerveau livré (voir sa qualité dans la liste **Moteur**) : choisissez **APEX intégré** ou Ollama pour ces questions, ou entraînez le vrai Cerveau sur le GPU du PC ([`CERVEAU_APEX_V2.md` §10](CERVEAU_APEX_V2.md)) |
 | Page **Assistant** : « ne peut pas s'afficher dans cette fenêtre » | composant absent : installez « Microsoft Edge WebView2 Runtime » (https://go.microsoft.com/fwlink/p/?LinkId=2124703), puis **Réessayer dans la fenêtre** ; en attendant, **Ouvrir dans le navigateur** |
 | « La réponse a échoué — … mémoire insuffisante pour charger le modèle : … Go disponibles, … Go nécessaires » | fermer des applications, ou **Paramètres → Ressources → Précision : bfloat16**, puis **Réessayer** |
 | « La réponse a échoué — délai dépassé » | **Paramètres → Runtime** : allonger le délai (jusqu'à 3600 s), ou réduire **Modèles → Longueur maximale** |

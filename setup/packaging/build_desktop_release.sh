@@ -54,6 +54,12 @@ cp -r "$REPO_ROOT/frontend/dist" "$APP_DIR/frontend_dist"
 [[ -f "$APP_DIR/frontend_dist/index.html" ]] || { log "ERREUR : interface web non construite"; exit 1; }
 mkdir -p "$APP_DIR/runtime"
 cp "$SCRIPT_DIR/runtime/python-runtime.json" "$SCRIPT_DIR/runtime/requirements-windows.lock" "$APP_DIR/runtime/"
+# Accélération GPU FACULTATIVE : seulement sa description et ses listes figées (quelques Ko) — jamais torch CUDA
+# lui-même (~2,5 Go), installé à part, sur demande, par `python -m apex.standalone gpu install`.
+mkdir -p "$APP_DIR/runtime/gpu"
+cp "$SCRIPT_DIR/runtime/gpu/gpu-runtime.json" "$APP_DIR/runtime/gpu/"
+find "$SCRIPT_DIR/runtime/gpu" -maxdepth 1 -name 'torch-cu*.lock' -exec cp {} "$APP_DIR/runtime/gpu/" \;
+log "accélération GPU facultative : $(find "$APP_DIR/runtime/gpu" -name 'torch-cu*.lock' | wc -l) liste(s) figée(s) PyTorch CUDA"
 (cd "$REPO_ROOT" && "$PY" -m runtime_build.verify "$APP_DIR") || { log "ERREUR : artefact Runtime refusé par runtime_build.verify"; exit 1; }
 find "$APP_DIR" -name __pycache__ -prune -exec rm -rf {} +
 find "$APP_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
@@ -120,10 +126,13 @@ manifest = {
                              for k in ("release", "source", "source_commit", "head_commit", "content_hash_sha256")},
         "python_runtime": json.load(open(os.path.join(app, "runtime", "python-runtime.json")))["python"],
         "requirements_lock_sha256": sha(os.path.join(app, "runtime", "requirements-windows.lock")),
-        # Cerveau APEX servi (0.4.1) : version promue du registre, poids vérifiés à chaque chargement.
-        "brain": {k: json.load(open(os.path.join(app, "brain", "apex-brain-v1", "provenance.json"))).get(k)
-                  for k in ("name", "weights_sha256", "model_fingerprint", "parameters")}
-                 if os.path.isfile(os.path.join(app, "brain", "apex-brain-v1", "provenance.json")) else None,
+        # Cerveaux APEX embarqués (0.4.1 : v1 ; 0.5.0 : v2 conversationnel, servi en priorité) ; poids
+        # vérifiés à chaque chargement.
+        "brains": [{k: json.load(open(os.path.join(app, "brain", name, "provenance.json"))).get(k)
+                    for k in ("name", "weights_file", "quantization", "weights_sha256", "model_fingerprint",
+                              "parameters")}
+                   for name in ("apex-brain-v2", "apex-brain-v1")
+                   if os.path.isfile(os.path.join(app, "brain", name, "provenance.json"))],
         "files": sum(len(ns) for _, _, ns in os.walk(app)),
     },
     "install": {"scope": "utilisateur courant, sans administrateur", "directory": "%LOCALAPPDATA%\\Programs\\APEX",

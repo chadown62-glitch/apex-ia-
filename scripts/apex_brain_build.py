@@ -201,11 +201,65 @@ def cmd_tasks(args: argparse.Namespace) -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     evaluation = eval_set()
+    knowledge: list = []
+    if args.corpus:
+        # Connaissances écrites par des humains (manuels, documentation, traductions) : voir
+        # `apex.neural.knowledge_tasks` pour ce que l'évaluation mesure.
+        from apex.neural.knowledge_tasks import knowledge_examples
+
+        evaluation += knowledge_examples(Path(args.corpus), split="eval", seed=args.seed)
+        knowledge = knowledge_examples(Path(args.corpus), split="train", seed=args.seed)
+    compose: list = []
+    if args.compose:
+        # Fonctions composées (filtre, transformation, agrégat) : des milliers de fonctions différentes,
+        # et des combinaisons jamais montrées pour mesurer la généralisation (`apex.neural.compose_tasks`).
+        from apex.neural.compose_tasks import compose_examples
+
+        held = compose_examples(args.compose_eval, seed=args.seed, split="eval")
+        evaluation += held
+        codes = frozenset(e.assistant.split("```python\n", 1)[1].split("```", 1)[0] for e in held)
+        compose = compose_examples(args.compose, seed=args.seed, split="train", exclude=codes)
+    polyglot: list = []
+    if args.polyglot:
+        # Plusieurs langages (C# pour Unity, C++ pour Unreal, Python pour Blender…) : chaque référence de
+        # l'évaluation est compilée et exécutée par le vrai compilateur avant d'être gardée.
+        from apex.neural.polyglot import LANGUAGES, available, polyglot_examples, verify_reference
+
+        languages = tuple(lang for lang in LANGUAGES if available(lang))
+        missing = sorted(set(LANGUAGES) - set(languages))
+        if missing:
+            print(f"compilateurs absents, langages non évalués ici : {', '.join(missing)}")
+        held = polyglot_examples(
+            args.polyglot_eval,
+            seed=args.seed,
+            split="eval",
+            languages=languages,
+            check=lambda lang, c: bool(verify_reference(lang, c)[0]),
+        )
+        evaluation += held
+        names = frozenset(e.meta["function"] for e in held)
+        polyglot = polyglot_examples(args.polyglot, seed=args.seed, split="train", exclude=names)
+    model3d: list = []
+    if args.model3d:
+        # Demandes de modélisation 3D en langage courant -> appel de l'atelier 3D
+        # (`apex.neural.model3d_tasks`) ;
+        # formulations jamais vues à l'évaluation.
+        from apex.neural.model3d_tasks import model3d_examples
+
+        held = model3d_examples(args.model3d_eval, seed=args.seed, split="eval")
+        evaluation += held
+        model3d = model3d_examples(
+            args.model3d, seed=args.seed, split="train", exclude=frozenset(e.user for e in held)
+        )
     keys = frozenset(e.key() for e in evaluation)
     with (out / "eval.jsonl").open("w", encoding="utf-8") as handle:
         for example in evaluation:
             handle.write(json.dumps(example.to_row(), ensure_ascii=False) + "\n")
     train = [e.to_row() for e in generate(args.train, seed=args.seed, exclude=keys)]
+    train += [e.to_row() for e in knowledge if e.key() not in keys]
+    train += [e.to_row() for e in compose if e.key() not in keys]
+    train += [e.to_row() for e in polyglot if e.key() not in keys]
+    train += [e.to_row() for e in model3d if e.key() not in keys]
     validation = [e.to_row() for e in generate(args.validation, seed=args.seed + 1, exclude=keys)]
     manifest = prepare_sft({"train": train, "validation": validation}, tokenizer, out, window=args.window)
     print(
@@ -335,6 +389,8 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
         "measured_at": report["measured_at"],
         "tasks_rate": report["tasks"]["rate"],
         "tasks": {k: v["rate"] for k, v in report["tasks"]["families"].items()},
+        "over_refusal_rate": report["tasks"].get("over_refusal_rate"),
+        "calibration": report["tasks"].get("calibration"),
         "decode_tokens_per_s_cpu": [r["decode_tokens_per_s"] for r in report["speed"]["runs"]],
         "time_to_first_token_s_cpu": [r["time_to_first_token_s"] for r in report["speed"]["runs"]],
         "stability_errors": report["stability"]["errors"],
@@ -350,6 +406,49 @@ def cmd_evaluate(args: argparse.Namespace) -> None:
     if not inspect(brain).ok:
         raise SystemExit("provenance réécrite mais Cerveau incohérent : ne pas installer")
     print(json.dumps(summary, indent=1, ensure_ascii=False))
+
+
+def cmd_chat(args: argparse.Namespace) -> None:
+    """Converser avec un Cerveau v2 dans le terminal, avant de l'installer dans APEX. `--prompt`
+    (répétable) : questions posées à la suite, dans la même conversation ; sinon conversation interactive
+    (ligne vide ou Ctrl+D pour finir)."""
+    from apex.brain.chat import Message
+    from apex.brain.inference import BrainEngine, SamplingSettings
+
+    engine = BrainEngine(Path(args.brain), device=args.device, weights=args.weights, threads=args.threads)
+    settings = SamplingSettings(
+        max_new_tokens=args.max_tokens,
+        temperature=args.temperature,
+        top_p=args.top_p,
+        repetition_penalty=args.repetition_penalty,
+        seed=args.seed,
+    )
+    messages = [Message("system", args.system)] if args.system else []
+
+    def answer(question: str) -> None:
+        messages.append(Message("user", question))
+        print("APEX : ", end="", flush=True)
+        result = engine.chat(messages, settings, on_text=lambda piece: print(piece, end="", flush=True))
+        stats = result.stats
+        print(
+            f"\n  [{stats.generated_tokens} jetons, {stats.tokens_per_s or 0:.1f} jetons/s, premier jeton "
+            f"{(stats.time_to_first_token_s or 0) * 1000:.0f} ms]\n"
+        )
+        messages.append(Message("assistant", result.text))
+
+    if args.prompt:
+        for question in args.prompt:
+            print(f"Vous : {question}")
+            answer(question)
+        return
+    while True:
+        try:
+            question = input("Vous : ").strip()
+        except EOFError:
+            break
+        if not question:
+            break
+        answer(question)
 
 
 def cmd_install(args: argparse.Namespace) -> None:
@@ -415,6 +514,30 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--validation", type=int, default=2000)
     p.add_argument("--window", type=int, default=1024)
     p.add_argument("--seed", type=int, default=1)
+    p.add_argument(
+        "--corpus", help="corpus construit : ajoute les exercices de connaissance (manuels, traductions)"
+    )
+    p.add_argument(
+        "--compose", type=int, default=30_000, help="fonctions composées à l'entraînement (0 : aucune)"
+    )
+    p.add_argument(
+        "--compose-eval", type=int, default=40, help="par famille (vues, jamais vues) à l'évaluation"
+    )
+    p.add_argument(
+        "--polyglot", type=int, default=2500, help="exercices par langage (10 langages) ; 0 : aucun"
+    )
+    p.add_argument(
+        "--polyglot-eval", type=int, default=20, help="par langage : vues et jamais vues, chacune"
+    )
+    p.add_argument(
+        "--model3d",
+        type=int,
+        default=8000,
+        help="demandes de modélisation 3D à l'entraînement (0 : aucune)",
+    )
+    p.add_argument(
+        "--model3d-eval", type=int, default=40, help="par famille (formulations vues, jamais vues)"
+    )
     p.set_defaults(func=cmd_tasks)
     p = sub.add_parser("train")
     p.add_argument("--run", required=True)
@@ -446,6 +569,21 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--limit", type=int, default=0)
     p.add_argument("--stability", type=int, default=100)
     p.set_defaults(func=cmd_evaluate)
+    p = sub.add_parser("chat", help="converser avec un Cerveau v2 dans le terminal")
+    p.add_argument("--brain", required=True)
+    p.add_argument(
+        "--prompt", action="append", help="question (répétable) ; sans : conversation interactive"
+    )
+    p.add_argument("--system", help="consignes système")
+    p.add_argument("--max-tokens", type=int, default=256)
+    p.add_argument("--temperature", type=float, default=0.0)
+    p.add_argument("--top-p", type=float, default=1.0)
+    p.add_argument("--repetition-penalty", type=float, default=1.1)
+    p.add_argument("--seed", type=int, default=0)
+    p.add_argument("--device", default="auto")
+    p.add_argument("--weights", choices=("dequantized", "q5_resident"), default="dequantized")
+    p.add_argument("--threads", type=int, default=0)
+    p.set_defaults(func=cmd_chat)
     p = sub.add_parser("install")
     p.add_argument("--brain", required=True)
     p.add_argument("--to", required=True, help="dossier des Cerveaux d'APEX")

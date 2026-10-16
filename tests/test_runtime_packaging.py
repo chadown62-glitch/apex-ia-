@@ -230,6 +230,30 @@ class TestAntiLeakVerification(_BuiltArtifactTestCase):
             self.assertFalse(report.ok)
             self.assertTrue(any("apex.discovery" in v and "absent" in v for v in report.violations), report.render())
 
+    def test_only_a_declared_optional_package_may_be_absent(self) -> None:
+        """`apex.game_studio` (import gardé de l'assistant) peut manquer ; tout autre paquet absent reste une
+        violation, même importé de la même façon. Une fois classé Runtime par son propriétaire
+        (`runtime_build/selection.py`), Game Studio est livré : son absence redevient une violation."""
+        from runtime_build.selection import RUNTIME_PACKAGES
+        from runtime_build.verify import OPTIONAL_PACKAGES
+
+        self.assertEqual(OPTIONAL_PACKAGES, frozenset({"game_studio"}))
+        with tempfile.TemporaryDirectory() as poisoned_tmp:
+            poisoned = Path(poisoned_tmp) / "poisoned"
+            shutil.copytree(self.artifact_dir, poisoned)
+            shutil.rmtree(poisoned / "apex" / "game_studio", ignore_errors=True)
+            guarded = poisoned / "apex" / "missions" / "_guarded.py"
+            guarded.write_text("try:\n    from apex.game_studio import delegation\nexcept ImportError:\n"
+                               "    delegation = None\ntry:\n    from apex.not_shipped import x\n"
+                               "except ImportError:\n    x = None\n", encoding="utf-8")
+            report = verify_runtime_artifact(poisoned)
+            missing_studio = [v for v in report.violations if "game_studio" in v]
+            if "game_studio" in RUNTIME_PACKAGES:
+                self.assertTrue(missing_studio, report.render())
+            else:
+                self.assertEqual(missing_studio, [], report.render())
+            self.assertTrue(any("apex.not_shipped" in v and "absent" in v for v in report.violations))
+
 
 class TestStandaloneFromTheArtifact(_BuiltArtifactTestCase):
     """L'application Windows (APEX.exe) embarque CET artefact : son lanceur autonome doit y être complet."""

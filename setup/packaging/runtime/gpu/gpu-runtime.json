@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "about": "Accélération GPU facultative d'APEX autonome (Windows) : torch CUDA de download.pytorch.org, installé à part du runtime de base par `python -m apex.standalone gpu install`. Une variante n'est proposée que si sa liste figée (lock) existe et ses tailles sont connues : les deux sont produites par lock_gpu.py, là où download.pytorch.org est joignable. Aucune compatibilité GPU n'est affirmée sans sonde réussie sur le PC de l'utilisateur.",
+  "python": "3.12",
+  "platform": "win_amd64",
+  "torch": "2.14.0",
+  "index": "https://download.pytorch.org/whl",
+  "variants": [
+    {"id": "cu130", "cuda": "13.0", "lock": "torch-cu130.lock", "wheel_bytes": null, "installed_bytes": null},
+    {"id": "cu128", "cuda": "12.8", "lock": "torch-cu128.lock", "wheel_bytes": null, "installed_bytes": null},
+    {"id": "cu126", "cuda": "12.6", "lock": "torch-cu126.lock", "wheel_bytes": null, "installed_bytes": null}
+  ]
+}

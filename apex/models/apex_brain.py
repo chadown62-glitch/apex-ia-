@@ -41,7 +41,7 @@ _NEW_MESSAGE = "Nouveau message de l'utilisateur :\n"
 
 _lock = threading.Lock()
 _engines: dict[str, Any] = {}
-_inspected: dict[tuple[str, int, float], Any] = {}
+_inspected: dict[tuple[str, int, int, int, int], Any] = {}
 _reaper: threading.Thread | None = None
 
 
@@ -80,6 +80,16 @@ def is_conversational(path: Path) -> bool:
     return "<|assistant|>" in (data.get("special_tokens") or [])
 
 
+def measured_quality(evaluation: Any) -> str:
+    """La qualité MESURÉE du Cerveau (résumé d'évaluation écrit dans sa provenance), en clair ; jamais
+    supposée : sans évaluation, c'est dit."""
+    if not isinstance(evaluation, dict) or evaluation.get("tasks_rate") is None:
+        return "qualité non évaluée"
+    when = str(evaluation.get("measured_at") or "")[:10]
+    rate = f"{evaluation['tasks_rate'] * 100:.0f} %"
+    return f"évalué{f' le {when}' if when else ''} : {rate} d'exercices jamais vus réussis"
+
+
 def _idle_limit() -> float:
     try:
         return float(os.environ.get("APEX_BRAIN_IDLE_UNLOAD_S", "600"))
@@ -94,7 +104,10 @@ def _reap_forever() -> None:
 
 
 def unload_idle(now: float | None = None) -> list[str]:
-    """Décharge les Cerveaux inutilisés depuis plus que la limite ; rend leurs chemins."""
+    """Décharge les Cerveaux inutilisés depuis plus que la limite ; rend leurs chemins. Le bail GPU partagé
+    est rendu s'il ne reste plus aucun modèle principal sur CUDA."""
+    from apex.models import gpu_handoff
+
     limit = _idle_limit()
     now = time.time() if now is None else now
     released = []
@@ -103,21 +116,57 @@ def unload_idle(now: float | None = None) -> list[str]:
             if engine.loaded and not engine.lock.locked() and now - engine.last_used > limit:
                 engine.unload()
                 released.append(key)
+    if released:
+        gpu_handoff.governor().unloaded()
     return released
 
 
 def unload_all() -> None:
+    """Décharge tout (tests, arrêt). Jamais appelé par un spécialiste : pour obtenir le GPU, il passe par
+    `apex.models.gpu_handoff.request_gpu`, qui attend la fin des générations en cours."""
+    from apex.models import gpu_handoff
+
     with _lock:
         for engine in _engines.values():
             engine.unload()
         _engines.clear()
+    gpu_handoff.governor().unloaded()
+
+
+def _cuda_residents() -> list[Any]:
+    """Les Cerveaux chargés sur CUDA, pour le partage du GPU (`apex.models.gpu_handoff`)."""
+    from apex.models.gpu_handoff import Resident
+
+    with _lock:
+        return [Resident(f"apex_brain:{Path(key).name}", engine.lock, engine.unload)
+                for key, engine in _engines.items() if engine.loaded and engine.device.type == "cuda"]
+
+
+def _placed(engine: Any) -> str:
+    """Charge le Cerveau sur le périphérique que le partage du GPU permet ; rend la raison du choix. Un
+    Cerveau resté sur le processeur pendant un prêt du GPU revient sur CUDA dès que le bail est repris."""
+    from apex.models import gpu_handoff
+
+    if engine.loaded and (engine.device.type == "cuda" or engine.requested_device == "cpu"):
+        return f"déjà chargé ({engine.device.type})"
+    device, reason = gpu_handoff.governor().place(engine.requested_device)
+    if engine.loaded:
+        if device == "cpu":
+            return f"déjà chargé (cpu) : {reason}"
+        with engine.lock:  # le GPU est de nouveau disponible : rechargé sur CUDA
+            engine.unload()
+    engine.place(device)
+    return reason
 
 
 def engine_for(path: Path) -> Any:
     """Le moteur partagé de ce Cerveau (un seul chargement par processus)."""
     global _reaper
     from apex.brain.inference import BrainEngine
+    from apex.models import gpu_handoff
 
+    # Hors de `_lock` : le partage du GPU prend son verrou, puis `_lock` (énumération des modèles CUDA).
+    gpu_handoff.governor().register(BACKEND, _cuda_residents)
     key = str(path)
     with _lock:
         engine = _engines.get(key)
@@ -145,7 +194,9 @@ class ApexBrainProvider(ModelProvider):
         try:
             provenance = json.loads((path / "provenance.json").read_text(encoding="utf-8"))
             stat = (path / weights_file(provenance)).stat()
-            key = (str(path), stat.st_size, stat.st_mtime)
+            # La provenance compte aussi : une évaluation ajoutée après l'export est vue sans redémarrer.
+            described = (path / "provenance.json").stat()
+            key = (str(path), stat.st_size, stat.st_mtime_ns, described.st_size, described.st_mtime_ns)
         except (OSError, ValueError):
             return inspect(path)
         with _lock:
@@ -187,6 +238,7 @@ class ApexBrainProvider(ModelProvider):
                 f"Cerveau APEX « {provenance.get('name', path.name)} » — {parameters} paramètres, "
                 f"construit et "
                 f"entraîné de zéro par APEX, instruit à converser ; poids {quantization}"
+                f" ; {measured_quality(provenance.get('evaluation'))}"
             )
         else:
             detail = (
@@ -208,8 +260,26 @@ class ApexBrainProvider(ModelProvider):
             },
         )
 
+    def python_twin(self, request: GenerationRequest, prefix: str) -> str:
+        """Version Python de sa réponse, pour la vérification croisée (voir la fonction `python_twin`)."""
+        return python_twin(self._endpoint, request, prefix)
+
     def generate(self, request: GenerationRequest) -> GenerationResult:
-        from apex.brain.chat import Message
+        """Une génération, comptée par le partage du GPU (`apex.models.gpu_handoff`) : pendant une
+        transition vers un spécialiste, elle attend sa fin (dans son délai), puis tourne là où le GPU le
+        permet."""
+        from apex.errors import TimeoutExceeded
+        from apex.models import gpu_handoff
+
+        try:
+            with gpu_handoff.governor().generation(deadline=time.monotonic() + request.timeout_s):
+                return self._generate(request)
+        except gpu_handoff.TransitionTimeout as exc:
+            raise TimeoutExceeded("ApexBrainProvider.generate (transition du GPU)",
+                                  request.timeout_s) from exc
+
+    def _generate(self, request: GenerationRequest) -> GenerationResult:
+        from apex.brain.chat import Message, cannot_know_kind
         from apex.brain.inference import GenerationCancelled, GenerationTimeout, SamplingSettings
         from apex.errors import ModelErrorCategory, ModelProviderError, TimeoutExceeded
         from apex.obs.status import Measurement
@@ -233,7 +303,14 @@ class ApexBrainProvider(ModelProvider):
         path = brain_dir(self._endpoint)
         assert path is not None
         engine = engine_for(path)
+        expected = report.facts.get("model_fingerprint")
+        if engine.loaded and expected and engine.fingerprint != expected:
+            # Cerveau réinstallé pendant qu'APEX tourne (entraînement terminé sous WSL, par exemple) : les
+            # poids en mémoire ne sont plus ceux, vérifiés, du disque. Rechargés, jamais servis périmés.
+            with engine.lock:
+                engine.unload()
         try:
+            placement = _placed(engine)
             just_loaded = engine.load()
         except Exception as exc:
             raise ModelProviderError(
@@ -318,7 +395,10 @@ class ApexBrainProvider(ModelProvider):
             facts={
                 "backend": BACKEND,
                 "device": stats.device,
-                "dtype": str(next(engine.model.parameters()).dtype),
+                # Pourquoi ce périphérique (partage du GPU avec les spécialistes : bail, prêt en cours…).
+                "device_reason": placement,
+                # Moteur partagé peut-être déchargé entre-temps (Cerveau réinstallé) : pas de plantage.
+                "dtype": str(next(engine.model.parameters()).dtype) if engine.model is not None else None,
                 "experimental": not conversational,
                 "conversational": conversational,
                 "weights": stats.weights,
@@ -334,9 +414,46 @@ class ApexBrainProvider(ModelProvider):
                 "seed": request.seed,
                 "max_new_tokens": settings.max_new_tokens,
                 "model_fingerprint": engine.fingerprint,
+                # Calculs exacts demandés par le Cerveau (expression, résultat de la calculatrice).
+                "tool_calls": list(stats.tool_calls),
+                # Confiance du Cerveau dans sa réponse (probabilités de ses propres jetons) : MESURÉE, pas
+                # interprétée ici (voir docs/CERVEAU_APEX_V2.md pour ce qu'elle prédit).
+                "confidence": stats.confidence,
+                "min_token_prob": stats.min_token_prob,
+                # Réponse apprise « je ne peux pas le savoir » (temps réel, information manquante) : un
+                # autre modèle peut savoir (`apex.brain.chat.CANNOT_KNOW_REALTIME`/`CANNOT_KNOW_MISSING`).
+                "cannot_know": cannot_know_kind(result.text) is not None,
+                "cannot_know_kind": cannot_know_kind(result.text),
                 "prompt_used": prompt_used,
             },
         )
+
+
+def python_twin(endpoint: ModelEndpoint, request: GenerationRequest, prefix: str, *,
+                max_new_tokens: int = 256) -> str:
+    """Suite que le Cerveau donne à un début de réponse IMPOSÉ (`prefix`), dans la même conversation que
+    `request`, en glouton : la version Python de sa réponse, pour la vérification croisée
+    (`apex.brain.crosscheck`). Rend le texte produit après `prefix`. Le Cerveau doit déjà avoir répondu
+    (moteur chargé) ; un Cerveau qui ne converse pas ne peut pas le faire (ValueError)."""
+    from apex.brain.chat import Message, stop_ids
+    from apex.brain.inference import SamplingSettings
+    from apex.models import gpu_handoff
+
+    path = brain_dir(endpoint)
+    if path is None or not is_conversational(path):
+        raise ValueError("vérification croisée : Cerveau conversationnel absent")
+    engine = engine_for(path)
+    with gpu_handoff.governor().generation(deadline=time.monotonic() + request.timeout_s):
+        _placed(engine)
+        engine.load()
+        messages = [Message(role, content) for role, content in _conversation(request)]
+        prompt, _ = engine.chat_prompt(messages, max_new_tokens)
+        result = engine.generate_ids(
+            prompt + engine.tokenizer.encode(prefix), SamplingSettings(max_new_tokens=max_new_tokens),
+            stop=stop_ids(engine.tokenizer), cancel=request.cancel_event,
+            deadline=time.perf_counter() + request.timeout_s,
+        )
+    return str(result.text)
 
 
 def _conversation(request: GenerationRequest) -> list[tuple[str, str]]:

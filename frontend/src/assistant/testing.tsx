@@ -67,14 +67,15 @@ export const MODES = [
   { id: "code", label: "Code", summary: "Programmation.", tools: ["fs.read", "code.run"], view: "code", limits: [] },
   { id: "design", label: "Design", summary: "Interfaces.", tools: ["color.contrast"], view: "design", limits: ["Pas de génération d'images."] },
   { id: "finance", label: "Finance", summary: "Budgets.", tools: ["finance.loan"], view: "finance", limits: [] },
+  { id: "3d", label: "3D", summary: "Modélisation 3D.", tools: ["model3d.create"], view: "studio3d", limits: [] },
 ];
 
 export const SETTINGS = {
   appearance: { theme: "night", animations: true, particles: true, reduce_motion: "system" },
-  models: { engine: "auto", preferred_model: "auto", temperature: 0.4, max_tokens: 768 },
+  models: { engine: "auto", preferred_model: "auto", temperature: 0.4, max_tokens: 768, brain_delegate_below: 0.97 },
   runtime: { generation_timeout_s: 900 },
   behavior: { default_mode: "normal", use_memory: true, history_chars: 6000 },
-  tools: { workspace_write: true, code_execution: true, max_tool_steps: 6 },
+  tools: { workspace_write: true, code_execution: true, max_tool_steps: 6, game_studio_compute: "auto" },
   privacy: { index_conversations: true, attachments_enabled: true },
   resources: { model_precision: "auto", cpu_threads: 0 },
   problems: [],

@@ -57,6 +57,10 @@ public static class Program
         {
             return HeadlessActions.InstallModelAsync().GetAwaiter().GetResult();
         }
+        if (args.Contains("--install-gpu"))
+        {
+            return HeadlessActions.InstallGpuAsync().GetAwaiter().GetResult();
+        }
 
         // 0.4.3 (Windows réel, 0.4.2 : « je double-clique sur l'icône et rien ne se passe ») : un lancement ne finit
         // jamais en silence. Tout plantage est journalisé et annoncé (boîte de message Windows, indépendante de

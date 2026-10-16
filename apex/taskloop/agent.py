@@ -145,6 +145,8 @@ _TOOL_GUIDE = {
     "fs.list": ("DÉCOUVRIR : lister un répertoire", {"path": "."}),
     "project.inspect": ("DÉCOUVRIR : structure du projet (fichiers, tests, paquets)", {}),
     "fs.write": ("MODIFIER : écrire un fichier complet", {"path": "solution.py", "content": "def f(x):\n    return x\n"}),
+    "fs.search": ("DÉCOUVRIR : chercher un texte dans le projet", {"query": "def f"}),
+    "fs.edit": ("MODIFIER : remplacer un passage exact", {"path": "solution.py", "old": "return x", "new": "return x + 1"}),
     "solution.check": ("VÉRIFIER : exécuter solution.py sur les exemples publics de l'énoncé", {}),
     "code.run": ("VÉRIFIER : exécuter un fichier Python", {"path": "script.py"}),
     "tests.run": ("VALIDER : lancer les tests du projet", {"start_dir": "tests"}),

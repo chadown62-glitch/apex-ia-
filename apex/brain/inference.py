@@ -12,11 +12,18 @@
   cache), périphérique — rendues avec chaque réponse, jamais estimées.
 - **Mémoire** : `unload()` libère réellement les poids (et la mémoire GPU) ; `BrainEngine` peut garder les
   poids compressés en APEX-Q5 (`weights="q5_resident"`).
+- **Calcul exact** : quand le modèle écrit `<|tool_call|> expression <|tool_result|>`, l'expression est
+  évaluée par `apex.brain.calc` et le résultat est placé dans la réponse (et dans le contexte du modèle) ;
+  le texte rendu montre le résultat, pas l'expression. Chaque appel figure dans les mesures (`tool_calls`).
+- **Atelier 3D** : un appel `vehicle(…)`, `weapon(…)` ou `character(…)` est construit par
+  `apex.brain.studio3d` ; le modèle lit le résumé du modèle 3D RÉELLEMENT construit (dimensions, pièces). Le
+  moteur n'écrit aucun fichier : l'assistant le fait ensuite, avec ses permissions (outil `model3d.create`).
 """
 
 from __future__ import annotations
 
 import gc
+import math
 import sys
 import threading
 import time
@@ -27,8 +34,21 @@ from typing import Any
 
 import torch
 
-from apex.brain.chat import Message, encode_chat, stop_ids, supports_chat
+from apex.brain import calc, studio3d
+from apex.brain.chat import (
+    TOOL_CALL,
+    TOOL_RESULT,
+    Message,
+    encode_chat,
+    stop_ids,
+    supports_chat,
+    supports_tools,
+)
 from apex.brain.model import ApexLM, KVCache
+
+#: Appels de calcul au plus par réponse, et longueur maximale d'une expression (en jetons).
+MAX_TOOL_CALLS = 16
+MAX_CALL_TOKENS = 64
 
 
 class GenerationCancelled(RuntimeError):
@@ -62,6 +82,18 @@ class GenerationStats:
     device: str = "cpu"
     weights: str = ""
     kv_cache_bytes: int = 0
+    tool_calls: list[dict[str, str]] = field(default_factory=list)
+    #: Confiance du modèle dans SA réponse : somme des log-probabilités (distribution brute, température 1)
+    #: des jetons qu'il a choisis, leur nombre, et la plus faible probabilité rencontrée. Les jetons fournis
+    #: par un outil (résultat de calcul, résumé 3D) n'y entrent pas : le modèle ne les a pas choisis.
+    logprob_sum: float = 0.0
+    scored_tokens: int = 0
+    min_token_prob: float | None = None
+
+    @property
+    def confidence(self) -> float | None:
+        """Moyenne géométrique des probabilités des jetons choisis (0 à 1) ; None si rien n'a été choisi."""
+        return round(math.exp(self.logprob_sum / self.scored_tokens), 4) if self.scored_tokens else None
 
     @property
     def tokens_per_s(self) -> float | None:
@@ -80,6 +112,7 @@ class GenerationStats:
             **self.__dict__,
             "tokens_per_s": self.tokens_per_s,
             "prefill_tokens_per_s": self.prefill_tokens_per_s,
+            "confidence": self.confidence,
         }
 
 
@@ -129,6 +162,9 @@ class BrainEngine:
         if weights not in ("dequantized", "q5_resident"):
             raise ValueError(f"mode de poids inconnu : {weights}")
         self.directory = directory
+        #: Périphérique DEMANDÉ (`auto`, `cpu`, `cuda`) ; `device` est celui du prochain chargement, choisi
+        #: par l'appelant (`place`, partage du GPU : `apex.models.gpu_handoff`).
+        self.requested_device = device
         self.device = pick_device(device)
         self.weights_mode = weights
         self.threads = threads
@@ -143,6 +179,11 @@ class BrainEngine:
     @property
     def loaded(self) -> bool:
         return self.model is not None
+
+    def place(self, device: str) -> None:
+        """Périphérique du prochain chargement ; sans effet sur un Cerveau déjà chargé."""
+        if self.model is None:
+            self.device = torch.device(device)
 
     def load(self) -> bool:
         """Charge si nécessaire ; vrai si le chargement vient d'avoir lieu. Contrôles d'intégrité de
@@ -246,6 +287,7 @@ class BrainEngine:
         cancel: threading.Event | None = None,
         deadline: float | None = None,
         on_text: Callable[[str], None] | None = None,
+        tools: bool = True,
     ) -> GenerationResult:
         self.load()
         assert self.model is not None
@@ -269,31 +311,76 @@ class BrainEngine:
         produced: list[int] = []
         text_parts: list[str] = []
         stats.finish_reason = "length"
+        use_tools = tools and supports_tools(tokenizer)
+        call_id = tokenizer.special_id(TOOL_CALL) if use_tools else -1
+        result_id = tokenizer.special_id(TOOL_RESULT) if use_tools else -1
+        call_start: int | None = None  # position de l'expression en cours dans `produced`
+
+        def emit(piece: str) -> None:
+            if piece:
+                text_parts.append(piece)
+                if on_text is not None:
+                    on_text(piece)
+
+        def feed(ids: list[int]) -> torch.Tensor:
+            out, _ = model(torch.tensor([ids], device=self.device), cache=cache, last_only=True)
+            return out
+
         with self.lock:
             self.last_used = time.time()
             prefill_started = time.perf_counter()
-            logits, _ = model(torch.tensor([prompt], device=self.device), cache=cache, last_only=True)
+            logits = feed(prompt)
             stats.prefill_s = time.perf_counter() - prefill_started
             decode_started = time.perf_counter()
-            for index in range(max_new):
+            while len(produced) < max_new:
                 if cancel is not None and cancel.is_set():
                     raise GenerationCancelled("génération annulée")
                 if deadline is not None and time.perf_counter() > deadline:
                     raise GenerationTimeout("délai de génération dépassé")
                 token = self._sample(logits[0, -1].float(), produced, settings, generator)
-                if index == 0:
+                if stats.time_to_first_token_s is None:
                     stats.time_to_first_token_s = round(time.perf_counter() - started, 4)
-                if token in stops:
+                if call_start is not None and len(produced) - call_start >= MAX_CALL_TOKENS:
+                    token = result_id  # expression démesurée : refermée, la calculatrice dira l'erreur
+                else:
+                    logprob = float(torch.log_softmax(logits[0, -1].float(), dim=-1)[token])
+                    stats.logprob_sum += logprob
+                    stats.scored_tokens += 1
+                    probability = math.exp(logprob)
+                    if stats.min_token_prob is None or probability < stats.min_token_prob:
+                        stats.min_token_prob = round(probability, 6)
+                if use_tools and token == call_id and call_start is None:
+                    if len(stats.tool_calls) >= MAX_TOOL_CALLS:
+                        stats.finish_reason = "tool_limit"
+                        break
+                    emit(stream.flush())
+                    produced.append(token)
+                    call_start = len(produced)
+                    logits = feed([token])
+                    continue
+                if use_tools and token == result_id and call_start is not None:
+                    expression = tokenizer.decode(produced[call_start:])
+                    tool = "3d" if studio3d.is_call(expression) else "calc"
+                    answer = studio3d.run(expression) if tool == "3d" else calc.run(expression)
+                    answer_ids = tokenizer.encode(answer)
+                    if len(produced) + 1 + len(answer_ids) >= max_new:
+                        break  # plus de place pour le résultat : arrêt sur la longueur
+                    stats.tool_calls.append(
+                        {"tool": tool, "expression": expression.strip(), "result": answer}
+                    )
+                    produced += [token, *answer_ids]
+                    call_start = None
+                    emit(answer)
+                    logits = feed([token, *answer_ids])
+                    continue
+                if token in stops and call_start is None:
                     stats.finish_reason = "stop"
                     break
                 produced.append(token)
-                piece = stream.push(tokenizer.token_bytes(token))
-                if piece:
-                    text_parts.append(piece)
-                    if on_text is not None:
-                        on_text(piece)
-                if index + 1 < max_new:
-                    logits, _ = model(torch.tensor([[token]], device=self.device), cache=cache)
+                if call_start is None:
+                    emit(stream.push(tokenizer.token_bytes(token)))
+                if len(produced) < max_new:
+                    logits = feed([token])
             stats.decode_s = time.perf_counter() - decode_started
             self.last_used = time.time()
         tail = stream.flush()
@@ -320,7 +407,9 @@ class BrainEngine:
     def _sample(
         logits: torch.Tensor, produced: list[int], settings: SamplingSettings, generator: torch.Generator
     ) -> int:
-        logits = logits.cpu()
+        # Copie : la pénalité ci-dessous modifie les valeurs, et l'appelant mesure la confiance sur la
+        # distribution BRUTE du modèle (sans copie, un tenseur CPU float32 était modifié sur place).
+        logits = logits.to("cpu", copy=True)
         if settings.repetition_penalty != 1.0 and produced:
             seen = torch.tensor(sorted(set(produced[-256:])), dtype=torch.long)
             values = logits[seen]

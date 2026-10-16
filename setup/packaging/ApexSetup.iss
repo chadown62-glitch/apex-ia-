@@ -26,7 +26,8 @@
 ; Désinstallation — politique (voir docs/DESKTOP_DISTRIBUTION.md) :
 ;   ARRÊTÉ    : APEX s'il tourne (APEX.exe --stop : arrêt propre par l'API) avant toute suppression ;
 ;   SUPPRIMÉ  : le dossier d'installation (fichiers installés), le runtime préparé par le Panel
-;               (%LOCALAPPDATA%\APEX\python : Python et bibliothèques, re-téléchargeables), le raccourci Bureau,
+;               (%LOCALAPPDATA%\APEX\python : Python et bibliothèques, re-téléchargeables — y compris
+;               l'accélération GPU facultative, python\gpu), le raccourci Bureau,
 ;               le menu Démarrer, l'entrée « Applications installées » ;
 ;   CONSERVÉ  : les DONNÉES de l'utilisateur — %LOCALAPPDATA%\APEX\data (base, espaces de travail),
 ;               %LOCALAPPDATA%\APEX\models (modèle téléchargé), %APPDATA%\APEX (paramètres),
