@@ -155,6 +155,28 @@ jobs:
           if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
           if ($assistant -eq 1 -or $studio -eq 1) { exit 1 }
           if ($assistant -eq 3 -or $studio -eq 3 -or $model -ne 0) { exit 3 }
+      # L'installateur de QUALIFICATION, pour l'essayer sur le PC de l'utilisateur : un artefact de ce run (connexion
+      # GitHub requise), jamais une release. Il s'annonce « 0.6.0 » ; son contenu exact est dans manifest.json.
+      - name: Name the qualification installer
+        if: always()
+        shell: bash
+        run: |
+          [[ -f "$RUNNER_TEMP/release/manifest.json" ]] || exit 0
+          short=$(git -C "$TREE" rev-parse --short=12 HEAD)
+          mkdir -p "$RUNNER_TEMP/candidate"
+          for f in "$RUNNER_TEMP"/release/APEX-Setup-x64-v*.exe; do
+            name="$(basename "$f" .exe)-candidate-$short.exe"
+            cp "$f" "$RUNNER_TEMP/candidate/$name"
+            (cd "$RUNNER_TEMP/candidate" && sha256sum "$name" > "$name.sha256")
+          done
+          cp "$RUNNER_TEMP/release/manifest.json" "$RUNNER_TEMP/rehearsal.md" "$RUNNER_TEMP/candidate/"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apex-qualification-installer
+          path: ${{ runner.temp }}/candidate
+          if-no-files-found: ignore
+          retention-days: 30
       - uses: actions/upload-artifact@v4
         if: always()
         with:
