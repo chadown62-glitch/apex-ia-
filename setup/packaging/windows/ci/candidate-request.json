@@ -10,5 +10,7 @@
     "agent/codex/8-project-orchestrator",
     "agent/codex/10-game-engineer"
   ],
-  "studio_cpu": true
+  "studio_cpu": true,
+  "attempt": 2,
+  "why": "run 38981526906 : l'APEX installé dit « Game Studio ne fait pas partie de cette installation » ; ce run ajoute le diagnostic des fichiers et des imports de l'application installée"
 }

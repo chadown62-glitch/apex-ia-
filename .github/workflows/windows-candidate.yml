@@ -135,6 +135,31 @@ jobs:
             return $code
           }
           if ((Panel '--prepare') -ne 0) { Note error 'Préparer APEX' 'échec (voir panel.log)'; exit 3 }
+          # Ce que l'APEX INSTALLÉ contient et sait importer (Python préparé par le Panel, application de
+          # l'installateur) : la preuve de l'empaquetage, indépendante de ce que dit l'application.
+          $py = Get-ChildItem "$env:LOCALAPPDATA\APEX\python" -Filter python.exe -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
+          $app = "$env:LOCALAPPDATA\Programs\APEX\app"
+          $gs = (Get-ChildItem "$app\apex\game_studio" -ErrorAction SilentlyContinue | ForEach-Object Name) -join ', '
+          $pth = Get-ChildItem "$env:LOCALAPPDATA\APEX\python" -Filter apex-app.pth -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 1
+          Note notice 'Application installée' "python : $($py.FullName)`npth : $($pth.FullName) -> $(if ($pth) { (Get-Content $pth.FullName -Raw).Trim() })`napex\game_studio : $gs"
+          $diag = @'
+          import importlib, sys, traceback
+          print("python", sys.version.split()[0], sys.executable)
+          import apex
+          print("apex", apex.__file__)
+          for name in ("apex.game_studio", "apex.game_studio.delegation", "jsonschema", "PIL", "psutil", "llama_cpp"):
+              try:
+                  module = importlib.import_module(name)
+                  print("OK", name, getattr(module, "__file__", ""))
+              except BaseException as exc:
+                  print("FAIL", name, type(exc).__name__, getattr(exc, "name", ""), exc)
+                  traceback.print_exc(limit=8, file=sys.stdout)
+          '@
+          $diag | Out-File -Encoding utf8 "$evidence\import_check.py"
+          if ($py) {
+            $out = & $py.FullName -X utf8 "$evidence\import_check.py" 2>&1 | ForEach-Object { "$_" }
+            Note notice 'Imports dans APEX installé' ($out -join "`n")
+          }
           $model = Panel '--install-model' 3600
           if ((Panel '--start' 900) -gt 1) {
             Note error 'Démarrage' ((Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 60) -join "`n")
