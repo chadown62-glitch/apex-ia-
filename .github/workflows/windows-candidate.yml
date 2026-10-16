@@ -1,0 +1,166 @@
+# Candidate de QUALIFICATION d'APEX.exe : l'arbre COMBINÉ (ma branche + la pile Game Studio de Codex + #5, #11,
+# #13), reconstruit dans le runner par scripts/integration/rehearse_merge.sh — fusions locales au runner, RIEN
+# n'est poussé, aucune PR n'est fusionnée — puis le parcours d'un utilisateur sur un Windows réel hébergé par
+# GitHub (Windows Server, CPU, sans GPU ni Blender ; ce n'est PAS le PC de l'utilisateur) :
+#   installateur construit depuis l'arbre combiné -> installation silencieuse -> APEX.exe --prepare
+#   -> --install-model -> --start -> un vrai tour de l'assistant (assistant_e2e.py run)
+#   -> parcours 3D réel (studio_e2e.py : composants, disponibilité, conversation 3D, proposition, clic,
+#      suivi) -> --stop -> désinstallation.
+# Verdicts : un prérequis absent (bibliothèque, planificateur, Blender…) donne BLOCKED (code 3) avec la raison
+# d'APEX, jamais PASS. Les résultats sont aussi publiés en annotations (lisibles par l'API, sans le journal).
+#
+# Déclenchement manuel : un commit qui modifie setup/packaging/windows/ci/candidate-request.json (ordre des
+# branches), sur la branche de développement de Claude ; ou « Run workflow » une fois sur la branche par défaut.
+name: windows-candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/apex-official-development-4kao8t]
+    paths:
+      - "setup/packaging/windows/ci/candidate-request.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-candidate
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    env:
+      APEX_PANEL_START_TIMEOUT_S: "870"
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Combined tree (merges local to this runner, nothing pushed)
+        shell: bash
+        run: |
+          order=$(python -c "import json; print(' '.join(json.load(open('setup/packaging/windows/ci/candidate-request.json', encoding='utf-8'))['order']))")
+          set +e
+          TMPDIR=$(cygpath -u "$RUNNER_TEMP") bash scripts/integration/rehearse_merge.sh --keep --order "$order" \
+            > "$RUNNER_TEMP/rehearsal.md" 2>&1
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/rehearsal.md"
+          python - "$RUNNER_TEMP/rehearsal.md" "$code" <<'PY'
+          import pathlib, sys
+          text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+          kind = "notice" if sys.argv[2] == "0" else "error"
+          print(f"::{kind} title=Arbre combine (code {sys.argv[2]})::" + text.replace("%", "%25").replace("\r", "").replace("\n", "%0A"))
+          PY
+          [[ $code -eq 0 ]] || exit 1
+          tree=$(sed -n 's/^worktree gardé : //p' "$RUNNER_TEMP/rehearsal.md" | tail -1)
+          echo "TREE=$(cygpath -m "$tree")" >> "$GITHUB_ENV"
+      - name: Runtime libraries of the combined tree (its exact Windows lock, verified by hashes)
+        shell: bash
+        working-directory: ${{ env.TREE }}
+        run: |
+          python -m pip install --disable-pip-version-check --no-input --require-hashes --only-binary=:all: --no-deps \
+            -r setup/packaging/runtime/requirements-windows.lock
+          echo "APEX_BUILD_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Build the candidate installer from the combined tree (same script as the release)
+        shell: bash
+        working-directory: ${{ env.TREE }}
+        run: |
+          command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }
+          ISCC=$(bash setup/packaging/fetch_innosetup.sh "$RUNNER_TEMP/toolchain" | tail -1)
+          set +e
+          ISCC="$ISCC" bash setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/release"
+          code=$?
+          set -e
+          if [[ $code -ne 0 ]]; then
+            tail -n 60 "$RUNNER_TEMP/release/build.log" 2>/dev/null | python -c "import sys; t = sys.stdin.read().replace('%', '%25').replace(chr(13), '').replace(chr(10), '%0A'); print('::error title=build_desktop_release (code $code)::' + t)"
+            exit $code
+          fi
+          python - "$RUNNER_TEMP/release/manifest.json" <<'PY'
+          import json, pathlib, sys
+          m = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          app = m.get("application") or {}
+          summary = {"version": m.get("version"), "installer": m.get("installer"),
+                     "source_commit": (app.get("runtime_artifact") or {}).get("source_commit"),
+                     "requirements_lock_sha256": app.get("requirements_lock_sha256")}
+          print("::notice title=Candidate construite::" + json.dumps(summary, ensure_ascii=False))
+          PY
+      - name: Install, prepare, model, start, a real assistant turn, the real 3D path, stop, uninstall
+        shell: pwsh
+        timeout-minutes: 200
+        run: |
+          $tree = $env:TREE
+          $evidence = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\evidence").FullName
+          function Note([string]$level, [string]$title, [string]$text) {
+            $t = ($text -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A')
+            if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
+            Write-Host "::${level} title=${title}::$t"
+          }
+          $setup = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence\install.log" -Wait -PassThru
+          $exe = "$env:LOCALAPPDATA\Programs\APEX\APEX.exe"
+          if ($p.ExitCode -ne 0 -or -not (Test-Path $exe)) { Note error 'Installation' "code $($p.ExitCode)"; exit 1 }
+          function Panel([string]$action, [int]$timeoutS = 2400) {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $exe; $psi.Arguments = $action
+            $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardOutput = $true
+            $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+            $proc = [Diagnostics.Process]::Start($psi)
+            $read = $proc.StandardOutput.ReadToEndAsync()
+            if (-not $proc.WaitForExit($timeoutS * 1000)) { try { $proc.Kill() } catch { }; Note error "APEX.exe $action" 'délai dépassé'; return 98 }
+            $out = $null; if ($read.Wait(30000)) { $out = $read.Result }
+            $out | Out-File -Append -Encoding utf8 "$evidence\panel.log"
+            $s = $null; try { $s = $out | ConvertFrom-Json } catch { }
+            Note notice "APEX.exe $action (code $($proc.ExitCode))" "$($s.headline) / $($s.cause)"
+            return $proc.ExitCode
+          }
+          function RunPy([string]$title, [string[]]$arguments) {
+            $lines = & python @arguments 2>&1 | ForEach-Object { "$_" }
+            $code = $LASTEXITCODE
+            $lines | Out-Host
+            $kept = $lines | Where-Object { $_ -match '^(CHECK|NOTE|COMPONENT|PROPOSAL|LAUNCH|MISSION|VERDICT|BLOCKED|FAIL)' }
+            Note notice "$title (code $code)" ($kept -join "`n")
+            return $code
+          }
+          if ((Panel '--prepare') -ne 0) { Note error 'Préparer APEX' 'échec (voir panel.log)'; exit 3 }
+          $model = Panel '--install-model' 3600
+          if ((Panel '--start' 900) -gt 1) {
+            Note error 'Démarrage' ((Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 60) -join "`n")
+            exit 1
+          }
+          $assistant = RunPy 'Assistant' @("$tree/setup/packaging/windows/ci/assistant_e2e.py", 'run', '--out', $evidence, '--timeout', '2400')
+          $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
+          $request = Get-Content "$tree/setup/packaging/windows/ci/candidate-request.json" -Raw | ConvertFrom-Json
+          if ($request.studio_cpu) { $studioArgs += '--cpu' }
+          $studio = RunPy 'Parcours 3D' $studioArgs
+          Panel '--stop' 300 | Out-Null
+          Copy-Item "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" "$evidence\launch.log" -ErrorAction SilentlyContinue
+          $u = Start-Process "$env:LOCALAPPDATA\Programs\APEX\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          Start-Sleep -Seconds 5
+          $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
+          Note notice 'Désinstallation' "code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
+          Note notice 'Codes' "modèle $model ; assistant $assistant ; parcours 3D $studio"
+          if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
+          if ($assistant -eq 1 -or $studio -eq 1) { exit 1 }
+          if ($assistant -eq 3 -or $studio -eq 3 -or $model -ne 0) { exit 3 }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-candidate-evidence
+          path: |
+            ${{ runner.temp }}/rehearsal.md
+            ${{ runner.temp }}/evidence
+            ${{ runner.temp }}/release/manifest.json
+            ${{ runner.temp }}/release/build.log
