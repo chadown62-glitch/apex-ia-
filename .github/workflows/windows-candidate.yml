@@ -123,7 +123,7 @@ jobs:
             $out = $null; if ($read.Wait(30000)) { $out = $read.Result }
             $out | Out-File -Append -Encoding utf8 "$evidence\panel.log"
             $s = $null; try { $s = $out | ConvertFrom-Json } catch { }
-            Note notice "APEX.exe $action (code $($proc.ExitCode))" "$($s.headline) / $($s.cause)"
+            Note notice "APEX.exe $action (code $($proc.ExitCode))" "$($s.headline) / $($s.cause)`n$($s.guidance)"
             return $proc.ExitCode
           }
           function RunPy([string]$title, [string[]]$arguments) {
