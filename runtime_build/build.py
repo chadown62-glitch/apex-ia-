@@ -63,13 +63,17 @@ def _extract_commit(commit: str, dest: Path) -> str:
     complet résolu (le manifeste de release doit toujours pointer un
     commit exact, jamais une référence mouvante comme `HEAD`)."""
     resolved = _git("rev-parse", commit)
-    with tempfile.NamedTemporaryFile(suffix=".tar") as tar_file:
+    # Un dossier temporaire, pas un `NamedTemporaryFile` : sous Windows, un fichier temporaire encore
+    # ouvert ne peut pas être rouvert en écriture par `git archive -o` (« Permission denied », constaté le
+    # 16/10/2026 sur le runner Windows de la CI).
+    with tempfile.TemporaryDirectory() as tmp:
+        tar_path = Path(tmp) / "source.tar"
         subprocess.run(
-            ["git", "archive", "--format=tar", resolved, "-o", tar_file.name],
+            ["git", "archive", "--format=tar", resolved, "-o", str(tar_path)],
             cwd=REPO_ROOT,
             check=True,
         )
-        with tarfile.open(tar_file.name) as tar:
+        with tarfile.open(tar_path) as tar:
             tar.extractall(dest, filter="data")
     return resolved
 
