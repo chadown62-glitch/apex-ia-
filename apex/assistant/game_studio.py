@@ -223,6 +223,17 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
     except Exception as exc:  # sonde de Game Studio en échec : dit tel quel, jamais « prêt »
         return {**base, "installed": True, "ready": False, "notes": [],
                 "missing": [f"la sonde de Game Studio a échoué : {exc.__class__.__name__}: {exc}"[:300]]}
+    missing = missing_from(report, compute)
+    cuda = report.get("cuda") or {}
+    notes = [n for n in (cuda.get("reason"), (report.get("specialist") or {}).get("gpu_policy")) if n]
+    environment = (report.get("environment") or {}).get("status")
+    return {**base, "installed": True, "ready": not missing, "missing": missing, "notes": notes,
+            "environment_status": environment, "cuda_available": bool(cuda.get("available"))}
+
+
+def missing_from(report: dict[str, Any], compute: str) -> list[str]:
+    """Ce qui manque sur CE PC d'après le rapport de la sonde de Game Studio, en clair (aussi lu par
+    l'état des composants, `apex.obs.component_checks`)."""
     blender = report.get("vehicle_blender") or {}
     cuda = report.get("cuda") or {}
     missing: list[str] = []
@@ -242,10 +253,7 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
     if compute != "cpu" and not cuda.get("available"):
         missing.append("Aucun GPU CUDA : choisissez « Processeur » dans Paramètres > Outils > Calcul des "
                        "missions (beaucoup plus lent), ou utilisez un PC équipé d'un GPU NVIDIA.")
-    notes = [n for n in (cuda.get("reason"), (report.get("specialist") or {}).get("gpu_policy")) if n]
-    environment = (report.get("environment") or {}).get("status")
-    return {**base, "installed": True, "ready": not missing, "missing": missing, "notes": notes,
-            "environment_status": environment, "cuda_available": bool(cuda.get("available"))}
+    return missing
 
 
 def _default_services() -> tuple[Any, Any]:
