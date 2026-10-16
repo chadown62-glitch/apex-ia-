@@ -241,11 +241,12 @@ def missing_from(report: dict[str, Any], compute: str) -> list[str]:
         missing.append("Blender n'est pas installé, ou introuvable dans le PATH.")
     if blender.get("workers_present") is False:
         missing.append("Les scripts de Game Studio (scripts/game_graphics/studio) sont absents.")
-    planner = (blender.get("coder_manifest_present") and blender.get("llama_cpp_present")) or blender.get(
-        "apex_native_coder_present")
-    if not planner:
-        missing.append("Le modèle planificateur local (Qwen2.5-Coder-7B épinglé et llama-cpp-python) n'est "
-                       "pas installé.")
+    # Les missions que le Cerveau propose passent par la planification dynamique de Game Studio
+    # (`create_dynamic`), qui exige le Qwen2.5-Coder-7B épinglé : le moteur intégré d'APEX n'y est pas
+    # accepté (« dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified », Game Studio).
+    if not (blender.get("coder_manifest_present") and blender.get("llama_cpp_present")):
+        missing.append("Le modèle planificateur des missions (Qwen2.5-Coder-7B épinglé, avec "
+                       "llama-cpp-python) n'est pas installé.")
     libraries = [name for name, ok in (blender.get("python_dependencies") or {}).items() if not ok]
     libraries += [name for name in ("jsonschema",) if find_spec(name) is None]
     if libraries:

@@ -71,22 +71,30 @@ def test_without_game_studio_every_studio_row_says_it_is_not_installed(monkeypat
 
 @pytest.mark.parametrize(("report", "state", "words"), [
     (_report(), cc.OFFLINE, "planificateur"),
-    (_report(native=True, environment="available_unqualified", family="available_unqualified"), cc.DEGRADED,
-     "aucune mission encore réussie"),
-    (_report(native=True, environment="available_unqualified", family="available_validated"), cc.READY,
-     "mission réussie sur ce PC"),
+    # Le moteur intégré ne planifie pas les missions du Cerveau.
+    (_report(native=True, environment="available_unqualified", family="available_unqualified"),
+     cc.OFFLINE, "Qwen2.5-Coder-7B épinglé"),
+    (_report(manifest=True, llama=True, environment="available_unqualified",
+             family="available_unqualified"),
+     cc.DEGRADED, "aucune mission encore réussie"),
+    (_report(manifest=True, llama=True, environment="available_unqualified", family="available_validated"),
+     cc.READY, "mission réussie sur ce PC"),
 ])
 def test_game_studio_is_ready_only_after_a_mission_passed_here(monkeypatch, report, state, words) -> None:
+    import apex.assistant.game_studio as studio
+
+    real = studio.find_spec
+    monkeypatch.setattr(studio, "find_spec", lambda name: object() if name == "jsonschema" else real(name))
     _studio(monkeypatch, report)
     status = cc.check_game_studio()
     assert status.state == state and words in status.detail, status
 
 
 @pytest.mark.parametrize(("report", "state", "words"), [
-    (_report(), cc.OFFLINE, "aucun planificateur"),
+    (_report(), cc.OFFLINE, "planificateur des missions absent"),
     (_report(manifest=True, llama=True), cc.DEGRADED, "Qwen2.5-Coder-7B épinglé"),
-    (_report(native=True), cc.DEGRADED, "moteur intégré"),
-    (_report(native=True, family="available_validated"), cc.READY, "missions réussies"),
+    (_report(native=True), cc.OFFLINE, "ne sert qu'aux créations d'une famille"),
+    (_report(manifest=True, llama=True, family="available_validated"), cc.READY, "missions réussies"),
 ])
 def test_the_planner_is_what_game_studio_would_use(monkeypatch, report, state, words) -> None:
     _studio(monkeypatch, report)

@@ -426,33 +426,36 @@ def check_game_studio() -> ComponentStatus:
     validated = _validated(report)
     if validated:
         return ComponentStatus("game_studio", READY, f"mission réussie sur ce PC ({', '.join(validated)})")
-    if status == _UNQUALIFIED:
+    missing = _missing(report)
+    if status == _UNQUALIFIED and not missing:
         return ComponentStatus("game_studio", DEGRADED,
                                "dépendances présentes ; aucune mission encore réussie sur ce PC (non "
                                "qualifié)")
-    return ComponentStatus("game_studio", OFFLINE, ("manque : " + " ".join(_missing(report)))[:600])
+    return ComponentStatus("game_studio", OFFLINE, ("manque : " + " ".join(missing))[:600])
 
 
 def check_planner() -> ComponentStatus:
     absent, report = _game_studio()
     if absent is not None:
         return ComponentStatus("planner", OFFLINE, absent)
+    # Les missions proposées par le Cerveau passent par la planification dynamique de Game Studio, qui exige
+    # le Qwen2.5-Coder-7B épinglé ; le moteur intégré n'y sert pas (seulement aux créations d'une famille).
     vehicle = report.get("vehicle_blender") or {}
     pinned = bool(vehicle.get("coder_manifest_present") and vehicle.get("llama_cpp_present"))
-    native = bool(vehicle.get("apex_native_coder_present"))
-    if not (pinned or native):
+    native = (" ; le moteur intégré, présent, ne sert qu'aux créations d'une famille depuis la page Game "
+              "Studio") if vehicle.get("apex_native_coder_present") else ""
+    if not pinned:
         parts = []
         if not vehicle.get("coder_manifest_present"):
             parts.append("Qwen2.5-Coder-7B épinglé absent (APEX_HOME/.apex/game-studio/coder-model.json)")
         if not vehicle.get("llama_cpp_present"):
             parts.append("llama-cpp-python absent")
-        parts.append("moteur intégré Qwen2.5-Coder absent")
-        return ComponentStatus("planner", OFFLINE, "aucun planificateur : " + " ; ".join(parts))
-    which = "Qwen2.5-Coder-7B épinglé (llama-cpp)" if pinned else "moteur intégré d'APEX (Qwen2.5-Coder)"
+        detail = "planificateur des missions absent : " + " ; ".join(parts) + native
+        return ComponentStatus("planner", OFFLINE, detail[:600])
     if _validated(report):
-        return ComponentStatus("planner", READY, f"{which} ; missions réussies sur ce PC")
-    return ComponentStatus("planner", DEGRADED,
-                           f"{which} présent ; non qualifié (aucune mission réussie sur ce PC)")
+        return ComponentStatus("planner", READY, "Qwen2.5-Coder-7B épinglé ; missions réussies sur ce PC")
+    return ComponentStatus("planner", DEGRADED, "Qwen2.5-Coder-7B épinglé présent ; non qualifié (aucune "
+                           "mission réussie sur ce PC)")
 
 
 def _blender_version(path: str) -> str | None:
