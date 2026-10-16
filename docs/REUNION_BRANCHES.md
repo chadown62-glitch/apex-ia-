@@ -40,8 +40,16 @@ Les quatre PR de la pile Game Studio s'empilent : #19 → #22 → #24 → #26.
 `main` (`ca3479a`) a divergé : il porte 11 commits absents de ma branche. Ce n'est pas l'objet de cette
 première intégration ; la réconciliation se fera séparément, sur autorisation (WORKFLOW.md).
 
-**Aucun fichier n'est modifié à la fois par ma branche et par une branche de Codex** depuis leur base
-commune `fab616d`. Ce point a été vérifié branche par branche (`git diff --name-only`).
+**Un seul fichier est modifié à la fois par ma branche et par une branche de Codex** depuis leur base
+commune `fab616d` : `runtime_build/build.py`. Ce point a été vérifié branche par branche
+(`git diff --name-only`).
+- Je l'ai écrit (`a0b1e1e`), fonction `_extract_commit` comprise.
+- La pile de Codex (#26) ajoute du code dans `_assemble_common`.
+- Ma correction `eb2713b` ne touche que `_extract_commit`. Sous Windows, `git archive -o` ne pouvait pas
+  rouvrir le fichier temporaire ; l'extraction passe désormais par un dossier temporaire. Le défaut a été
+  constaté sur le runner Windows.
+- Les deux modifications fusionnent sans conflit (`git merge-tree`, vérifié). Codex relit ce changement
+  (Issue #21).
 
 ## 3. Répétition des fusions
 
@@ -99,7 +107,10 @@ torch-loaded check injectable… ») :
 
 ## 4. Ordre d'intégration proposé
 
-0. **Décision humaine** : comment ma branche entre dans `apex/integration`. Les deux options gardent l'historique, sans réécriture :
+0. **Décision humaine — prise : option (B).** La branche `agent/claude/brain-integration`, partie
+   d'`apex/integration`, reçoit ma branche par fusion. Une PR **brouillon** va vers `apex/integration`.
+   L'utilisateur est l'intégrateur final : rien n'y est fusionné sans lui. Les deux options gardaient
+   l'historique, sans réécriture :
    - (A) une nouvelle PR de `claude/apex-official-development-4kao8t` vers `apex/integration`. La PR #2, vers
      `main`, reste telle quelle.
    - (B) une branche `agent/claude/<issue>-brain-integration`, partie d'`apex/integration`, qui reçoit ma
@@ -123,14 +134,16 @@ torch-loaded check injectable… ») :
 | Fichier | Modifié par | Règle |
 |---|---|---|
 | `setup/packaging/runtime/requirements-windows.in` / `.lock` | Codex (pile : pillow, psutil) | Codex ; je n'y touche pas. `jsonschema` et `llama-cpp-python` restent à y déclarer (§6) |
-| `runtime_build/build.py`, `pyproject.runtime.toml`, `selection.py` | Codex (pile) | Codex ; `apex/vision` à classer |
+| `runtime_build/build.py` | Claude (`_extract_commit`, correction Windows `eb2713b`) ; Codex (pile : `_assemble_common`) | partagé : chacun sa fonction, fusion propre (§2) |
+| `runtime_build/pyproject.runtime.toml`, `selection.py` | Codex (pile) | Codex ; `apex/vision` à classer |
 | `runtime_build/verify.py` | Claude (`OPTIONAL_PACKAGES`) | Claude ; compatible avec le classement de Codex (testé) |
 | `apex/tools/model.py` (permissions `GAME_STUDIO_*`) | Codex (#24, #26) | Codex ; lues défensivement par `apex/assistant/modes.py` |
 | `apex/api/app.py`, `apex/api/dependencies.py` | Codex (routes Game Studio) | Codex |
 | `apex/assistant/**`, `apex/api/routes/assistant.py`, `apex/models/**`, `apex/brain/**`, `apex/standalone/**` | Claude | Claude |
 | `setup/src/**`, `setup/packaging/ApexSetup.iss`, `build_desktop_release.sh`, `setup/packaging/runtime/gpu/**` | Claude | Claude |
 | `apex/game_studio/**`, `apex/game_graphics/**`, `apex/game_engineer/**`, `scripts/game_*` | Codex | Codex |
-| `AGENTS.md`, `CLAUDE.md`, `docs/coordination/**`, `.github/` | intégration (humain) | inchangés |
+| `.github/workflows/windows-native.yml`, `windows-desktop.yml`, `gpu-locks.yml` | Claude (CI Windows ; `gpu-locks` validée par l'utilisateur) | Claude ; déclenchées par un push sur ma branche de développement seulement |
+| `AGENTS.md`, `CLAUDE.md`, `docs/coordination/**`, `.github/PULL_REQUEST_TEMPLATE.md` | intégration (humain) | inchangés |
 
 Contrats entre les deux côtés (détail : `docs/INTEGRATION_CERVEAU_GAME_STUDIO.md` §2) :
 - `register_game_studio_tools(registry)` ;
@@ -166,10 +179,11 @@ psutil) :
 | Visual C++ récent (`msvc-runtime` dans la liste) | « Préparer APEX » | IMPLEMENTED |
 | Cerveau APEX v2 (`brain/apex-brain-v2`, 19 Mo, Q5) | l'installateur | IMPLEMENTED |
 | Moteur intégré : Qwen2.5-Coder-1.5B-Instruct (révision `2e1fd39…`) | « Installer le modèle » | IMPLEMENTED |
-| PyTorch CUDA (environ 2,5 Go) | « Accélération GPU (facultatif) » — `docs/ACCELERATION_GPU.md` | BLOCKED : listes figées à produire, aucun test matériel |
+| PyTorch CUDA 2.14.0 (cu130 : 1,99 Go ; cu126 : 2,60 Go) | « Accélération GPU (facultatif) » — `docs/ACCELERATION_GPU.md` | listes figées produites sur un vrai runner Windows (workflow `gpu-locks`, métadonnées seulement, empreintes de l'index). cu128 est absent de l'index : non proposé. UNVERIFIED sur matériel : aucun test sur une carte NVIDIA |
 | Pilote NVIDIA | l'utilisateur | règle mesurée par `nvidia-smi` |
 | Blender (4.3.2 utilisé par Codex) | l'utilisateur (`docs/game_graphics/`) | à installer ; la sonde le dit |
-| Planificateur Qwen2.5-Coder-7B Q5_K_M (environ 5,4 Go d'après Codex) et `llama-cpp-python` CUDA | Codex (`APEX_HOME/.apex/game-studio/coder-model.json`) | BLOCKED (Codex) |
+| Planificateur Qwen2.5-Coder-7B Q5_K_M (environ 5,4 Go d'après Codex) et `llama-cpp-python` CUDA | Codex (`APEX_HOME/.apex/game-studio/coder-model.json`) | BLOCKED (Codex). Toute mission proposée par le Cerveau passe par la planification dynamique, qui refuse le moteur intégré (`dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified`). Sans ce 7B, le parcours « voiture sportive » s'arrête au clic, avec la raison de Game Studio (mesuré dans l'arbre combiné) |
+| `scripts/game_engineer/` (dont `import_vehicle.py`) | Codex | absent du runtime empaqueté : la candidate combinée embarque `scripts/game_graphics/`, pas `scripts/game_engineer/` (constaté). La préparation de l'import UE5 (`python -m apex.game_engineer`) lit ce script et échouerait dans APEX.exe. Les missions Blender de Game Studio n'en dépendent pas |
 
 Effet d'une fusion sur un PC déjà préparé : la liste Windows de la pile Codex change d'empreinte, et le Panel
 affiche « préparé pour une autre version d'APEX ». Un clic sur « Préparer APEX » complète la préparation.
@@ -215,7 +229,10 @@ propriétaire.
 - Partage du GPU : appeler `request_gpu` / `return_gpu` autour de `resource_lease`. Lever la garde de #26
   seulement après le test matériel.
 - Déclarer `jsonschema` et `llama-cpp-python` : `pyproject.toml`, et liste Windows produite par son
-  générateur.
+  générateur. Une proposition pour `jsonschema` est jointe à l'Issue #21 : lignes figées, avec les
+  empreintes de PyPI. Je ne l'applique pas, la liste est à Codex.
+- Empaqueter `scripts/game_engineer/` avec le runtime, comme `scripts/game_graphics/`.
+- Relire ma correction Windows de `runtime_build/build.py` (`_extract_commit`, §2).
 - Classer `apex/vision` dans `runtime_build/selection.py`.
 - Trancher #12, #16, #17 face à la pile.
 - Régler la spécialité `game-graphics` (`is_supported` au stade STUB) face au test de garde historique.
@@ -225,10 +242,12 @@ propriétaire.
 
 **Claude**
 - Garder ma branche stable ; aucune fusion, aucune release.
-- Committer les listes GPU dès qu'elles sont produites.
-- Rejouer la répétition après chaque mouvement de Codex.
+- ~~Committer les listes GPU dès qu'elles sont produites.~~ Fait : cu130 et cu126, workflow `gpu-locks`.
+- Rejouer la répétition après chaque mouvement de Codex, et reporter ma branche dans
+  `agent/claude/brain-integration` par fusion.
 - Qualifier le GPU sur le PC de l'utilisateur.
 
 **Utilisateur**
-- Choisir l'option (A) ou (B) du §4, et désigner l'intégrateur.
-- Dire où produire les listes figées de PyTorch CUDA : votre PC, une CI autorisée, ou Codex.
+- ~~Choisir l'option (A) ou (B) du §4~~ : (B), avec l'utilisateur comme intégrateur final.
+- ~~Dire où produire les listes figées de PyTorch CUDA~~ : CI Windows manuelle, validée.
+- Sur son PC : les essais du §7, avec la candidate.
