@@ -20,6 +20,10 @@ on:
     paths:
       - ".github/workflows/windows-native.yml"
       - "apex/assistant/**"
+      - "apex/standalone/**"
+      - "runtime_build/**"
+      - "setup/packaging/build_desktop_release.sh"
+      - "setup/packaging/runtime/**"
       - "setup/packaging/windows/ci/assistant_e2e.py"
 
 permissions:

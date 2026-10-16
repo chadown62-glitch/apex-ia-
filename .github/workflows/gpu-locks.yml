@@ -48,6 +48,9 @@ jobs:
   locks:
     runs-on: windows-latest
     timeout-minutes: 90
+    env:
+      PYTHONUTF8: "1"  # sinon la console Windows imprime les annotations en cp1252 (accents illisibles)
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
