@@ -450,6 +450,99 @@ APEX n'a aujourd'hui **aucun outil connecté**. Contrat proposé dans l'Issue #2
 réseau » (`network.read`) dans le moteur d'outils, fichier partagé. Ajouter un tel outil est une décision de
 confidentialité pour l'utilisateur.
 
+## 9 sexies. Le Cerveau confie une création 3D à Game Studio (16/10/2026)
+
+Les outils de délégation de Game Studio (`game_studio.create`, `.status`, `.results`, `.cancel`) sont écrits par
+Codex (PR #24 et #25, non fusionnées à ce jour). L'assistant les enregistre et les utilise ; il ne réimplémente
+rien de Game Studio. Tout ce qui suit est dans les fichiers de l'assistant.
+
+**Ce qui est branché**
+- **Registre** (`apex/assistant/tools.py`). Les quatre outils sont enregistrés par `register_game_studio_tools`
+  quand le module de Game Studio est installé. Sans lui, rien n'est offert ni annoncé (la liste des outils du
+  mode est filtrée) et la raison est dite. Un Game Studio présent mais cassé ne retire aucun autre outil.
+- **Mode et permissions** (`apex/assistant/modes.py`). Les outils sont offerts en mode 3D seulement :
+  - suivre une mission (état, résultats) est permis avec le mode ;
+  - lancer ou annuler une mission demande le réglage « Missions Game Studio » (Paramètres > Outils),
+    **désactivé par défaut**.
+- **Calcul**. Réglage « Calcul des missions » : automatique (GPU CUDA) ou processeur, choisi explicitement. Le
+  choix de l'utilisateur est imposé à chaque lancement ; le modèle ne peut pas le changer.
+- **Appartenance**. Une mission appartient à l'espace de travail de la conversation (ou de son projet). Game
+  Studio refuse de la montrer à un autre espace : elle y est « introuvable ».
+- **Chemin du Cerveau** (`apex/assistant/turns.py`). Le Cerveau n'émet pas d'appel d'outil JSON. La mission
+  est lancée quand deux conditions sont réunies :
+  - le Cerveau a fait son appel 3D appris, réussi ou non ;
+  - le message est formulé comme une demande de création (`apex/assistant/creation.py`).
+
+  La description envoyée est la demande de l'utilisateur telle quelle (20 à 4 000 caractères), jamais l'appel
+  du Cerveau. L'ébauche paramétrique (§9 ter) reste construite à part.
+- **Modèles qui appellent des outils** (Qwen, Ollama). Ils voient `game_studio.create` dans leur liste, avec une
+  consigne : ne jamais dire qu'une mission est terminée sans l'avoir lu avec `status` ou `results`.
+- **Une mission par tour au plus**, quel que soit le lanceur : un modèle qui boucle n'en lance jamais plusieurs.
+- **Suivi**. Le panneau Atelier 3D lit chaque mission par la route
+  `GET /assistant/conversations/{id}/game-studio/{project_id}` (outils `status` puis `results`, lecture seule).
+  L'annulation passe par `POST …/cancel`, seulement si les missions sont permises. Les fichiers restent derrière
+  l'API de Game Studio : l'assistant n'en montre que les noms et les empreintes.
+
+**Pourquoi deux conditions.** Mesuré avec le vrai Cerveau, en mode 3D, dans les conditions de l'application.
+D'abord sur 40 messages écrits pour cette mesure ; la règle de formulation a ensuite été écrite en les
+regardant, donc ce jeu ne la valide pas.
+
+| Messages (développement) | Appel 3D du Cerveau |
+|---|---|
+| demandes de création (12 de son répertoire, 8 hors répertoire, 8 scènes) | 26 / 28 |
+| questions du mode 3D | 2 / 12 |
+
+Ensuite, sur 60 messages jamais vus, écrits après avoir figé la règle. Conditions finales exactes : outils et
+consigne Game Studio dans les consignes du modèle.
+
+| Messages (validation) | Cerveau seul | règle seule | Cerveau ET règle (déclencheur) |
+|---|---|---|---|
+| demandes de création | 26 / 30 | 26 / 30 | **22 / 30** |
+| autres messages (questions, remerciements, modifications) | 7 / 30 | 1 / 30 | **0 / 30** |
+
+Une mission coûte des minutes de GPU : aucun lancement à tort sur 30 messages qui n'en demandaient pas, au prix
+de 8 créations non confiées sur 30.
+- 4 de ces créations ne passent pas la règle : « J'aimerais une… », « Prépare… », « Ajoute… », « Dessine-moi… ».
+- Pour les 4 autres, le Cerveau n'a fait aucun appel 3D.
+
+Le Cerveau seul aurait lancé une mission pour « Annule la mission en cours », « Lis le script Blender de la
+voiture » ou « Change la couleur du tank en bleu ».
+
+Autre constat, sur le jeu de développement, et la raison pour laquelle la description est la demande de
+l'utilisateur : pour 16 objets hors de son répertoire ou scènes, l'ébauche du Cerveau construit un modèle sans
+rapport dans 10 cas (une chaise devient un personnage, une salle de classe une voiture). Elle échoue dans
+5 autres cas.
+
+**Chaîne réelle, de bout en bout.** Arbre d'intégration local : ma branche plus la PR #25, jamais poussé,
+dossier APEX vierge. Le vrai Cerveau reçoit « Crée une scène de forêt avec une cabane et une rivière. ». Le
+déclencheur part, et le vrai `game_studio.create` (moteur d'outils, permission accordée) atteint le vrai service
+de Game Studio :
+
+| Calcul | Réponse de Game Studio | Durée de l'appel |
+|---|---|---|
+| automatique | refus `cuda_unavailable_choose_cpu_explicitly` (pas de GPU ici) | 2,2 s (sonde CUDA) |
+| processeur | refus `local_planner_model_missing` (modèle planificateur absent, téléchargement bloqué ici) | 0,03 s |
+
+Les deux refus sont montrés tels quels, avec leur explication. **Aucune mission n'a pu s'exécuter ici** : qu'une
+scène soit réellement produite par Game Studio n'est pas prouvé dans cet environnement. Il faut le GPU et le
+modèle planificateur du PC de l'utilisateur.
+
+Le premier essai a aussi révélé que `jsonschema` (et Pillow) manquaient : Game Studio les importe sans les
+déclarer. Signalé à Codex (Issue #21).
+
+**Tests** (`tests/test_assistant_game_studio.py`) :
+- 6 tests sans Game Studio (toujours exécutés) ;
+- 8 avec ses vrais outils, ignorés quand il est absent.
+
+Sur ma branche, 6 passent et 8 sont ignorés. Dans l'arbre d'intégration, les 14 passent, ainsi que les 2 tests
+de Codex.
+
+**Limites connues**
+- Formulations non reconnues (ci-dessus). Les ajouter demande un nouveau jeu jamais vu pour les mesurer.
+- En mode Automatique, un Cerveau peu sûr de lui (confiance 0,69 sur la scène ci-dessus) confie le tour à un
+  autre moteur s'il y en a un. C'est alors ce moteur qui décide d'appeler `game_studio.create`.
+- L'ébauche paramétrique est construite même quand elle est sans rapport (comportement antérieur, inchangé).
+
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 
 Dans Ubuntu (WSL) :

@@ -98,8 +98,10 @@ def _message_out(message: Any) -> dict[str, Any]:
 @router.get("/assistant/modes", response_model=DataEnvelope[list[dict[str, Any]]])
 def list_modes() -> DataEnvelope[list[dict[str, Any]]]:
     from apex.assistant.modes import MODES
+    from apex.assistant.tools import assistant_registry
 
-    return DataEnvelope(status="real", data=[mode.describe() for mode in MODES.values()])
+    available = {spec.name for spec in assistant_registry().specs()}  # Game Studio absent : non annoncé
+    return DataEnvelope(status="real", data=[mode.describe(available) for mode in MODES.values()])
 
 
 @router.get("/assistant/settings", response_model=DataEnvelope[dict[str, Any]])
@@ -390,6 +392,46 @@ def cancel_turn(turn_id: str) -> DataEnvelope[dict[str, Any]]:
 
     requested = get_turn_manager().cancel(turn_id)
     return DataEnvelope(status="real", data={"cancel_requested": requested})
+
+
+# -- missions Game Studio d'une conversation (mode 3D) -----------------------------------------------------
+
+
+def _game_studio_error(exc: Exception) -> HTTPException:
+    from apex.assistant.game_studio import GameStudioUnavailable
+
+    if isinstance(exc, PermissionError):
+        return HTTPException(status_code=403, detail=str(exc))
+    if isinstance(exc, GameStudioUnavailable):
+        return HTTPException(status_code=503, detail=str(exc))
+    return _client_error(exc)
+
+
+@router.get("/assistant/conversations/{conversation_id}/game-studio/{project_id}",
+            response_model=DataEnvelope[dict[str, Any]])
+def game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    """État et résultats (empreintes, jamais les octets) d'une mission que Game Studio exécute pour cette
+    conversation ; une mission d'un autre espace de travail est introuvable ici."""
+    from apex.assistant import game_studio
+
+    try:
+        return DataEnvelope(status="real", data=game_studio.follow(_factory(), conversation_id, project_id))
+    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+
+
+@router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/cancel",
+             response_model=DataEnvelope[dict[str, Any]])
+def cancel_game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    from apex.assistant import game_studio
+    from apex.assistant.settings import SettingsService
+
+    settings, _ = SettingsService(_factory()).load()
+    try:
+        return DataEnvelope(status="real", data=game_studio.cancel(
+            _factory(), conversation_id, project_id, missions_allowed=settings.tools.game_studio_missions))
+    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
 
 
 # -- espace de travail (mode Code) ---------------------------------------------------------------------------

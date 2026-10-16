@@ -341,7 +341,7 @@ export function SettingsView() {
       )}
 
       {t && (
-        <Section id="outils" title="Outils" lead="Ce que le modèle peut faire en mode Code (les autres modes n'ont que des calculs sans effet de bord).">
+        <Section id="outils" title="Outils" lead="Ce que le modèle peut faire en mode Code et en mode 3D (les autres modes n'ont que des calculs sans effet de bord).">
           <Row label="Écrire dans l'espace de travail" hint="Créer et modifier des fichiers, uniquement dans l'espace de la conversation ou du projet.">
             <Switch label="Écriture" checked={t.workspace_write} onChange={(v) => toolsSection.update({ workspace_write: v })} />
           </Row>
@@ -350,6 +350,15 @@ export function SettingsView() {
           </Row>
           <Row label="Étapes d'outils par réponse" hint="1 à 40 : davantage pour un gros projet (lire, écrire, tester, corriger), au prix d'une réponse plus longue.">
             <NumberField label="Étapes maximum" value={t.max_tool_steps} min={1} max={40} onChange={(n) => toolsSection.update({ max_tool_steps: n })} />
+          </Row>
+          <Row label="Missions Game Studio (mode 3D)" hint="Permettre à l'assistant de confier une création 3D à Game Studio (si installé) : une mission dure des minutes et occupe le GPU. Désactivé : aucune mission n'est lancée.">
+            <Switch label="Missions Game Studio" checked={t.game_studio_missions} onChange={(v) => toolsSection.update({ game_studio_missions: v })} />
+          </Row>
+          <Row label="Calcul des missions Game Studio" hint="Automatique : GPU CUDA, refusé par Game Studio sans GPU. Processeur : à choisir explicitement, beaucoup plus lent.">
+            <select aria-label="Calcul des missions Game Studio" value={t.game_studio_compute} onChange={(e) => toolsSection.update({ game_studio_compute: e.target.value as "auto" | "cpu" })}>
+              <option value="auto">Automatique (GPU)</option>
+              <option value="cpu">Processeur (explicite)</option>
+            </select>
           </Row>
           <SaveBar section={toolsSection} />
         </Section>

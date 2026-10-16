@@ -3,15 +3,17 @@
  * - Code : fichiers de l'espace de travail (API), lus à la demande ;
  * - Design : couleurs citées dans les réponses, contrastes calculés ici avec la formule WCAG (theme/contrast.ts)
  *   et contrastes vérifiés par l'outil `color.contrast` ;
- * - Finance : résultats des outils de calcul exécutés pendant les tours (prêt, projection, calculatrice).
+ * - Finance : résultats des outils de calcul exécutés pendant les tours (prêt, projection, calculatrice) ;
+ * - 3D : modèles de l'espace de travail, et missions confiées à Game Studio (lues par ses outils).
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import { contrast, extractHexColors } from "../theme/contrast";
 import { assistantApi, errorMessage, type Message, type ToolStep } from "./api";
-import { keys } from "./hooks";
+import { keys, useSettings } from "./hooks";
+import { GAME_STUDIO_REFUSALS } from "./MessageItem";
 import { IconFile, IconRefresh } from "./Icons";
 
 const euro = (value: unknown) =>
@@ -417,6 +419,110 @@ async function download(conversationId: string, path: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
+/** États après lesquels une mission Game Studio n'évolue plus (ses résultats sont alors lisibles). */
+const GAME_STUDIO_FINISHED = new Set(["review", "failed", "cancelled"]);
+
+/** Missions lancées dans cette conversation : chaque appel de `game_studio.create`, réussi ou refusé. */
+function gameStudioLaunches(steps: ToolStep[]): { key: string; projectId: string | null; refusal: string | null }[] {
+  return steps
+    .filter((s) => s.tool === "game_studio.create")
+    .map((s, i) => {
+      const id = s.ok ? s.observation.output?.project_id : null;
+      const message = s.observation.error?.message ?? null;
+      const refusal = s.ok ? null : message ? (GAME_STUDIO_REFUSALS[message] ? `${GAME_STUDIO_REFUSALS[message]} (${message})` : message) : "échec";
+      return { key: typeof id === "string" ? id : `refus-${i}`, projectId: typeof id === "string" ? id : null, refusal };
+    });
+}
+
+function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conversationId: string; projectId: string; canCancel: boolean }) {
+  const client = useQueryClient();
+  const key = ["assistant", "game-studio", conversationId, projectId];
+  const mission = useQuery({
+    queryKey: key,
+    queryFn: () => assistantApi.gameStudioMission(conversationId, projectId),
+    refetchInterval: (query) => (query.state.data && GAME_STUDIO_FINISHED.has(query.state.data.status.status) ? false : 5000),
+  });
+  const cancel = useMutation({
+    mutationFn: () => assistantApi.cancelGameStudioMission(conversationId, projectId),
+    onSettled: () => client.invalidateQueries({ queryKey: key }),
+  });
+  const data = mission.data;
+  return (
+    <li className="ax-model3d ax-gs-mission">
+      <div className="ax-model3d__body">
+        <h3>Mission {projectId.slice(0, 8)}</h3>
+        {mission.isLoading ? (
+          <p className="ax-muted">Lecture de la mission…</p>
+        ) : mission.isError || !data ? (
+          <p className="ax-inline-error" role="alert">{errorMessage(mission.error)}</p>
+        ) : (
+          <>
+            <p className="ax-model3d__summary">
+              État : <strong>{data.status.status}</strong>
+              {data.status.delivery_status ? ` · livraison : ${data.status.delivery_status}` : ""}
+            </p>
+            {data.status.steps.length > 0 && (
+              <ul className="ax-gs-steps">
+                {data.status.steps.map((step) => (
+                  <li key={step.key}>
+                    {step.key}
+                    {step.kind ? ` (${step.kind})` : ""} : {step.status}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {data.results.blocked && data.results.blocked.length > 0 && (
+              <ul className="ax-panel__notes">
+                {data.results.blocked.map((b) => (
+                  <li key={b.key}>{`${b.key} bloquée${b.reason ? ` : ${b.reason}` : ""}`}</li>
+                ))}
+              </ul>
+            )}
+            {data.results.ready ? (
+              <p className="ax-muted">
+                {data.results.artifact_count} fichier(s) produit(s){data.results.truncated ? " (liste tronquée)" : ""} :{" "}
+                {(data.results.artifacts ?? []).map((a) => `${a.name} (${a.role})`).join(", ")}. Ouvrez la page Game Studio pour les
+                voir et les télécharger.
+              </p>
+            ) : (
+              GAME_STUDIO_FINISHED.has(data.status.status) && <p className="ax-muted">Aucun fichier produit.</p>
+            )}
+            {canCancel && !GAME_STUDIO_FINISHED.has(data.status.status) && (
+              <button type="button" className="ax-chip-btn" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+                Annuler la mission
+              </button>
+            )}
+            {cancel.isError && <p className="ax-inline-error" role="alert">{errorMessage(cancel.error)}</p>}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function GameStudioMissions({ conversationId, steps }: { conversationId: string; steps: ToolStep[] }) {
+  const settings = useSettings();
+  const launches = useMemo(() => gameStudioLaunches(steps), [steps]);
+  if (launches.length === 0) return null;
+  return (
+    <section aria-label="Missions Game Studio">
+      <h3 className="ax-gs-title">Game Studio</h3>
+      <ul className="ax-model3d-list">
+        {launches.map((launch) =>
+          launch.projectId ? (
+            <GameStudioMissionCard key={launch.key} conversationId={conversationId} projectId={launch.projectId}
+              canCancel={settings.data?.tools.game_studio_missions ?? false} />
+          ) : (
+            <li key={launch.key} className="ax-model3d ax-gs-mission">
+              <p className="ax-inline-error">Game Studio a refusé la mission : {launch.refusal}</p>
+            </li>
+          ),
+        )}
+      </ul>
+    </section>
+  );
+}
+
 export function Studio3DPanel({ conversationId, messages, liveSteps, notes }: {
   conversationId: string; messages: Message[]; liveSteps: ToolStep[]; notes: string[];
 }) {
@@ -445,6 +551,7 @@ export function Studio3DPanel({ conversationId, messages, liveSteps, notes }: {
           {error}
         </p>
       )}
+      <GameStudioMissions conversationId={conversationId} steps={steps} />
       {workspace.isLoading ? (
         <p className="ax-muted">Lecture de l'espace de travail…</p>
       ) : workspace.isError ? (

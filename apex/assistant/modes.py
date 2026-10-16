@@ -5,6 +5,7 @@ l'affiche, et rien n'est jamais présenté comme disponible sans l'être."""
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -16,6 +17,17 @@ _COMMON = (
     "(titres courts, listes, blocs de code avec leur langage). N'invente jamais de faits, de sources, de chiffres "
     "ni de résultats d'exécution : si tu ne sais pas ou si tu n'as pas pu vérifier, dis-le."
 )
+
+
+#: Permissions des outils de Game Studio (`apex.tools.model`, ajoutées avec Game Studio) : absentes d'une
+#: installation sans Game Studio, et alors rien n'est demandé. Lancer ou annuler une mission n'est en plus
+#: accordé que si l'utilisateur l'a permis (Paramètres > Outils > Missions Game Studio).
+def _permissions(*names: str) -> frozenset[Permission]:
+    return frozenset(p for name in names if (p := getattr(Permission, name, None)) is not None)
+
+
+GAME_STUDIO_LAUNCH = _permissions("GAME_STUDIO_CREATE", "GAME_STUDIO_CANCEL")
+GAME_STUDIO_PERMISSIONS = GAME_STUDIO_LAUNCH | _permissions("GAME_STUDIO_READ")
 
 
 @dataclass(frozen=True)
@@ -34,8 +46,11 @@ class Mode:
     view: str = "chat"
     limits: tuple[str, ...] = ()
 
-    def describe(self) -> dict[str, Any]:
-        return {"id": self.id, "label": self.label, "summary": self.summary, "tools": list(self.tools),
+    def describe(self, available: Collection[str] | None = None) -> dict[str, Any]:
+        """`available` : outils réellement enregistrés dans cette installation ; les autres ne sont pas
+        annoncés (Game Studio absent : rien n'est présenté comme disponible)."""
+        tools = [t for t in self.tools if available is None or t in available]
+        return {"id": self.id, "label": self.label, "summary": self.summary, "tools": tools,
                 "view": self.view, "limits": list(self.limits)}
 
 
@@ -110,11 +125,14 @@ MODES: dict[str, Mode] = {
             "script Blender, script Unity C#, classe Unreal C++. Tu peux lire et adapter ces scripts avec fs.read "
             "et fs.write. Dis clairement que ce sont des modèles low-poly de base, et que les scripts Unity et "
             "Unreal n'ont été vérifiés que pour la syntaxe."),
-        tools=("model3d.create", "fs.list", "fs.read", "fs.search", "fs.write", "fs.edit"),
-        permissions=frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE}),
+        tools=("model3d.create", "game_studio.create", "game_studio.status", "game_studio.results",
+               "game_studio.cancel", "fs.list", "fs.read", "fs.search", "fs.write", "fs.edit"),
+        permissions=(frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE})
+                     | GAME_STUDIO_PERMISSIONS),
         view="studio3d",
         limits=("Modèles paramétriques low-poly (véhicule, arme, personnage), pas de sculpture ni de textures.",
                 "Scripts Unity et Unreal de départ : syntaxe vérifiée, non exécutés dans les moteurs.",
+                "Missions Game Studio (si installé) : lancées seulement si permis (Paramètres > Outils).",
                 "Accès limité à l'espace de travail de la conversation ou du projet."),
     ),
 }

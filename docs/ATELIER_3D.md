@@ -123,3 +123,27 @@ jamais montrées). Mesuré sur le Cerveau livré en 0.6.0 : **95 %** et **87,5 %
   mais pas pour des déformations organiques.
 - Neuf sortes seulement. Une demande hors de ces sortes (un avion, un dragon) est refusée par l'atelier, et le
   refus est dit.
+  Le Cerveau, lui, ne sait pas toujours qu'une demande sort de son répertoire. Mesuré le 16/10/2026 sur
+  16 objets hors répertoire ou scènes : il a construit un modèle sans rapport dans 10 cas (une chaise devient un
+  personnage) et échoué dans 5 autres. Pour ces demandes, voir Game Studio ci-dessous.
+
+## 6. Confier une création à Game Studio (si installé)
+
+Game Studio (écrit par Codex) produit des objets détaillés et des scènes complètes. En mode 3D, l'assistant
+peut lui confier une création :
+
+1. Activez **Paramètres > Outils > Missions Game Studio** (désactivé par défaut : une mission dure des minutes
+   et occupe le GPU).
+2. **Calcul des missions** : *Automatique* utilise le GPU CUDA ; sans GPU, Game Studio refuse la mission.
+   *Processeur* est un choix explicite, beaucoup plus lent.
+3. Demandez la création : « Crée une scène de forêt avec une cabane et une rivière. »
+
+Le Cerveau confie la demande quand il la reconnaît comme une création 3D et qu'elle est formulée comme telle
+(« Crée… », « Fais-moi… », « Il me faut… », « Build me… »). Une question (« Comment exporter vers Unity ? »)
+ne lance jamais de mission. Mesuré sur 60 messages jamais vus : 22 créations sur 30 confiées, aucune mission
+lancée à tort sur 30 autres messages (`docs/CERVEAU_APEX_V2.md` §9 sexies).
+
+La mission continue en arrière-plan. Le panneau **Atelier 3D** affiche son état, ses étapes et les fichiers
+produits ; il permet de l'annuler. Les fichiers s'ouvrent depuis la page Game Studio. Si Game Studio refuse la
+mission (pas de GPU, modèle planificateur absent), le refus est affiché tel quel. Sans Game Studio dans
+l'installation, rien n'est proposé, et le message le dit quand une création a été demandée.

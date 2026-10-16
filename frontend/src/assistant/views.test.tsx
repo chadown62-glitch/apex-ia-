@@ -5,7 +5,7 @@ import { resetAppearanceFromCache } from "../theme/appearance";
 import { AssistantSidebar } from "./AssistantSidebar";
 import { ConversationView } from "./ConversationView";
 import { HomeView } from "./HomeView";
-import { FinancePanel, DesignPanel } from "./ModePanels";
+import { FinancePanel, DesignPanel, Studio3DPanel } from "./ModePanels";
 import { ProjectView } from "./ProjectView";
 import { SettingsView } from "./SettingsView";
 import { MODES, SETTINGS, conversation, engines, installFakeApi, message, real, renderAt, turn, type FakeApi } from "./testing";
@@ -322,6 +322,53 @@ describe("mode panels", () => {
     renderAt("/", [{ path: "/", element: <FinancePanel messages={messages as never} liveSteps={[]} /> }]);
     expect(screen.getByText("1500*12")).toBeInTheDocument();
     expect(screen.getByText("18 000")).toBeInTheDocument();
+  });
+});
+
+describe("Game Studio in the 3D workshop", () => {
+  const PROJECT = "6f1c2a8e-0000-4000-8000-000000000001";
+  const created = (ok: boolean, output: Record<string, unknown> | null, error: { code: string; message: string } | null) =>
+    message({
+      id: "g",
+      role: "assistant",
+      content: "…",
+      meta: { steps: [{ step: 1, tool: "game_studio.create", arguments: { description: "Une scène de forêt." }, ok, duration_s: 0.1, observation: { ok, output, error } }] },
+    });
+
+  it("follows a mission the brain handed to Game Studio, through the conversation's route", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: { status: "review", mission_id: "m1", steps: [{ key: "scene", kind: "graphics", status: "done", job_id: "j1" }], delivery_status: "delivered", last_event: null },
+      results: { status: "review", ready: true, artifacts: [{ name: "scene.glb", hash: "h", role: "exchange", source: "assembly" }], artifact_count: 1, truncated: false, blocked: [] },
+    });
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued", poll_tool: "game_studio.status" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText("Mission 6f1c2a8e")).toBeInTheDocument();
+    expect(await screen.findByText(/1 fichier\(s\) produit\(s\) : scene\.glb \(exchange\)/)).toBeInTheDocument();
+    expect(screen.getByText(/scene \(graphics\) : done/)).toBeInTheDocument();
+    // Missions non permises dans les Paramètres : aucun bouton d'annulation.
+    expect(screen.queryByRole("button", { name: "Annuler la mission" })).not.toBeInTheDocument();
+  });
+
+  it("shows Game Studio's refusal as it is, explained, never as a mission", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    const messages = [created(false, null, { code: "unavailable", message: "cuda_unavailable_choose_cpu_explicitly" })];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Game Studio a refusé la mission : aucun GPU CUDA sur ce PC.*\(cuda_unavailable_choose_cpu_explicitly\)/)).toBeInTheDocument();
+    expect(api.calls.some((c) => c.path.includes("/game-studio/"))).toBe(false);
+  });
+});
+
+describe("gameStudioLine", () => {
+  it("says whether the brain handed the creation to Game Studio, and why not", async () => {
+    const { gameStudioLine } = await import("./MessageItem");
+    expect(gameStudioLine({ trigger: "cerveau", launched: true, project_id: "6f1c2a8e-0000", status: "queued" }))
+      .toBe("confié à Game Studio par le Cerveau APEX : mission 6f1c2a8e (queued)");
+    expect(gameStudioLine({ trigger: "cerveau", launched: false, error: { code: "unavailable", message: "local_planner_model_missing" } }))
+      .toBe("Game Studio a refusé la mission : le modèle planificateur local de Game Studio n'est pas installé (local_planner_model_missing)");
+    expect(gameStudioLine({ trigger: "cerveau", launched: false, reason: "Game Studio ne fait pas partie de cette installation d'APEX" }))
+      .toBe("non confié à Game Studio : Game Studio ne fait pas partie de cette installation d'APEX");
   });
 });
 

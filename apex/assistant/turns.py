@@ -38,6 +38,8 @@ _PROSE_AROUND_TOOL_CALL = 200
 _SANDBOX_CACHE_S = 300.0
 _SPEAKERS = {MessageRole.USER: "Utilisateur", MessageRole.ASSISTANT: "Assistant"}
 
+_PROJECT_ID = "<project_id rendu par game_studio.create>"
+
 #: Rôle et exemple d'appel de chaque outil, montrés au modèle (un modèle 1,5B ne déduit pas l'usage d'un
 #: schéma).
 TOOL_GUIDE: dict[str, tuple[str, dict[str, Any]]] = {
@@ -57,6 +59,13 @@ TOOL_GUIDE: dict[str, tuple[str, dict[str, Any]]] = {
     "color.contrast": ("contraste WCAG texte/fond", {"foreground": "#1F1A14", "background": "#F4EDE1"}),
     "model3d.create": ("construire un modèle 3D et écrire ses fichiers (Blender, Unity, Unreal)",
                        {"generator": "vehicle", "kind": "tank", "length": 7, "color": "kaki"}),
+    "game_studio.create": ("confier à Game Studio une création 3D complète (objet détaillé, scène) ; rend "
+                           "aussitôt les identifiants de la mission, qui se poursuit en arrière-plan",
+                           {"description": "Une scène de garage avec deux voitures et un établi."}),
+    "game_studio.status": ("état d'une mission Game Studio et de ses étapes", {"project_id": _PROJECT_ID}),
+    "game_studio.results": ("résultats d'une mission Game Studio terminée (fichiers et empreintes)",
+                            {"project_id": _PROJECT_ID}),
+    "game_studio.cancel": ("annuler une mission Game Studio", {"project_id": _PROJECT_ID}),
 }
 
 
@@ -201,6 +210,25 @@ _CURRENT_INFO_NOTE = ("Cette question porte sur une information actuelle : appel
 #: Verdicts de la vérification croisée qui prouvent qu'une des deux versions est fausse.
 _CODE_MISMATCH = frozenset({"disagree", "answer_fails"})
 
+#: Ajouté aux consignes quand `game_studio.create` est offert (Game Studio installé, missions permises).
+_GAME_STUDIO_NOTE = ("GAME STUDIO. Pour une création 3D complète (objet détaillé, scène), appelle "
+                     "game_studio.create avec la demande de l'utilisateur : la mission se poursuit en "
+                     "arrière-plan, pendant des minutes. Ne dis jamais qu'elle est terminée, ni ce "
+                     "qu'elle a produit, sans l'avoir lu avec game_studio.status ou game_studio.results.")
+#: Bornes de `description` de `game_studio.create` (contrat de Game Studio).
+_GAME_STUDIO_DESCRIPTION = (20, 4000)
+#: Missions lancées au plus par tour (appel du modèle ou délégation du Cerveau).
+_GAME_STUDIO_LAUNCHES_PER_TURN = 1
+
+
+def game_studio_description(request: str) -> str:
+    """La demande de l'utilisateur telle quelle (jamais réécrite par le modèle), dans les bornes de
+    l'outil : une demande trop courte (« un tank kaki ») est seulement présentée comme telle."""
+    text = request.strip()
+    if len(text) < _GAME_STUDIO_DESCRIPTION[0]:
+        text = f"Demande de l'utilisateur : {text}"
+    return text[:_GAME_STUDIO_DESCRIPTION[1]]
+
 
 def _generate(ranked: list[Any], *, delegate_below: float, deadline: float, cancel: threading.Event,
               question: str = "", connected: Sequence[str] = (),
@@ -301,16 +329,19 @@ class TurnBusy(RuntimeError):
 
 
 class TurnManager:
-    """Un par processus (`apex serve`). `provider_factory`, `config` et `sandbox_selection` sont injectables
-    pour les tests ; par défaut : les fournisseurs, la configuration et la sandbox RÉELS d'APEX."""
+    """Un par processus (`apex serve`). `provider_factory`, `config`, `sandbox_selection` et
+    `game_studio_service` sont injectables pour les tests ; par défaut : les fournisseurs, la configuration,
+    la sandbox et Game Studio RÉELS d'APEX."""
 
     def __init__(self, session_factory: Any, *, provider_factory: Callable[..., Any] | None = None,
                  config: Any = None, sandbox_selection: Callable[[], Any] | None = None,
-                 synchronous: bool = False) -> None:
+                 synchronous: bool = False, game_studio_service: Any = None) -> None:
         self._session_factory = session_factory
         self._provider_factory = provider_factory
         self._config = config
         self._sandbox_selection = sandbox_selection
+        #: Service de Game Studio passé à ses outils (tests) ; par défaut, celui du processus.
+        self._game_studio_service = game_studio_service
         self._synchronous = synchronous
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="apex-turn")
         self._cancels: dict[str, threading.Event] = {}
@@ -500,7 +531,7 @@ class TurnManager:
         verify = self._code_verifier(settings, turn_id, deadline)
         system = system_prompt(mode, project_name=project.name if project else None,
                                project_instructions=project.instructions if project else "", tools=offered,
-                               notes=tools["notes"] if tools else ())
+                               notes=[*tools["notes"], *tools["guidance"]] if tools else ())
         meta: dict[str, Any] = {
             "mode": mode.id, "history_messages": history_used, "attachments": attachments,
             "memory": [{"id": r.record.id, "source": r.record.source, "score": round(r.score, 4)} for r in recalled],
@@ -522,6 +553,8 @@ class TurnManager:
         #: `apex.brain.studio3d`) : leurs fichiers sont écrits après, par l'outil `model3d.create`, avec les
         #: permissions de ce tour.
         brain_models: list[dict[str, Any]] = []
+        #: Appels 3D du Cerveau, réussis ou non : il a reconnu une demande 3D (délégation à Game Studio).
+        brain_3d = False
         final_text: str | None = None
         served = None
         last_result: Any = None
@@ -580,8 +613,10 @@ class TurnManager:
             served = outcome.succeeded_with
             ranked = [served]  # le même modèle pour tout le tour
             last_result = outcome.result
-            brain_models.extend(c for c in (getattr(outcome.result, "facts", None) or {}).get("tool_calls", [])
-                                if c.get("tool") == "3d" and not str(c.get("result", "")).startswith("erreur"))
+            calls_3d = [c for c in (getattr(outcome.result, "facts", None) or {}).get("tool_calls", [])
+                        if c.get("tool") == "3d"]
+            brain_3d = brain_3d or bool(calls_3d)
+            brain_models.extend(c for c in calls_3d if not str(c.get("result", "")).startswith("erreur"))
             for key, attr in (("prompt", "tokens_prompt"), ("completion", "tokens_completion")):
                 measured = getattr(outcome.result, attr, None)
                 if measured is not None and getattr(measured.status, "value", "") == "real":
@@ -601,6 +636,8 @@ class TurnManager:
 
         if brain_models and final_text and not cancel.is_set():
             self._write_brain_models(tools, brain_models, steps, meta, turn_id)
+        if brain_3d and final_text and not cancel.is_set():
+            self._delegate_to_game_studio(tools, content, steps, meta, turn_id)
         facts = getattr(last_result, "facts", None) or {}
         meta.update({
             "steps": steps, "tokens_prompt": tokens["prompt"] or None, "tokens_completion": tokens["completion"] or None,
@@ -687,6 +724,7 @@ class TurnManager:
         la machine ne permet pas (sandbox non vérifiée) — chaque retrait est dit au modèle et à l'interface."""
         if not mode.tools:
             return None
+        from apex.assistant.modes import GAME_STUDIO_LAUNCH
         from apex.assistant.tools import assistant_registry
         from apex.assistant.workspace import conversation_workspace
         from apex.tools.engine import ToolContext, ToolEngine
@@ -694,6 +732,8 @@ class TurnManager:
 
         granted = set(mode.permissions)
         notes: list[str] = []
+        if not settings.tools.game_studio_missions:
+            granted -= GAME_STUDIO_LAUNCH  # lancer/annuler : seulement si l'utilisateur l'a permis
         if Permission.WRITE_WORKSPACE in granted and not settings.tools.workspace_write:
             granted.discard(Permission.WRITE_WORKSPACE)
             notes.append("L'écriture de fichiers est désactivée dans les Paramètres : propose les modifications "
@@ -714,13 +754,27 @@ class TurnManager:
                                  "exécuté quoi que ce soit.")
                 else:
                     run_in_sandbox = self._sandbox_runner(selection.provider, turn_id)
-        engine = ToolEngine(assistant_registry())
+        problems: list[str] = []
+        engine = ToolEngine(assistant_registry(problems=problems))
         frozen = frozenset(granted)
         offered = [name for name in mode.tools
                    if (spec := engine.registry.get(name)) is not None and spec[0].permissions <= frozen]
         workspace = conversation_workspace(conversation.id, conversation.project_id)
-        context = ToolContext(workspace=workspace, granted=frozen, run_in_sandbox=run_in_sandbox)
-        return {"engine": engine, "context": context, "offered": offered, "notes": notes}
+        service = self._game_studio_service
+        extra = {} if service is None else {"game_studio_service": service}
+        context = ToolContext(workspace=workspace, granted=frozen, run_in_sandbox=run_in_sandbox,
+                              extra=extra)
+        game_studio = None
+        if any(name.startswith("game_studio.") for name in mode.tools):
+            # Appartenance des missions : l'espace de travail de la conversation (ou du projet), contrôlée
+            # par Game Studio lui-même ; calcul : le choix de l'utilisateur, imposé à chaque lancement.
+            game_studio = {"absent": problems[0] if problems else None,
+                           "missions": settings.tools.game_studio_missions,
+                           "compute": settings.tools.game_studio_compute}
+        # Consignes pour le modèle seulement (les `notes` sont aussi montrées à l'utilisateur).
+        guidance = [_GAME_STUDIO_NOTE] if "game_studio.create" in offered else []
+        return {"engine": engine, "context": context, "offered": offered, "notes": notes,
+                "guidance": guidance, "game_studio": game_studio}
 
     def _code_verifier(
         self, settings: AppSettings, turn_id: str, deadline: float,
@@ -811,6 +865,40 @@ class TurnManager:
             steps.append(step)
         self._update(turn_id, steps=steps)
 
+    def _delegate_to_game_studio(self, tools: dict[str, Any] | None, request: str,
+                                 steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str) -> None:
+        """Le Cerveau a reconnu une demande 3D (son appel 3D appris) et le message est formulé comme une
+        demande de création (`apex.assistant.creation`) : la création est confiée à Game Studio par son
+        outil `game_studio.create`, avec les permissions de ce tour et la demande de l'utilisateur pour
+        description. Sans Game Studio, ou sans permission de lancer une mission, rien n'est lancé et c'est
+        dit. La mission se poursuit en arrière-plan : seul son reçu (identifiants, état) est rendu ici."""
+        from apex.assistant.creation import asks_to_create
+
+        info = (tools or {}).get("game_studio")
+        if tools is None or info is None or not asks_to_create(request):
+            return
+        if any(s.get("tool") == "game_studio.create" for s in steps):
+            return  # déjà confiée pendant ce tour (par un modèle qui appelle les outils)
+        if "game_studio.create" not in tools["offered"]:
+            reason = info["absent"] or (
+                "les missions Game Studio ne sont pas permises (Paramètres > Outils)"
+                if not info["missions"] else "outil game_studio.create non offert")
+            meta["game_studio"] = {"trigger": "cerveau", "launched": False, "reason": reason}
+            note = f"Demande de création 3D reconnue, non confiée à Game Studio : {reason}."
+            meta["tools_notes"] = [*meta.get("tools_notes", []), note]
+            return
+        arguments = {"description": game_studio_description(request)}
+        step = self._run_tool(tools, "game_studio.create", arguments, len(steps) + 1, turn_id)
+        step["source"] = "cerveau"
+        steps.append(step)
+        self._update(turn_id, steps=steps)
+        observation = step["observation"]
+        output = observation.get("output") or {}
+        meta["game_studio"] = {"trigger": "cerveau", "launched": step["ok"],
+                               "project_id": output.get("project_id"),
+                               "mission_id": output.get("mission_id"), "status": output.get("status"),
+                               "error": observation.get("error")}
+
     @staticmethod
     def _run_tool(tools: dict[str, Any] | None, name: str, arguments: dict[str, Any], number: int,
                   turn_id: str) -> dict[str, Any]:
@@ -822,6 +910,17 @@ class TurnManager:
                                                   "message": f"outil « {name} » non disponible dans ce tour"}}
             return {"step": number, "tool": name, "arguments": arguments, "ok": False, "observation": observation,
                     "duration_s": 0.0}
+        if name == "game_studio.create" and tools.get("game_studio"):
+            info = tools["game_studio"]
+            if info.get("launches", 0) >= _GAME_STUDIO_LAUNCHES_PER_TURN:
+                # Une mission coûte des minutes de GPU : un modèle qui boucle n'en lance jamais plusieurs.
+                observation = {"ok": False, "error": {"code": "limit", "message": (
+                    "une seule mission Game Studio par tour : suivez-la avec game_studio.status")}}
+                return {"step": number, "tool": name, "arguments": arguments, "ok": False,
+                        "observation": observation, "duration_s": 0.0}
+            info["launches"] = info.get("launches", 0) + 1
+            # Le calcul est le choix de l'utilisateur (Paramètres > Outils), jamais celui du modèle.
+            arguments = {**arguments, "compute_backend": info["compute"]}
         result = tools["engine"].execute(ToolCall(tool=name, arguments=arguments, call_id=str(uuid.uuid4()),
                                                   requested_by=f"assistant:{turn_id}"), tools["context"])
         observation = {"ok": result.ok, "output": result.output,

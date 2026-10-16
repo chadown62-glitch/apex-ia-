@@ -63,6 +63,40 @@ export interface MessageMeta {
   delegation?: { from: string; reason?: "low_confidence" | "cannot_know" | "current_info_tool" | "current_info_no_tool" | "code_mismatch"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
   /** Vérification croisée du code du Cerveau APEX par sa propre version Python, exécutées dans la sandbox. */
   crosscheck?: { language: string | null; status: "agree" | "disagree" | "answer_fails" | "unverifiable"; detail: string; example: { input: number[]; answer: unknown; python: unknown } | null };
+  /** Mode 3D : demande de création reconnue par le Cerveau APEX et confiée à Game Studio (ou pourquoi pas). */
+  game_studio?: GameStudioDelegation;
+}
+
+export interface GameStudioDelegation {
+  trigger: "cerveau";
+  launched: boolean;
+  project_id?: string | null;
+  mission_id?: string | null;
+  status?: string | null;
+  error?: { code: string; message: string } | null;
+  /** Non lancée : Game Studio absent, ou missions non permises dans les Paramètres. */
+  reason?: string;
+}
+
+/** Mission Game Studio d'une conversation, lue par ses outils `game_studio.status` et `game_studio.results`. */
+export interface GameStudioMission {
+  project_id: string;
+  status: {
+    status: string;
+    mission_id: string;
+    steps: { key: string; kind: string | null; status: string; job_id: string | null }[];
+    delivery_status: string | null;
+    last_event: Record<string, unknown> | null;
+  };
+  results: {
+    status: string;
+    ready: boolean;
+    artifacts?: { name: string; hash: string; role: string; source: string }[];
+    artifact_count?: number;
+    truncated?: boolean;
+    blocked?: { key: string; reason: string | null }[];
+    api_path?: string;
+  };
 }
 
 export interface Message {
@@ -109,7 +143,13 @@ export interface AppSettings {
   models: { engine: EngineId; preferred_model: string; temperature: number; max_tokens: number; brain_delegate_below: number };
   runtime: { generation_timeout_s: number };
   behavior: { default_mode: ModeId; use_memory: boolean; history_chars: number };
-  tools: { workspace_write: boolean; code_execution: boolean; max_tool_steps: number };
+  tools: {
+    workspace_write: boolean;
+    code_execution: boolean;
+    max_tool_steps: number;
+    game_studio_missions: boolean;
+    game_studio_compute: "auto" | "cpu";
+  };
   privacy: { index_conversations: boolean; attachments_enabled: boolean };
   resources: { model_precision: "auto" | "float32" | "bfloat16"; cpu_threads: number };
   problems: string[];
@@ -205,6 +245,13 @@ export const assistantApi = {
   workspaceFileBase64: (conversationId: string, path: string) =>
     data<{ path: string; size: number; content_base64: string }>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/workspace/file?path=${encodeURIComponent(path)}&encoding=base64`),
+  gameStudioMission: (conversationId: string, projectId: string) =>
+    data<GameStudioMission>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}`),
+  cancelGameStudioMission: (conversationId: string, projectId: string) =>
+    data<{ project_id: string; status: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/cancel`,
+      { method: "POST" }),
 };
 
 /** Fichier local -> base64 (pièces jointes) ; la taille est vérifiée par le backend après décodage. */

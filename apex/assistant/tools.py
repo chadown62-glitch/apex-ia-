@@ -200,9 +200,10 @@ _COLOR = {"type": "string", "maxLength": 9}
 _AMOUNT = {"type": "number", "minimum": 0, "maximum": 1e12}
 
 
-def assistant_registry() -> ToolRegistry:
+def assistant_registry(*, problems: list[str] | None = None) -> ToolRegistry:
     """Outils d'espace de travail d'APEX + outils des modes Design et Finance (aucune permission requise :
-    calcul pur, sans fichier ni exécution)."""
+    calcul pur, sans fichier ni exécution) + modèles 3D + délégation à Game Studio s'il est installé (sinon
+    sa raison est ajoutée à `problems`)."""
     registry = default_registry()
     registry.register(ToolSpec(
         name="calc.evaluate",
@@ -256,4 +257,36 @@ def assistant_registry() -> ToolRegistry:
         output_schema={"type": "object", "additionalProperties": True},
         permissions=frozenset({Permission.WRITE_WORKSPACE}),
     ), _model3d)
+    absent = register_game_studio(registry)
+    if absent is not None and problems is not None:
+        problems.append(absent)
     return registry
+
+
+#: Outils de délégation de Game Studio (`apex.game_studio.delegation`, propriété de Codex) : lancer une
+#: mission, suivre son état, lire ses résultats (empreintes, jamais les octets), l'annuler.
+GAME_STUDIO_TOOLS = ("game_studio.create", "game_studio.status", "game_studio.results",
+                     "game_studio.cancel")
+_GAME_STUDIO_MODULES = ("apex.game_studio", "apex.game_studio.delegation")
+GAME_STUDIO_ABSENT = "Game Studio ne fait pas partie de cette installation d'APEX"
+
+
+def register_game_studio(registry: ToolRegistry) -> str | None:
+    """Enregistre les outils de Game Studio quand ce module fait partie de l'installation. Sinon rien n'est
+    offert et la raison est rendue (pour être dite) : module absent, ou présent mais impossible à charger
+    (une dépendance manquante n'empêche jamais les autres outils de l'assistant). Ses outils et leurs
+    contrôles (permissions, appartenance de la mission à l'espace de travail du tour) sont ceux de Game
+    Studio : rien n'est réimplémenté ici."""
+    try:
+        # Module facultatif (absent d'une installation sans Game Studio) : non vérifié ici par mypy.
+        from apex.game_studio.delegation import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
+            register_game_studio_tools,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name in _GAME_STUDIO_MODULES:
+            return GAME_STUDIO_ABSENT
+        return f"Game Studio n'a pas pu être chargé : {exc}"[:300]
+    except ImportError as exc:
+        return f"Game Studio n'a pas pu être chargé : {exc}"[:300]
+    register_game_studio_tools(registry)
+    return None

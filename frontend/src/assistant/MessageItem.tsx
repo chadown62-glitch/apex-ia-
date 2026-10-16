@@ -83,6 +83,7 @@ function MetaLine({ message }: { message: Message }) {
   }
   const check = meta?.crosscheck;
   if (check) parts.push(crosscheckLine(check));
+  if (meta?.game_studio) parts.push(gameStudioLine(meta.game_studio));
   if (parts.length === 0) return null;
   return <div className="ax-msg__meta">{parts.join(" · ")}</div>;
 }
@@ -95,6 +96,25 @@ export function crosscheckLine(check: NonNullable<NonNullable<Message["meta"]>["
   }
   if (check.status === "answer_fails") return "code douteux : il ne compile pas ou plante";
   return `code non vérifié : ${check.detail}`;
+}
+
+/** Explications des refus connus de Game Studio (codes de `create_dynamic`). */
+export const GAME_STUDIO_REFUSALS: Record<string, string> = {
+  cuda_unavailable_choose_cpu_explicitly:
+    "aucun GPU CUDA sur ce PC ; le calcul sur processeur se choisit dans Paramètres > Outils",
+  local_planner_model_missing: "le modèle planificateur local de Game Studio n'est pas installé",
+};
+
+/** Une ligne sur la délégation d'une création 3D à Game Studio par le Cerveau APEX. */
+export function gameStudioLine(delegation: NonNullable<NonNullable<Message["meta"]>["game_studio"]>): string {
+  if (delegation.launched && delegation.project_id) {
+    return `confié à Game Studio par le Cerveau APEX : mission ${delegation.project_id.slice(0, 8)} (${delegation.status ?? "?"})`;
+  }
+  if (delegation.error) {
+    const known = GAME_STUDIO_REFUSALS[delegation.error.message];
+    return `Game Studio a refusé la mission : ${known ? `${known} (${delegation.error.message})` : delegation.error.message}`;
+  }
+  return `non confié à Game Studio : ${delegation.reason ?? "raison inconnue"}`;
 }
 
 export function MessageItem({ message, onRetry }: { message: Message; onRetry?: () => void }) {

@@ -2255,3 +2255,16 @@
 .ax-model3d__root code {
   word-break: break-all;
 }
+
+.ax-gs-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.ax-gs-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+}
