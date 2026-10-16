@@ -43,8 +43,31 @@ log "dates des fichiers publiés ramenées à SOURCE_DATE_EPOCH=$SOURCE_DATE_EPO
 #     de travail seulement s'il a des modifications non commitées — le manifeste le dit), vérifié : aucune fuite
 #     de l'extension Recherche, aucun module importé absent. Plus l'interface web reconstruite (frontend/dist
 #     n'est pas versionné) et la description figée du runtime (Python par empreinte, bibliothèques par empreintes).
-PY="$REPO_ROOT/.venv/bin/python"; [[ -x "$PY" ]] || PY=python3
+#     Le contrôle anti-fuite IMPORTE chaque module de l'artefact : son Python doit avoir les bibliothèques du
+#     runtime. APEX_BUILD_PYTHON l'impose ; sinon le .venv du dépôt (Linux ou Windows) ; sinon python3.
+PY="${APEX_BUILD_PYTHON:-}"
+if [[ -z "$PY" ]]; then
+  for candidate in "$REPO_ROOT/.venv/bin/python" "$REPO_ROOT/.venv/Scripts/python.exe"; do
+    if [[ -x "$candidate" ]]; then PY="$candidate"; break; fi
+  done
+fi
+PY="${PY:-python3}"
 APP_DIR="$OUT/app"
+# Une version antérieure au mode Windows natif (0.2.x, reconstruite pour le test de mise à jour) n'a ni
+# description du runtime ni runtime_build : son installateur n'embarque pas d'application Python.
+NATIVE_APP=true
+[[ -f "$SCRIPT_DIR/runtime/python-runtime.json" && -d "$REPO_ROOT/runtime_build" ]] || NATIVE_APP=false
+if [[ "$NATIVE_APP" == true ]]; then
+# Échec explicite AVANT de construire : sans ses bibliothèques, la vérification échouait plus loin sur un
+# « No module named … » (constaté le 16/10/2026 : la CI Windows était rouge depuis 2a38110 pour cette raison,
+# son Python ne les avait pas).
+missing=$("$PY" -c "import importlib.util as u; print(' '.join(m for m in ('fastapi', 'pydantic', 'sqlalchemy', 'yaml', 'uvicorn', 'alembic') if u.find_spec(m) is None))")
+if [[ -n "$missing" ]]; then
+  log "ERREUR : le Python du contrôle anti-fuite ($PY) n'a pas les bibliothèques du runtime : $missing"
+  log "  remède (Windows, Python 3.12) : $PY -m pip install --require-hashes --only-binary=:all: --no-deps -r setup/packaging/runtime/requirements-windows.lock"
+  log "  ou APEX_BUILD_PYTHON=<Python d'un environnement complet>"
+  exit 1
+fi
 if [[ "$DIRTY" == "true" ]]; then RT_SOURCE=(--source worktree); else RT_SOURCE=(--source commit --commit "$COMMIT"); fi
 (cd "$REPO_ROOT" && "$PY" -m runtime_build.build "${RT_SOURCE[@]}" --out "$APP_DIR")
 log "interface web : npm ci + npm run build (frontend/)"
@@ -64,6 +87,11 @@ log "accélération GPU facultative : $(find "$APP_DIR/runtime/gpu" -name 'torch
 find "$APP_DIR" -name __pycache__ -prune -exec rm -rf {} +
 find "$APP_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 log "application APEX : $(du -sh "$APP_DIR" | cut -f1) ($(find "$APP_DIR" -type f | wc -l) fichiers), artefact $(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print('release ' + m['source_commit'][:12] if m.get('release') else 'VALIDATION (arbre de travail)')" "$APP_DIR/RUNTIME_BUILD_MANIFEST.json")"
+APP_DEFINE=("/DAppDir=$APP_DIR")
+else
+  log "version antérieure au mode Windows natif (ni runtime/python-runtime.json ni runtime_build) : installateur sans application Python"
+  APP_DEFINE=()
+fi
 
 # 2. Compilateur
 if [[ -n "${ISCC:-}" ]]; then
@@ -87,7 +115,8 @@ fi
 log "compilateur : $COMPILER"
 
 # 3. Installateur
-"${ISCC_CMD[@]}" /Qp "/DApexVersion=$VERSION" "/DPublishDir=$(to_win "$PUBLISH_DIR")" "/DAppDir=$(to_win "$APP_DIR")" \
+if [[ ${#APP_DEFINE[@]} -gt 0 ]]; then APP_DEFINE=("/DAppDir=$(to_win "$APP_DIR")"); fi
+"${ISCC_CMD[@]}" /Qp "/DApexVersion=$VERSION" "/DPublishDir=$(to_win "$PUBLISH_DIR")" "${APP_DEFINE[@]}" \
   "/DIconFile=$(to_win "$SETUP_ROOT/src/ApexSetup.Dashboard/Assets/apex.ico")" \
   "/O$(to_win "$OUT")" "$(to_win "$SCRIPT_DIR/ApexSetup.iss")"
 INSTALLER="$OUT/APEX-Setup-x64-v${VERSION}.exe"
@@ -121,7 +150,7 @@ manifest = {
         "files": len(files),
         "bytes": sum(os.path.getsize(os.path.join(publish, f)) for f in files),
     },
-    "application": {
+    "application": None if not os.path.isdir(app) else {
         "runtime_artifact": {k: json.load(open(os.path.join(app, "RUNTIME_BUILD_MANIFEST.json"))).get(k)
                              for k in ("release", "source", "source_commit", "head_commit", "content_hash_sha256")},
         "python_runtime": json.load(open(os.path.join(app, "runtime", "python-runtime.json")))["python"],

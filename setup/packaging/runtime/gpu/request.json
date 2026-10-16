@@ -1,0 +1,7 @@
+{
+  "about": "Modifier ce fichier sur la branche de développement de Claude déclenche .github/workflows/gpu-locks.yml (runner Windows hébergé par GitHub, gratuit pour ce dépôt public). Mode light : aucune roue téléchargée.",
+  "variants": [],
+  "mode": "light",
+  "verify_install": false,
+  "requested": "2026-10-16 : première génération des listes figées (accord de l'utilisateur : CI Windows manuelle pour les versions figées)"
+}

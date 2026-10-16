@@ -8,7 +8,10 @@ Pour chaque variante :
 1. l'index de PyTorch (`<index>/<variante>/torch/`) doit contenir EXACTEMENT
    `torch-<version>+<variante>-cp312-cp312-win_amd64.whl` (version = celle du runtime de base,
    `requirements-windows.lock`) ; sinon la variante est déclarée absente, jamais remplacée par une autre ;
-2. la roue est téléchargée et son SHA-256 calculé ; il doit égaler celui de l'index (s'il en donne un) ;
+2. mode léger (défaut) : la roue n'est PAS téléchargée ; sa taille, son répertoire central et son METADATA
+   sont lus par requêtes HTTP Range (quelques Mo), et l'empreinte retenue est celle de l'index — pip la
+   revérifie sur chaque octet à l'installation. `--full` : la roue entière est téléchargée (~2,5 Go) et son
+   SHA-256 recalculé ; il doit égaler celui de l'index ;
 3. ses dépendances (`Requires-Dist` de son METADATA), évaluées pour Windows x64 / CPython 3.12, doivent
    TOUTES être satisfaites par les versions figées du runtime de base : la surcouche est installée en
    `--no-deps`, elle n'apporte rien d'autre que torch ;
@@ -23,6 +26,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import html.parser
+import io
 import json
 import re
 import shutil
@@ -33,7 +37,7 @@ import urllib.request
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from packaging.markers import Marker  # `pip install packaging` (déjà dans l'environnement de dév.)
 from packaging.requirements import Requirement
@@ -104,6 +108,66 @@ def find_wheel(index: str, variant: str, torch: str) -> tuple[str, str | None] |
     return None
 
 
+class RangeReader(io.RawIOBase):
+    """Roue distante lue par morceaux (requêtes HTTP Range) : `zipfile` n'en lit que la fin (répertoire
+    central) et METADATA, soit quelques Mo d'une roue de plusieurs Go."""
+
+    CHUNK = 1 << 18
+
+    def __init__(self, url: str, timeout: float = 60.0) -> None:
+        super().__init__()
+        _check_url(url)
+        self.url, self.timeout, self.pos, self.fetched = url, timeout, 0, 0
+        self._chunks: dict[int, bytes] = {}
+        request = urllib.request.Request(url, method="HEAD")  # noqa: S310 — adresse vérifiée
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310 — adresse vérifiée
+            length = response.headers.get("Content-Length")
+        if length is None or not length.isdigit():
+            raise ValueError("taille de la roue inconnue (pas de Content-Length) : relancez avec --full")
+        self.size = int(length)
+
+    def readable(self) -> bool:
+        return True
+
+    def seekable(self) -> bool:
+        return True
+
+    def tell(self) -> int:
+        return self.pos
+
+    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+        base = {io.SEEK_SET: 0, io.SEEK_CUR: self.pos, io.SEEK_END: self.size}[whence]
+        self.pos = max(0, base + offset)
+        return self.pos
+
+    def _chunk(self, number: int) -> bytes:
+        if number not in self._chunks:
+            start = number * self.CHUNK
+            end = min(self.size, start + self.CHUNK) - 1
+            request = urllib.request.Request(  # noqa: S310 — adresse vérifiée
+                self.url, headers={"Range": f"bytes={start}-{end}"})
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:  # noqa: S310
+                if response.status != 206:
+                    raise ValueError(f"le serveur ne sert pas les plages (HTTP {response.status}) : "
+                                     "relancez avec --full")
+                data = bytes(response.read())
+            self.fetched += len(data)
+            self._chunks[number] = data
+        return self._chunks[number]
+
+    def readinto(self, buffer: Any) -> int:
+        wanted = min(len(buffer), self.size - self.pos)
+        if wanted <= 0:
+            return 0
+        out = bytearray()
+        while len(out) < wanted:
+            number, offset = divmod(self.pos + len(out), self.CHUNK)
+            out += self._chunk(number)[offset:offset + wanted - len(out)]
+        buffer[:wanted] = out
+        self.pos += wanted
+        return wanted
+
+
 def _download(url: str, destination: Path) -> tuple[str, int]:
     _check_url(url)
     digest = hashlib.sha256()
@@ -116,7 +180,7 @@ def _download(url: str, destination: Path) -> tuple[str, int]:
     return digest.hexdigest(), size
 
 
-def check_wheel(wheel: Path, pins: dict[str, Version]) -> tuple[int, list[str], list[str]]:
+def check_wheel(wheel: Path | IO[bytes], pins: dict[str, Version]) -> tuple[int, list[str], list[str]]:
     """(taille extraite, dépendances requises sous Windows, celles que le runtime de base ne satisfait
     pas)."""
     with zipfile.ZipFile(wheel) as archive:
@@ -141,27 +205,40 @@ def check_wheel(wheel: Path, pins: dict[str, Version]) -> tuple[int, list[str], 
 
 
 def lock_variant(spec: dict[str, Any], variant: dict[str, Any], pins: dict[str, Version],
-                 workdir: Path, index: str) -> dict[str, Any]:
+                 workdir: Path, index: str, *, full: bool = False) -> dict[str, Any]:
+    """Mode léger (défaut) : métadonnées lues par plages, empreinte de l'index (pip la vérifie à
+    l'installation, octet par octet). `full` : la roue entière téléchargée et son empreinte recalculée."""
     torch = spec["torch"]
     found = find_wheel(index, variant["id"], torch)
     if found is None:
         return {"id": variant["id"], "ok": False,
                 "reason": f"torch-{torch}+{variant['id']}-cp312-cp312-win_amd64.whl absent de l'index"}
     url, index_sha = found
-    wheel = workdir / url.rsplit("/", 1)[-1]
-    try:
-        sha, size = _download(url, wheel)
-        if index_sha is not None and sha != index_sha:
+    if full:
+        wheel = workdir / url.rsplit("/", 1)[-1]
+        try:
+            sha, size = _download(url, wheel)
+            if index_sha is not None and sha != index_sha:
+                return {"id": variant["id"], "ok": False, "url": url,
+                        "reason": f"empreinte téléchargée {sha} ≠ empreinte de l'index {index_sha}"}
+            installed, required, missing = check_wheel(wheel, pins)
+        finally:
+            wheel.unlink(missing_ok=True)
+        source, fetched = "download", size
+    else:
+        if index_sha is None:
             return {"id": variant["id"], "ok": False, "url": url,
-                    "reason": f"empreinte téléchargée {sha} ≠ empreinte de l'index {index_sha}"}
-        installed, required, missing = check_wheel(wheel, pins)
-    finally:
-        wheel.unlink(missing_ok=True)
+                    "reason": "empreinte absente de l'index : relancez avec --full "
+                              "(téléchargement complet)"}
+        reader = RangeReader(url)
+        installed, required, missing = check_wheel(io.BufferedReader(reader), pins)
+        sha, size, source, fetched = index_sha, reader.size, "index", reader.fetched
     if missing:
         return {"id": variant["id"], "ok": False, "url": url, "requires": required,
                 "reason": "dépendances non satisfaites par le runtime de base : " + "; ".join(missing)}
-    return {"id": variant["id"], "ok": True, "url": url, "sha256": sha, "wheel_bytes": size,
-            "installed_bytes": installed, "requires": required, "index_sha256": index_sha}
+    return {"id": variant["id"], "ok": True, "url": url, "sha256": sha, "sha256_source": source,
+            "wheel_bytes": size, "installed_bytes": installed, "fetched_bytes": fetched,
+            "requires": required, "index_sha256": index_sha}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -171,6 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--spec-dir", type=Path, default=HERE, help=argparse.SUPPRESS)
     parser.add_argument("--base-lock", type=Path, default=BASE_LOCK, help=argparse.SUPPRESS)
     parser.add_argument("--index", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("--full", action="store_true",
+                        help="télécharger chaque roue entière (~2,5 Go) et recalculer son empreinte")
     args = parser.parse_args(argv)
     spec_path = args.spec_dir / "gpu-runtime.json"
     spec = json.loads(spec_path.read_text(encoding="utf-8"))
@@ -186,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         for variant in chosen:
             try:
-                result = lock_variant(spec, variant, pins, workdir, index)
+                result = lock_variant(spec, variant, pins, workdir, index, full=args.full)
             except (OSError, ValueError) as exc:
                 result = {"id": variant["id"], "ok": False,
                           "reason": f"{exc.__class__.__name__}: {exc}"[:400]}
@@ -197,10 +276,11 @@ def main(argv: list[str] | None = None) -> int:
                 f"# Accélération GPU d'APEX : torch {spec['torch']}+{variant['id']} "
                 "(Windows x64, CPython 3.12).\n"
                 f"# Produit par lock_gpu.py le {datetime.now(UTC):%Y-%m-%d} ; dépendances vérifiées contre "
-                "requirements-windows.lock.\n"
+                f"requirements-windows.lock ; empreinte : {result['sha256_source']}.\n"
                 f"torch @ {result['url']} \\\n    --hash=sha256:{result['sha256']}\n", encoding="utf-8")
             variant.update(wheel_bytes=result["wheel_bytes"], installed_bytes=result["installed_bytes"],
-                           sha256=result["sha256"], url=result["url"],
+                           sha256=result["sha256"], sha256_source=result["sha256_source"],
+                           url=result["url"],
                            locked_at=datetime.now(UTC).isoformat(timespec="seconds"))
     finally:
         shutil.rmtree(workdir, ignore_errors=True)

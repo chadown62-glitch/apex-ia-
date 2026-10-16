@@ -20,6 +20,10 @@ on:
     paths:
       - ".github/workflows/windows-native.yml"
       - "apex/assistant/**"
+      - "apex/standalone/**"
+      - "runtime_build/**"
+      - "setup/packaging/build_desktop_release.sh"
+      - "setup/packaging/runtime/**"
       - "setup/packaging/windows/ci/assistant_e2e.py"
 
 permissions:
@@ -48,13 +52,30 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Runtime libraries for the anti-leak check (the exact Windows lock, verified by hashes)
+        shell: bash
+        run: |
+          # build_desktop_release.sh IMPORTE chaque module de l'application qu'il embarque : sans ces bibliothèques,
+          # le contrôle anti-fuite échoue (cause de la CI rouge depuis 2a38110, identifiée le 16/10/2026).
+          python -m pip install --disable-pip-version-check --no-input --require-hashes --only-binary=:all: --no-deps \
+            -r setup/packaging/runtime/requirements-windows.lock
+          echo "APEX_BUILD_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
 
       - name: Build the installer from this commit (same script as the release)
         shell: bash
         run: |
           command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }
           ISCC=$(bash setup/packaging/fetch_innosetup.sh "$RUNNER_TEMP/toolchain" | tail -1)
+          set +e
           ISCC="$ISCC" bash setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/release"
+          code=$?
+          set -e
+          if [[ $code -ne 0 ]]; then
+            # Le journal d'un runner ne se lit que sur github.com ; une annotation se lit aussi par l'API
+            # (check-runs/<id>/annotations) : la cause d'un échec reste diagnostiquable de partout.
+            tail -n 60 "$RUNNER_TEMP/release/build.log" 2>/dev/null | python -c "import sys; t = sys.stdin.read().replace('%', '%25').replace(chr(13), '').replace(chr(10), '%0A'); print('::error title=build_desktop_release (code $code)::' + t)"
+            exit $code
+          fi
           cat "$RUNNER_TEMP/release/manifest.json"
 
       - name: Install, prepare, install the model, start, real assistant turns, restart, persistence, uninstall

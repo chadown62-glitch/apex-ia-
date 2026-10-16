@@ -13,6 +13,18 @@ public enum ComponentKey
     Ollama,
     Models,
     Sandbox,
+    /// <summary>Cerveau APEX (ApexLM) servi : poids intègres, conversationnel.</summary>
+    ApexBrain,
+    /// <summary>Moteur intégré (transformers, en processus) : poids du modèle par défaut.</summary>
+    NativeModel,
+    /// <summary>GPU CUDA : accélération facultative mesurée au démarrage, pilote NVIDIA détecté.</summary>
+    Gpu,
+    GameStudio,
+    /// <summary>Planificateur de Game Studio : Qwen2.5-Coder-7B épinglé ou moteur intégré.</summary>
+    Planner,
+    Blender,
+    GameGraphics,
+    GameEngineer,
     Brain,
     Ui,
 }
@@ -27,6 +39,14 @@ public static class ComponentKeys
         (ComponentKey.Ollama, "ollama"),
         (ComponentKey.Models, "models"),
         (ComponentKey.Sandbox, "sandbox"),
+        (ComponentKey.ApexBrain, "apex_brain"),
+        (ComponentKey.NativeModel, "native_model"),
+        (ComponentKey.Gpu, "gpu"),
+        (ComponentKey.GameStudio, "game_studio"),
+        (ComponentKey.Planner, "planner"),
+        (ComponentKey.Blender, "blender"),
+        (ComponentKey.GameGraphics, "game_graphics"),
+        (ComponentKey.GameEngineer, "game_engineer"),
         (ComponentKey.Brain, "brain"),
         (ComponentKey.Ui, "ui"),
     ];
@@ -42,6 +62,14 @@ public static class ComponentKeys
         ComponentKey.Ollama => "Ollama",
         ComponentKey.Models => "Modèles",
         ComponentKey.Sandbox => "Sandbox",
+        ComponentKey.ApexBrain => "Cerveau APEX",
+        ComponentKey.NativeModel => "Moteur intégré",
+        ComponentKey.Gpu => "GPU CUDA",
+        ComponentKey.GameStudio => "Game Studio",
+        ComponentKey.Planner => "Planificateur 3D",
+        ComponentKey.Blender => "Blender",
+        ComponentKey.GameGraphics => "Game Graphics",
+        ComponentKey.GameEngineer => "Game Engineer",
         ComponentKey.Brain => "Brain",
         ComponentKey.Ui => "Interface",
         _ => key.ToString(),
@@ -49,7 +77,16 @@ public static class ComponentKeys
 
     /// <summary>Lignes affichées mais hors du verdict, comme côté backend (<c>component_checks.INFORMATIONAL</c>) :
     /// Ollama n'est qu'un backend de modèles facultatif ; « Modèles » mesure s'il existe un modèle exécutable.</summary>
-    public static bool IsInformational(ComponentKey key) => key == ComponentKey.Ollama;
+    public static bool IsInformational(ComponentKey key) => key == ComponentKey.Ollama || IsApplication(key);
+
+    /// <summary>
+    /// Composants de l'application (Cerveau APEX, moteur intégré, GPU, Game Studio et ses parties) : mesurés par le
+    /// backend (<c>component_checks.APPLICATION</c>), facultatifs, jamais dans le verdict. Un backend plus ancien
+    /// qui ne les rapporte pas n'affiche pas leur ligne, plutôt qu'« inconnu ».
+    /// </summary>
+    public static bool IsApplication(ComponentKey key) => key is ComponentKey.ApexBrain or ComponentKey.NativeModel
+        or ComponentKey.Gpu or ComponentKey.GameStudio or ComponentKey.Planner or ComponentKey.Blender
+        or ComponentKey.GameGraphics or ComponentKey.GameEngineer;
 }
 
 /// <summary>Un état affiché — toujours produit par une mesure réelle, jamais fabriqué.</summary>

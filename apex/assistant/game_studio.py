@@ -223,6 +223,17 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
     except Exception as exc:  # sonde de Game Studio en échec : dit tel quel, jamais « prêt »
         return {**base, "installed": True, "ready": False, "notes": [],
                 "missing": [f"la sonde de Game Studio a échoué : {exc.__class__.__name__}: {exc}"[:300]]}
+    missing = missing_from(report, compute)
+    cuda = report.get("cuda") or {}
+    notes = [n for n in (cuda.get("reason"), (report.get("specialist") or {}).get("gpu_policy")) if n]
+    environment = (report.get("environment") or {}).get("status")
+    return {**base, "installed": True, "ready": not missing, "missing": missing, "notes": notes,
+            "environment_status": environment, "cuda_available": bool(cuda.get("available"))}
+
+
+def missing_from(report: dict[str, Any], compute: str) -> list[str]:
+    """Ce qui manque sur CE PC d'après le rapport de la sonde de Game Studio, en clair (aussi lu par
+    l'état des composants, `apex.obs.component_checks`)."""
     blender = report.get("vehicle_blender") or {}
     cuda = report.get("cuda") or {}
     missing: list[str] = []
@@ -230,11 +241,12 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
         missing.append("Blender n'est pas installé, ou introuvable dans le PATH.")
     if blender.get("workers_present") is False:
         missing.append("Les scripts de Game Studio (scripts/game_graphics/studio) sont absents.")
-    planner = (blender.get("coder_manifest_present") and blender.get("llama_cpp_present")) or blender.get(
-        "apex_native_coder_present")
-    if not planner:
-        missing.append("Le modèle planificateur local (Qwen2.5-Coder-7B épinglé et llama-cpp-python) n'est "
-                       "pas installé.")
+    # Les missions que le Cerveau propose passent par la planification dynamique de Game Studio
+    # (`create_dynamic`), qui exige le Qwen2.5-Coder-7B épinglé : le moteur intégré d'APEX n'y est pas
+    # accepté (« dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified », Game Studio).
+    if not (blender.get("coder_manifest_present") and blender.get("llama_cpp_present")):
+        missing.append("Le modèle planificateur des missions (Qwen2.5-Coder-7B épinglé, avec "
+                       "llama-cpp-python) n'est pas installé.")
     libraries = [name for name, ok in (blender.get("python_dependencies") or {}).items() if not ok]
     libraries += [name for name in ("jsonschema",) if find_spec(name) is None]
     if libraries:
@@ -242,10 +254,7 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
     if compute != "cpu" and not cuda.get("available"):
         missing.append("Aucun GPU CUDA : choisissez « Processeur » dans Paramètres > Outils > Calcul des "
                        "missions (beaucoup plus lent), ou utilisez un PC équipé d'un GPU NVIDIA.")
-    notes = [n for n in (cuda.get("reason"), (report.get("specialist") or {}).get("gpu_policy")) if n]
-    environment = (report.get("environment") or {}).get("status")
-    return {**base, "installed": True, "ready": not missing, "missing": missing, "notes": notes,
-            "environment_status": environment, "cuda_available": bool(cuda.get("available"))}
+    return missing
 
 
 def _default_services() -> tuple[Any, Any]:
