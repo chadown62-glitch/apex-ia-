@@ -48,7 +48,7 @@ votre PC. Un composant jamais qualifié chez vous n'est jamais affiché « prêt
 | Cerveau APEX | prêt |
 | Moteur intégré | prêt, une fois le modèle installé |
 | GPU CUDA | « GPU détecté : … », puis l'invitation « Accélération GPU (facultatif) » |
-| Game Studio | probablement « manque : jsonschema » : bibliothèque pas encore déclarée par Codex |
+| Game Studio | constaté sur le runner Windows : « Game Studio ne fait pas partie de cette installation d'APEX », alors que la candidate le contient. Défaut en cours de diagnostic (rapport §4). Une fois corrigé, attendu : « manque : jsonschema », bibliothèque pas encore déclarée par Codex |
 | Planificateur 3D | absent : le Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne sont pas fournis |
 | Blender | sa version, s'il est installé et trouvé ; sinon « introuvable » |
 | Game Graphics, Game Engineer | selon la sonde de Game Studio |

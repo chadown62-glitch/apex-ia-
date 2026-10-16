@@ -3,6 +3,8 @@
 **Verdict : aucune release « READY ».**
 - Le parcours de création 3D reste bloqué : le planificateur Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne
   sont pas fournis, et la liste Windows de Game Studio n'a pas `jsonschema`. Ces trois points sont à Codex.
+- Sous Windows, la candidate combinée installée ne charge pas Game Studio : « ne fait pas partie de cette
+  installation ». La cause est en cours de diagnostic (§4).
 - Rien n'a été fusionné dans `apex/integration`. La PR [#27](https://github.com/chadown62-glitch/apex-ia-/pull/27)
   est un **brouillon** ; l'utilisateur est l'intégrateur final.
 - Aucune release n'a été publiée.
@@ -58,7 +60,7 @@ Blender. » :
 |---|---|---|
 | Ma branche, `5a694ec` | runner Windows de GitHub, `build_desktop_release.sh` | **construit** ([run 38979850221](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38979850221)) |
 | Ma branche, `f941d90` | idem | **construit** ([run 38980883566](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38980883566)) |
-| Arbre combiné, `201e720` + pile Codex | runner Windows, workflow `windows-candidate` | **construit** ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) |
+| Arbre combiné, `201e720` + pile Codex | runner Windows, workflow `windows-candidate` | **construit** ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) : 51 950 406 octets, SHA-256 `8a8efb0ce77c433b…` |
 | Arbre combiné `e9898bf` (antérieur) | ici, Inno Setup sous Wine | construit (52 Mo) ; contrôle anti-fuite sans violation |
 
 Chaîne de fabrication auditée :
@@ -81,7 +83,27 @@ client, ni le PC de l'utilisateur.
 | Build | Parcours | Résultat |
 |---|---|---|
 | Ma branche, `5a694ec` et `f941d90` | installation silencieuse → « Préparer APEX » → installation du modèle → démarrage → vrais tours de l'assistant → arrêt, redémarrage, persistance → désinstallation (base conservée) | **PASS**, deux fois |
-| Candidate combinée | installation → préparation → modèle → démarrage → un tour de l'assistant → parcours 3D → arrêt → désinstallation | **en cours** au moment de ce commit ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) : aucun résultat n'est affirmé avant sa fin |
+| Candidate combinée ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) | installation → « Préparer APEX » → modèle → démarrage → tours de l'assistant → parcours 3D → arrêt → désinstallation | voir ci-dessous : **job en échec**, parcours 3D BLOCKED |
+
+**Candidate combinée sur Windows Server, mesures du run 38981526906** (annotations du job) :
+- installateur construit dans le runner : 51 950 406 octets, SHA-256 `8a8efb0ce77c433b…`, depuis le commit de
+  fusion `b861326` (créé dans le runner, jamais poussé) ;
+- installation silencieuse : OK. « Préparer APEX » : code 0. Installation du modèle : code 0 ;
+- démarrage : code 1, « APEX DEGRADED / PartialServices » ;
+- assistant : **PASS** (pièce jointe texte acceptée et PDF refusé, tour Finance, tour Code, réglage
+  enregistré) ;
+- lignes d'état : Cerveau APEX prêt, moteur intégré prêt, sandbox `WindowsAppContainerSandbox` prête, GPU
+  absent (aucun pilote NVIDIA), Blender introuvable ;
+- **défaut** : les lignes Game Studio, planificateur, Game Graphics et Game Engineer disent « Game Studio ne fait
+  pas partie de cette installation d'APEX ». Pourtant cette candidate le contient. Ce message ne sort que si
+  `apex.game_studio` lui-même est introuvable à l'import. Sous Linux, les mêmes étapes de build empaquettent et
+  importent bien `apex.game_studio` (vérifié). La cause propre à Windows est **en cours de diagnostic** : le run
+  suivant liste les fichiers installés et importe Game Studio avec le Python préparé ;
+- parcours 3D : **BLOCKED** dès la disponibilité, à cause de ce défaut ; la conversation n'a pas été tentée ;
+- arrêt, puis désinstallation : code 0, base de l'utilisateur conservée.
+
+Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par `exit 3`, avant la ligne
+`exit $LASTEXITCODE` que GitHub ajoute ; `pwsh -Command` réduit alors le code à 1.
 
 ## 5. Exécuté avec un vrai modèle
 
@@ -89,6 +111,9 @@ client, ni le PC de l'utilisateur.
   figée, empreintes vérifiées), et un vrai modèle d'APEX a répondu aux tours (`assistant_e2e.py` exige
   `message.status == "real"` et un `model_id`). **Quel moteur a répondu** est écrit dans l'artefact du run,
   illisible d'ici : il n'est pas affirmé.
+- **Windows Server, candidate combinée** : le moteur intégré **`qwen2.5-coder:1.5b-instruct:bf16`** a répondu
+  au tour Finance (412 caractères, 173 tokens, 72,6 s, processeur). L'outil `finance.loan` n'a pas été appelé
+  par le modèle ; c'est rapporté tel quel.
 - **Ici, Linux** : le Cerveau APEX v2 a servi le tour 3D et a produit la proposition (§2).
 - **Planificateur Qwen2.5-Coder-7B : jamais exécuté.** Il n'est pas fourni.
 
