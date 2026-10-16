@@ -113,6 +113,17 @@ jobs:
             $allErrors += $errors
           }
           if ($issues -or $allErrors) { exit 1 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Runtime libraries for the anti-leak check (the exact Windows lock, verified by hashes)
+        shell: bash
+        run: |
+          # build_desktop_release.sh IMPORTE chaque module de l'application qu'il embarque : sans ces bibliothèques,
+          # le contrôle anti-fuite échoue (cause de la CI rouge depuis 2a38110, identifiée le 16/10/2026).
+          python -m pip install --disable-pip-version-check --no-input --require-hashes --only-binary=:all: --no-deps \
+            -r setup/packaging/runtime/requirements-windows.lock
+          echo "APEX_BUILD_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
       - name: Build the installers on Windows (current and previous release)
         shell: bash
         run: |
