@@ -6,8 +6,34 @@
   "torch": "2.14.0",
   "index": "https://download.pytorch.org/whl",
   "variants": [
-    {"id": "cu130", "cuda": "13.0", "lock": "torch-cu130.lock", "wheel_bytes": null, "installed_bytes": null},
-    {"id": "cu128", "cuda": "12.8", "lock": "torch-cu128.lock", "wheel_bytes": null, "installed_bytes": null},
-    {"id": "cu126", "cuda": "12.6", "lock": "torch-cu126.lock", "wheel_bytes": null, "installed_bytes": null}
+    {
+      "id": "cu130",
+      "cuda": "13.0",
+      "lock": "torch-cu130.lock",
+      "wheel_bytes": 1990604486,
+      "installed_bytes": 3019122041,
+      "sha256": "6a20371bf5af2af933a6149e5ec13f7ea7ad506276137dae9386f98d236c02ff",
+      "sha256_source": "index",
+      "url": "https://download-r2.pytorch.org/whl/cu130/torch-2.14.0%2Bcu130-cp312-cp312-win_amd64.whl",
+      "locked_at": "2026-10-16T23:02:23+00:00"
+    },
+    {
+      "id": "cu128",
+      "cuda": "12.8",
+      "lock": "torch-cu128.lock",
+      "wheel_bytes": null,
+      "installed_bytes": null
+    },
+    {
+      "id": "cu126",
+      "cuda": "12.6",
+      "lock": "torch-cu126.lock",
+      "wheel_bytes": 2602771598,
+      "installed_bytes": 4191850416,
+      "sha256": "11a492e40dfd18597fdb8271879a3a09496a23140deb81a6b5a005d9cff7312b",
+      "sha256_source": "index",
+      "url": "https://download-r2.pytorch.org/whl/cu126/torch-2.14.0%2Bcu126-cp312-cp312-win_amd64.whl",
+      "locked_at": "2026-10-16T23:02:24+00:00"
+    }
   ]
 }
