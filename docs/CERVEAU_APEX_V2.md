@@ -456,6 +456,13 @@ Les outils de délégation de Game Studio (`game_studio.create`, `.status`, `.re
 Codex (PR #24 et #25, non fusionnées à ce jour). L'assistant les enregistre et les utilise ; il ne réimplémente
 rien de Game Studio. Tout ce qui suit est dans les fichiers de l'assistant.
 
+> **Remplacé depuis.**
+> - Le lancement par le Cerveau décrit ici a été remplacé au §9 septies : il propose, l'utilisateur lance.
+> - Depuis le commit `c839a77`, lancer ou annuler une mission est **réservé à l'humain**, sans exception : ni
+>   le Cerveau ni aucun modèle ne le peuvent, et le réglage de lancement automatique n'a plus d'effet.
+>
+> Ce paragraphe est gardé comme historique.
+
 **Ce qui est branché**
 - **Registre** (`apex/assistant/tools.py`). Les quatre outils sont enregistrés par `register_game_studio_tools`
   quand le module de Game Studio est installé. Sans lui, rien n'est offert ni annoncé (la liste des outils du
@@ -600,14 +607,15 @@ moteur d'outils. De son côté, Game Studio enregistre `created_by=HUMAN` pour t
 
 | Situation | Ce que fait APEX |
 |---|---|
-| **par défaut** : demande claire ou ambiguë | le Cerveau **propose** la mission dans l'Atelier 3D |
-| clic « Lancer la mission » | acte humain, vérifié par `PolicyEngine` (HUMAN, CREATE_MISSION) ; une seule mission par proposition (deux clics simultanés n'en lancent qu'une) ; le lancement est enregistré comme un **nouveau** message, car les messages ne sont jamais réécrits |
-| réglage « Lancement automatique des missions Game Studio » activé, demande claire | le Cerveau lance lui-même, au titre de cette autorisation permanente, quel que soit le moteur qui a rédigé la réponse |
-| demande ambiguë, même avec le lancement automatique | toujours proposée |
+| demande claire ou ambiguë | le Cerveau **propose** la mission dans l'Atelier 3D ; il ne la lance jamais |
+| clic « Lancer la mission » | acte humain, vérifié par `PolicyEngine` (HUMAN, CREATE_MISSION). Une seule mission par proposition : deux clics simultanés n'en lancent qu'une. Le lancement est enregistré comme un **nouveau** message, car les messages ne sont jamais réécrits |
+| un modèle appelle `game_studio.create` ou `.cancel` | refusé (`not_offered`) : ces outils ne sont offerts à aucun modèle, dans aucun mode |
 | annulation | acte humain (HUMAN, CANCEL_MISSION), toujours permise |
 
-Le lancement automatique est tracé (`authorization: "lancement automatique permis"`, `source: "cerveau"`).
-Le garder est une décision à confirmer par l'utilisateur et par Codex (Issue #21).
+**Décision de l'utilisateur (16/10/2026)** : le clic est obligatoire, et la règle HUMAN-only n'est jamais
+contournée. Le réglage de lancement automatique (`game_studio_missions`) est gardé pour relire les paramètres
+déjà enregistrés, mais il est toujours relu à faux. Une exécution autonome viendra plus tard, avec ses propres
+autorisations explicites, des budgets et une politique cohérente.
 
 **Ce que voit l'utilisateur** (Atelier 3D) :
 - la disponibilité de Game Studio sur ce PC, lue par sa propre sonde (`probe()`), et ce qui manque, en

@@ -145,6 +145,25 @@ def load_spec(root: Path | None = None) -> tuple[dict[str, Any] | None, Path | N
     return spec, folder, None
 
 
+def base_torch(folder: Path) -> str | None:
+    """Version de torch du runtime de BASE (`requirements-windows.lock`, à côté du dossier `gpu/`)."""
+    try:
+        text = (folder.parent / "requirements-windows.lock").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    match = re.search(r"^torch==([^\s;\\]+)", text, re.MULTILINE)
+    return match.group(1) if match else None
+
+
+def torch_mismatch(spec: dict[str, Any], folder: Path) -> str | None:
+    """La surcouche remplace torch : elle doit être EXACTEMENT la version du runtime de base."""
+    base = base_torch(folder)
+    if base != spec["torch"]:
+        return (f"torch du runtime de base ({base or 'introuvable'}) ≠ torch de l'accélération GPU "
+                f"({spec['torch']}) : listes GPU à régénérer pour cette version d'APEX")
+    return None
+
+
 def _cuda(text: Any) -> tuple[int, int] | None:
     match = re.fullmatch(r"(\d+)\.(\d+)", str(text or "").strip())
     return (int(match.group(1)), int(match.group(2))) if match else None
@@ -232,6 +251,8 @@ def detect_driver(*, smi: str | None = None, run: Runner = subprocess.run) -> di
 def choose(spec: dict[str, Any], folder: Path, driver: dict[str, Any],
            requested: str | None = None) -> tuple[dict[str, Any] | None, str]:
     """La variante à installer pour CE pilote, ou None et pourquoi."""
+    if (mismatch := torch_mismatch(spec, folder)) is not None:
+        return None, mismatch
     if not driver.get("found") or driver.get("reason"):
         return None, driver.get("reason") or "aucun pilote NVIDIA détecté"
     ceiling = _cuda(driver.get("cuda_driver"))
@@ -401,6 +422,8 @@ def _activation(home: Path | None, *, root: Path | None, run: Runner, smi: str |
     spec, folder, problem = load_spec(root)
     if spec is None or folder is None:
         return {**base, "state": "inactive", "reason": problem or "description du composant GPU absente"}
+    if (mismatch := torch_mismatch(spec, folder)) is not None:
+        return {**base, "state": "inactive", "reason": mismatch}
     current = next((v for v in variants(spec, folder) if v["id"] == marker.get("variant")), None)
     if current is None or current["lock_sha256"] != marker.get("lock_sha256"):
         return {**base, "state": "inactive",

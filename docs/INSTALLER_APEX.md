@@ -51,6 +51,11 @@ PowerShell : `Get-FileHash .\APEX-Setup-x64-v0.4.5.exe -Algorithm SHA256` (même
    révision figée ; la progression affiche la taille réellement téléchargée. Sans modèle, APEX démarre
    (APEX DEGRADED) mais une tâche s'arrête « bloquée : aucun modèle disponible » — jamais une réponse
    simulée.
+   *Facultatif* — **Accélération GPU** (carte NVIDIA, environ 2,5 Go, APEX arrêté). Le Panel installe
+   PyTorch CUDA à part du runtime, choisi d'après le pilote, et ne le garde que si une sonde du GPU réussit
+   sur ce PC. À chaque démarrage, l'accélération n'est utilisée que si elle est de nouveau vérifiée ; sinon
+   APEX tourne sur le processeur, et le Panel dit pourquoi. Voir `docs/ACCELERATION_GPU.md`. Pas encore
+   disponible : ses listes figées ne sont pas produites, et aucun GPU n'a été qualifié.
 4. **Démarrer APEX** : le Panel lance APEX (base embarquée, `apex doctor`, **Startup Gate** — jamais
    contourné), sans fenêtre de console. Quelques secondes plus tard : **APEX READY**, ou **APEX
    DEGRADED** avec la ligne concernée (ex. modèle non installé).

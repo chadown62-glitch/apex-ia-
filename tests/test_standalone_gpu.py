@@ -87,6 +87,8 @@ def app(tmp_path):
         line = f"torch @ https://exemple/{variant['id']}.whl --hash=sha256:{'0' * 64}\n"
         (folder / variant["lock"]).write_text(line, encoding="utf-8")
     (folder / "gpu-runtime.json").write_text(json.dumps(spec), encoding="utf-8")
+    (folder.parent / "requirements-windows.lock").write_text(BASE_LOCK.read_text(encoding="utf-8"),
+                                                             encoding="utf-8")
     return tmp_path / "app"
 
 
@@ -208,8 +210,13 @@ def test_a_failed_probe_leaves_nothing_installed_and_says_why(home, app, probe) 
     (_Machine(cuda="11.8"), {}, "pilote NVIDIA trop ancien"),
     (_Machine(), {"disk_free": lambda _path: 5 * 10**9}, "espace disque insuffisant"),
     (_Machine(), {"requested": "cu999"}, "variante inconnue"),
+    (_Machine(), {"base_torch": "2.14.1"}, "listes GPU à régénérer"),
 ])
 def test_install_refuses_before_downloading_anything(home, app, machine, kwargs, reason) -> None:
+    if version := kwargs.pop("base_torch", None):
+        lock = app / "runtime/requirements-windows.lock"
+        lock.write_text(lock.read_text(encoding="utf-8").replace("torch==2.14.0", f"torch=={version}"),
+                        encoding="utf-8")
     code, report = _install(home, app, machine, **kwargs)
     assert code == gpu.EXIT_REFUSED and reason in report["reason"]
     assert not machine.ran("pip") and not (gpu.gpu_home(home) / "installed.json").exists()
@@ -257,6 +264,7 @@ def test_activation_puts_the_overlay_first_only_when_everything_is_verified(home
     ("no_driver", "inactive", "pilote NVIDIA indisponible"),
     ("probe", "inactive", "sonde GPU en échec"),
     ("deleted", "failed", "surcouche GPU incomplète ou effacée"),
+    ("base_torch", "inactive", "torch du runtime de base (2.14.1)"),
     ("torch_loaded", "failed", "torch déjà chargé"),
 ])
 def test_activation_falls_back_to_the_cpu_and_says_why(home, app, no_torch, monkeypatch, change, state,
@@ -278,6 +286,10 @@ def test_activation_falls_back_to_the_cpu_and_says_why(home, app, no_torch, monk
         machine = _Machine(probe=_ok_probe(cuda_available=False))
     elif change == "deleted":
         shutil.rmtree(gpu.gpu_home(home) / "torch-2.14.0-cu128")
+    elif change == "base_torch":  # une fusion change torch dans le runtime de base
+        lock = app / "runtime/requirements-windows.lock"
+        lock.write_text(lock.read_text(encoding="utf-8").replace("torch==2.14.0", "torch==2.14.1"),
+                        encoding="utf-8")
     path = ["base"]
     result = _activate(home, app, machine, path, torch_loaded=change == "torch_loaded")
     assert result["state"] == state and reason in result["reason"], result

@@ -146,9 +146,9 @@ Mesuré sur 120 messages jamais vus : 48 créations sur 50 reconnues, aucune mis
 (`docs/CERVEAU_APEX_V2.md` §9 septies).
 
 **Réglages** (Paramètres > Outils)
-- **Lancement automatique des missions Game Studio**, désactivé par défaut. Activé, le Cerveau lance
-  lui-même une mission pour une demande claire ; les demandes ambiguës restent proposées. Une mission dure
-  des minutes et occupe le GPU.
+- Aucun réglage ne permet au Cerveau de lancer une mission : il la **propose**, et vous seul la lancez ou
+  l'annulez, d'un clic (règle HUMAN-only du moteur de politique). Une mission dure des minutes et occupe le
+  GPU.
 - **Calcul des missions** : *Automatique* utilise le GPU CUDA, et sans GPU Game Studio refuse la mission.
   *Processeur* est un choix explicite, beaucoup plus lent.
 
