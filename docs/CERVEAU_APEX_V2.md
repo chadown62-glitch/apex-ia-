@@ -382,6 +382,21 @@ concordance n'est jamais une preuve de justesse.
 | 1 220 exercices du §9 quater : 358 réponses | **20 / 20** | 1 / 338 |
 | Jeu NEUF : 225 combinaisons réservées, nouvelle graine, module réel | **2 / 2** | **0 / 223** (1 « non vérifiable ») |
 
+Rejoué ensuite avec le module final (`python_twin` du fournisseur, sondes, mêmes commandes que la sandbox,
+exécutées en sous-processus) sur les mêmes 358 réponses : **20 / 20** erreurs attrapées, **0 / 338** réponse
+juste signalée.
+
+**Comparaison avec la version précédente**, sur les mêmes 1 220 exercices dans les conditions de
+l'application :
+
+| Version | Réponses gardées | Justes parmi les gardées | Erreurs confiées | Réponses justes confiées |
+|---|---|---|---|---|
+| avant (`eb6537f` : confiance + « je ne peux pas le savoir ») | 76,8 % | 97,2 % | 186 / 212 | 97 / 1 008 |
+| après (`1d41f3c`, sandbox Linux) | 76,1 % | **99,4 %** | **206 / 212** | **85 / 1 008** |
+
+12 réponses justes de moins sont cédées : ce sont des refus honnêtes à des questions d'actualité, désormais
+gardés. Sur Windows, la vérification croisée ne s'exécute pas : il reste 186 erreurs confiées sur 212.
+
 La fausse alerte du premier jeu venait d'une version Python inutilisable (`def f(nombres): int`, type recopié
 de la signature PHP). Une telle version est désormais « non vérifiable », jamais « fausse ». Restent hors de
 portée 6 des 26 erreurs : sorties de programme, demandes 3D et la fonction Python.
