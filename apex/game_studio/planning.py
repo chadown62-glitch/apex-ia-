@@ -13,6 +13,8 @@ from apex.config.schema import ModelEndpoint
 from apex.models.model import GenerationRequest
 from apex.models.provider import get_default_provider
 
+from .requirements import extract, judge
+
 ASSETS = {"vehicle": "vehicule", "building": "batiment", "chair": "objet_3d"}
 KINDS = set(ASSETS) | {"assemble", "unreal_handoff", "unsupported"}
 KEY = re.compile(r"[a-z][a-z0-9_]{0,31}\Z")
@@ -195,18 +197,43 @@ def validate_plan(
         ):
             step["status"] = "blocked_dependency"
             step["reason"] = "assembly_input_asset_unavailable"
+    contract = extract(request)
+    coverage = judge(contract, normalized)
+    if coverage["defects"]:
+        raise ValueError(
+            "requirement_coverage_failed:" + json.dumps(coverage["defects"], ensure_ascii=False)
+        )
+    unavailable_context = {r["id"] for r in contract["requirements"] if r["kind"] == "context"}
+    for step in normalized:
+        if step["kind"] in ASSETS and any(
+            r["id"] in ("low_poly", "cartoon", "no_glass") for r in contract["requirements"]
+        ):
+            step.update(status="not_implemented", reason="requested_feature_not_qualified")
+        if step["kind"] == "building" and unavailable_context:
+            step.update(
+                status="not_implemented",
+                reason="specialized_building_not_qualified:" + ",".join(sorted(unavailable_context)),
+            )
+        if step["kind"] == "assemble" and any(
+            s["key"] in step["depends_on"] and not s["status"].startswith("available") for s in normalized
+        ):
+            step.update(status="blocked_dependency", reason="assembly_input_asset_unavailable")
     return {
+        "requirements": contract,
+        "coverage": coverage,
         "schema_version": 1,
         "feasibility_scope": (
             "DAG, resource budget and known specialist capability; "
-            "objective coverage is not semantically verified"
+            "source-grounded count/context coverage in declared scope; artistic fidelity unverified"
         ),
         "steps": normalized,
         "unmet_requirements": unmet,
         "estimated_minimum_s": cost_s,
         "feasible_steps": sum(s["status"].startswith("available") for s in normalized),
         "blocked_steps": sum(not s["status"].startswith("available") for s in normalized),
-        "fully_feasible": all(s["status"].startswith("available") for s in normalized) and not unmet,
+        "fully_feasible": all(s["status"].startswith("available") for s in normalized)
+        and not unmet
+        and not coverage["unavailable"],
     }
 
 
@@ -217,6 +244,7 @@ def generate_plan(
     capabilities: dict[str, Any],
     output: Path,
     timeout_s: int = 240,
+    reserve_attempt=None,
 ) -> dict[str, Any]:
     """Ask a local ModelProvider for a task graph; archive raw output and rejection."""
     if output.exists():
@@ -255,6 +283,10 @@ def generate_plan(
         + request["tool"]
         + "."
     )
+    prompt += (
+        " Preserve explicit counts, context, colors and materials. Requirements checked independently: "
+        + json.dumps(extract(request)["requirements"], ensure_ascii=False)
+    )
     output.parent.mkdir(parents=True, exist_ok=True)
     trace: dict[str, Any] = {
         "prompt": prompt,
@@ -265,7 +297,12 @@ def generate_plan(
     output.write_text(json.dumps(trace, indent=2))
     try:
         deadline = time.monotonic() + timeout_s
-        for number in (1, 2):
+        attempts = (
+            min(2, request.get("max_attempts", 2)) if request.get("automatic_corrections", True) else 1
+        )
+        for number in range(1, attempts + 1):
+            if reserve_attempt:
+                reserve_attempt("planner", attempts)
             remaining = deadline - time.monotonic()
             if remaining < 1:
                 raise TimeoutError("planning_time_budget_exhausted")
@@ -287,7 +324,7 @@ def generate_plan(
             except (ValueError, TypeError, KeyError) as exc:
                 attempt["rejection"] = type(exc).__name__ + ": " + str(exc)
                 output.write_text(json.dumps(trace, indent=2, default=str))
-                if number == 2:
+                if number == attempts:
                     raise
                 prompt += " Previous plan rejected: " + str(exc) + ". Rebuild full valid JSON."
                 continue

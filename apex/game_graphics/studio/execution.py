@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -70,8 +71,9 @@ def store_plan(plan: dict, directory: Path, *, caller: str = "studio-controller"
     return directory / "plan.json"
 
 
-def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, rss_limit_mib=12000,
-                cancel_event=None):
+def run_blender(
+    script: str, arguments: list[str], log: Path, *, timeout_s=600, rss_limit_mib=12000, cancel_event=None
+):
     if script not in ("render_asset.py", "inspect_asset.py", "assemble_garage.py"):
         raise ValueError("untrusted_script")
     executable = shutil.which("blender")
@@ -102,6 +104,14 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
         )
         try:
             process = psutil.Process(child.pid)
+            owner = {
+                "pid": child.pid,
+                "create_time": process.create_time(),
+                "command": process.cmdline(),
+                "kind": "blender",
+                "stopped": False,
+            }
+            log.with_suffix(".owner.json").write_text(json.dumps(owner))
             while child.poll() is None:
                 elapsed = time.monotonic() - started
                 try:
@@ -126,16 +136,12 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
                     owned = psutil.Process(child.pid)
                     tree = [*owned.children(recursive=True), owned]
                     for item in tree:
-                        try:
+                        with contextlib.suppress(psutil.NoSuchProcess):
                             item.terminate()
-                        except psutil.NoSuchProcess:
-                            pass
                     _, survivors = psutil.wait_procs(tree, timeout=5)
                     for item in survivors:
-                        try:
+                        with contextlib.suppress(psutil.NoSuchProcess):
                             item.kill()
-                        except psutil.NoSuchProcess:
-                            pass
                 else:
                     os.killpg(child.pid, signal.SIGTERM)
                 try:
@@ -146,6 +152,7 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
                     else:
                         os.killpg(child.pid, signal.SIGKILL)
                     child.wait(timeout=5)
+    log.with_suffix(".owner.json").write_text(json.dumps({**owner, "stopped": child.poll() is not None}))
     elapsed = time.monotonic() - started
     text = log.read_text(errors="replace")
     status = ExecutionStatus.SUCCESS if child.returncode == 0 and reason is None else ExecutionStatus.FAILED
@@ -187,8 +194,16 @@ def run_blender(script: str, arguments: list[str], log: Path, *, timeout_s=600, 
     return result
 
 
-def create_revision(root: Path, family: str, *, parent: Path | None = None, plan: dict | None = None,
-                    cancel_event=None, timeout_s=600, rss_limit_mib=12000):
+def create_revision(
+    root: Path,
+    family: str,
+    *,
+    parent: Path | None = None,
+    plan: dict | None = None,
+    cancel_event=None,
+    timeout_s=600,
+    rss_limit_mib=12000,
+):
     refuse_personal_project(root)
     if parent:
         refuse_personal_project(parent)
@@ -206,8 +221,14 @@ def create_revision(root: Path, family: str, *, parent: Path | None = None, plan
             raise ValueError("plan_family_mismatch")
         plan_file = store_plan(plan, root / "plan")
         args += ["--plan", str(plan_file.resolve())]
-    result = run_blender("render_asset.py", args, root / "build.log", cancel_event=cancel_event,
-                         timeout_s=timeout_s, rss_limit_mib=rss_limit_mib)
+    result = run_blender(
+        "render_asset.py",
+        args,
+        root / "build.log",
+        cancel_event=cancel_event,
+        timeout_s=timeout_s,
+        rss_limit_mib=rss_limit_mib,
+    )
     if parent and file_sha256(parent) != parent_sha:
         raise ValueError("parent_modified_during_execution")
     (root / "execution.json").write_text(json.dumps(result.to_dict(), indent=2))

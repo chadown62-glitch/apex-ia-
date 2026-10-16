@@ -1141,7 +1141,10 @@ export interface GameStudioRevision {
   created_at: string;
 }
 
+export interface GameStudioBudget { charged_s: number; observed_s?: number; limit_s: number; attempts: Record<string, number>; }
+
 export interface GameStudioMission {
+  budget?: GameStudioBudget;
   id: string;
   mission_id: string;
   mission_history: string[];
@@ -1187,6 +1190,7 @@ export interface GameStudioPlanStep {
 }
 
 export interface GameStudioProject {
+  budget?: GameStudioBudget;
   id: string;
   mission_id: string;
   mission_history: string[];
@@ -1197,7 +1201,7 @@ export interface GameStudioProject {
   elapsed_s?: number;
   recipe: string;
   delivery_status?: string;
-  plan?: { steps: GameStudioPlanStep[]; fully_feasible: boolean; estimated_minimum_s: number; unmet_requirements: string[]; feasibility_scope?: string } | null;
+  plan?: { steps: GameStudioPlanStep[]; fully_feasible: boolean; estimated_minimum_s: number; unmet_requirements: string[]; feasibility_scope?: string; coverage?: { verdict: string; [key: string]: unknown } } | null;
   planning_artifact?: GameStudioArtifact;
   planner_model?: Record<string, unknown>;
   request: Omit<GameStudioRequest, "references">;

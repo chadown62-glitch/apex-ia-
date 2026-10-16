@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "fixed_before_execution": true,
+  "repetitions": 2,
+  "criteria": {
+    "plan": "Valid bounded DAG, exact explicit entity counts, no undisclosed substitutions; preserve raw failures",
+    "fidelity": "Independent source-grounded coverage in declared scope, no artistic inference",
+    "execution": "One natural multi-asset case; mandatory geometry and file integrity, four native views per asset and assembly, second-process reopen",
+    "correction": "Bounded with traces; retain earliest PASS on tied technical metrics; never require an injected defect",
+    "stability": "Report both trials; structural and semantic scoped acceptance separately from actual execution",
+    "budget": "3600s global active elapsed budget including model loading; max3 versions per asset; 12000MiB RSS ceiling",
+    "blocked": "Unavailable styles, specialized builders and UE5 must remain explicit; a partial plan is not full delivery"
+  },
+  "cases": [
+    {"id":"vehicle", "description":"Crée un coupé bleu avec une carrosserie détaillée, des matériaux PBR et quatre rendus."},
+    {"id":"specialized", "description":"Crée une pharmacie de quartier reconnaissable avec une devanture et quatre rendus."},
+    {"id":"courtyard", "description":"Crée une petite cour contenant un bâtiment et deux fauteuils en cuir, avec des matériaux PBR et quatre rendus.", "execute":true},
+    {"id":"quantity", "description":"Crée trois voitures sportives distinctes et assemble leurs modèles dans une scène avec quatre rendus."},
+    {"id":"style", "description":"Crée une voiture low-poly avec quatre rendus, en conservant strictement ce style.", "style":"low_poly"},
+    {"id":"specialists", "description":"Crée une voiture sportive et prépare son intégration dans Unreal Engine 5 pour la rendre pilotable.", "tool":"hybride"}
+  ]
+}

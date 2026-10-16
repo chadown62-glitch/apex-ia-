@@ -18,12 +18,14 @@ router = APIRouter(prefix="/game-studio", tags=["game-studio"])
 
 
 class ReferenceIn(BaseModel):
+    model_config = {"extra": "forbid"}
     content_type: Literal["image/png", "image/jpeg", "text/plain"]
     data_base64: str = Field(min_length=4, max_length=6_000_000)
     provenance: str = Field(min_length=3, max_length=500)
 
 
 class StudioRequestIn(BaseModel):
+    model_config = {"extra": "forbid"}
     creation_type: Literal["vehicule", "batiment", "objet_3d", "environnement", "monde_ouvert", "autre"]
     creation_other: str | None = Field(default=None, max_length=200)
     style: Literal["photorealiste", "realiste", "stylise", "cartoon_anime", "low_poly", "autre"]

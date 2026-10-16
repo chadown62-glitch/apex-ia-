@@ -35,11 +35,32 @@ SPECIALTIES: tuple[Specialty, ...] = (
     Specialty(
         id="game-graphics",
         name="Game Graphics",
-        description="Création graphique Blender via le catalogue Game Studio et des contrôles réels.",
+        description=(
+            "Spécialiste composé : contrôleur Qwen, outils Blender, contrats et juges techniques. "
+            "Aucun nouveau checkpoint entraîné."
+        ),
         dev_stage=ImplStatus.STUB,
-        capabilities=("véhicule Blender", "bâtiment Blender", "fauteuil Blender"),
-        tools=("blender", "game-graphics.studio"),
-        required_permissions=("validation humaine avant COMPLETED",),
+        capabilities=(
+            "coupé Blender",
+            "bâtiment générique Blender",
+            "fauteuil Blender",
+            "planification multi-assets bornée",
+            "juges techniques et corrections versionnées",
+        ),
+        tools=(
+            "blender",
+            "game_studio.create",
+            "game_studio.status",
+            "game_studio.cancel",
+            "game_studio.results",
+        ),
+        required_permissions=(
+            "game_studio.create",
+            "game_studio.read",
+            "game_studio.cancel",
+            "workspace propriétaire",
+            "validation humaine avant COMPLETED",
+        ),
     ),
     Specialty(
         id="code-intelligence",
