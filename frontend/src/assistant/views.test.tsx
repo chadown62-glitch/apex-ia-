@@ -347,8 +347,55 @@ describe("Game Studio in the 3D workshop", () => {
     expect(await screen.findByText("Mission 6f1c2a8e")).toBeInTheDocument();
     expect(await screen.findByText(/1 fichier\(s\) produit\(s\) : scene\.glb \(exchange\)/)).toBeInTheDocument();
     expect(screen.getByText(/scene \(graphics\) : done/)).toBeInTheDocument();
-    // Missions non permises dans les Paramètres : aucun bouton d'annulation.
+    expect(screen.getByText("terminée, à revoir")).toBeInTheDocument();
+    // Mission terminée : plus rien à annuler.
     expect(screen.queryByRole("button", { name: "Annuler la mission" })).not.toBeInTheDocument();
+  });
+
+  it("shows the rendered previews and lets the user cancel a running mission", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: { status: "running", mission_id: "m1", steps: [], delivery_status: null, last_event: null },
+      results: { status: "running", ready: true, artifacts: [{ name: "scene.png", hash: "hv", role: "view", source: "assembly" }], artifact_count: 1, truncated: false, blocked: [] },
+    });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}/preview/hv`, { content_type: "image/png", size: 4, content_base64: "iVBORw==" });
+    api.on("POST", `/assistant/conversations/c1/game-studio/${PROJECT}/cancel`, { project_id: PROJECT, status: "cancelled" });
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByAltText("Rendu scene.png")).toHaveAttribute("src", "data:image/png;base64,iVBORw==");
+    fireEvent.click(screen.getByRole("button", { name: "Annuler la mission" }));
+    await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path.endsWith("/cancel"))).toBe(true));
+  });
+
+  it("asks before launching: the user launches a proposed mission once, with its missing dependencies shown", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", "/assistant/game-studio/availability", {
+      installed: true, ready: false, missing: ["Aucun GPU CUDA : choisissez « Processeur »."], notes: [], auto_launch: false, compute: "auto",
+    });
+    api.on("POST", "/assistant/conversations/c1/game-studio/launch", (body) => real({ message_id: "l1", content: "Mission lancée.", meta: { echo: body } }));
+    const messages = [
+      message({ id: "u1", role: "user", content: "Crée une scène de forêt avec une rivière." }),
+      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1", reason: "le lancement automatique des missions n'est pas activé : confirmez pour lancer" } } }),
+    ];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Le Cerveau propose de confier à Game Studio : « Crée une scène de forêt avec une rivière\. »/)).toBeInTheDocument();
+    expect(await screen.findByText("Aucun GPU CUDA : choisissez « Processeur ».")).toBeInTheDocument();
+    expect(screen.getByText(/Le Cerveau propose les missions ; vous les lancez\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Lancer la mission" }));
+    await waitFor(() => expect(api.calls.find((c) => c.path === "/assistant/conversations/c1/game-studio/launch")?.body).toEqual({ message_id: "a1" }));
+  });
+
+  it("never offers a proposal that was already launched", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    const messages = [
+      message({ id: "u1", role: "user", content: "Crée une scène." }),
+      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1" } } }),
+      message({ id: "l1", role: "assistant", content: "Mission lancée.", meta: { game_studio: { trigger: "utilisateur", state: "refused", launched: false, proposal_of: "a1", error: { code: "unavailable", message: "local_planner_model_missing" } }, steps: [{ step: 1, tool: "game_studio.create", arguments: {}, ok: false, duration_s: 0, observation: { ok: false, output: {}, error: { code: "unavailable", message: "local_planner_model_missing" } } }] } }),
+    ];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Game Studio a refusé la mission : le modèle planificateur local/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lancer la mission" })).not.toBeInTheDocument();
   });
 
   it("shows Game Studio's refusal as it is, explained, never as a mission", async () => {
@@ -356,7 +403,7 @@ describe("Game Studio in the 3D workshop", () => {
     const messages = [created(false, null, { code: "unavailable", message: "cuda_unavailable_choose_cpu_explicitly" })];
     renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
     expect(await screen.findByText(/Game Studio a refusé la mission : aucun GPU CUDA sur ce PC.*\(cuda_unavailable_choose_cpu_explicitly\)/)).toBeInTheDocument();
-    expect(api.calls.some((c) => c.path.includes("/game-studio/"))).toBe(false);
+    expect(api.calls.some((c) => c.path.includes("/conversations/c1/game-studio/"))).toBe(false);
   });
 });
 
@@ -369,6 +416,12 @@ describe("gameStudioLine", () => {
       .toBe("Game Studio a refusé la mission : le modèle planificateur local de Game Studio n'est pas installé (local_planner_model_missing)");
     expect(gameStudioLine({ trigger: "cerveau", launched: false, reason: "Game Studio ne fait pas partie de cette installation d'APEX" }))
       .toBe("non confié à Game Studio : Game Studio ne fait pas partie de cette installation d'APEX");
+    expect(gameStudioLine({ trigger: "cerveau", state: "proposed", launched: false, reason: "demande à confirmer (question générale)" }))
+      .toBe("mission Game Studio proposée, à confirmer dans l'Atelier 3D : demande à confirmer (question générale)");
+    expect(gameStudioLine({ trigger: "utilisateur", state: "launched", launched: true, project_id: "abcdef12-0000", status: "queued" }))
+      .toBe("confié à Game Studio à votre demande : mission abcdef12 (queued)");
+    expect(gameStudioLine({ trigger: "cerveau", state: "refused", launched: false, error: { code: "unavailable", message: "x" }, explanation: "le GPU est occupé." }))
+      .toBe("Game Studio a refusé la mission : le GPU est occupé.");
   });
 });
 

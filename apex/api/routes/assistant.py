@@ -398,13 +398,57 @@ def cancel_turn(turn_id: str) -> DataEnvelope[dict[str, Any]]:
 
 
 def _game_studio_error(exc: Exception) -> HTTPException:
-    from apex.assistant.game_studio import GameStudioUnavailable
+    from apex.assistant.game_studio import AlreadyLaunched, GameStudioUnavailable
+    from apex.errors import PolicyDenied
 
-    if isinstance(exc, PermissionError):
+    if isinstance(exc, (PermissionError, PolicyDenied)):
         return HTTPException(status_code=403, detail=str(exc))
+    if isinstance(exc, AlreadyLaunched):
+        return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, GameStudioUnavailable):
         return HTTPException(status_code=503, detail=str(exc))
     return _client_error(exc)
+
+
+class GameStudioLaunchIn(BaseModel):
+    #: Message de l'assistant qui PROPOSE la mission (sa demande d'origine est retrouvée côté serveur).
+    message_id: str = Field(min_length=1, max_length=64)
+
+
+@router.get("/assistant/game-studio/availability", response_model=DataEnvelope[dict[str, Any]])
+def game_studio_availability() -> DataEnvelope[dict[str, Any]]:
+    """Game Studio sur ce PC : installé, prêt, et ce qui manque, expliqué (sonde de Game Studio)."""
+    from apex.assistant import game_studio
+    from apex.assistant.settings import SettingsService
+
+    settings, _ = SettingsService(_factory()).load()
+    return DataEnvelope(status="real", data=game_studio.availability(settings))
+
+
+@router.get("/assistant/gpu", response_model=DataEnvelope[dict[str, Any]])
+def gpu_sharing() -> DataEnvelope[dict[str, Any]]:
+    """Partage du GPU entre les modèles principaux et les spécialistes (`apex.models.gpu_handoff`) :
+    bail, prêt en cours, dernier accusé de réception."""
+    from apex.models.gpu_handoff import gpu_status
+
+    return DataEnvelope(status="real", data=gpu_status())
+
+
+@router.post("/assistant/conversations/{conversation_id}/game-studio/launch",
+             response_model=DataEnvelope[dict[str, Any]])
+def launch_game_studio_mission(conversation_id: str,
+                               payload: GameStudioLaunchIn) -> DataEnvelope[dict[str, Any]]:
+    """L'utilisateur lance la mission que le Cerveau a proposée : une seule par proposition."""
+    from apex.assistant import game_studio
+    from apex.assistant.settings import SettingsService
+    from apex.errors import PolicyDenied
+
+    settings, _ = SettingsService(_factory()).load()
+    try:
+        return DataEnvelope(status="real", data=game_studio.launch_proposed(
+            _factory(), conversation_id, payload.message_id, compute=settings.tools.game_studio_compute))
+    except (LookupError, PermissionError, PolicyDenied, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
 
 
 @router.get("/assistant/conversations/{conversation_id}/game-studio/{project_id}",
@@ -420,17 +464,31 @@ def game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[d
         raise _game_studio_error(exc) from exc
 
 
+@router.get("/assistant/conversations/{conversation_id}/game-studio/{project_id}/preview/{digest}",
+            response_model=DataEnvelope[dict[str, Any]])
+def game_studio_preview(conversation_id: str, project_id: str, digest: str) -> DataEnvelope[dict[str, Any]]:
+    """Un aperçu (image) rendu par cette mission, en base64 ; les autres fichiers restent sur la page Game
+    Studio."""
+    from apex.assistant import game_studio
+
+    try:
+        data, mime = game_studio.preview(_factory(), conversation_id, project_id, digest)
+    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+    return DataEnvelope(status="real", data={"content_type": mime, "size": len(data),
+                                             "content_base64": base64.b64encode(data).decode("ascii")})
+
+
 @router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/cancel",
              response_model=DataEnvelope[dict[str, Any]])
 def cancel_game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    """L'utilisateur annule une mission de cette conversation."""
     from apex.assistant import game_studio
-    from apex.assistant.settings import SettingsService
+    from apex.errors import PolicyDenied
 
-    settings, _ = SettingsService(_factory()).load()
     try:
-        return DataEnvelope(status="real", data=game_studio.cancel(
-            _factory(), conversation_id, project_id, missions_allowed=settings.tools.game_studio_missions))
-    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        return DataEnvelope(status="real", data=game_studio.cancel(_factory(), conversation_id, project_id))
+    except (LookupError, PermissionError, PolicyDenied, RuntimeError, ValueError) as exc:
         raise _game_studio_error(exc) from exc
 
 

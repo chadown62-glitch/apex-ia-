@@ -132,7 +132,7 @@ MODES: dict[str, Mode] = {
         view="studio3d",
         limits=("Modèles paramétriques low-poly (véhicule, arme, personnage), pas de sculpture ni de textures.",
                 "Scripts Unity et Unreal de départ : syntaxe vérifiée, non exécutés dans les moteurs.",
-                "Missions Game Studio (si installé) : lancées seulement si permis (Paramètres > Outils).",
+                "Missions Game Studio (si installé) : proposées, ou lancées seules si vous le permettez.",
                 "Accès limité à l'espace de travail de la conversation ou du projet."),
     ),
 }

@@ -55,8 +55,10 @@ class ToolSettings(_Section):
     workspace_write: bool = True
     code_execution: bool = True
     max_tool_steps: int = Field(default=6, ge=1, le=40)
-    #: Mode 3D : permettre à l'assistant de LANCER (et d'annuler) des missions Game Studio. Une mission dure
-    #: des minutes et occupe le GPU : désactivé par défaut ; le suivi des missions reste permis.
+    #: Mode 3D : le Cerveau LANCE lui-même (et le modèle peut annuler) les missions Game Studio d'une
+    #: demande de création claire. Désactivé (défaut) : il les propose, et l'utilisateur les lance d'un
+    #: clic. Une mission dure des minutes et occupe le GPU ; le suivi et l'annulation par l'utilisateur
+    #: restent permis.
     game_studio_missions: bool = False
     #: Calcul des missions lancées par l'assistant : `auto` (GPU CUDA, refusé par Game Studio sans GPU) ou
     #: `cpu` (choisi explicitement, plus lent). Jamais un repli implicite sur le processeur ; le modèle ne

@@ -210,6 +210,24 @@ _CURRENT_INFO_NOTE = ("Cette question porte sur une information actuelle : appel
 #: Verdicts de la vérification croisée qui prouvent qu'une des deux versions est fausse.
 _CODE_MISMATCH = frozenset({"disagree", "answer_fails"})
 
+
+def model3d_mismatch(facts: dict[str, Any], question: str) -> str | None:
+    """Raison pour laquelle les modèles 3D construits par le Cerveau pendant sa réponse ne répondent PAS à
+    la demande (sa réponse décrit alors un objet sans rapport), ou None. Mesuré : sur des demandes hors de
+    son répertoire, il construit le plus souvent une autre sorte (docs/CERVEAU_APEX_V2.md §9 septies)."""
+    from apex.assistant.creation import analyze
+    from apex.brain import studio3d
+
+    calls = [c for c in facts.get("tool_calls") or [] if c.get("tool") == "3d"]
+    if not calls:
+        return None
+    if analyze(question).kind == "none":
+        return "le Cerveau a construit un modèle 3D pour un message qui n'en demande pas"
+    if any(not str(c.get("result", "")).startswith("erreur")
+           and studio3d.matches_request(str(c.get("expression", "")), question) for c in calls):
+        return None
+    return "le modèle 3D construit par le Cerveau ne correspond pas à l'objet demandé"
+
 #: Ajouté aux consignes quand `game_studio.create` est offert (Game Studio installé, missions permises).
 _GAME_STUDIO_NOTE = ("GAME STUDIO. Pour une création 3D complète (objet détaillé, scène), appelle "
                      "game_studio.create avec la demande de l'utilisateur : la mission se poursuit en "
@@ -219,6 +237,15 @@ _GAME_STUDIO_NOTE = ("GAME STUDIO. Pour une création 3D complète (objet détai
 _GAME_STUDIO_DESCRIPTION = (20, 4000)
 #: Missions lancées au plus par tour (appel du modèle ou délégation du Cerveau).
 _GAME_STUDIO_LAUNCHES_PER_TURN = 1
+
+
+def _kind(expression: str) -> str:
+    from apex.brain import studio3d
+
+    try:
+        return studio3d.parse(expression).kind
+    except studio3d.Error3D:
+        return ""
 
 
 def game_studio_description(request: str) -> str:
@@ -253,6 +280,11 @@ def _generate(ranked: list[Any], *, delegate_below: float, deadline: float, canc
         checked = verify(brain, request, answer)
         if checked is not None and checked["status"] in _CODE_MISMATCH and delegate_below > 0:
             unsure = ("code_mismatch", f"vérification croisée : {checked['detail']}")
+    if (unsure is None and delegate_below > 0 and answer is not None
+            and (answer.facts or {}).get("backend") == "apex_brain"):
+        mismatch = model3d_mismatch(answer.facts or {}, question)
+        if mismatch is not None:
+            unsure = ("model3d_mismatch", mismatch)
     if brain is None or answer is None or unsure is None:
         return first, None, checked
     motive, reason = unsure
@@ -635,9 +667,11 @@ class TurnManager:
             self._update(turn_id, steps=steps)
 
         if brain_models and final_text and not cancel.is_set():
-            self._write_brain_models(tools, brain_models, steps, meta, turn_id)
-        if brain_3d and final_text and not cancel.is_set():
-            self._delegate_to_game_studio(tools, content, steps, meta, turn_id)
+            self._write_brain_models(tools, brain_models, steps, meta, turn_id, content)
+        if final_text and not cancel.is_set():
+            brain_served = (getattr(last_result, "facts", None) or {}).get("backend") == "apex_brain"
+            self._delegate_to_game_studio(tools, content, steps, meta, turn_id, brain_served=brain_served,
+                                          brain_3d=brain_3d, user_message_id=user_message.id)
         facts = getattr(last_result, "facts", None) or {}
         meta.update({
             "steps": steps, "tokens_prompt": tokens["prompt"] or None, "tokens_completion": tokens["completion"] or None,
@@ -845,11 +879,28 @@ class TurnManager:
                               label=f"assistant:{turn_id}")
 
     def _write_brain_models(self, tools: dict[str, Any] | None, calls: list[dict[str, Any]],
-                            steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str) -> None:
-        """Écrit les fichiers des modèles 3D que le Cerveau a construits — seulement si ce tour offre l'outil
-        `model3d.create` (permission d'écriture) ; sinon c'est dit, jamais fait en silence."""
+                            steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str,
+                            request: str = "") -> None:
+        """Écrit les fichiers des modèles 3D que le Cerveau a construits — seulement pour une demande de
+        création, seulement l'objet demandé (`studio3d.matches_request`), et seulement si ce tour offre
+        l'outil `model3d.create` (permission d'écriture). Tout ce qui n'est pas écrit est dit."""
+        from apex.assistant.creation import analyze
         from apex.brain import studio3d
 
+        def note(text: str) -> None:
+            meta["tools_notes"] = [*meta.get("tools_notes", []), text]
+
+        if analyze(request).kind == "none":
+            note("Message sans demande de création : le modèle 3D construit par le Cerveau n'a pas été "
+                 "écrit.")
+            return
+        unrelated = [c for c in calls if not studio3d.matches_request(c["expression"], request)]
+        if unrelated:
+            kinds = sorted({studio3d.LABELS.get(_kind(c["expression"]), "inconnu") for c in unrelated})
+            note(f"Ébauche du Cerveau sans rapport avec la demande ({', '.join(kinds)}) : non écrite.")
+        calls = [c for c in calls if c not in unrelated]
+        if not calls:
+            return
         if not tools or "model3d.create" not in tools["offered"]:
             meta["tools_notes"] = [*meta.get("tools_notes", []), (
                 f"Le Cerveau APEX a construit {len(calls)} modèle(s) 3D, mais leurs fichiers n'ont pas été écrits : "
@@ -866,38 +917,68 @@ class TurnManager:
         self._update(turn_id, steps=steps)
 
     def _delegate_to_game_studio(self, tools: dict[str, Any] | None, request: str,
-                                 steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str) -> None:
-        """Le Cerveau a reconnu une demande 3D (son appel 3D appris) et le message est formulé comme une
-        demande de création (`apex.assistant.creation`) : la création est confiée à Game Studio par son
-        outil `game_studio.create`, avec les permissions de ce tour et la demande de l'utilisateur pour
-        description. Sans Game Studio, ou sans permission de lancer une mission, rien n'est lancé et c'est
-        dit. La mission se poursuit en arrière-plan : seul son reçu (identifiants, état) est rendu ici."""
-        from apex.assistant.creation import asks_to_create
+                                 steps: list[dict[str, Any]], meta: dict[str, Any], turn_id: str, *,
+                                 brain_served: bool, brain_3d: bool, user_message_id: str) -> None:
+        """Ce que le Cerveau fait d'un message du mode 3D quand Game Studio fait partie du mode. Son analyse
+        d'intention (`apex.assistant.creation`) décide, jamais une intention devinée :
+
+        - demande de création claire, lancement automatique permis par l'utilisateur (Paramètres >
+          Outils) : mission lancée par `game_studio.create`, la demande de l'utilisateur pour description
+          (quel que soit le moteur qui a rédigé la réponse : la décision est celle de l'analyse) ;
+        - demande claire sans cette autorisation, ou demande ambiguë : mission PROPOSÉE ; l'utilisateur
+          la lance d'un clic (`apex.assistant.game_studio.launch_proposed`, acte humain) ;
+        - Game Studio absent : rien n'est proposé, et la raison est dite ;
+        - sinon (question, commande sur l'existant…) : rien.
+
+        L'appel 3D appris du Cerveau est rapporté comme indice, sans décider : seul, il se déclenche aussi
+        sur des questions (docs/CERVEAU_APEX_V2.md §9 septies). Une mission au plus par tour."""
+        from apex.assistant.creation import analyze
 
         info = (tools or {}).get("game_studio")
-        if tools is None or info is None or not asks_to_create(request):
+        if tools is None or info is None:
             return
         if any(s.get("tool") == "game_studio.create" for s in steps):
             return  # déjà confiée pendant ce tour (par un modèle qui appelle les outils)
-        if "game_studio.create" not in tools["offered"]:
-            reason = info["absent"] or (
-                "les missions Game Studio ne sont pas permises (Paramètres > Outils)"
-                if not info["missions"] else "outil game_studio.create non offert")
-            meta["game_studio"] = {"trigger": "cerveau", "launched": False, "reason": reason}
-            note = f"Demande de création 3D reconnue, non confiée à Game Studio : {reason}."
+        intent = analyze(request)
+        if intent.kind == "none":
+            return
+        record: dict[str, Any] = {"trigger": "cerveau", "intent": intent.kind,
+                                  "intent_reason": intent.reason, "brain_3d_call": brain_3d,
+                                  "request_message_id": user_message_id, "launched": False}
+        if info["absent"]:
+            meta["game_studio"] = {**record, "state": "unavailable", "reason": info["absent"]}
+            note = ("Demande de création 3D reconnue, mais Game Studio n'est pas disponible : "
+                    f"{info['absent']}.")
             meta["tools_notes"] = [*meta.get("tools_notes", []), note]
+            return
+        if intent.kind == "ambiguous":
+            meta["game_studio"] = {**record, "state": "proposed",
+                                   "reason": f"demande à confirmer ({intent.reason})"}
+            return
+        record["served_by_brain"] = brain_served
+        if "game_studio.create" not in tools["offered"]:
+            reason = ("le lancement automatique des missions n'est pas activé : confirmez pour lancer"
+                      if not info["missions"]
+                      else "lancement non offert dans ce tour : confirmez pour lancer")
+            meta["game_studio"] = {**record, "state": "proposed", "reason": reason}
             return
         arguments = {"description": game_studio_description(request)}
         step = self._run_tool(tools, "game_studio.create", arguments, len(steps) + 1, turn_id)
         step["source"] = "cerveau"
         steps.append(step)
         self._update(turn_id, steps=steps)
+        from apex.assistant.game_studio import explain
+
         observation = step["observation"]
         output = observation.get("output") or {}
-        meta["game_studio"] = {"trigger": "cerveau", "launched": step["ok"],
+        error = observation.get("error")
+        if error:
+            record["explanation"] = explain(error.get("message"))
+        meta["game_studio"] = {**record, "state": "launched" if step["ok"] else "refused",
+                               "launched": step["ok"], "authorization": "lancement automatique permis",
                                "project_id": output.get("project_id"),
                                "mission_id": output.get("mission_id"), "status": output.get("status"),
-                               "error": observation.get("error")}
+                               "error": error}
 
     @staticmethod
     def _run_tool(tools: dict[str, Any] | None, name: str, arguments: dict[str, Any], number: int,

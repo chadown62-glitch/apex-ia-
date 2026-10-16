@@ -543,6 +543,126 @@ de Codex.
   autre moteur s'il y en a un. C'est alors ce moteur qui décide d'appeler `game_studio.create`.
 - L'ébauche paramétrique est construite même quand elle est sans rapport (comportement antérieur, inchangé).
 
+Ces trois limites sont traitées au §9 septies.
+
+## 9 septies. Délégation à Game Studio fiabilisée, ébauches vérifiées, partage du GPU (16/10/2026)
+
+### Reconnaître une demande de création (`apex/assistant/creation.py`, v2)
+
+La règle du §9 sexies (une liste de formulations, combinée à l'appel 3D du Cerveau) est remplacée par une
+analyse de la structure de la phrase.
+
+| Élément analysé | Effet |
+|---|---|
+| acte de langage | question d'explication, négation, ce qui a déjà été fait, hypothèse → rien |
+| verbe ou souhait de création | plus de 40 formes : « dessine-moi », « prépare », « ajoute », « j'aimerais », « il me faudrait », subjonctif, anglais |
+| objet | son nom (après les adjectifs) doit désigner une création 3D : « fais le point », « crée un fichier », « prépare un résumé » → rien |
+
+Elle a trois issues :
+- `create` : demande claire ;
+- `ambiguous` : question de capacité (« Sais-tu faire des avions ? »), report (« plus tard »), ajout à un
+  objet existant (« ajoute des roues à la voiture »), « refais… » ;
+- `none` : tout le reste.
+
+Elle a été écrite sur 129 messages de développement : les 100 messages déjà utilisés, les 5 exemples de
+l'utilisateur et des cas écrits pour chaque règle. Puis elle a été **figée** (empreinte SHA-256 vérifiée par
+le script de mesure). Ensuite seulement, j'ai écrit un jeu neuf de **120 messages jamais vus** : 50
+créations claires, 50 non-créations, 20 ambiguës. La règle de choix entre les variantes a été fixée avant la
+mesure : aucun lancement à tort, puis le plus de créations reconnues.
+
+Mesure avec le vrai Cerveau, en mode 3D, dans les conditions finales (outils et consigne Game Studio offerts).
+Pour les colonnes « à tort », les ambiguës se lancent seulement après confirmation.
+
+| Variante | Créations lancées | Non-créations lancées à tort | Ambiguës lancées à tort |
+|---|---|---|---|
+| appel 3D du Cerveau seul | 42 / 50 | 24 / 50 | 10 / 20 |
+| §9 sexies : Cerveau ET règle v1 | 29 / 50 | **3 / 50** | **1 / 20** |
+| **v2 seule (retenue)** | **48 / 50** (+1 proposée) | **0 / 50** | **0 / 20** (13 proposées) |
+| Cerveau ET v2 | 40 / 50 | 0 / 50 | 0 / 20 |
+
+- **Correction du §9 sexies.** Sur ce jeu plus large, la règle livrée n'était pas sans risque : elle lançait
+  une mission pour « Crée un fichier de notes », « Fais un résumé des modèles produits », « Crée un nouveau
+  projet pour mon jeu » et « Peux-tu créer des arbres ? ».
+- **Les 2 créations manquées par v2.**
+  - « Ajoute deux arbres et un banc au parc de mon projet » est jugée ajout à un objet existant : elle est
+    proposée, pas lancée.
+  - « I'd like a small red car. » venait d'une contraction mal écrite dans la règle. Je l'ai corrigée après
+    la mesure : sur ce jeu, v2 fait donc maintenant 49 / 50, mais ce chiffre n'est plus à l'aveugle.
+- **L'appel 3D du Cerveau ne décide plus.** Il est rapporté comme indice (`brain_3d_call`). Seul, il se
+  déclenche sur un message sur deux qui ne demande rien ; combiné à v2, il fait perdre 8 créations sans
+  rien gagner.
+
+### Le Cerveau propose, l'utilisateur lance (`apex/assistant/turns.py`, `apex/assistant/game_studio.py`)
+
+**Constat de politique.** Dans le moteur de politique d'APEX, `CREATE_MISSION` est réservé à l'humain
+(« jamais le CORE en autonomie »). Le lancement automatique du §9 sexies ne passait que par la permission du
+moteur d'outils. De son côté, Game Studio enregistre `created_by=HUMAN` pour toute mission.
+
+| Situation | Ce que fait APEX |
+|---|---|
+| **par défaut** : demande claire ou ambiguë | le Cerveau **propose** la mission dans l'Atelier 3D |
+| clic « Lancer la mission » | acte humain, vérifié par `PolicyEngine` (HUMAN, CREATE_MISSION) ; une seule mission par proposition (deux clics simultanés n'en lancent qu'une) ; le lancement est enregistré comme un **nouveau** message, car les messages ne sont jamais réécrits |
+| réglage « Lancement automatique des missions Game Studio » activé, demande claire | le Cerveau lance lui-même, au titre de cette autorisation permanente, quel que soit le moteur qui a rédigé la réponse |
+| demande ambiguë, même avec le lancement automatique | toujours proposée |
+| annulation | acte humain (HUMAN, CANCEL_MISSION), toujours permise |
+
+Le lancement automatique est tracé (`authorization: "lancement automatique permis"`, `source: "cerveau"`).
+Le garder est une décision à confirmer par l'utilisateur et par Codex (Issue #21).
+
+**Ce que voit l'utilisateur** (Atelier 3D) :
+- la disponibilité de Game Studio sur ce PC, lue par sa propre sonde (`probe()`), et ce qui manque, en
+  clair : Blender, planificateur Qwen, bibliothèques (dont `jsonschema`, non déclarée), GPU CUDA ;
+- les propositions, avec leur bouton ;
+- les missions : état, étapes, étapes bloquées, aperçus des rendus (images `view`, servies seulement pour
+  une mission de cette conversation), fichiers, bouton d'annulation ;
+- les refus de Game Studio, expliqués (`apex.assistant.game_studio.explain`), avec le code exact à côté.
+
+### Ébauches du Cerveau vérifiées (`apex/brain/studio3d.py`, `turns.model3d_mismatch`)
+
+Une ébauche paramétrique n'est plus écrite que pour une demande de création, et seulement si l'objet
+construit est celui que la demande nomme (`studio3d.matches_request`). Sinon c'est dit. En mode
+Automatique, la réponse va alors au moteur suivant (motif `model3d_mismatch`), comme pour le code au §9
+quinquies.
+
+Mesure sur les 137 appels 3D du vrai Cerveau relevés dans les trois jeux ci-dessus. Ces messages avaient
+déjà été vus : la mesure n'est pas à l'aveugle.
+
+| | Ébauches écrites | dont la bonne sorte d'objet |
+|---|---|---|
+| avant | 98 | 17 |
+| après | 17 | 17 |
+
+Parmi les 81 ébauches qui ne sont plus écrites :
+- un pick-up devenu fusil, une chaise devenue personnage ;
+- une voiture construite pour « Ne crée pas de voiture » ;
+- des modèles construits pour des questions.
+
+Couleur et taille ne sont pas vérifiées : une moto « verte » peut sortir noire.
+
+### Partage du GPU, côté Cerveau (`apex/models/gpu_handoff.py`)
+
+Le protocole est celui de l'Issue #21, accepté par Codex. Le détail est en tête du module et dans
+`docs/INTEGRATION_CERVEAU_GAME_STUDIO.md`.
+
+- **Bail.** Le Cerveau et le moteur intégré **tiennent** le bail `APEX_HOME/.apex/model-session.lock` tant
+  qu'ils sont sur CUDA, avec la même primitive que `resource_lease` de Game Studio.
+- **Demande du spécialiste** (`request_gpu(timeout_s, requester)`), dans l'ordre :
+  - les admissions CUDA se ferment ;
+  - les générations en cours se terminent, sans être coupées, dans le délai ;
+  - les modèles sont déchargés et la mémoire CUDA est mesurée ;
+  - le bail est rendu, et un accusé de réception est renvoyé.
+- **Délai dépassé** : rien n'est déchargé, et `released: false`.
+- **Pendant le prêt** : le Cerveau répond sur le processeur, et ses mesures le disent (`device_reason`).
+- **Reprise** : `return_gpu(requester)` rouvre les admissions ; le Cerveau revient sur CUDA au prochain
+  chargement.
+
+Tests :
+- 10 tests, dont l'exclusion mutuelle avec un autre processus (même primitive) ;
+- dans l'arbre d'intégration, avec le vrai `resource_lease` de Codex : jamais les deux à la fois, transfert
+  après l'accusé de réception, reprise.
+
+**Aucune mesure CUDA** : cet environnement n'a pas de GPU, et l'accusé le dit (`cuda.measured: false`).
+
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 
 Dans Ubuntu (WSL) :

@@ -76,7 +76,8 @@ function MetaLine({ message }: { message: Message }) {
   } else if (delegation) {
     const confidence = typeof delegation.confidence === "number" ? delegation.confidence.toFixed(2) : "?";
     const why = delegation.reason === "cannot_know" ? "il dit ne pas pouvoir le savoir"
-      : delegation.reason === "code_mismatch" ? "son code diverge de sa version Python" : `confiance ${confidence}`;
+      : delegation.reason === "code_mismatch" ? "son code diverge de sa version Python"
+      : delegation.reason === "model3d_mismatch" ? "son modèle 3D ne correspond pas à la demande" : `confiance ${confidence}`;
     parts.push(delegation.status === "delegated"
       ? `confié par le Cerveau APEX (${why})`
       : `Cerveau APEX peu sûr (${why}), aucun autre moteur disponible`);
@@ -103,16 +104,31 @@ export const GAME_STUDIO_REFUSALS: Record<string, string> = {
   cuda_unavailable_choose_cpu_explicitly:
     "aucun GPU CUDA sur ce PC ; le calcul sur processeur se choisit dans Paramètres > Outils",
   local_planner_model_missing: "le modèle planificateur local de Game Studio n'est pas installé",
+  limit: "une seule mission Game Studio par réponse",
+  shared_resource_profile_required: "le profil APEX (APEX_HOME) n'est pas défini pour partager le GPU",
+  external_graphics_workload_active: "Blender ou Unreal tourne déjà sur ce PC",
+  external_model_workload_active: "un autre serveur de modèle tourne déjà sur ce PC",
 };
+
+/** Un refus de Game Studio en clair : l'explication du backend, sinon la table connue, sinon le code. */
+export function explainRefusal(message: string | undefined | null, explanation?: string): string {
+  if (explanation) return explanation;
+  if (!message) return "échec sans détail";
+  const known = GAME_STUDIO_REFUSALS[message];
+  return known ? `${known} (${message})` : message;
+}
 
 /** Une ligne sur la délégation d'une création 3D à Game Studio par le Cerveau APEX. */
 export function gameStudioLine(delegation: NonNullable<NonNullable<Message["meta"]>["game_studio"]>): string {
+  const who = delegation.trigger === "utilisateur" ? "à votre demande" : "par le Cerveau APEX";
   if (delegation.launched && delegation.project_id) {
-    return `confié à Game Studio par le Cerveau APEX : mission ${delegation.project_id.slice(0, 8)} (${delegation.status ?? "?"})`;
+    return `confié à Game Studio ${who} : mission ${delegation.project_id.slice(0, 8)} (${delegation.status ?? "?"})`;
   }
   if (delegation.error) {
-    const known = GAME_STUDIO_REFUSALS[delegation.error.message];
-    return `Game Studio a refusé la mission : ${known ? `${known} (${delegation.error.message})` : delegation.error.message}`;
+    return `Game Studio a refusé la mission : ${explainRefusal(delegation.error.message, delegation.explanation)}`;
+  }
+  if (delegation.state === "proposed") {
+    return `mission Game Studio proposée, à confirmer dans l'Atelier 3D : ${delegation.reason ?? "demande à confirmer"}`;
   }
   return `non confié à Game Studio : ${delegation.reason ?? "raison inconnue"}`;
 }

@@ -9,11 +9,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { contrast, extractHexColors } from "../theme/contrast";
-import { assistantApi, errorMessage, type Message, type ToolStep } from "./api";
-import { keys, useSettings } from "./hooks";
-import { GAME_STUDIO_REFUSALS } from "./MessageItem";
+import { assistantApi, errorMessage, type GameStudioAvailability, type Message, type ToolStep } from "./api";
+import { keys } from "./hooks";
+import { explainRefusal } from "./MessageItem";
 import { IconFile, IconRefresh } from "./Icons";
 
 const euro = (value: unknown) =>
@@ -421,6 +422,16 @@ async function download(conversationId: string, path: string): Promise<void> {
 
 /** États après lesquels une mission Game Studio n'évolue plus (ses résultats sont alors lisibles). */
 const GAME_STUDIO_FINISHED = new Set(["review", "failed", "cancelled"]);
+const GAME_STUDIO_STATES: Record<string, string> = {
+  queued: "en file d'attente",
+  running: "en cours",
+  review: "terminée, à revoir",
+  technical_review: "revue technique",
+  failed: "échouée",
+  cancelled: "annulée",
+  blocked: "bloquée",
+};
+const stateLabel = (state: string) => GAME_STUDIO_STATES[state] ?? state;
 
 /** Missions lancées dans cette conversation : chaque appel de `game_studio.create`, réussi ou refusé. */
 function gameStudioLaunches(steps: ToolStep[]): { key: string; projectId: string | null; refusal: string | null }[] {
@@ -428,13 +439,35 @@ function gameStudioLaunches(steps: ToolStep[]): { key: string; projectId: string
     .filter((s) => s.tool === "game_studio.create")
     .map((s, i) => {
       const id = s.ok ? s.observation.output?.project_id : null;
-      const message = s.observation.error?.message ?? null;
-      const refusal = s.ok ? null : message ? (GAME_STUDIO_REFUSALS[message] ? `${GAME_STUDIO_REFUSALS[message]} (${message})` : message) : "échec";
+      const refusal = s.ok ? null : explainRefusal(s.observation.error?.message);
       return { key: typeof id === "string" ? id : `refus-${i}`, projectId: typeof id === "string" ? id : null, refusal };
     });
 }
 
-function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conversationId: string; projectId: string; canCancel: boolean }) {
+/** Missions que le Cerveau a PROPOSÉES et qui n'ont pas encore été lancées (une seule fois chacune). */
+function gameStudioProposals(messages: Message[]): { message: Message; request: string; reason: string }[] {
+  const launched = new Set(messages.map((m) => m.meta?.game_studio?.proposal_of).filter((id): id is string => !!id));
+  return messages
+    .filter((m) => m.meta?.game_studio?.state === "proposed" && !launched.has(m.id))
+    .map((m) => ({
+      message: m,
+      request: messages.find((u) => u.id === m.meta?.game_studio?.request_message_id)?.content ?? "",
+      reason: m.meta?.game_studio?.reason ?? "",
+    }));
+}
+
+function GameStudioPreview({ conversationId, projectId, digest, name }: { conversationId: string; projectId: string; digest: string; name: string }) {
+  const image = useQuery({
+    queryKey: ["assistant", "game-studio", conversationId, projectId, "preview", digest],
+    queryFn: () => assistantApi.gameStudioPreview(conversationId, projectId, digest),
+    staleTime: Infinity,
+  });
+  if (image.isLoading) return <div className="ax-model3d__preview ax-model3d__preview--loading" aria-label="Chargement du rendu" />;
+  if (image.isError || !image.data) return <p className="ax-inline-error">{errorMessage(image.error)}</p>;
+  return <img className="ax-model3d__preview" src={`data:${image.data.content_type};base64,${image.data.content_base64}`} alt={`Rendu ${name}`} />;
+}
+
+function GameStudioMissionCard({ conversationId, projectId }: { conversationId: string; projectId: string }) {
   const client = useQueryClient();
   const key = ["assistant", "game-studio", conversationId, projectId];
   const mission = useQuery({
@@ -447,6 +480,7 @@ function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conve
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
   const data = mission.data;
+  const views = (data?.results.artifacts ?? []).filter((a) => a.role === "view").slice(0, 4);
   return (
     <li className="ax-model3d ax-gs-mission">
       <div className="ax-model3d__body">
@@ -458,7 +492,7 @@ function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conve
         ) : (
           <>
             <p className="ax-model3d__summary">
-              État : <strong>{data.status.status}</strong>
+              État : <strong>{stateLabel(data.status.status)}</strong>
               {data.status.delivery_status ? ` · livraison : ${data.status.delivery_status}` : ""}
             </p>
             {data.status.steps.length > 0 && (
@@ -466,7 +500,7 @@ function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conve
                 {data.status.steps.map((step) => (
                   <li key={step.key}>
                     {step.key}
-                    {step.kind ? ` (${step.kind})` : ""} : {step.status}
+                    {step.kind ? ` (${step.kind})` : ""} : {stateLabel(step.status)}
                   </li>
                 ))}
               </ul>
@@ -478,16 +512,19 @@ function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conve
                 ))}
               </ul>
             )}
+            {views.map((v) => (
+              <GameStudioPreview key={v.hash} conversationId={conversationId} projectId={projectId} digest={v.hash} name={v.name} />
+            ))}
             {data.results.ready ? (
               <p className="ax-muted">
                 {data.results.artifact_count} fichier(s) produit(s){data.results.truncated ? " (liste tronquée)" : ""} :{" "}
-                {(data.results.artifacts ?? []).map((a) => `${a.name} (${a.role})`).join(", ")}. Ouvrez la page Game Studio pour les
-                voir et les télécharger.
+                {(data.results.artifacts ?? []).map((a) => `${a.name} (${a.role})`).join(", ")}.{" "}
+                <Link to="/game-studio">Ouvrir dans Game Studio</Link> pour les télécharger.
               </p>
             ) : (
               GAME_STUDIO_FINISHED.has(data.status.status) && <p className="ax-muted">Aucun fichier produit.</p>
             )}
-            {canCancel && !GAME_STUDIO_FINISHED.has(data.status.status) && (
+            {!GAME_STUDIO_FINISHED.has(data.status.status) && (
               <button type="button" className="ax-chip-btn" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
                 Annuler la mission
               </button>
@@ -500,18 +537,73 @@ function GameStudioMissionCard({ conversationId, projectId, canCancel }: { conve
   );
 }
 
-function GameStudioMissions({ conversationId, steps }: { conversationId: string; steps: ToolStep[] }) {
-  const settings = useSettings();
+function GameStudioProposal({ conversationId, message, request, reason, availability }: {
+  conversationId: string; message: Message; request: string; reason: string; availability: GameStudioAvailability | undefined;
+}) {
+  const client = useQueryClient();
+  const launch = useMutation({
+    mutationFn: () => assistantApi.launchGameStudio(conversationId, message.id),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.messages(conversationId) }),
+  });
+  const cpu = availability?.compute === "cpu";
+  return (
+    <li className="ax-model3d ax-gs-mission">
+      <div className="ax-model3d__body">
+        <h3>Mission proposée</h3>
+        <p className="ax-model3d__summary">
+          Le Cerveau propose de confier à Game Studio : « {request.length > 160 ? `${request.slice(0, 160)}…` : request} »
+        </p>
+        {reason && <p className="ax-muted">{reason}</p>}
+        <p className="ax-muted">
+          Une mission dure plusieurs minutes et utilise {cpu ? "le processeur (choix explicite)" : "le GPU"}. Le calcul se règle dans
+          Paramètres &gt; Outils.
+        </p>
+        {availability && availability.installed && !availability.ready && (
+          <ul className="ax-panel__notes">
+            {availability.missing.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
+        )}
+        <button type="button" className="ax-chip-btn" disabled={launch.isPending} onClick={() => launch.mutate()}>
+          Lancer la mission
+        </button>
+        {launch.isError && <p className="ax-inline-error" role="alert">{errorMessage(launch.error)}</p>}
+      </div>
+    </li>
+  );
+}
+
+function GameStudioMissions({ conversationId, messages, steps }: { conversationId: string; messages: Message[]; steps: ToolStep[] }) {
   const launches = useMemo(() => gameStudioLaunches(steps), [steps]);
-  if (launches.length === 0) return null;
+  const proposals = useMemo(() => gameStudioProposals(messages), [messages]);
+  const availability = useQuery({ queryKey: ["assistant", "game-studio", "availability"], queryFn: assistantApi.gameStudioAvailability, staleTime: 30_000 });
+  const report = availability.data;
+  if (launches.length === 0 && proposals.length === 0 && !report?.installed) return null;
   return (
     <section aria-label="Missions Game Studio">
       <h3 className="ax-gs-title">Game Studio</h3>
+      {report && (
+        <p className="ax-muted">
+          {report.ready ? "Prêt sur ce PC." : "Pas encore prêt sur ce PC."}{" "}
+          {report.auto_launch ? "Le Cerveau lance lui-même les demandes de création claires." : "Le Cerveau propose les missions ; vous les lancez."}
+        </p>
+      )}
+      {report && !report.ready && proposals.length === 0 && report.missing.length > 0 && (
+        <ul className="ax-panel__notes">
+          {report.missing.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      )}
       <ul className="ax-model3d-list">
+        {proposals.map((p) => (
+          <GameStudioProposal key={p.message.id} conversationId={conversationId} message={p.message} request={p.request} reason={p.reason}
+            availability={report} />
+        ))}
         {launches.map((launch) =>
           launch.projectId ? (
-            <GameStudioMissionCard key={launch.key} conversationId={conversationId} projectId={launch.projectId}
-              canCancel={settings.data?.tools.game_studio_missions ?? false} />
+            <GameStudioMissionCard key={launch.key} conversationId={conversationId} projectId={launch.projectId} />
           ) : (
             <li key={launch.key} className="ax-model3d ax-gs-mission">
               <p className="ax-inline-error">Game Studio a refusé la mission : {launch.refusal}</p>
@@ -551,7 +643,7 @@ export function Studio3DPanel({ conversationId, messages, liveSteps, notes }: {
           {error}
         </p>
       )}
-      <GameStudioMissions conversationId={conversationId} steps={steps} />
+      <GameStudioMissions conversationId={conversationId} messages={messages} steps={steps} />
       {workspace.isLoading ? (
         <p className="ax-muted">Lecture de l'espace de travail…</p>
       ) : workspace.isError ? (

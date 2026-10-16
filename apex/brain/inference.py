@@ -162,6 +162,9 @@ class BrainEngine:
         if weights not in ("dequantized", "q5_resident"):
             raise ValueError(f"mode de poids inconnu : {weights}")
         self.directory = directory
+        #: Périphérique DEMANDÉ (`auto`, `cpu`, `cuda`) ; `device` est celui du prochain chargement, choisi
+        #: par l'appelant (`place`, partage du GPU : `apex.models.gpu_handoff`).
+        self.requested_device = device
         self.device = pick_device(device)
         self.weights_mode = weights
         self.threads = threads
@@ -176,6 +179,11 @@ class BrainEngine:
     @property
     def loaded(self) -> bool:
         return self.model is not None
+
+    def place(self, device: str) -> None:
+        """Périphérique du prochain chargement ; sans effet sur un Cerveau déjà chargé."""
+        if self.model is None:
+            self.device = torch.device(device)
 
     def load(self) -> bool:
         """Charge si nécessaire ; vrai si le chargement vient d'avoir lieu. Contrôles d'intégrité de

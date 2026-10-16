@@ -60,7 +60,7 @@ export interface MessageMeta {
   tools_offered?: string[];
   tools_notes?: string[];
   /** Mode automatique : le Cerveau APEX, pas assez sûr de sa réponse, l'a confiée à un autre moteur (ou l'a gardée). */
-  delegation?: { from: string; reason?: "low_confidence" | "cannot_know" | "current_info_tool" | "current_info_no_tool" | "code_mismatch"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
+  delegation?: { from: string; reason?: "low_confidence" | "cannot_know" | "current_info_tool" | "current_info_no_tool" | "code_mismatch" | "model3d_mismatch"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
   /** Vérification croisée du code du Cerveau APEX par sa propre version Python, exécutées dans la sandbox. */
   crosscheck?: { language: string | null; status: "agree" | "disagree" | "answer_fails" | "unverifiable"; detail: string; example: { input: number[]; answer: unknown; python: unknown } | null };
   /** Mode 3D : demande de création reconnue par le Cerveau APEX et confiée à Game Studio (ou pourquoi pas). */
@@ -68,14 +68,37 @@ export interface MessageMeta {
 }
 
 export interface GameStudioDelegation {
-  trigger: "cerveau";
+  /** Qui a lancé (ou proposé) : le Cerveau pendant le tour, ou l'utilisateur d'un clic. */
+  trigger: "cerveau" | "utilisateur";
+  /** launched/refused : mission demandée à Game Studio ; proposed : à confirmer ; unavailable : Game Studio absent. */
+  state?: "launched" | "refused" | "proposed" | "unavailable";
   launched: boolean;
+  intent?: "create" | "ambiguous";
+  intent_reason?: string;
+  brain_3d_call?: boolean;
+  request_message_id?: string;
+  proposal_of?: string;
+  authorization?: string;
   project_id?: string | null;
   mission_id?: string | null;
   status?: string | null;
   error?: { code: string; message: string } | null;
-  /** Non lancée : Game Studio absent, ou missions non permises dans les Paramètres. */
+  /** Le refus de Game Studio expliqué en clair (le code exact est dans `error`). */
+  explanation?: string;
   reason?: string;
+}
+
+/** Game Studio sur ce PC, d'après sa propre sonde (`GET /assistant/game-studio/availability`). */
+export interface GameStudioAvailability {
+  installed: boolean;
+  ready: boolean;
+  missing: string[];
+  notes: string[];
+  auto_launch: boolean;
+  compute: "auto" | "cpu";
+  cuda_available?: boolean;
+  /** Partage du GPU avec les modèles principaux : bail tenu, prêté à un spécialiste. */
+  gpu?: { lease_held: boolean; lent_to: string | null; admissions_open: boolean; cuda_available: boolean; cuda_residents: string[] };
 }
 
 /** Mission Game Studio d'une conversation, lue par ses outils `game_studio.status` et `game_studio.results`. */
@@ -91,7 +114,7 @@ export interface GameStudioMission {
   results: {
     status: string;
     ready: boolean;
-    artifacts?: { name: string; hash: string; role: string; source: string }[];
+    artifacts?: { name: string; hash: string; role: string; source: string; job_id?: string }[];
     artifact_count?: number;
     truncated?: boolean;
     blocked?: { key: string; reason: string | null }[];
@@ -248,6 +271,14 @@ export const assistantApi = {
   gameStudioMission: (conversationId: string, projectId: string) =>
     data<GameStudioMission>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}`),
+  gameStudioAvailability: () => data<GameStudioAvailability>("/assistant/game-studio/availability"),
+  launchGameStudio: (conversationId: string, messageId: string) =>
+    data<{ message_id: string; content: string; meta: MessageMeta }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/launch`,
+      json("POST", { message_id: messageId })),
+  gameStudioPreview: (conversationId: string, projectId: string, digest: string) =>
+    data<{ content_type: string; size: number; content_base64: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/preview/${encodeURIComponent(digest)}`),
   cancelGameStudioMission: (conversationId: string, projectId: string) =>
     data<{ project_id: string; status: string }>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/cancel`,

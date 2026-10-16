@@ -64,6 +64,43 @@ LABELS = {
     "humanoid": "personnage",
 }
 _STEMS = {"épée": "epee"}
+#: Mots qui NOMMENT chaque sorte dans une demande (français, anglais) : l'ébauche n'est présentée comme la
+#: réponse que si l'objet demandé est celui construit (`matches_request`). Mesuré : sur des demandes hors
+#: répertoire, le Cerveau construit souvent une sorte sans rapport (docs/CERVEAU_APEX_V2.md §9 septies).
+REQUEST_NAMES: dict[str, tuple[str, ...]] = {
+    "car": ("voiture", "voitures", "auto", "autos", "automobile", "berline", "cabriolet", "coupé",
+            "bagnole", "car", "cars", "sedan"),
+    "truck": ("camion", "camions", "camionnette", "poids lourd", "pick-up", "pickup", "truck", "trucks",
+              "lorry"),
+    "tank": ("char", "chars", "tank", "tanks", "blindé"),
+    "motorbike": ("moto", "motos", "motocyclette", "scooter", "motorbike", "motorcycle"),
+    "sword": ("épée", "épées", "sabre", "glaive", "katana", "sword", "swords"),
+    "axe": ("hache", "haches", "axe", "axes"),
+    "rifle": ("fusil", "fusils", "carabine", "rifle", "rifles", "sniper"),
+    "pistol": ("pistolet", "pistolets", "revolver", "pistol", "handgun"),
+    "humanoid": ("personnage", "personnages", "humanoïde", "héros", "guerrier", "guerrière", "chevalier",
+                 "soldat", "magicien", "sorcier", "character", "humanoid", "hero", "warrior", "knight",
+                 "soldier", "wizard"),
+}
+_REQUEST_PATTERNS = {
+    kind: re.compile(r"(?<![\w-])(?:" + "|".join(re.escape(n) for n in names) + r")(?![\w])")
+    for kind, names in REQUEST_NAMES.items()}
+
+
+def requested_kinds(text: str) -> set[str]:
+    """Les sortes NOMMÉES dans une demande (« une moto noire » → {motorbike})."""
+    lowered = text.replace("\u2019", "'").lower()
+    return {kind for kind, pattern in _REQUEST_PATTERNS.items() if pattern.search(lowered)}
+
+
+def matches_request(expression: str, request: str) -> bool:
+    """L'ébauche construite par cet appel est-elle l'objet demandé ? Faux pour un appel illisible, pour
+    une autre sorte que celle demandée, ou pour une demande qui ne nomme aucune sorte du répertoire."""
+    try:
+        kind = parse(expression).kind
+    except Error3D:
+        return False
+    return kind in requested_kinds(request)
 BUILDS = {"slim": "mince", "normal": "normal", "strong": "costaud"}
 #: Arguments acceptés par générateur (en plus de la sorte, premier argument ou `kind=`).
 ARGUMENTS = {
