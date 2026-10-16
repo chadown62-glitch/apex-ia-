@@ -1,0 +1,66 @@
+{
+  "prompt": "Return ONLY JSON: {\"steps\":[{\"key\":\"x\",\"kind\":\"vehicle|building|chair|assemble|unreal_handoff|unsupported\",\"description\":\"specific work\",\"depends_on\":[]}],\"unmet_requirements\":[]}. These are the EXACT fields; unmet_requirements is an array of short strings. Create one independent vehicle, building or chair step per distinct requested asset. Buildings include facades, garages and shops. Chairs include other seating. Every asset step already includes materials and four renders; no separate view, render, material or lighting steps. If 2+ assets, add one assemble step depending on all assets. Assets have no dependencies. At most 5 assets and 8 steps; order by dependencies. Unknown requested components use unsupported with no dependencies. Never invent missing reference images. No file paths or code. Do not include unreal_handoff or mention Unreal. User request: Cr\u00e9e une vitrine de fleuriste de quartier avec un fauteuil d\u2019accueil et assemble un d\u00e9cor de rue pour pr\u00e9senter le magasin.. Tool: blender.",
+  "attempts": [
+    {
+      "number": 1,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"1\",\n      \"kind\": \"building\",\n      \"description\": \"Create a flower shop facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"2\",\n      \"kind\": \"chair\",\n      \"description\": \"Create an indoor seating chair\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"3\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the flower shop decor\",\n      \"depends_on\": [\"1\", \"2\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 242,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 131,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 33.634,
+        "facts": {
+          "id": "chatcmpl-a9aedc90-264b-4ee9-9d2f-d1f81f230451",
+          "created": 1792151891
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"1\",\n      \"kind\": \"building\",\n      \"description\": \"Create a flower shop facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"2\",\n      \"kind\": \"chair\",\n      \"description\": \"Create an indoor seating chair\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"3\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the flower shop decor\",\n      \"depends_on\": [\"1\", \"2\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```"
+    }
+  ],
+  "accepted": true,
+  "status": "validated",
+  "plan": {
+    "schema_version": 1,
+    "steps": [
+      {
+        "key": "task_1",
+        "kind": "building",
+        "description": "Create a flower shop facade",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "task_2",
+        "kind": "chair",
+        "description": "Create an indoor seating chair",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "task_3",
+        "kind": "assemble",
+        "description": "Assemble the flower shop decor",
+        "depends_on": [
+          "task_1",
+          "task_2"
+        ],
+        "status": "available_unqualified",
+        "reason": null
+      }
+    ],
+    "unmet_requirements": [],
+    "estimated_minimum_s": 1200,
+    "feasible_steps": 3,
+    "blocked_steps": 0,
+    "fully_feasible": true
+  }
+}

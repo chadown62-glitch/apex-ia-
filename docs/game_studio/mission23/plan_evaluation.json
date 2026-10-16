@@ -1,0 +1,154 @@
+{
+  "scope": "Actual local Qwen outputs revalidated under final bounded schema; original raw traces retained outside git. No Blender execution claimed by these plan evaluations.",
+  "plans": [
+    {
+      "request": "Crée deux coupés sportifs distincts devant une galerie urbaine avec un fauteuil de terrasse; assemble la scène.",
+      "trace_sha256": "455a9b3bc4b30fba7ded41e1c421f1c2dba81cd5bf8eef77a28470858d55cb09",
+      "original_probe_status": "validated",
+      "attempts": [
+        {
+          "number": 1,
+          "validation": "accepted"
+        }
+      ],
+      "accepted_revalidation": {
+        "attempt": 1,
+        "raw_sha256": "b17e3328164862aa2f5888866ebb635b51be518aa2d23b4f144d9a977e96ffdc",
+        "plan": {
+          "schema_version": 1,
+          "feasibility_scope": "DAG, resource budget and known specialist capability; objective coverage is not semantically verified",
+          "steps": [
+            {
+              "key": "car1",
+              "kind": "vehicle",
+              "description": "Create a distinct sports car model",
+              "depends_on": [],
+              "status": "available_unqualified",
+              "reason": null
+            },
+            {
+              "key": "car2",
+              "kind": "vehicle",
+              "description": "Create another distinct sports car model",
+              "depends_on": [],
+              "status": "available_unqualified",
+              "reason": null
+            },
+            {
+              "key": "garage",
+              "kind": "building",
+              "description": "Create a garage facade for the cars",
+              "depends_on": [],
+              "status": "available_unqualified",
+              "reason": null
+            },
+            {
+              "key": "terrace_chair",
+              "kind": "chair",
+              "description": "Create a terrace chair model",
+              "depends_on": [],
+              "status": "available_unqualified",
+              "reason": null
+            },
+            {
+              "key": "assemble_scene",
+              "kind": "assemble",
+              "description": "Assemble the scene with both cars, garage, and terrace chair",
+              "depends_on": [
+                "car1",
+                "car2",
+                "garage",
+                "terrace_chair"
+              ],
+              "status": "available_unqualified",
+              "reason": null
+            }
+          ],
+          "unmet_requirements": [],
+          "estimated_minimum_s": 2040,
+          "feasible_steps": 5,
+          "blocked_steps": 0,
+          "fully_feasible": true
+        }
+      }
+    },
+    {
+      "request": "Modélise un fauteuil de lecture autonome avec quatre rendus et des matériaux réalistes.",
+      "trace_sha256": "1a305acb6d1c47f3eac5b83c70ef9eb237a8dda96ae19b166b894ec0be17d678",
+      "original_probe_status": "validated",
+      "attempts": [
+        {
+          "number": 1,
+          "validation": "accepted"
+        }
+      ],
+      "accepted_revalidation": {
+        "attempt": 1,
+        "raw_sha256": "668d50adfd1f475fa93e400ce000b9c9c8df9239439992c4a082ee54a94cdfea",
+        "plan": {
+          "schema_version": 1,
+          "feasibility_scope": "DAG, resource budget and known specialist capability; objective coverage is not semantically verified",
+          "steps": [
+            {
+              "key": "fauteuil",
+              "kind": "chair",
+              "description": "Modélise un fauteuil de lecture autonome avec quatre rendus et des matériaux réalistes.",
+              "depends_on": [],
+              "status": "available_unqualified",
+              "reason": null
+            }
+          ],
+          "unmet_requirements": [],
+          "estimated_minimum_s": 660,
+          "feasible_steps": 1,
+          "blocked_steps": 0,
+          "fully_feasible": true
+        }
+      }
+    },
+    {
+      "request": "Construis une façade de librairie et prépare son import dans Unreal Engine 5 avec un contrôle des limitations du moteur.",
+      "trace_sha256": "c737d93647d5759ab2eda4f50e931ec8afa1998ec775aafc3fcad9563c8c10e8",
+      "original_probe_status": "rejected",
+      "attempts": [
+        {
+          "number": 1,
+          "validation": "accepted"
+        }
+      ],
+      "accepted_revalidation": {
+        "attempt": 1,
+        "raw_sha256": "60ed7789fd458ec1bb128f761901c25050f7f95cd5280dbf48621dcd6d19570f",
+        "plan": {
+          "schema_version": 1,
+          "feasibility_scope": "DAG, resource budget and known specialist capability; objective coverage is not semantically verified",
+          "steps": [
+            {
+              "key": "library_facade",
+              "kind": "building",
+              "description": "Construct a library facade",
+              "depends_on": [],
+              "status": "available_unqualified",
+              "reason": null
+            },
+            {
+              "key": "unreal_handoff_library_facade",
+              "kind": "unreal_handoff",
+              "description": "Hand off the library facade to Unreal Engine 5 for import and control of engine limitations",
+              "depends_on": [
+                "library_facade"
+              ],
+              "status": "blocked_dependency",
+              "reason": "real_unreal_editor_validation_unavailable"
+            }
+          ],
+          "unmet_requirements": [],
+          "estimated_minimum_s": 660,
+          "feasible_steps": 1,
+          "blocked_steps": 1,
+          "fully_feasible": false
+        }
+      }
+    }
+  ]
+}

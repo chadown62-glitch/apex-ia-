@@ -205,6 +205,79 @@ def run(args):
     if plan and plan["family"] != args.family:
         raise ValueError("plan_family_mismatch")
     trace = apply_operations(plan, add_component) if plan else []
+    if args.contract_wheels:
+        if args.family != "vehicle" or not args.input:
+            raise ValueError("vehicle_contract_repair_requires_existing_vehicle")
+        slots = {
+            "front_left": "wheel_front_left",
+            "front_right": "wheel_front_right",
+            "rear_left": "wheel_rear_left",
+            "rear_right": "wheel_rear_right",
+        }
+        wheels = []
+        for slot, name in slots.items():
+            obj = bpy.data.objects.get("tyre_" + slot)
+            if obj is None or obj.type != "MESH" or obj.parent is not None:
+                raise ValueError("vehicle_wheel_source_missing:" + slot)
+            obj.name = name
+            obj.rotation_euler.x = -3.141592653589793 / 2
+            obj["wheel_slot"] = name
+            for component in list(bpy.data.objects):
+                if component.type == "MESH" and component.name.startswith(
+                    ("rim_" + slot, "hub_" + slot, "spoke_" + slot + "_")
+                ):
+                    world = component.matrix_world.copy()
+                    component.parent = obj
+                    component.matrix_world = world
+            wheels.append(
+                {
+                    "object": name,
+                    "center_m": list(obj.location),
+                    "radius_m": 0.355,
+                    "spin_axis_local": [0, 0, 1],
+                    "spin_axis_blender_world": [0, 1, 0],
+                }
+            )
+        bpy.context.view_layer.update()
+        points = [
+            obj.matrix_world @ Vector(corner)
+            for obj in bpy.data.objects
+            if obj.type == "MESH" and obj.name != "studio_floor"
+            for corner in obj.bound_box
+        ]
+        lower = [min(v[i] for v in points) for i in range(3)]
+        upper = [max(v[i] for v in points) for i in range(3)]
+        paint = bpy.data.materials["petrol_paint"].node_tree.nodes["Principled BSDF"].inputs
+        color = list(paint["Base Color"].default_value[:3])
+        front = next(w for w in wheels if w["object"] == "wheel_front_left")
+        rear = next(w for w in wheels if w["object"] == "wheel_rear_left")
+        first_wheel = bpy.data.objects["wheel_front_left"]
+        wheel_width = (
+            max(v.co.z for v in first_wheel.data.vertices) - min(v.co.z for v in first_wheel.data.vertices)
+        ) * first_wheel.scale.z
+        (output / "vehicle-contract.json").write_text(
+            json.dumps(
+                {
+                    "wheels": wheels,
+                    "spec": {
+                        "length_m": round(upper[0] - lower[0], 4),
+                        "width_m": round(upper[1] - lower[1], 4),
+                        "height_m": round(upper[2] - lower[2], 4),
+                        "wheelbase_m": round(front["center_m"][0] - rear["center_m"][0], 4),
+                        "wheel_radius_m": 0.355,
+                        "wheel_width_m": round(wheel_width, 4),
+                        "mass_kg": 1200,
+                        "body_color": color,
+                        "paint_metallic": float(paint["Metallic"].default_value),
+                        "paint_roughness": float(paint["Roughness"].default_value),
+                    },
+                    "measurement_scope": (
+                        "bounds, wheel centers and material from Blender; mass is a design estimate"
+                    ),
+                },
+                indent=2,
+            )
+        )
     bpy.context.view_layer.update()
     (output / "hierarchy-before.json").write_text(json.dumps(before, indent=2))
     (output / "hierarchy.json").write_text(json.dumps(hierarchy(), indent=2))
@@ -214,7 +287,10 @@ def run(args):
     for o in scene.objects:
         if o.type == "MESH" and o.name != "studio_floor" and o.get("apex_studio_part"):
             o.select_set(True)
-    bpy.ops.export_scene.gltf(filepath=str(output / "asset.glb"), export_format="GLB", use_selection=True)
+    bpy.ops.export_scene.gltf(
+        filepath=str(output / "asset.glb"), export_format="GLB", use_selection=True,
+        export_extras=args.contract_wheels,
+    )
     settings = {
         "device": scene.cycles.device,
         "denoising": scene.cycles.use_denoising,
@@ -253,6 +329,7 @@ if __name__ == "__main__":
     parser.add_argument("--input", type=Path)
     parser.add_argument("--parent-sha")
     parser.add_argument("--plan", type=Path)
+    parser.add_argument("--contract-wheels", action="store_true")
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1 :])
     if args.calibration:
         calibrate(args.output)

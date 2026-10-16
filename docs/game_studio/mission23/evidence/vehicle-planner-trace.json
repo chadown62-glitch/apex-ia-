@@ -1,0 +1,71 @@
+{
+  "prompt": "Return ONLY JSON: {\"steps\":[{\"key\":\"x\",\"kind\":\"vehicle|building|chair|assemble|unreal_handoff|unsupported\",\"description\":\"specific work\",\"depends_on\":[]}],\"unmet_requirements\":[]}. These are the EXACT fields; unmet_requirements is an array of short strings. Create one independent vehicle, building or chair step per distinct requested asset. Buildings include facades, garages and shops. Chairs include other seating. Every asset step already includes materials and four renders; no separate view, render, material or lighting steps. If 2+ assets, add one assemble step depending on all assets. Assets have no dependencies. At most 5 assets and 8 steps; order by dependencies. Unknown requested components use unsupported with no dependencies. Never invent missing reference images. No file paths or code. Do not include unreal_handoff or mention Unreal. User request: Cr\u00e9e une voiture sportive d\u00e9taill\u00e9e avec carrosserie, quatre roues identifiables, mat\u00e9riaux r\u00e9alistes et quatre rendus.. Tool: blender.",
+  "attempts": [
+    {
+      "number": 1,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car_body\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a detailed car body with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"wheels\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create identifiable wheels with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assemble_car\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the car body with the wheels.\",\n      \"depends_on\": [\"car_body\", \"wheels\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 240,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 148,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 36.367,
+        "facts": {
+          "id": "chatcmpl-2792a694-84b8-4641-887d-f518b0d36df8",
+          "created": 1792152871
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car_body\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a detailed car body with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"wheels\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create identifiable wheels with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assemble_car\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the car body with the wheels.\",\n      \"depends_on\": [\"car_body\", \"wheels\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+      "rejection": "ValueError: vehicle_components_must_remain_inside_one_vehicle_asset"
+    },
+    {
+      "number": 2,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"vehicle\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a detailed sports car with body, four identifiable wheels, realistic materials, and four renders.\",\n      \"depends_on\": []\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 260,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 68,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 13.431,
+        "facts": {
+          "id": "chatcmpl-d6708806-16e1-451d-bd8a-8800a566221b",
+          "created": 1792152908
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"vehicle\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a detailed sports car with body, four identifiable wheels, realistic materials, and four renders.\",\n      \"depends_on\": []\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```"
+    }
+  ],
+  "accepted": true,
+  "status": "validated",
+  "plan": {
+    "schema_version": 1,
+    "feasibility_scope": "DAG, resource budget and known specialist capability; objective coverage is not semantically verified",
+    "steps": [
+      {
+        "key": "vehicle",
+        "kind": "vehicle",
+        "description": "Create a detailed sports car with body, four identifiable wheels, realistic materials, and four renders.",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      }
+    ],
+    "unmet_requirements": [],
+    "estimated_minimum_s": 660,
+    "feasible_steps": 1,
+    "blocked_steps": 0,
+    "fully_feasible": true
+  }
+}

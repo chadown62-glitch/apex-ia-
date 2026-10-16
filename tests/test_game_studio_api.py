@@ -14,8 +14,11 @@ from tests.api_test_support import authed_client
 
 def request() -> dict:
     return {
-        "creation_type": "vehicule", "style": "realiste", "quality": "prototype",
-        "tool": "auto", "description": "Une voiture sportive réaliste avec quatre rendus détaillés.",
+        "creation_type": "vehicule",
+        "style": "realiste",
+        "quality": "prototype",
+        "tool": "auto",
+        "description": "Une voiture sportive réaliste avec quatre rendus détaillés.",
     }
 
 
@@ -27,9 +30,7 @@ def test_game_studio_routes_require_existing_api_token():
 
 
 def test_unimplemented_unreal_tool_is_rejected_before_mission():
-    response = authed_client().post(
-        "/api/v1/game-studio/missions", json={**request(), "tool": "unreal"}
-    )
+    response = authed_client().post("/api/v1/game-studio/missions", json={**request(), "tool": "unreal"})
     assert response.status_code == 422
     assert "not_implemented" in response.text
 
@@ -38,10 +39,16 @@ def test_image_reference_mime_is_verified_from_bytes():
     image = Image.new("RGB", (2, 2))
     out = io.BytesIO()
     image.save(out, format="PNG")
-    payload = {**request(), "references": [{
-        "content_type": "image/jpeg", "data_base64": base64.b64encode(out.getvalue()).decode(),
-        "provenance": "User supplied reference",
-    }]}
+    payload = {
+        **request(),
+        "references": [
+            {
+                "content_type": "image/jpeg",
+                "data_base64": base64.b64encode(out.getvalue()).decode(),
+                "provenance": "User supplied reference",
+            }
+        ],
+    }
     response = authed_client().post("/api/v1/game-studio/missions", json=payload)
     assert response.status_code == 422
     assert "reference_type_mismatch" in response.text
@@ -70,25 +77,46 @@ def test_project_routes_require_existing_api_token():
     assert client.get("/api/v1/game-studio/projects/not-a-uuid/artifacts/bad").status_code == 401
 
 
-def test_project_rejects_unavailable_tool_before_launch():
+def test_project_preserves_unreal_request_for_planner(monkeypatch):
+    from apex.api.routes import game_studio
+
+    class Capture:
+        def create_dynamic(self, payload, references):
+            assert payload["tool"] == "unreal" and payload["plan_only"] is True and not references
+            return {"id": "p", "status": "queued"}
+
+    monkeypatch.setattr(game_studio, "_projects", lambda: Capture())
     response = authed_client().post(
         "/api/v1/game-studio/projects",
-        json={**request(), "creation_type": "environnement", "tool": "unreal"},
+        json={**request(), "creation_type": "environnement", "tool": "unreal", "plan_only": True},
     )
-    assert response.status_code == 422
-    assert "garage_recipe_requires_realistic_blender_environment" in response.text
+    assert response.status_code == 200
 
 
-def test_project_does_not_claim_to_use_unread_visual_references():
+def test_project_preserves_unread_visual_reference_provenance(monkeypatch):
+    from apex.api.routes import game_studio
+
+    class Capture:
+        def create_dynamic(self, payload, references):
+            assert len(references) == 1 and references[0][2] == "User supplied reference"
+            return {"id": "p", "status": "queued"}
+
+    monkeypatch.setattr(game_studio, "_projects", lambda: Capture())
     response = authed_client().post(
         "/api/v1/game-studio/projects",
-        json={**request(), "creation_type": "environnement", "references": [{
-            "content_type": "text/plain", "data_base64": base64.b64encode(b"reference").decode(),
-            "provenance": "User supplied reference",
-        }]},
+        json={
+            **request(),
+            "creation_type": "environnement",
+            "references": [
+                {
+                    "content_type": "text/plain",
+                    "data_base64": base64.b64encode(b"reference").decode(),
+                    "provenance": "User supplied reference",
+                }
+            ],
+        },
     )
-    assert response.status_code == 422
-    assert "garage_visual_references_not_consumed_by_controller" in response.text
+    assert response.status_code == 200
 
 
 def test_scene_revision_requires_an_existing_project(monkeypatch):

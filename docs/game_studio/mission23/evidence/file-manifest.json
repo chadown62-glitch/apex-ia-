@@ -1,0 +1,295 @@
+{
+  "scope": "Artifacts copied from isolated actual Qwen, Blender, Engineer, API and Chromium runs; not simulated",
+  "files": [
+    {
+      "path": "api-ui-check.json",
+      "sha256": "310317bd6bc2eb0de7c837c043afef2537d2aba4b04d12b4a4871e56b68ac9d5",
+      "bytes": 768
+    },
+    {
+      "path": "assembly-build.resources.json",
+      "sha256": "204a25c92c9fe51efec8ab159173f78b37c9b8dc94768eb5e12deb2219bcb78e",
+      "bytes": 72819
+    },
+    {
+      "path": "assembly-reopen.resources.json",
+      "sha256": "265bb8acdfe85093de089611daf59ed7aa69c7cf3ab9ef1ca87f6177915c7ef9",
+      "bytes": 2817
+    },
+    {
+      "path": "assets/building/asset.blend",
+      "sha256": "0df60b219537ef5a45152037eeca81d8a15eb68e2005c76e185b89d56ff700a7",
+      "bytes": 3291020
+    },
+    {
+      "path": "assets/building/asset.glb",
+      "sha256": "b0adadd5438d8ac502b8869efa9bc5e8175ae2f5ca0b3355a9f19ce23cc04707",
+      "bytes": 1854976
+    },
+    {
+      "path": "assets/building/front.png",
+      "sha256": "4baff66f294de5040f5cac6ce3542d5a1c57ab5a24a0f84e6530cfb490e186a5",
+      "bytes": 936181
+    },
+    {
+      "path": "assets/building/front_three_quarter.png",
+      "sha256": "e0817d222dfaecf2a1a5b6af3036e8956036cee276025956f8f5c3b0c2acd416",
+      "bytes": 1118304
+    },
+    {
+      "path": "assets/building/rear_three_quarter.png",
+      "sha256": "1b00eb9091a5c2429ff293ba5693373eca5df972667ac18a4af7ecb185a19792",
+      "bytes": 954394
+    },
+    {
+      "path": "assets/building/side.png",
+      "sha256": "bda6c4631e0faed3eb50e715dbb2f60ab8b480df3b266d8f499de0983ed2b0bd",
+      "bytes": 990829
+    },
+    {
+      "path": "assets/chair/asset.blend",
+      "sha256": "d8d8fa64b18f7acc8392fb35f744b7cba86689f0b3191ac56421ce511506f2b3",
+      "bytes": 2192436
+    },
+    {
+      "path": "assets/chair/asset.glb",
+      "sha256": "2d2c4a12a14a228773a2ec4285cf7ea7f26d6a454279ebde8cdf0b2086d3d543",
+      "bytes": 502848
+    },
+    {
+      "path": "assets/chair/front.png",
+      "sha256": "34202c433634b65aa1bd5a44d7bb7e6443e0523e85ee53c17ac5f28c5e126bae",
+      "bytes": 753862
+    },
+    {
+      "path": "assets/chair/front_three_quarter.png",
+      "sha256": "1228fdabb6a5ac971ef74a4d062a483f2b80e51b515b99cc901d0846e7c56e7a",
+      "bytes": 1017681
+    },
+    {
+      "path": "assets/chair/rear_three_quarter.png",
+      "sha256": "5eaf4469ad30c9199c76a0b5abe1fece4e082fdaebe58dea8bf580626b8df5b3",
+      "bytes": 1009655
+    },
+    {
+      "path": "assets/chair/side.png",
+      "sha256": "3fd3f570877c97fc37ea77cb72a5fd5880f743d4efd61c2e555f1dfe98045762",
+      "bytes": 953424
+    },
+    {
+      "path": "building-after/front_three_quarter.png",
+      "sha256": "e0817d222dfaecf2a1a5b6af3036e8956036cee276025956f8f5c3b0c2acd416",
+      "bytes": 1118304
+    },
+    {
+      "path": "building-after/judge-report.json",
+      "sha256": "7ae895758f5cff7071ac4542bc54d9c4e6e3b9575ac80d6b76b7fcc32eed8c9f",
+      "bytes": 2491
+    },
+    {
+      "path": "building-before/front_three_quarter.png",
+      "sha256": "d331b417f44236397fde89fc250c29566e7383fca8ed7c7c307a2e76ea0600cf",
+      "bytes": 1118158
+    },
+    {
+      "path": "building-before/judge-report.json",
+      "sha256": "d882fb044d1894b724e7ed3b6abd86ad0b69c381f211798965bf602d4219f478",
+      "bytes": 3796
+    },
+    {
+      "path": "building-correction-plan.json",
+      "sha256": "ac8f68ef430e00cd56b305398e5e7330af378242490e8eda9272490ea429d74d",
+      "bytes": 6455
+    },
+    {
+      "path": "building-receipt.json",
+      "sha256": "70216f11b159190bc492080404cdc589aea5238b65d26316259e61f1259129a2",
+      "bytes": 19190
+    },
+    {
+      "path": "chair-after/front_three_quarter.png",
+      "sha256": "1228fdabb6a5ac971ef74a4d062a483f2b80e51b515b99cc901d0846e7c56e7a",
+      "bytes": 1017681
+    },
+    {
+      "path": "chair-after/judge-report.json",
+      "sha256": "278a0c1d591d7f018abfbaa3476b1ff83708293d7dfdb91d15f404d00f1ca822",
+      "bytes": 6518
+    },
+    {
+      "path": "chair-before/front_three_quarter.png",
+      "sha256": "e26b8c605aa20c8f3111b8cca78af906ab24cc815a74a8ee52d65bd44dc6076f",
+      "bytes": 1061776
+    },
+    {
+      "path": "chair-before/judge-report.json",
+      "sha256": "762656f8c2198c451971976bdc6ea7a71849b444d77ce3df51b105418251bc5e",
+      "bytes": 6517
+    },
+    {
+      "path": "chair-receipt.json",
+      "sha256": "8e76fa85c487dfc7dc08d8d0f233a975e32af857eaf37c79ae308fb9642534c6",
+      "bytes": 19845
+    },
+    {
+      "path": "demo-planner-trace.json",
+      "sha256": "a0b647c3fd5d193b400df89592d4f83b0f409df6f794a7139d2cd7555e86a3d1",
+      "bytes": 3643
+    },
+    {
+      "path": "hardware.json",
+      "sha256": "97e31c33cb9643981e6004a976dcc5929a035d6a2e723630ca064b08dcd5ef83",
+      "bytes": 699
+    },
+    {
+      "path": "project-receipt.json",
+      "sha256": "49c7e120f8f46034510f39716de260d54dd0c4e52d47a390a7a8e8681c9694ae",
+      "bytes": 84104
+    },
+    {
+      "path": "rejected-vehicle-component-plan.json",
+      "sha256": "0c371a9219eb5eff9be61602b45eeb1eb64003103840fc2bddd7c62053a7bdb9",
+      "bytes": 4124
+    },
+    {
+      "path": "scene/engineer-handoff.json",
+      "sha256": "e756cb6c04e709026e9de0bbc94c051d55145ba2217dca2d6b610a0f84e1bd37",
+      "bytes": 317
+    },
+    {
+      "path": "scene/framing-report.json",
+      "sha256": "e4d089b886909422ad6cb2beb03090a34cb9554a6daaf2f29a7afdf7620fff3a",
+      "bytes": 1739
+    },
+    {
+      "path": "scene/front_three_quarter.png",
+      "sha256": "4fcef88aa5072d78a03acad0976a8464442da7a6b01d4a3f6e8d681ca7c96e59",
+      "bytes": 1011150
+    },
+    {
+      "path": "scene/garage.blend",
+      "sha256": "77e5759d89148ab258f6c8f3e1b0324b9ea03983280bd386d21f22dba99056a9",
+      "bytes": 6524856
+    },
+    {
+      "path": "scene/garage.glb",
+      "sha256": "2a609abbbf4f295d071cbf139db953cd4b03c35be9c8bcd4abf57be8ed7594bc",
+      "bytes": 2366212
+    },
+    {
+      "path": "scene/judge-report.json",
+      "sha256": "5c45f5b5477bd83e8e4ff005f47047ff0106e8021a6e5bab54b635db4103a31d",
+      "bytes": 2844
+    },
+    {
+      "path": "scene/manifest.json",
+      "sha256": "4668e444785990e1d31bea32eb1c351d433c316c381965f3141a3a7bbee85cd6",
+      "bytes": 1647
+    },
+    {
+      "path": "scene/rear_three_quarter.png",
+      "sha256": "7a77b8717187dde213e0992c5ac9694769db2a305b3bd3f1608b73e0d9af2b18",
+      "bytes": 934359
+    },
+    {
+      "path": "scene/reopen-report.json",
+      "sha256": "49c8405bdd92f4aa4eb2548546d5ca9b785723e6899089b3e2402ad58dcc1f6e",
+      "bytes": 267
+    },
+    {
+      "path": "scene/side.png",
+      "sha256": "1cf06ef7e633d6a0525beab193b5d43d7a981533b5fb9117bb3587b83520c7b6",
+      "bytes": 982381
+    },
+    {
+      "path": "scene/top.png",
+      "sha256": "aae41717ed2c144d9563c1e50a537d7bd620ecd033d37bc24ce7329857f152cb",
+      "bytes": 1058250
+    },
+    {
+      "path": "ui-project.png",
+      "sha256": "814a97bff44e6215befa6b7623d1bd2801508c4a2e1439e88d123bfd1536ddba",
+      "bytes": 512576
+    },
+    {
+      "path": "vehicle-integrated/api-ui-check.json",
+      "sha256": "9bdaafba64c3a2cd94eec3ef517ac7d98e9a1e6a15d35cefb91102993b18bd72",
+      "bytes": 512
+    },
+    {
+      "path": "vehicle-integrated/before-engineer.json",
+      "sha256": "0aa957595be3813410e1f87969fd3098c078f50377d794e1c5a9c60fadbdef4f",
+      "bytes": 239
+    },
+    {
+      "path": "vehicle-integrated/before.png",
+      "sha256": "42c71753cf3786aeb4c3d3ac64678ff8011fa350e4e11942218560a95645d32e",
+      "bytes": 967929
+    },
+    {
+      "path": "vehicle-integrated/engineer-report-extra-check.json",
+      "sha256": "4cfeefef859d2a5088f10d33cce017f1bc90ddfea6f0647f5336708f58cff463",
+      "bytes": 6312
+    },
+    {
+      "path": "vehicle-integrated/engineer-report.json",
+      "sha256": "4f4ab41172c2cb5b67fc02ca1f79d3df18d24ebcb0ac08b3aad166c1a1232fd8",
+      "bytes": 6123
+    },
+    {
+      "path": "vehicle-integrated/front.png",
+      "sha256": "981540d8bd4d20fc359f8b7620e9d8b2bee9c116ac47e27fa257d2cbf038d22b",
+      "bytes": 718118
+    },
+    {
+      "path": "vehicle-integrated/front_three_quarter.png",
+      "sha256": "d1bc9155da63c08f23f9c5265b2bca8e8bbf93efb60c3add88cebebeffc541e8",
+      "bytes": 963572
+    },
+    {
+      "path": "vehicle-integrated/manifest.json",
+      "sha256": "17616d4f360941f435584f6b4be56c0c58f0e2d63a457d899b62b040f5e5ef3f",
+      "bytes": 4260
+    },
+    {
+      "path": "vehicle-integrated/project-receipt.json",
+      "sha256": "852350021925747d8aadab4e1c3ec06b86f4ebea5c01e1417105f188eff9dbf2",
+      "bytes": 84430
+    },
+    {
+      "path": "vehicle-integrated/rear_three_quarter.png",
+      "sha256": "c90e67c4e4271ce502606da9ccdd750022402769d067825657c2616b9ac9823d",
+      "bytes": 960663
+    },
+    {
+      "path": "vehicle-integrated/side.png",
+      "sha256": "985f950d625d27f66de7b024711fae902db29fabefb29d327fb6278919679f2f",
+      "bytes": 928533
+    },
+    {
+      "path": "vehicle-integrated/ui-handoff.png",
+      "sha256": "6afece0f7ef67e314111424d09f70a43c26774a6679ade2549c0afbef01b972b",
+      "bytes": 479878
+    },
+    {
+      "path": "vehicle-integrated/vehicle-contract.json",
+      "sha256": "2566d7cf53ae57a666c9e424c9e609f4dcdc3d3a67385541bab9bbffa4cfdb7d",
+      "bytes": 1803
+    },
+    {
+      "path": "vehicle-integrated/vehicle.blend",
+      "sha256": "f25a20ae3bffa37ec71cb6a3ea625b14e265e21b1ba29b53a9b76d6b5cc24ca8",
+      "bytes": 3767816
+    },
+    {
+      "path": "vehicle-integrated/vehicle.glb",
+      "sha256": "df460e4277a864fbb87ae3b8c25d99aa78aef3b510d37dd059425be392c4be05",
+      "bytes": 1126584
+    },
+    {
+      "path": "vehicle-planner-trace.json",
+      "sha256": "a83c78a79b33b5ca26ffbc282d4bf2dee6608260f8611fc4633d358d4152a257",
+      "bytes": 4844
+    }
+  ]
+}

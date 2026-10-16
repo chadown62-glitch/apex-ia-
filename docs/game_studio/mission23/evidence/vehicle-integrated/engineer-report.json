@@ -1,0 +1,244 @@
+{
+  "status": "verified_intake",
+  "manifest": {
+    "schema_version": 1,
+    "contract": "VehicleAssetContract",
+    "producer": "apex.game_studio",
+    "geometry_method": "procedural_blender_with_bounded_contract_repair",
+    "spec": {
+      "length_m": 4.925,
+      "width_m": 2.24,
+      "height_m": 1.2888,
+      "wheelbase_m": 2.8,
+      "wheel_radius_m": 0.355,
+      "wheel_width_m": 0.232,
+      "mass_kg": 1200,
+      "body_color": [
+        0.800000011920929,
+        0.20000000298023224,
+        0.10000000149011612
+      ],
+      "paint_metallic": 0.0,
+      "paint_roughness": 0.30000001192092896
+    },
+    "units": "m",
+    "blender_axes": {
+      "forward": "+X",
+      "up": "+Z",
+      "handedness": "right"
+    },
+    "glb_axes": {
+      "up": "+Y",
+      "handedness": "right",
+      "exporter_converted": true
+    },
+    "unreal_target": {
+      "units": "cm",
+      "up": "+Z",
+      "forward": "+X",
+      "scale_conversion": 100,
+      "import_tested": false
+    },
+    "wheels": [
+      {
+        "object": "wheel_front_left",
+        "center_m": [
+          1.399999976158142,
+          -0.8999999761581421,
+          0.35499998927116394
+        ],
+        "radius_m": 0.355,
+        "spin_axis_local": [
+          0,
+          0,
+          1
+        ],
+        "spin_axis_blender_world": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "object": "wheel_front_right",
+        "center_m": [
+          1.399999976158142,
+          0.8999999761581421,
+          0.35499998927116394
+        ],
+        "radius_m": 0.355,
+        "spin_axis_local": [
+          0,
+          0,
+          1
+        ],
+        "spin_axis_blender_world": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "object": "wheel_rear_left",
+        "center_m": [
+          -1.399999976158142,
+          -0.8999999761581421,
+          0.35499998927116394
+        ],
+        "radius_m": 0.355,
+        "spin_axis_local": [
+          0,
+          0,
+          1
+        ],
+        "spin_axis_blender_world": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "object": "wheel_rear_right",
+        "center_m": [
+          -1.399999976158142,
+          0.8999999761581421,
+          0.35499998927116394
+        ],
+        "radius_m": 0.355,
+        "spin_axis_local": [
+          0,
+          0,
+          1
+        ],
+        "spin_axis_blender_world": [
+          0,
+          1,
+          0
+        ]
+      }
+    ],
+    "files": [
+      {
+        "path": "front.png",
+        "role": "source_or_contract",
+        "sha256": "981540d8bd4d20fc359f8b7620e9d8b2bee9c116ac47e27fa257d2cbf038d22b",
+        "bytes": 718118
+      },
+      {
+        "path": "front_three_quarter.png",
+        "role": "source_or_contract",
+        "sha256": "d1bc9155da63c08f23f9c5265b2bca8e8bbf93efb60c3add88cebebeffc541e8",
+        "bytes": 963572
+      },
+      {
+        "path": "rear_three_quarter.png",
+        "role": "source_or_contract",
+        "sha256": "c90e67c4e4271ce502606da9ccdd750022402769d067825657c2616b9ac9823d",
+        "bytes": 960663
+      },
+      {
+        "path": "side.png",
+        "role": "source_or_contract",
+        "sha256": "985f950d625d27f66de7b024711fae902db29fabefb29d327fb6278919679f2f",
+        "bytes": 928533
+      },
+      {
+        "path": "spec.json",
+        "role": "source_or_contract",
+        "sha256": "e47498918b61115672ce8054b921f53ff3c263ee4348afc0b8f47c9f1c6f33a7",
+        "bytes": 320
+      },
+      {
+        "path": "vehicle-asset-v1.schema.json",
+        "role": "source_or_contract",
+        "sha256": "1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51",
+        "bytes": 2637
+      },
+      {
+        "path": "vehicle-contract.json",
+        "role": "source_or_contract",
+        "sha256": "2566d7cf53ae57a666c9e424c9e609f4dcdc3d3a67385541bab9bbffa4cfdb7d",
+        "bytes": 1803
+      },
+      {
+        "path": "vehicle.blend",
+        "role": "source_or_contract",
+        "sha256": "f25a20ae3bffa37ec71cb6a3ea625b14e265e21b1ba29b53a9b76d6b5cc24ca8",
+        "bytes": 3767816
+      },
+      {
+        "path": "vehicle.glb",
+        "role": "source_or_contract",
+        "sha256": "df460e4277a864fbb87ae3b8c25d99aa78aef3b510d37dd059425be392c4be05",
+        "bytes": 1126584
+      }
+    ],
+    "rig": {
+      "kind": "separate_static_meshes",
+      "skeletal_rig": false,
+      "physics_asset": false
+    },
+    "lods": [],
+    "texture_maps": [],
+    "source_artifact": "sha256:df460e4277a864fbb87ae3b8c25d99aa78aef3b510d37dd059425be392c4be05",
+    "measurement_scope": "bounds, wheel centers and material from Blender; mass is a design estimate"
+  },
+  "manifest_sha256": "17616d4f360941f435584f6b4be56c0c58f0e2d63a457d899b62b040f5e5ef3f",
+  "verified_files": 9,
+  "mesh_nodes": 136,
+  "materials": 9,
+  "wheel_nodes": {
+    "wheel_front_left": {
+      "glb_pivot_m": [
+        1.399999976158142,
+        0.35499998927116394,
+        0.8999999761581421
+      ],
+      "blender_pivot_m": [
+        1.399999976158142,
+        -0.8999999761581421,
+        0.35499998927116394
+      ]
+    },
+    "wheel_front_right": {
+      "glb_pivot_m": [
+        1.399999976158142,
+        0.35499998927116394,
+        -0.8999999761581421
+      ],
+      "blender_pivot_m": [
+        1.399999976158142,
+        0.8999999761581421,
+        0.35499998927116394
+      ]
+    },
+    "wheel_rear_left": {
+      "glb_pivot_m": [
+        -1.399999976158142,
+        0.35499998927116394,
+        0.8999999761581421
+      ],
+      "blender_pivot_m": [
+        -1.399999976158142,
+        -0.8999999761581421,
+        0.35499998927116394
+      ]
+    },
+    "wheel_rear_right": {
+      "glb_pivot_m": [
+        -1.399999976158142,
+        0.35499998927116394,
+        -0.8999999761581421
+      ],
+      "blender_pivot_m": [
+        -1.399999976158142,
+        0.8999999761581421,
+        0.35499998927116394
+      ]
+    }
+  },
+  "engine_import_verified": false,
+  "handedness_in_unreal_verified": false,
+  "limits": "GLB byte/pivot checks do not qualify Unreal import, bones, collisions or physics",
+  "verdict": "pass_preflight"
+}

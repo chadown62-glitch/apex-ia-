@@ -1,0 +1,30 @@
+{
+  "method": "trusted_blender_assembly",
+  "source_artifacts": {
+    "task_1": {
+      "mission_id": "73f4a165-9739-4863-821e-77b6c98ce541",
+      "job_id": "226d05e9-ea84-4ded-ad86-7fa79163f8bf",
+      "hash": "sha256:b0adadd5438d8ac502b8869efa9bc5e8175ae2f5ca0b3355a9f19ce23cc04707",
+      "selected_from": "child_selected_revision"
+    },
+    "task_2": {
+      "mission_id": "e8a57bf9-1f1c-49b3-a200-fbe28fdee5f0",
+      "job_id": "3aa0e74a-4396-47fa-80b2-58b54ce054ed",
+      "hash": "sha256:2d2c4a12a14a228773a2ec4285cf7ea7f26d6a454279ebde8cdf0b2086d3d543",
+      "selected_from": "child_selected_revision"
+    }
+  },
+  "files": {
+    "assembly.json": "7942a24643f59891a84e8d63497ea163567918f273c44334fe8a395f94ceea2a",
+    "engineer-handoff.json": "e756cb6c04e709026e9de0bbc94c051d55145ba2217dca2d6b610a0f84e1bd37",
+    "framing-report.json": "e4d089b886909422ad6cb2beb03090a34cb9554a6daaf2f29a7afdf7620fff3a",
+    "front_three_quarter.png": "4fcef88aa5072d78a03acad0976a8464442da7a6b01d4a3f6e8d681ca7c96e59",
+    "garage.blend": "77e5759d89148ab258f6c8f3e1b0324b9ea03983280bd386d21f22dba99056a9",
+    "garage.glb": "2a609abbbf4f295d071cbf139db953cd4b03c35be9c8bcd4abf57be8ed7594bc",
+    "judge-report.json": "5c45f5b5477bd83e8e4ff005f47047ff0106e8021a6e5bab54b635db4103a31d",
+    "rear_three_quarter.png": "7a77b8717187dde213e0992c5ac9694769db2a305b3bd3f1608b73e0d9af2b18",
+    "reopen-report.json": "49c8405bdd92f4aa4eb2548546d5ca9b785723e6899089b3e2402ad58dcc1f6e",
+    "side.png": "1cf06ef7e633d6a0525beab193b5d43d7a981533b5fb9117bb3587b83520c7b6",
+    "top.png": "aae41717ed2c144d9563c1e50a537d7bd620ecd033d37bc24ce7329857f152cb"
+  }
+}

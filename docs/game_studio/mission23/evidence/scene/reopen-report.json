@@ -1,0 +1,14 @@
+{
+  "reopened_in_second_blender_process": true,
+  "source_mesh_counts": {
+    "task_1": 143,
+    "task_2": 32
+  },
+  "camera": "Garage camera",
+  "named_lights": [
+    "Key daylight",
+    "Garage fill",
+    "Street bounce"
+  ],
+  "street_and_sidewalk_present": true
+}

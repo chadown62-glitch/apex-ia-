@@ -1,0 +1,15 @@
+{
+  "project_id": "e70ad228-c457-4dca-88bd-2c1387877e6d",
+  "api_project_http": 200,
+  "api_artifact_http": 200,
+  "status": "review",
+  "delivery_status": "technical_review",
+  "vehicle_handoff_status": "pass_preflight",
+  "before_verdict": "fail_preflight",
+  "after_verdict": "pass_preflight",
+  "corrected_glb_sha256": "df460e4277a864fbb87ae3b8c25d99aa78aef3b510d37dd059425be392c4be05",
+  "bytes": 1126584,
+  "browser_handoff_visible": true,
+  "browser_render_images_loaded": 8,
+  "browser_page_errors": []
+}
