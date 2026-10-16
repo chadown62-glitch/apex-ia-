@@ -288,6 +288,7 @@ def test_provider_serves_v2_as_a_structured_conversation(tiny_brain, monkeypatch
     assert result.facts["conversational"] and "4 message(s)" in result.facts["prompt_used"]
     assert result.tokens_completion.value <= 8
     assert 0 < result.facts["confidence"] <= 1 and result.facts["cannot_know"] is False
+    assert result.facts["cannot_know_kind"] is None
 
 
 def test_the_brain_saying_it_cannot_know_is_recognized_exactly() -> None:
@@ -296,12 +297,20 @@ def test_the_brain_saying_it_cannot_know_is_recognized_exactly() -> None:
     font pas partie : ils sont justes par construction."""
     import random
 
-    from apex.brain.chat import CANNOT_KNOW_MISSING, CANNOT_KNOW_REALTIME, says_cannot_know
+    from apex.brain.chat import (
+        CANNOT_KNOW_MISSING,
+        CANNOT_KNOW_REALTIME,
+        cannot_know_kind,
+        says_cannot_know,
+    )
     from apex.neural.tasks import honesty
 
-    for answers in (*CANNOT_KNOW_REALTIME.values(), *CANNOT_KNOW_MISSING.values()):
-        for answer in answers:
-            assert says_cannot_know(answer) and says_cannot_know(f"  {answer.replace(' ', '\n', 1)}\n")
+    for kind, table in (("realtime", CANNOT_KNOW_REALTIME), ("missing", CANNOT_KNOW_MISSING)):
+        for answers in table.values():
+            for answer in answers:
+                assert says_cannot_know(answer) and says_cannot_know(f"  {answer.replace(' ', '\n', 1)}\n")
+                assert cannot_know_kind(answer) == kind
+    assert cannot_know_kind("Canberra.") is None
     assert not says_cannot_know("Je ne peux pas le savoir : c'est Canberra.")
     assert not says_cannot_know("Canberra.")
     # Les données d'instruction utilisent exactement ces phrases (source unique), et rien d'autre ne compte.
@@ -309,6 +318,7 @@ def test_the_brain_saying_it_cannot_know_is_recognized_exactly() -> None:
         example = honesty(random.Random(seed), "fr" if seed % 2 else "en")
         expected = example.check["kind"] in ("realtime", "missing")
         assert says_cannot_know(example.assistant) is expected, example
+        assert cannot_know_kind(example.assistant) == (example.check["kind"] if expected else None)
 
 
 def test_brain_reinstalled_while_apex_runs_is_reloaded(tiny_brain, tokenizer, monkeypatch) -> None:

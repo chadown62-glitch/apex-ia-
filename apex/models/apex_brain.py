@@ -221,8 +221,12 @@ class ApexBrainProvider(ModelProvider):
             },
         )
 
+    def python_twin(self, request: GenerationRequest, prefix: str) -> str:
+        """Version Python de sa réponse, pour la vérification croisée (voir la fonction `python_twin`)."""
+        return python_twin(self._endpoint, request, prefix)
+
     def generate(self, request: GenerationRequest) -> GenerationResult:
-        from apex.brain.chat import Message, says_cannot_know
+        from apex.brain.chat import Message, cannot_know_kind
         from apex.brain.inference import GenerationCancelled, GenerationTimeout, SamplingSettings
         from apex.errors import ModelErrorCategory, ModelProviderError, TimeoutExceeded
         from apex.obs.status import Measurement
@@ -362,10 +366,35 @@ class ApexBrainProvider(ModelProvider):
                 "min_token_prob": stats.min_token_prob,
                 # Réponse apprise « je ne peux pas le savoir » (temps réel, information manquante) : un
                 # autre modèle peut savoir (`apex.brain.chat.CANNOT_KNOW_REALTIME`/`CANNOT_KNOW_MISSING`).
-                "cannot_know": says_cannot_know(result.text),
+                "cannot_know": cannot_know_kind(result.text) is not None,
+                "cannot_know_kind": cannot_know_kind(result.text),
                 "prompt_used": prompt_used,
             },
         )
+
+
+def python_twin(endpoint: ModelEndpoint, request: GenerationRequest, prefix: str, *,
+                max_new_tokens: int = 256) -> str:
+    """Suite que le Cerveau donne à un début de réponse IMPOSÉ (`prefix`), dans la même conversation que
+    `request`, en glouton : la version Python de sa réponse, pour la vérification croisée
+    (`apex.brain.crosscheck`). Rend le texte produit après `prefix`. Le Cerveau doit déjà avoir répondu
+    (moteur chargé) ; un Cerveau qui ne converse pas ne peut pas le faire (ValueError)."""
+    from apex.brain.chat import Message, stop_ids
+    from apex.brain.inference import SamplingSettings
+
+    path = brain_dir(endpoint)
+    if path is None or not is_conversational(path):
+        raise ValueError("vérification croisée : Cerveau conversationnel absent")
+    engine = engine_for(path)
+    engine.load()
+    messages = [Message(role, content) for role, content in _conversation(request)]
+    prompt, _ = engine.chat_prompt(messages, max_new_tokens)
+    result = engine.generate_ids(
+        prompt + engine.tokenizer.encode(prefix), SamplingSettings(max_new_tokens=max_new_tokens),
+        stop=stop_ids(engine.tokenizer), cancel=request.cancel_event,
+        deadline=time.perf_counter() + request.timeout_s,
+    )
+    return str(result.text)
 
 
 def _conversation(request: GenerationRequest) -> list[tuple[str, str]]:

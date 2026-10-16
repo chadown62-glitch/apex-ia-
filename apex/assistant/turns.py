@@ -1,15 +1,15 @@
 """Tours de conversation ASYNCHRONES de l'assistant : l'interface envoie un message et suit le tour (file,
-génération, appels d'outils, fin) sans bloquer une requête HTTP pendant les minutes qu'une génération CPU peut
-prendre ; elle peut l'annuler.
+génération, appels d'outils, fin) sans bloquer une requête HTTP pendant les minutes qu'une génération CPU
+peut prendre ; elle peut l'annuler.
 
 Chaîne réelle d'un tour :
   message utilisateur (inséré) -> tour `queued` -> exécuteur (UNE génération à la fois : un seul modèle en
   mémoire) -> contexte (historique borné, mémoire d'APEX, pièces jointes, consignes du mode et du projet) ->
   routage (`apex.routing.select_model`, modèle préféré des paramètres) -> génération avec repli
   (`generate_with_fallback`, runtime natif compris) -> si le mode offre des outils : protocole JSON
-  `{"tool": ..., "arguments": ...}` exécuté par `apex.tools.engine` (permissions explicites, sandbox réelle par
-  `AgentRuntime` pour le code) puis observation rendue au modèle -> réponse insérée (`real`), ou échec explicite
-  (`error`), ou annulation (`cancelled`) — jamais une réponse inventée à la place d'un échec.
+  `{"tool": ..., "arguments": ...}` exécuté par `apex.tools.engine` (permissions explicites, sandbox réelle
+  par `AgentRuntime` pour le code) puis observation rendue au modèle -> réponse insérée (`real`), ou échec
+  explicite (`error`), ou annulation (`cancelled`) — jamais une réponse inventée à la place d'un échec.
 
 Un tour interrompu par l'arrêt d'APEX est marqué comme tel au démarrage suivant (`recover_unfinished`).
 """
@@ -38,7 +38,8 @@ _PROSE_AROUND_TOOL_CALL = 200
 _SANDBOX_CACHE_S = 300.0
 _SPEAKERS = {MessageRole.USER: "Utilisateur", MessageRole.ASSISTANT: "Assistant"}
 
-#: Rôle et exemple d'appel de chaque outil, montrés au modèle (un modèle 1,5B ne déduit pas l'usage d'un schéma).
+#: Rôle et exemple d'appel de chaque outil, montrés au modèle (un modèle 1,5B ne déduit pas l'usage d'un
+#: schéma).
 TOOL_GUIDE: dict[str, tuple[str, dict[str, Any]]] = {
     "fs.list": ("lister un dossier de l'espace de travail", {"path": "."}),
     "fs.read": ("lire un fichier", {"path": "main.py"}),
@@ -159,15 +160,30 @@ def parse_tool_call(text: str) -> tuple[str, dict[str, Any]] | None:
     return value["tool"], arguments
 
 
-def _brain_unsure(result: Any, threshold: float) -> tuple[str, str] | None:
-    """(motif, raison écrite) de confier la question au moteur suivant : le Cerveau APEX répond par sa
-    phrase apprise « je ne peux pas le savoir » (`apex.brain.chat.says_cannot_know`), ou sa confiance
-    mesurée est sous le seuil. Seuil 0 : jamais. Les autres moteurs ne sont jamais déclinés (ils ne
-    mesurent pas leur confiance ici)."""
+def _brain_unsure(result: Any, threshold: float, *, question: str = "",
+                  connected: Sequence[str] = ()) -> tuple[str, str] | None:
+    """(motif, raison écrite) quand la réponse du Cerveau APEX ne doit pas être servie telle quelle.
+    Seuil 0 : jamais. Les autres moteurs ne sont jamais déclinés (ils ne mesurent pas leur confiance ici).
+    Motifs :
+
+    - `low_confidence` : confiance mesurée sous le seuil → moteur suivant ;
+    - `cannot_know` : sa phrase apprise « je ne peux pas le savoir » (`apex.brain.chat.cannot_know_kind`)
+      → moteur suivant, qui peut savoir ;
+    - question d'actualité (`apex.assistant.freshness`) et réponse « pas d'accès au temps réel » : aucun
+      modèle ne la connaît. `current_info_tool` si un outil connecté est offert → moteur suivant, qui peut
+      l'appeler ; sinon `current_info_no_tool` → la réponse honnête du Cerveau est GARDÉE."""
+    from apex.assistant.freshness import asks_for_current_information
+
     facts = getattr(result, "facts", None) or {}
     if threshold <= 0 or facts.get("backend") != "apex_brain":
         return None
     if facts.get("cannot_know"):
+        if facts.get("cannot_know_kind") == "realtime" and asks_for_current_information(question):
+            if connected:
+                return ("current_info_tool",
+                        f"question d'actualité, outil connecté offert : {', '.join(connected)}")
+            return ("current_info_no_tool",
+                    "question d'actualité sans outil connecté : aucun modèle ne la connaît")
         return "cannot_know", "le Cerveau APEX dit ne pas pouvoir le savoir"
     confidence = facts.get("confidence")
     if confidence is None or confidence >= threshold:
@@ -175,22 +191,49 @@ def _brain_unsure(result: Any, threshold: float) -> tuple[str, str] | None:
     return "low_confidence", f"confiance du Cerveau APEX {confidence:.3f} sous le seuil {threshold:.2f}"
 
 
+#: Ajouté aux consignes du moteur suivant quand une question d'actualité lui est confiée avec un outil
+#: connecté.
+_CURRENT_INFO_NOTE = ("Cette question porte sur une information actuelle : appelle l'outil connecté "
+                      "offert et réponds d'après son résultat. Sans résultat de l'outil, dis que tu ne "
+                      "peux pas le savoir.")
+
+
+#: Verdicts de la vérification croisée qui prouvent qu'une des deux versions est fausse.
+_CODE_MISMATCH = frozenset({"disagree", "answer_fails"})
+
+
 def _generate(ranked: list[Any], *, delegate_below: float, deadline: float, cancel: threading.Event,
-              **request: Any) -> tuple[Any, dict[str, Any] | None]:
+              question: str = "", connected: Sequence[str] = (),
+              verify: Callable[[Any, dict[str, Any], Any], dict[str, Any] | None] | None = None,
+              **request: Any) -> tuple[Any, dict[str, Any] | None, dict[str, Any] | None]:
     """`generate_with_fallback` (inchangé) sur les candidats classés. Mode automatique : une réponse du
-    Cerveau APEX peu sûre d'elle, ou qui dit ne pas pouvoir savoir, est confiée aux candidats suivants, par
+    Cerveau APEX peu sûre d'elle, qui dit ne pas pouvoir savoir, ou dont le code diverge de sa propre
+    version Python (`verify`, vérification croisée dans la sandbox), est confiée aux candidats suivants, par
     un second appel. La réponse déclinée reste dans la trace (tentative non retenue, raison écrite) ; si
-    aucun suivant ne répond, elle est gardée, et c'est dit. Rend la génération et ce qui a été délégué
-    (None : rien)."""
+    aucun suivant ne répond, elle est gardée, et c'est dit. Rend (génération, délégation ou None,
+    vérification croisée ou None) ; la vérification est rendue même sans délégation (moteur « Cerveau »
+    choisi, seuil 0)."""
     from apex.routing.generation import FallbackResult, GenerationAttempt, generate_with_fallback
 
     first = generate_with_fallback(ranked, timeout_s=deadline - time.monotonic(), cancel_event=cancel,
                                    **request)
     brain, answer = first.succeeded_with, first.result
-    unsure = _brain_unsure(answer, delegate_below)
+    unsure = _brain_unsure(answer, delegate_below, question=question, connected=connected)
+    checked = None
+    if (unsure is None and verify is not None and brain is not None and answer is not None
+            and (answer.facts or {}).get("backend") == "apex_brain"):
+        checked = verify(brain, request, answer)
+        if checked is not None and checked["status"] in _CODE_MISMATCH and delegate_below > 0:
+            unsure = ("code_mismatch", f"vérification croisée : {checked['detail']}")
     if brain is None or answer is None or unsure is None:
-        return first, None
+        return first, None, checked
     motive, reason = unsure
+    delegation = {"from": brain.ref.id, "reason": motive, "confidence": answer.facts.get("confidence"),
+                  "threshold": delegate_below}
+    if motive == "current_info_no_tool":
+        return first, {**delegation, "to": None, "status": "kept"}, checked
+    if motive == "current_info_tool":
+        request = {**request, "system": f"{request.get('system') or ''}\n\n{_CURRENT_INFO_NOTE}".strip()}
     declined = GenerationAttempt(candidate=brain, succeeded=False, error=f"déclinée : {reason}",
                                  result=answer)
     later = ranked[ranked.index(brain) + 1:]
@@ -199,14 +242,12 @@ def _generate(ranked: list[Any], *, delegate_below: float, deadline: float, canc
         second = generate_with_fallback(later, timeout_s=deadline - time.monotonic(), cancel_event=cancel,
                                         **request)
     attempts = (*first.attempts[:-1], declined, *(second.attempts if second is not None else ()))
-    delegation = {"from": brain.ref.id, "reason": motive, "confidence": answer.facts.get("confidence"),
-                  "threshold": delegate_below}
     if second is not None and second.result is not None and second.succeeded_with is not None:
         return (FallbackResult(result=second.result, succeeded_with=second.succeeded_with,
                                attempts=attempts),
-                {**delegation, "to": second.succeeded_with.ref.id, "status": "delegated"})
+                {**delegation, "to": second.succeeded_with.ref.id, "status": "delegated"}, checked)
     return (FallbackResult(result=answer, succeeded_with=brain, attempts=attempts),
-            {**delegation, "to": None, "status": "kept"})
+            {**delegation, "to": None, "status": "kept"}, checked)
 
 
 #: Résultats d'outils rendus en entier au modèle pendant un tour (les plus récents) ; les plus anciens sont
@@ -278,6 +319,9 @@ class TurnManager:
         #: dans la même conversation ne créent jamais deux tours concurrents.
         self._submit_lock = threading.Lock()
         self._sandbox_cache: tuple[float, Any] | None = None
+        #: Sondes de la vérification croisée (langage -> prêt, détail, instant) : un langage que la sandbox
+        #: de ce PC n'exécute pas n'est sondé qu'une fois toutes les 10 minutes.
+        self._crosscheck_probes: dict[str, tuple[bool, str, float]] = {}
 
     # -- interface publique ----------------------------------------------------------------------------
 
@@ -449,6 +493,11 @@ class TurnManager:
         last_user = "\n\n".join([*context_blocks, content])
         tools = self._tools(mode, conversation, settings, turn_id)
         offered = tools["offered"] if tools else []
+        from apex.assistant.freshness import connected_tools
+
+        connected = (connected_tools(tools["engine"].registry.get(name)[0] for name in offered)
+                     if tools else [])
+        verify = self._code_verifier(settings, turn_id, deadline)
         system = system_prompt(mode, project_name=project.name if project else None,
                                project_instructions=project.instructions if project else "", tools=offered,
                                notes=tools["notes"] if tools else ())
@@ -469,8 +518,9 @@ class TurnManager:
 
         steps: list[dict[str, Any]] = []
         observations: list[str] = []
-        #: Modèles 3D construits par le Cerveau APEX PENDANT sa génération (outil interne, `apex.brain.studio3d`) :
-        #: leurs fichiers sont écrits après, par l'outil `model3d.create`, avec les permissions de ce tour.
+        #: Modèles 3D construits par le Cerveau APEX PENDANT sa génération (outil interne,
+        #: `apex.brain.studio3d`) : leurs fichiers sont écrits après, par l'outil `model3d.create`, avec les
+        #: permissions de ce tour.
         brain_models: list[dict[str, Any]] = []
         final_text: str | None = None
         served = None
@@ -494,8 +544,9 @@ class TurnManager:
             if observations:
                 suffix = ""
                 if len(steps) > _DETAILED_OBSERVATIONS:
-                    # Long tour (gros projet) : chaque étape plus ancienne reste connue du modèle, en une ligne
-                    # (outil, fichier visé, réussite) — il n'oublie pas ce qu'il a déjà écrit ou testé.
+                    # Long tour (gros projet) : chaque étape plus ancienne reste connue du modèle, en une
+                    # ligne (outil, fichier visé, réussite) — il n'oublie pas ce qu'il a déjà écrit ou
+                    # testé.
                     suffix = ("\n\nÉtapes précédentes de ce tour (résumé) :\n"
                               + "\n".join(_step_line(s) for s in steps[:-_DETAILED_OBSERVATIONS]))
                 suffix += ("\n\nOutils déjà utilisés pendant ce tour (résultats réels) :\n"
@@ -509,12 +560,16 @@ class TurnManager:
             if self._provider_factory is not None:
                 kwargs["provider_factory"] = self._provider_factory
             # Délégation à la première étape seulement : elle choisit le modèle de tout le tour.
-            outcome, delegation = _generate(
+            outcome, delegation, checked = _generate(
                 ranked, delegate_below=delegation_threshold if step_number == 1 else 0.0, deadline=deadline,
-                cancel=cancel, prompt=step_prompt, system=system, max_tokens=settings.models.max_tokens,
-                temperature=settings.models.temperature, messages=(*turns, ("user", step_user)), **kwargs)
+                cancel=cancel, question=content, connected=connected,
+                verify=verify if step_number == 1 else None, prompt=step_prompt, system=system,
+                max_tokens=settings.models.max_tokens, temperature=settings.models.temperature,
+                messages=(*turns, ("user", step_user)), **kwargs)
             if delegation is not None:
                 meta["delegation"] = delegation
+            if checked is not None:
+                meta["crosscheck"] = checked
             if outcome.result is None:
                 if cancel.is_set():
                     break
@@ -666,6 +721,59 @@ class TurnManager:
         workspace = conversation_workspace(conversation.id, conversation.project_id)
         context = ToolContext(workspace=workspace, granted=frozen, run_in_sandbox=run_in_sandbox)
         return {"engine": engine, "context": context, "offered": offered, "notes": notes}
+
+    def _code_verifier(
+        self, settings: AppSettings, turn_id: str, deadline: float,
+    ) -> Callable[[Any, dict[str, Any], Any], dict[str, Any] | None] | None:
+        """Vérification croisée du code du Cerveau (`apex.assistant.verification`), seulement si l'exécution
+        de code est permise (Paramètres > Outils) et la sandbox vérifiée sur ce PC : elle exécute du code.
+        La sandbox n'est sondée que pour une réponse qui contient du code vérifiable."""
+        if not settings.tools.code_execution:
+            return None
+        from apex.brain import crosscheck
+        from apex.models.model import GenerationRequest
+        from apex.models.provider import get_default_provider
+
+        factory = self._provider_factory or (lambda candidate: get_default_provider(candidate.endpoint))
+
+        def verify(candidate: Any, request: dict[str, Any], result: Any) -> dict[str, Any] | None:
+            answer = crosscheck.parse_answer(result.text)
+            if answer is None or answer.language == "python" or candidate.endpoint is None:
+                return None
+            provider = factory(candidate)
+            if not hasattr(provider, "python_twin"):
+                return None
+            execute = self._sandbox_executor(turn_id)
+            if execute is None:
+                return {"language": answer.language, "status": "unverifiable", "example": None,
+                        "detail": "sandbox non vérifiée sur ce PC : code non exécuté"}
+            twin_request = GenerationRequest(
+                endpoint=candidate.endpoint, prompt=request.get("prompt", ""), system=request.get("system"),
+                messages=request.get("messages"), timeout_s=max(1.0, deadline - time.monotonic()))
+            from apex.assistant import verification
+
+            verdict = verification.check(
+                result.text, lambda prefix: provider.python_twin(twin_request, prefix), execute,
+                probes=self._crosscheck_probes)
+            return None if verdict is None else {"language": answer.language, **verdict.to_dict()}
+
+        return verify
+
+    def _sandbox_executor(self, turn_id: str) -> Any:
+        """Exécuteur de la vérification croisée dans la sandbox vérifiée de ce PC, ou None."""
+        selection = self._sandbox()
+        report = getattr(selection, "report", None)
+        if report is None or not report.is_available or getattr(selection, "provider", None) is None:
+            return None
+        from apex.agents.runtime import AgentRuntime
+        from apex.assistant import verification
+        from apex.sandbox.model import ResourceLimits
+        from apex.taskloop.runs import execution_pool
+
+        config = self._load_config()
+        return verification.sandbox_executor(verification.sandbox_run(
+            AgentRuntime(self._session_factory), selection.provider, execution_pool(config),
+            ResourceLimits.from_config(config.sandbox), label=f"crosscheck:{turn_id}"))
 
     def _sandbox_runner(self, provider: Any, turn_id: str) -> Any:
         from apex.agents.runtime import AgentRuntime

@@ -1,8 +1,9 @@
 """Assistant APEX 0.4.0 — projets, conversations, modes, paramètres, pièces jointes, tours asynchrones.
 
-Tout passe par les vrais composants (SQLite réelle, moteur d'outils, espaces de travail, routage, génération avec
-repli). Seule la GÉNÉRATION du modèle est un double de test (`_ScriptedProvider`, contrat `ModelProvider`
-respecté) : ces tests prouvent la logique d'APEX autour du modèle, jamais la qualité d'un modèle réel.
+Tout passe par les vrais composants (SQLite réelle, moteur d'outils, espaces de travail, routage, génération
+avec repli). Seule la GÉNÉRATION du modèle est un double de test (`_ScriptedProvider`, contrat
+`ModelProvider` respecté) : ces tests prouvent la logique d'APEX autour du modèle, jamais la qualité d'un
+modèle réel.
 """
 
 from __future__ import annotations
@@ -103,7 +104,8 @@ def _messages(factory, conversation_id):
     return ConversationService(factory).list_messages(conversation_id)
 
 
-# -- projets ---------------------------------------------------------------------------------------------------
+# -- projets
+# ---------------------------------------------------------------------------------------------------
 
 
 def test_projects_are_created_updated_and_deleted_with_everything_they_own(env) -> None:
@@ -146,7 +148,8 @@ def test_a_clone_can_neither_modify_nor_delete_a_project(env) -> None:
         ProjectService(env).delete(project.id, requested_by=Subject.CORE)
 
 
-# -- conversations et modes -----------------------------------------------------------------------------------
+# -- conversations et modes
+# -----------------------------------------------------------------------------------
 
 
 def test_conversations_have_a_mode_and_are_listed_by_project_or_standalone(env) -> None:
@@ -178,7 +181,8 @@ def test_modes_change_instructions_tools_and_view() -> None:
     assert len({m.instructions for m in MODES.values()}) == len(MODES) == 5
 
 
-# -- tours ------------------------------------------------------------------------------------------------------
+# -- tours
+# ------------------------------------------------------------------------------------------------------
 
 
 def test_a_turn_sends_mode_and_project_instructions_history_and_stores_a_real_answer(env) -> None:
@@ -318,7 +322,8 @@ def test_tool_calls_are_recognised_only_when_the_reply_is_a_call() -> None:
     assert parse_tool_call('{"tool": "fs.list", "arguments": [1]}') is None
 
 
-# -- outils des modes ------------------------------------------------------------------------------------------
+# -- outils des modes
+# ------------------------------------------------------------------------------------------
 
 
 def test_calculator_tools_are_exact_and_refuse_anything_but_arithmetic() -> None:
@@ -338,7 +343,8 @@ def test_calculator_tools_are_exact_and_refuse_anything_but_arithmetic() -> None
     assert assistant_tools.contrast("#777777", "#FFFFFF")["aa_normal_text"] is False  # 4,48 : refusé AA
 
 
-# -- pièces jointes ----------------------------------------------------------------------------------------------
+# -- pièces jointes
+# ----------------------------------------------------------------------------------------------
 
 
 def test_only_real_text_attachments_are_accepted(env) -> None:
@@ -384,7 +390,8 @@ def test_an_attachment_whose_file_cannot_be_written_is_not_kept(env, monkeypatch
     assert service.list_all(project.id) == []
 
 
-# -- paramètres ------------------------------------------------------------------------------------------------
+# -- paramètres
+# ------------------------------------------------------------------------------------------------
 
 
 def test_settings_are_validated_persisted_and_applied_to_the_model_runtime(env) -> None:
@@ -419,7 +426,8 @@ def updated_at():
     return datetime.now(UTC)
 
 
-# -- runtime du modèle : mémoire et intégrité -------------------------------------------------------------------
+# -- runtime du modèle : mémoire et intégrité
+# -------------------------------------------------------------------
 
 
 def test_precision_is_chosen_from_measured_memory_and_refused_explicitly_when_too_low(tmp_path) -> None:
@@ -456,7 +464,8 @@ def test_downloaded_weights_must_match_the_published_sha256(tmp_path) -> None:
     assert not weights.exists()  # fichier différent : supprimé, jamais chargé
 
 
-# -- API --------------------------------------------------------------------------------------------------------
+# -- API
+# --------------------------------------------------------------------------------------------------------
 
 
 def test_api_full_path_project_conversation_turn_messages(env, monkeypatch, tmp_path) -> None:
@@ -628,7 +637,8 @@ def test_conversational_models_receive_the_conversation_as_structured_turns(env)
     assert "Comment je m'appelle ?" in second.prompt and second.system
 
 
-# -- mode 3D ----------------------------------------------------------------------------------------------------
+# -- mode 3D
+# ----------------------------------------------------------------------------------------------------
 
 
 def test_3d_mode_builds_the_model_and_writes_its_files_never_overwriting_one(env) -> None:
@@ -698,11 +708,12 @@ class _UnsureBrainProvider(_ScriptedProvider):
     moteur suivant du mode automatique) répondent normalement, ou échouent tous si `offline`."""
 
     def __init__(self, replies: list[str], *, confidence: float, offline: bool = False,
-                 cannot_know: bool = False) -> None:
+                 cannot_know: bool = False, cannot_know_kind: str | None = None) -> None:
         super().__init__(replies)
         self.confidence = confidence
         self.offline = offline
-        self.cannot_know = cannot_know
+        self.cannot_know = cannot_know or cannot_know_kind is not None
+        self.cannot_know_kind = cannot_know_kind
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
         from apex.errors import ModelProviderError
@@ -719,10 +730,12 @@ class _UnsureBrainProvider(_ScriptedProvider):
                                 tokens_completion=result.tokens_completion,
                                 finish_reason="stop", elapsed_s=0.01,
                                 facts={"backend": "apex_brain", "confidence": self.confidence,
-                                       "cannot_know": self.cannot_know})
+                                       "cannot_know": self.cannot_know,
+                                       "cannot_know_kind": self.cannot_know_kind})
 
 
-def _brain_turn(env, provider, settings=None):
+def _brain_turn(env, provider, settings=None, question="Écris une fonction Rust qui inverse une liste.",
+                mode="normal"):
     from apex.assistant.settings import SettingsService
 
     _no_memory(env)
@@ -731,8 +744,8 @@ def _brain_turn(env, provider, settings=None):
     manager = TurnManager(env, provider_factory=lambda _candidate: provider,
                           config=parse_config(copy.deepcopy(BASE_CONFIG)),
                           sandbox_selection=lambda: _Selection(False), synchronous=True)
-    conversation = _conversation(env)
-    _, turn = manager.submit(conversation.id, "Écris une fonction Rust qui inverse une liste.")
+    conversation = _conversation(env, mode=mode)
+    _, turn = manager.submit(conversation.id, question)
     return turn, _messages(env, conversation.id)[-1]
 
 
@@ -756,6 +769,137 @@ def test_a_brain_that_says_it_cannot_know_hands_the_question_over_even_when_conf
     assert answer.content == "Canberra." and len(provider.requests) == 2
     assert answer.meta["delegation"]["reason"] == "cannot_know"
     assert answer.meta["delegation"]["status"] == "delegated"
+
+
+def test_current_information_is_never_handed_to_a_model_that_cannot_know_it_either(env) -> None:
+    """Question d'actualité, et le Cerveau répond qu'il n'a pas accès au temps réel : sans outil connecté,
+    aucun autre modèle ne connaît l'actualité. Sa réponse honnête est gardée, et c'est dit."""
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "jamais demandée"], confidence=0.99,
+                                    cannot_know_kind="realtime")
+    _, answer = _brain_turn(env, provider, question="Quel temps fait-il à Lyon aujourd'hui ?")
+    assert answer.content == "Je ne peux pas le savoir." and len(provider.requests) == 1
+    assert answer.meta["delegation"]["reason"] == "current_info_no_tool"
+    assert answer.meta["delegation"]["status"] == "kept"
+
+
+def test_a_general_question_the_brain_mistook_for_current_news_still_goes_to_the_next_engine(env) -> None:
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "Canberra."], confidence=0.99,
+                                    cannot_know_kind="realtime")
+    _, answer = _brain_turn(env, provider, question="Quelle est la capitale de l'Australie ?")
+    assert answer.content == "Canberra." and answer.meta["delegation"]["reason"] == "cannot_know"
+
+
+def test_current_information_goes_to_the_next_engine_when_a_connected_tool_is_offered(env,
+                                                                                       monkeypatch) -> None:
+    """Contrat proposé (Issue #21) : un outil portant la permission `network.read`. Aucun n'existe encore ;
+    ici, sa présence est simulée dans un mode qui offre des outils (le mode Normal n'en offre aucun)."""
+    from apex.assistant import freshness
+    from apex.assistant.turns import _CURRENT_INFO_NOTE
+
+    monkeypatch.setattr(freshness, "connected_tools", lambda specs: ["web.search"])
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "Il pleut à Lyon."], confidence=0.99,
+                                    cannot_know_kind="realtime")
+    _, answer = _brain_turn(env, provider, question="Quel temps fait-il à Lyon aujourd'hui ?", mode="code")
+    assert answer.content == "Il pleut à Lyon."
+    assert answer.meta["delegation"]["reason"] == "current_info_tool"
+    assert _CURRENT_INFO_NOTE in provider.requests[1].system  # le moteur suivant sait qu'il doit l'appeler
+
+
+def test_current_information_questions_are_recognized_by_explicit_markers_only() -> None:
+    """Jeu neuf, écrit avant la mesure (docs/CERVEAU_APEX_V2.md). Limites dites : sans mot du temps présent,
+    une question d'actualité n'est pas reconnue ; un mot comme « actuelle » ou « dernier » fait signaler une
+    question générale (sans effet tant que le Cerveau ne répond pas « pas d'accès au temps réel »)."""
+    from apex.assistant.freshness import asks_for_current_information, connected_tools
+
+    for question in ("Quel est le taux de change de l'euro en dollars aujourd'hui ?",
+                     "Quelle est la météo à Brest ?",
+                     "Combien vaut le bitcoin en ce moment ?", "Le site est-il en panne actuellement ?",
+                     "What is the weather like in London today?", "Who won the game last night?",
+                     "Is GitHub down right now?", "What\u2019s trending on social media?"):
+        assert asks_for_current_information(question), question
+    for question in ("Quelle est la capitale de l'Australie ?", "Qui a écrit Les Misérables ?",
+                     "Who painted the Mona Lisa?", "Comment fonctionne un moteur à explosion ?"):
+        assert not asks_for_current_information(question), question
+    assert not asks_for_current_information("Combien coûte l'essence à Lyon ?")  # limite connue
+    assert asks_for_current_information("Qui était le dernier roi de France ?")  # limite connue
+    # Aucun outil d'APEX n'est connecté aujourd'hui.
+    assert connected_tools(assistant_tools.assistant_registry().specs()) == []
+
+
+class _CodingBrainProvider(_UnsureBrainProvider):
+    """Cerveau sûr de lui (0,99) qui répond une fonction Ruby ; sa version Python (vérification croisée) est
+    `twin` (la suite du début imposé « def nom(nombres): »)."""
+
+    def __init__(self, replies: list[str], *, twin: str) -> None:
+        super().__init__(replies, confidence=0.99)
+        self.twin = twin
+        self.twin_requests: list[str] = []
+
+    def python_twin(self, request: GenerationRequest, prefix: str) -> str:
+        self.twin_requests.append(prefix)
+        return self.twin
+
+
+_RUBY_RIGHT = "```ruby\ndef somme_pairs_tous(nombres)\n  nombres.select { |x| x.even? }.sum\nend\n```"
+_RUBY_WRONG = "```ruby\ndef somme_pairs_tous(nombres)\n  nombres.select { |x| x.odd? }.sum\nend\n```"
+_PY_TWIN = "\n    valeurs = [x for x in nombres if x % 2 == 0]\n    return sum(valeurs)\n```"
+
+
+def _real_sandbox_turn(env, provider, *, engine=None, code_execution=True):
+    import shutil as _shutil
+
+    from apex.assistant.settings import SettingsService
+    from apex.sandbox.provider import select_sandbox_provider
+
+    selection = select_sandbox_provider()
+    if not selection.report.is_available or _shutil.which("ruby") is None:
+        pytest.skip("sandbox non vérifiée ou ruby absent sur cette machine")
+    _no_memory(env)
+    updates: dict = {"tools": {"code_execution": code_execution}}
+    if engine:
+        updates["models"] = {"engine": engine}
+    SettingsService(env).update(updates)
+    manager = TurnManager(env, provider_factory=lambda _candidate: provider,
+                          config=parse_config(copy.deepcopy(BASE_CONFIG)),
+                          sandbox_selection=lambda: selection, synchronous=True)
+    conversation = _conversation(env)
+    manager.submit(conversation.id,
+                   "Écris en Ruby `def somme_pairs_tous(nombres)` : la somme des nombres pairs.")
+    return _messages(env, conversation.id)[-1]
+
+
+def test_wrong_brain_code_is_caught_in_the_real_sandbox_and_handed_over(env) -> None:
+    """Chaîne RÉELLE : réponse Ruby fausse du Cerveau (sûr de lui), sa version Python juste, les deux
+    exécutées dans la sandbox de CETTE machine sur les mêmes entrées générées : elles divergent → moteur
+    suivant."""
+    provider = _CodingBrainProvider([_RUBY_WRONG, "réponse du moteur suivant"], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider)
+    assert provider.twin_requests == ["```python\ndef somme_pairs_tous(nombres):"]
+    checked = answer.meta["crosscheck"]
+    assert checked["status"] == "disagree" and checked["language"] == "ruby"
+    assert answer.meta["crosscheck"]["example"]["answer"] != answer.meta["crosscheck"]["example"]["python"]
+    assert answer.meta["delegation"]["reason"] == "code_mismatch"
+    assert answer.content == "réponse du moteur suivant"
+
+
+def test_right_brain_code_agrees_with_its_python_twin_and_is_kept(env) -> None:
+    provider = _CodingBrainProvider([_RUBY_RIGHT, "jamais demandée"], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider)
+    assert answer.meta["crosscheck"]["status"] == "agree" and "delegation" not in answer.meta
+    assert answer.content == _RUBY_RIGHT and len(provider.requests) == 1
+
+
+def test_with_the_brain_chosen_explicitly_a_mismatch_is_reported_not_handed_over(env) -> None:
+    provider = _CodingBrainProvider([_RUBY_WRONG], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider, engine="brain")
+    assert answer.content == _RUBY_WRONG and answer.meta["crosscheck"]["status"] == "disagree"
+    assert "delegation" not in answer.meta
+
+
+def test_no_code_is_ever_run_when_code_execution_is_disabled(env) -> None:
+    provider = _CodingBrainProvider([_RUBY_WRONG, "jamais demandée"], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider, code_execution=False)
+    assert "crosscheck" not in answer.meta and provider.twin_requests == []
 
 
 def test_a_confident_brain_keeps_the_question(env) -> None:

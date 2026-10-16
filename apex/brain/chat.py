@@ -77,6 +77,16 @@ def says_cannot_know(text: str) -> bool:
     return " ".join(text.split()) in _CANNOT_KNOW
 
 
+def cannot_know_kind(text: str) -> str | None:
+    """`realtime` (pas d'accès au temps réel), `missing` (information manquante) ou None : laquelle des
+    phrases apprises « je ne peux pas le savoir » est la réponse, exactement (espaces normalisés)."""
+    normalized = " ".join(text.split())
+    for kind, table in (("realtime", CANNOT_KNOW_REALTIME), ("missing", CANNOT_KNOW_MISSING)):
+        if any(normalized in answers for answers in table.values()):
+            return kind
+    return None
+
+
 @dataclass(frozen=True)
 class Message:
     role: str

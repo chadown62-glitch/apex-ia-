@@ -351,6 +351,90 @@ inventer. Le seuil vaut pour **ce** Cerveau. Chaque évaluation (`apex_brain_bui
 la calibration (`tasks.calibration` dans `evaluation.json`, résumé dans la provenance) : pour un nouveau
 Cerveau, par exemple celui entraîné sur le GPU, le seuil se règle d'après sa propre mesure.
 
+## 9 quinquies. Vérifier le code du Cerveau, et les questions d'actualité (16/10/2026)
+
+**Les 26 erreurs que le filtre de confiance garde** (conditions de l'application, seuil 0,97, §9 quater),
+rejouées avec les vrais compilateurs :
+
+| Nature | Nombre |
+|---|---|
+| code qui compile et tourne, résultat faux (« < » au lieu de « > », filtre ajouté, mauvaise opération) | 19 (Go 9, Ruby 4, C++ 2, PHP 2, Java 1, Python 1) |
+| code qui ne compile pas (Go : `undefined: abs`) | 1 |
+| code qui plante à l'exécution (JavaScript) | 1 |
+| sortie de programme mal prédite | 2 |
+| demande 3D | 3 |
+
+**Pistes mesurées et écartées.**
+- Compilation ou exécution seules : 2 erreurs sur 26 attrapées ici, 0 sur un PC où seul Python s'exécute.
+- Plus faible probabilité d'un mot (seuil 0,4) : 5 erreurs de plus, mais 4 réponses justes de plus cédées, sur
+  les mêmes données.
+- Le Cerveau traduit sa propre réponse en Python : 4 erreurs attrapées sur 20, et 18 réponses justes sur 40
+  signalées à tort. Il n'a jamais appris à traduire du code.
+
+**Vérification croisée, retenue** (`apex/brain/crosscheck.py`, `apex/assistant/verification.py`). Le Cerveau
+écrit juste la même fonction en Python (100 % des exercices Python jamais vus). Il écrit donc sa version Python,
+avec un début de réponse imposé (`def nom(nombres):`), en glouton. Les deux versions s'exécutent sur 13 entrées
+générées, jamais sur des tests cachés. Une divergence prouve qu'au moins l'une des deux est fausse. Une
+concordance n'est jamais une preuve de justesse.
+
+| Mesure (réponses de code gardées par la confiance, hors Python) | Erreurs attrapées | Réponses justes signalées |
+|---|---|---|
+| 1 220 exercices du §9 quater : 358 réponses | **20 / 20** | 1 / 338 |
+| Jeu NEUF : 225 combinaisons réservées, nouvelle graine, module réel | **2 / 2** | **0 / 223** (1 « non vérifiable ») |
+
+La fausse alerte du premier jeu venait d'une version Python inutilisable (`def f(nombres): int`, type recopié
+de la signature PHP). Une telle version est désormais « non vérifiable », jamais « fausse ». Restent hors de
+portée 6 des 26 erreurs : sorties de programme, demandes 3D et la fonction Python.
+
+Détail de mise au point : le début imposé s'arrête à `):`. `"\n    "` (retour et indentation) est un seul jeton
+du Cerveau ; imposer un retour à la ligne seul le sortait de ce qu'il a appris, et il écrivait du texte
+incohérent.
+
+**Où elle s'exécute.** Toujours dans la sandbox d'APEX (réseau coupé, clone tracé, autorisation
+`PolicyEngine`), jamais en dehors.
+
+| Sandbox | Ce qu'elle exécute (constaté le 16/10/2026) |
+|---|---|
+| Linux (espaces de noms) | Python, Ruby, JavaScript, PHP, C++, Java (0,1 à 0,9 s), TypeScript (2,1 s) ; C# (0,9 s, avec deux réglages .NET : sans double mappage W^X, tas plafonné à 256 Mo) ; Go (~9 s, disque porté à 256 Mo pour son cache de compilation) ; pas Rust installé dans `~/.cargo` (« Permission denied » depuis la sandbox) |
+| Windows (AppContainer) | **Python seul** : sur Windows, la vérification croisée d'un code Go ou Ruby est « non vérifiable » aujourd'hui |
+
+Avant de vérifier un langage, la sandbox exécute une **sonde**, une fonction connue pour être juste,
+mémorisée 10 minutes. Si la sonde échoue, ce langage est « non vérifiable » sur ce PC : un échec n'y prouve
+rien. La mise au point l'a montré : avant ses réglages .NET, une réponse C# juste aurait été déclarée fausse.
+Une limite de la sandbox atteinte (délai, mémoire, taille de fichier) donne aussi « non vérifiable ».
+
+**Dans APEX** : si l'exécution de code est permise (Paramètres > Outils) et la sandbox vérifiée, une réponse
+de code du Cerveau (forme apprise, hors Python) est vérifiée à la première étape du tour. Le coût est la
+génération de sa version Python, plus les deux exécutions.
+- Mode Automatique : une divergence, ou une réponse qui ne compile pas ou plante, confie la question au moteur
+  suivant (« confié par le Cerveau APEX (son code diverge de sa version Python) »).
+- Moteur « Cerveau » choisi explicitement : la divergence est signalée sous la réponse, sans délégation
+  (« code douteux : pour [1,2], il rend 1, sa version Python 2 »).
+- Exécution de code désactivée : rien n'est exécuté.
+
+Tests : `tests/test_brain_crosscheck.py` (vrais compilateurs des 9 langages ; sandbox de type Windows simulée)
+et `tests/test_assistant.py`, de bout en bout dans la vraie sandbox Linux avec un Cerveau simulé. Les mesures
+avec le vrai Cerveau ont exécuté les mêmes commandes en sous-processus, pas dans la sandbox.
+
+**Questions d'actualité** (`apex/assistant/freshness.py`). Quand le Cerveau répond « je n'ai pas accès au temps
+réel », trois cas se présentent :
+
+| Question | Ce que fait APEX |
+|---|---|
+| d'actualité (« aujourd'hui », « en ce moment », « météo »…), un outil connecté est offert | moteur suivant, qui doit appeler l'outil (consigne ajoutée) |
+| d'actualité, aucun outil connecté | **réponse honnête du Cerveau gardée** : aucun autre modèle ne connaît l'actualité ; « question d'actualité : aucun outil connecté » |
+| pas d'actualité (capitale, auteur…) | moteur suivant, comme au §9 quater : le Cerveau a mal classé la question |
+
+Le repérage se fait par des marqueurs explicites. Mesuré à l'aveugle sur un jeu neuf écrit avant l'essai : 17
+questions d'actualité reconnues sur 20, et 5 questions générales sur 20 prises pour de l'actualité (des pièges
+comme « valeur actuelle nette » ou « dernier roi de France »). Une fausse alerte ne coûte que la délégation d'un
+refus. Après la mesure, j'ai ajouté « last night » et « last week » : ce chiffre n'est donc plus à l'aveugle.
+Limites connues : « Combien coûte l'essence ? » ou « la Coupe du monde 2026 » ne sont pas reconnues.
+
+APEX n'a aujourd'hui **aucun outil connecté**. Contrat proposé dans l'Issue #21 : une permission « lecture
+réseau » (`network.read`) dans le moteur d'outils, fichier partagé. Ajouter un tel outil est une décision de
+confidentialité pour l'utilisateur.
+
 ## 10. Entraîner le vrai Cerveau sur le GPU du PC
 
 Dans Ubuntu (WSL) :

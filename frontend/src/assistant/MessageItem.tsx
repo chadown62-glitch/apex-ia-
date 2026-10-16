@@ -67,15 +67,34 @@ function MetaLine({ message }: { message: Message }) {
   if (meta?.memory && meta.memory.length > 0) parts.push(`${meta.memory.length} souvenir${meta.memory.length > 1 ? "s" : ""} rappelé${meta.memory.length > 1 ? "s" : ""}`);
   if (meta?.attachments && meta.attachments.length > 0) parts.push(`pièces jointes : ${meta.attachments.join(", ")}`);
   const delegation = meta?.delegation;
-  if (delegation) {
+  if (delegation?.reason === "current_info_no_tool") {
+    parts.push("question d'actualité : aucun outil connecté, réponse du Cerveau APEX gardée");
+  } else if (delegation?.reason === "current_info_tool") {
+    parts.push(delegation.status === "delegated"
+      ? `question d'actualité confiée à ${delegation.to} (outil connecté)`
+      : "question d'actualité : aucun moteur n'a répondu, réponse du Cerveau APEX gardée");
+  } else if (delegation) {
     const confidence = typeof delegation.confidence === "number" ? delegation.confidence.toFixed(2) : "?";
-    const why = delegation.reason === "cannot_know" ? "il dit ne pas pouvoir le savoir" : `confiance ${confidence}`;
+    const why = delegation.reason === "cannot_know" ? "il dit ne pas pouvoir le savoir"
+      : delegation.reason === "code_mismatch" ? "son code diverge de sa version Python" : `confiance ${confidence}`;
     parts.push(delegation.status === "delegated"
       ? `confié par le Cerveau APEX (${why})`
       : `Cerveau APEX peu sûr (${why}), aucun autre moteur disponible`);
   }
+  const check = meta?.crosscheck;
+  if (check) parts.push(crosscheckLine(check));
   if (parts.length === 0) return null;
   return <div className="ax-msg__meta">{parts.join(" · ")}</div>;
+}
+
+/** Une ligne sur la vérification croisée (code du Cerveau contre sa version Python, dans la sandbox). */
+export function crosscheckLine(check: NonNullable<NonNullable<Message["meta"]>["crosscheck"]>): string {
+  if (check.status === "agree") return "code vérifié : même résultat que sa version Python";
+  if (check.status === "disagree" && check.example) {
+    return `code douteux : pour ${JSON.stringify(check.example.input)}, il rend ${JSON.stringify(check.example.answer)}, sa version Python ${JSON.stringify(check.example.python)}`;
+  }
+  if (check.status === "answer_fails") return "code douteux : il ne compile pas ou plante";
+  return `code non vérifié : ${check.detail}`;
 }
 
 export function MessageItem({ message, onRetry }: { message: Message; onRetry?: () => void }) {

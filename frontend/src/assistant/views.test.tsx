@@ -331,10 +331,23 @@ describe("MessageItem", () => {
     const delegated = message({ id: "d", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.623, threshold: 0.97, to: "qwen", status: "delegated" } } });
     const kept = message({ id: "k", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.5, threshold: 0.97, to: null, status: "kept" } } });
     const unknown = message({ id: "u", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", reason: "cannot_know", confidence: 0.99, threshold: 0.97, to: "qwen", status: "delegated" } } });
-    renderAt("/", [{ path: "/", element: <><MessageItem message={delegated as never} /><MessageItem message={kept as never} /><MessageItem message={unknown as never} /></> }]);
+    const current = message({ id: "c", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", reason: "current_info_no_tool", confidence: 0.99, threshold: 0.97, to: null, status: "kept" } } });
+    renderAt("/", [{ path: "/", element: <><MessageItem message={delegated as never} /><MessageItem message={kept as never} /><MessageItem message={unknown as never} /><MessageItem message={current as never} /></> }]);
+    expect(screen.getByText(/question d'actualité : aucun outil connecté, réponse du Cerveau APEX gardée/)).toBeInTheDocument();
     expect(screen.getByText(/confié par le Cerveau APEX \(confiance 0\.62\)/)).toBeInTheDocument();
     expect(screen.getByText(/Cerveau APEX peu sûr \(confiance 0\.50\), aucun autre moteur disponible/)).toBeInTheDocument();
     expect(screen.getByText(/confié par le Cerveau APEX \(il dit ne pas pouvoir le savoir\)/)).toBeInTheDocument();
+  });
+});
+
+describe("crosscheckLine", () => {
+  it("says what the cross-check found, never more", async () => {
+    const { crosscheckLine } = await import("./MessageItem");
+    expect(crosscheckLine({ language: "go", status: "agree", detail: "", example: null })).toBe("code vérifié : même résultat que sa version Python");
+    expect(crosscheckLine({ language: "go", status: "disagree", detail: "", example: { input: [1, 2], answer: 1, python: 2 } }))
+      .toBe("code douteux : pour [1,2], il rend 1, sa version Python 2");
+    expect(crosscheckLine({ language: "go", status: "unverifiable", detail: "la sandbox de ce PC n'exécute pas go", example: null }))
+      .toBe("code non vérifié : la sandbox de ce PC n'exécute pas go");
   });
 });
 

@@ -60,7 +60,9 @@ export interface MessageMeta {
   tools_offered?: string[];
   tools_notes?: string[];
   /** Mode automatique : le Cerveau APEX, pas assez sûr de sa réponse, l'a confiée à un autre moteur (ou l'a gardée). */
-  delegation?: { from: string; reason?: "low_confidence" | "cannot_know"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
+  delegation?: { from: string; reason?: "low_confidence" | "cannot_know" | "current_info_tool" | "current_info_no_tool" | "code_mismatch"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
+  /** Vérification croisée du code du Cerveau APEX par sa propre version Python, exécutées dans la sandbox. */
+  crosscheck?: { language: string | null; status: "agree" | "disagree" | "answer_fails" | "unverifiable"; detail: string; example: { input: number[]; answer: unknown; python: unknown } | null };
 }
 
 export interface Message {
