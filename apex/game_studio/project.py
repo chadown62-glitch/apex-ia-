@@ -262,7 +262,7 @@ class GameStudioProjectService:
             "assembly_history": [],
             "delivery_status": "planning",
             "limitations": [
-                "Visual references are preserved but not interpreted by this planner.",
+                "Reference files are preserved but their content is not interpreted by this planner.",
                 "Unreal and CUDA remain unqualified on this host.",
             ],
         }
@@ -387,11 +387,17 @@ class GameStudioProjectService:
         except Exception as exc:
             current = self.missions.get(mission_id)
             if current and current.state.value == "running":
-                self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
+                if cancel.is_set():
+                    self.missions.cancel(mission_id, requested_by=Subject.HUMAN)
+                else:
+                    self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
             with self._lock:
                 receipt = self._read(project_id)
                 receipt["events"].append(
-                    self._event("project_failed", reason=f"{type(exc).__name__}: {exc}"[:500])
+                    self._event(
+                        "project_cancelled" if cancel.is_set() else "project_failed",
+                        reason=f"{type(exc).__name__}: {exc}"[:500],
+                    )
                 )
                 self._save(receipt)
         finally:
@@ -584,7 +590,10 @@ class GameStudioProjectService:
         except Exception as exc:
             current = self.missions.get(mission_id)
             if current and current.state.value == "running":
-                self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
+                if cancel.is_set():
+                    self.missions.cancel(mission_id, requested_by=Subject.HUMAN)
+                else:
+                    self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
             with self._lock:
                 receipt = self._read(project_id)
                 trace_file = folder / "planner-trace.json"
@@ -600,7 +609,10 @@ class GameStudioProjectService:
                         "bytes": trace_file.stat().st_size,
                     }
                 receipt["events"].append(
-                    self._event("project_failed", reason=f"{type(exc).__name__}: {exc}"[:500])
+                    self._event(
+                        "project_cancelled" if cancel.is_set() else "project_failed",
+                        reason=f"{type(exc).__name__}: {exc}"[:500],
+                    )
                 )
                 self._save(receipt)
         finally:

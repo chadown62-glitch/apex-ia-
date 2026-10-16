@@ -133,3 +133,36 @@ def test_pid_reuse_identity_never_authorizes_termination(tmp_path):
     finally:
         child.terminate()
         child.wait(timeout=3)
+
+
+def test_cancelled_parent_keeps_missionservice_cancelled_state(tmp_path):
+    from uuid import uuid4
+
+    from apex.game_studio.project import GameStudioProjectService
+    from apex.game_studio.service import GameStudioService
+    from apex.policy.model import Subject
+    from tests.test_taskloop_execution import sqlite_session_factory
+
+    service = GameStudioProjectService(GameStudioService(sqlite_session_factory(), root=tmp_path))
+    mission = service.missions.create(
+        title="Cancel test",
+        description="Observe cancellation",
+        objective="cancel",
+        specialty="game-graphics",
+        created_by=Subject.HUMAN,
+    )
+    project = str(uuid4())
+    service._save(
+        {
+            "id": project,
+            "mission_id": mission.id,
+            "recipe": "dynamic-v1",
+            "request": {},
+            "plan": None,
+            "events": [],
+        }
+    )
+    cancel = threading.Event()
+    cancel.set()
+    service._run_dynamic(project, cancel, time.monotonic())
+    assert service.missions.get(mission.id).state.value == "cancelled"

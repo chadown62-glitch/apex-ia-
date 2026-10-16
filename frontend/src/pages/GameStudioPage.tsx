@@ -191,7 +191,7 @@ export function GameStudioPage() {
         <label>RAM échantillonnée max (Mio)<input type="number" min={512} max={16384} value={form.max_rss_mib} onChange={(e) => setForm({ ...form, max_rss_mib: Number(e.target.value) })} /></label>
         <label>Versions max par asset<input type="number" min={1} max={3} value={form.max_attempts} onChange={(e) => setForm({ ...form, max_attempts: Number(e.target.value) })} /></label>
         <label className="game-form__wide">Critères de qualité personnalisés (JSON)<textarea rows={2} value={criteriaText} onChange={(e) => setCriteriaText(e.target.value)} /></label>
-        <p className="game-form__wide">Les projets construisent un plan borné avec le modèle local. Les familles exécutables sont véhicule, bâtiment et fauteuil ; les autres demandes restent signalées comme bloquées. Les devantures spécialisées non qualifiées sont bloquées. Les références sont conservées avec provenance, mais leur contenu visuel n'est pas encore interprété. UE5 et CUDA gardent leur statut mesuré.</p>
+        <p className="game-form__wide">Les projets construisent un plan borné avec le modèle local. Les familles exécutables sont véhicule, bâtiment et fauteuil ; les autres demandes restent signalées comme bloquées. Les devantures spécialisées non qualifiées sont bloquées. Les références sont conservées avec provenance, mais leur contenu n'est pas encore exploité par le planificateur. UE5 et CUDA gardent leur statut mesuré.</p>
         {error && <p role="alert" className="game-form__wide">{error}</p>}
         <button type="submit" disabled={projectSubmit.isPending}>{projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</button>
       </form>
@@ -202,7 +202,7 @@ export function GameStudioPage() {
       </button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
       {project && <section className="game-mission" aria-label="Suivi du projet">
         <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · livraison {project.delivery_status ?? "en cours"} · {project.elapsed_s != null ? `temps actif cumulé : ${project.elapsed_s} s` : "en cours"}</p>
-        {project.plan && <article><h4>Plan généré et validé</h4><p>{project.plan.steps.length} tâches · estimation minimale {project.plan.estimated_minimum_s} s · tâches proposées exécutables : {project.plan.fully_feasible ? "oui" : "non"}. La fidélité artistique reste non certifiée.</p>
+        {project.plan && <article><h4>Plan généré et validé</h4><p>{project.plan.steps.length} tâches · budget estimé pour admission {project.plan.estimated_minimum_s} s · tâches proposées exécutables : {project.plan.fully_feasible ? "oui" : "non"}. La fidélité artistique reste non certifiée.</p>
           {project.plan.coverage && <details open><summary>Couverture des exigences · {project.plan.coverage.verdict}</summary><p>Contrôle indépendant des quantités et contextes reconnus ; les propriétés non analysées restent non vérifiées.</p><pre>{JSON.stringify(project.plan.coverage, null, 2)}</pre></details>}
           {project.plan.unmet_requirements.length > 0 && <p>Demandes non satisfaites : {project.plan.unmet_requirements.join(" ; ")}</p>}
         </article>}

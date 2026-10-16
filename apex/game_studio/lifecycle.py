@@ -48,7 +48,12 @@ class RunBudget:
         self.lock = threading.RLock()
         self.data = snapshot(folder)
         self.used = float(self.data.get("charged_s", 0))
+        self.data.pop("stop_reason", None)
         self.data.setdefault("attempts", {})
+        # Preserve reservations made by the first candidate schema.
+        counts = self.data["attempts"]
+        if "asset_revision" not in counts and ("baseline" in counts or "artistic_revision" in counts):
+            counts["asset_revision"] = counts.get("baseline", 0) + counts.get("artistic_revision", 0)
         self.stop = threading.Event()
         self.started = time.monotonic()
         self.thread: threading.Thread | None = None

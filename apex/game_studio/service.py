@@ -74,6 +74,14 @@ def _validate_topology_repair(plan: dict[str, Any], *, target: str) -> None:
         raise ValueError("correction_outside_measured_topology_defect")
 
 
+def _validate_paint_repair(plan: dict[str, Any], *, material: str) -> None:
+    edits = [
+        op for op in plan["operations"] if op["op"] not in ("inspect_scene", "save_revision_and_render")
+    ]
+    if len(edits) != 1 or edits[0]["op"] != "set_material_pbr" or edits[0]["target"] != material:
+        raise ValueError("correction_outside_requested_paint_material")
+
+
 def _utc() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -609,6 +617,13 @@ class GameStudioService:
                             _validate_topology_repair,
                             target=repair_target,
                         )
+                    if (
+                        request["automatic_corrections"]
+                        and judge["defects"]
+                        and all(defect["id"] == "requested_paint_channels" for defect in judge["defects"])
+                    ):
+                        material = judge["defects"][0]["material"]
+                        plan_args["plan_validator"] = partial(_validate_paint_repair, material=material)
                     try:
                         if request.get("resolved_controller_model", "pinned_7b") == "apex_native":
                             endpoint = native_coder_endpoint()
