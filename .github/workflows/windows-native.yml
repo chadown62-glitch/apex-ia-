@@ -62,7 +62,16 @@ jobs:
         run: |
           command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }
           ISCC=$(bash setup/packaging/fetch_innosetup.sh "$RUNNER_TEMP/toolchain" | tail -1)
+          set +e
           ISCC="$ISCC" bash setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/release"
+          code=$?
+          set -e
+          if [[ $code -ne 0 ]]; then
+            # Le journal d'un runner ne se lit que sur github.com ; une annotation se lit aussi par l'API
+            # (check-runs/<id>/annotations) : la cause d'un échec reste diagnostiquable de partout.
+            tail -n 60 "$RUNNER_TEMP/release/build.log" 2>/dev/null | python -c "import sys; t = sys.stdin.read().replace('%', '%25').replace(chr(13), '').replace(chr(10), '%0A'); print('::error title=build_desktop_release (code $code)::' + t)"
+            exit $code
+          fi
           cat "$RUNNER_TEMP/release/manifest.json"
 
       - name: Install, prepare, install the model, start, real assistant turns, restart, persistence, uninstall
