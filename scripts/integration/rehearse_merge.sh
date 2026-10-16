@@ -27,9 +27,9 @@ ORDER=(
   agent/codex/25-game-studio-candidate      # PR #26 (sur #24)
   agent/codex/4-inference-diagnostics       # PR #5
   agent/codex/8-project-orchestrator        # PR #11
-  agent/codex/6-vision-specialist           # PR #7
-  agent/codex/9-game-graphics               # PR #12
   agent/codex/10-game-engineer              # PR #13
+  agent/codex/6-vision-specialist           # PR #7 (après le classement d'apex/vision)
+  agent/codex/9-game-graphics               # PR #12 (à trancher par Codex face à la pile)
   agent/codex/14-neural-3d                  # PR #17 (sur #12)
   agent/codex/15-graphics-ue                # PR #16 (sur #12)
 )
