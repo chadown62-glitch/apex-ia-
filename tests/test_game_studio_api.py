@@ -131,3 +131,21 @@ def test_scene_revision_requires_an_existing_project(monkeypatch):
         "/api/v1/game-studio/projects/00000000-0000-0000-0000-000000000000/improve-framing"
     )
     assert response.status_code == 404
+
+
+def test_unknown_options_are_rejected_instead_of_silently_ignored():
+    response = authed_client().post(
+        "/api/v1/game-studio/projects", json={**request(), "execute_code": "anything"}
+    )
+    assert response.status_code == 422
+
+
+def test_composed_specialist_uses_existing_registry(monkeypatch):
+    from apex.game_studio import capabilities
+    from apex.specialties.registry import by_id
+
+    monkeypatch.setattr(capabilities, "native_coder_endpoint", lambda: None)
+    result = capabilities.probe()["specialist"]
+    assert result["id"] == by_id("game-graphics").id
+    assert result["composition"] == "composed_specialist" and not result["trained_checkpoint"]
+    assert set(result["tools"]) >= {"game_studio.create", "game_studio.status", "game_studio.results"}

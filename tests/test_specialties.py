@@ -29,15 +29,14 @@ class TestRegistry(unittest.TestCase):
     def test_by_id_returns_none_for_unknown(self) -> None:
         self.assertIsNone(by_id("does-not-exist"))
 
-    def test_only_research_is_supported(self) -> None:
-        """Ne pas créer artificiellement 15 implémentations — une seule
-        Specialty a un moteur réellement exercé (RESEARCH, AgentRuntime)."""
+    def test_only_wired_specialists_are_supported(self) -> None:
+        """Only Research and the integrated composed graphics worker are assignable."""
         ids = {s.id for s in supported()}
-        self.assertEqual(ids, {"research"})
+        self.assertEqual(ids, {"research", "game-graphics"})
 
-    def test_every_non_research_specialty_is_planned(self) -> None:
+    def test_every_other_specialty_is_planned(self) -> None:
         for spec in SPECIALTIES:
-            if spec.id == "research":
+            if spec.id in ("research", "game-graphics"):
                 continue
             with self.subTest(specialty=spec.id):
                 self.assertEqual(spec.dev_stage, ImplStatus.PLANNED)

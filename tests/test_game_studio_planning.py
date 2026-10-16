@@ -77,7 +77,7 @@ def test_unavailable_asset_blocks_assembly_without_fallback():
 def test_unreal_handoff_from_model_is_labeled_blocked_and_never_executed():
     raw = {
         "steps": [
-            step("libraryFacade", "building"),
+            {**step("libraryFacade", "building"), "description": "Create a library facade"},
             step("unrealHandoffLibrary", "unsupported", ("libraryFacade",)),
         ],
         "unmet_requirements": [],

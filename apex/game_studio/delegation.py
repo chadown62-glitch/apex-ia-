@@ -80,6 +80,7 @@ def _status(args: dict[str, Any], ctx: ToolContext, _spec: ToolSpec) -> dict[str
             for step in record["steps"]
         ],
         "delivery_status": record.get("delivery_status"),
+        "budget": record.get("budget"),
         "last_event": record["events"][-1] if record["events"] else None,
     }
 
@@ -101,6 +102,17 @@ def _results(args: dict[str, Any], ctx: ToolContext, _spec: ToolSpec) -> dict[st
         if item["role"] in ("view", "blender_project", "exchange")
     ]
     for step in record["steps"]:
+        for item in (step.get("handoff") or {}).get("artifacts", []):
+            if item["name"].startswith("after/"):
+                artifacts.append(
+                    {
+                        "name": item["name"],
+                        "hash": item["hash"],
+                        "role": "engineer_contract",
+                        "source": step["key"],
+                        "project_id": record["id"],
+                    }
+                )
         child = step.get("mission") or {}
         selected = child.get("selected_revision_number")
         if selected and 1 <= selected <= len(child.get("revisions", [])):
@@ -118,9 +130,11 @@ def _results(args: dict[str, Any], ctx: ToolContext, _spec: ToolSpec) -> dict[st
     return {
         "project_id": record["id"],
         "status": record["status"],
-        "ready": True,
+        "ready": bool(artifacts),
         "delivery_status": record.get("delivery_status"),
         "artifacts": artifacts[:40],
+        "artifact_count": len(artifacts),
+        "truncated": len(artifacts) > 40,
         "blocked": [
             {"key": s["key"], "reason": s.get("reason")}
             for s in record["steps"]

@@ -63,3 +63,20 @@ def test_delegation_is_nonblocking_permissioned_and_workspace_scoped(tmp_path):
     assert call("game_studio.status", {"project_id": service.project_id}).ok
     ctx.workspace = Workspace.create(tmp_path, "other")
     assert call("game_studio.results", {"project_id": service.project_id}).error.code is ErrorCode.NOT_FOUND
+
+
+def test_terminal_failure_with_no_artifacts_is_not_a_ready_delivery(tmp_path):
+    service = Service()
+    original = service.get
+    service.get = lambda key: {**original(key), "status": "failed"}
+    registry = ToolRegistry()
+    register_game_studio_tools(registry)
+    context = ToolContext(
+        workspace=Workspace.create(tmp_path, "owner"),
+        granted=frozenset({Permission.GAME_STUDIO_READ}),
+        extra={"game_studio_service": service},
+    )
+    result = ToolEngine(registry).execute(
+        ToolCall("game_studio.results", {"project_id": service.project_id}, str(uuid4()), "test"), context
+    )
+    assert result.ok and result.output["ready"] is False and result.output["artifact_count"] == 0

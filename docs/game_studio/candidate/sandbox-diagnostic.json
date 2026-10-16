@@ -1,0 +1,28 @@
+{
+  "probe": {
+    "level": "containerized",
+    "namespaces_available": true,
+    "cgroups_available": true,
+    "privilege_drop_available": true,
+    "network_isolation_available": true,
+    "docker_daemon_reachable": true,
+    "seccomp_available": false,
+    "detail": "CONTAINERIZED \u2014 d\u00e9mon Docker joignable, r\u00e9seau coup\u00e9 + utilisateur non-root + racine en lecture seule v\u00e9rifi\u00e9s empiriquement sur un conteneur r\u00e9el (uid=65534 network_blocked=True rootfs_writable=False). Aucun profil seccomp personnalis\u00e9 v\u00e9rifi\u00e9 (celui par d\u00e9faut de Docker s'applique, non confirm\u00e9 ici) : jamais HARDENED.",
+    "facts": {
+      "docker_daemon": "d\u00e9mon Docker 28.4.0 joignable",
+      "container_probe": "uid=65534 network_blocked=True rootfs_writable=False",
+      "container_probe_facts": {
+        "uid": 65534,
+        "network_blocked": true,
+        "rootfs_writable": false
+      },
+      "image": "python:3.12-slim"
+    }
+  },
+  "resolved_cli": "/usr/local/bin/docker",
+  "client_path": "/usr/bin:/bin",
+  "actual_launcher": {
+    "exception": "FileNotFoundError",
+    "detail": "[Errno 2] No such file or directory: 'docker'"
+  }
+}
