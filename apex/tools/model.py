@@ -16,6 +16,12 @@ class Permission(str, Enum):
     WRITE_WORKSPACE = "workspace.write"
     #: Exécuter du code dans la sandbox (réseau coupé, limites CPU/mémoire/temps), sur une COPIE de l'espace.
     EXECUTE_SANDBOX = "sandbox.execute"
+    #: Start a long-running Game Studio mission in the caller's approved workspace.
+    GAME_STUDIO_CREATE = "game_studio.create"
+    #: Read Game Studio mission status, judgments and owned artifact digests.
+    GAME_STUDIO_READ = "game_studio.read"
+    #: Cancel an owned Game Studio mission.
+    GAME_STUDIO_CANCEL = "game_studio.cancel"
 
 
 class ErrorCode(str, Enum):

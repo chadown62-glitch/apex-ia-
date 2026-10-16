@@ -1,0 +1,21 @@
+{
+  "platform": "Linux-6.18.44-x86_64-with-glibc2.41",
+  "processor": "AMD EPYC 9V74 80-Core Processor (lscpu)",
+  "logical_cpu_count": 5,
+  "memory_total_bytes": 35743784960,
+  "blender_version": "Blender 4.3.2",
+  "nvidia_smi_present": false,
+  "cuda": {
+    "status": "blocked_dependency",
+    "available": false,
+    "device_count": 0,
+    "reason": "No TripoSR CUDA performance or memory qualification yet"
+  },
+  "unreal": {
+    "status": "blocked_dependency",
+    "engine_present": false,
+    "engine_qualified": false,
+    "reason": "UE5.8 scene execution and reopen have not been verified on this host"
+  },
+  "scope": "this cloud only; no measurement on target RTX 4060 Ti or Windows 11"
+}

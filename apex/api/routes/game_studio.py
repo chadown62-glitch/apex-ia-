@@ -40,20 +40,28 @@ class StudioRequestIn(BaseModel):
     max_attempts: int = Field(default=3, ge=1, le=3)
     criteria: dict[str, Any] = Field(default_factory=dict)
     references: list[ReferenceIn] = Field(default_factory=list, max_length=4)
+    plan_only: bool = False
 
     @field_validator("criteria")
     @classmethod
     def criteria_fields(cls, value: dict[str, Any]) -> dict[str, Any]:
-        integer_fields = {"max_triangles", "max_distinct_defect_attempts", "minimum_views",
-                          "required_lods", "required_texture_size"}
+        integer_fields = {
+            "max_triangles",
+            "max_distinct_defect_attempts",
+            "minimum_views",
+            "required_lods",
+            "required_texture_size",
+        }
         float_fields = {"dimension_tolerance_m", "pivot_tolerance_m"}
         bool_fields = {"require_calibrated_visual_reference"}
         if set(value) - integer_fields - float_fields - bool_fields:
             raise ValueError("unknown_quality_criterion")
         for name, item in value.items():
-            if ((name in integer_fields and type(item) is not int)
-                    or (name in float_fields and type(item) not in (int, float))
-                    or (name in bool_fields and type(item) is not bool)):
+            if (
+                (name in integer_fields and type(item) is not int)
+                or (name in float_fields and type(item) not in (int, float))
+                or (name in bool_fields and type(item) is not bool)
+            ):
                 raise ValueError("invalid_quality_criterion_type")
         return value
 
@@ -117,8 +125,11 @@ def missions() -> DataEnvelope[list[dict[str, Any]]]:
 @router.post("/missions", response_model=DataEnvelope[dict[str, Any]])
 def create(payload: StudioRequestIn) -> DataEnvelope[dict[str, Any]]:
     refs = _references(payload.references)
-    if (payload.creation_type not in ("vehicule", "batiment", "objet_3d")
-            or payload.style != "realiste" or payload.tool not in ("auto", "blender")):
+    if (
+        payload.creation_type not in ("vehicule", "batiment", "objet_3d")
+        or payload.style != "realiste"
+        or payload.tool not in ("auto", "blender")
+    ):
         raise HTTPException(422, "requested_creation_style_or_tool_not_implemented")
     try:
         request = payload.model_dump(exclude={"references"})
@@ -132,15 +143,10 @@ def create(payload: StudioRequestIn) -> DataEnvelope[dict[str, Any]]:
 @router.post("/projects", response_model=DataEnvelope[dict[str, Any]])
 def create_project(payload: StudioRequestIn) -> DataEnvelope[dict[str, Any]]:
     refs = _references(payload.references)
-    if (payload.creation_type != "environnement" or payload.style != "realiste"
-            or payload.tool not in ("auto", "blender")):
-        raise HTTPException(422, "garage_recipe_requires_realistic_blender_environment")
-    if refs:
-        raise HTTPException(422, "garage_visual_references_not_consumed_by_controller")
     try:
-        return DataEnvelope(status="real", data=_projects().create(
-            payload.model_dump(exclude={"references"}), refs
-        ))
+        return DataEnvelope(
+            status="real", data=_projects().create_dynamic(payload.model_dump(exclude={"references"}), refs)
+        )
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     except RuntimeError as exc:
@@ -196,7 +202,8 @@ def project_artifact(project_id: str, digest: str) -> Response:
     except (LookupError, ValueError) as exc:
         raise HTTPException(404, "artifact_not_owned_or_missing") from exc
     return Response(
-        content=content, media_type=mime,
+        content=content,
+        media_type=mime,
         headers={"Cache-Control": "private, immutable", "X-Content-Type-Options": "nosniff"},
     )
 

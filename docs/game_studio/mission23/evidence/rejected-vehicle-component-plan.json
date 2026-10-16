@@ -1,0 +1,67 @@
+{
+  "prompt": "Return ONLY JSON: {\"steps\":[{\"key\":\"x\",\"kind\":\"vehicle|building|chair|assemble|unreal_handoff|unsupported\",\"description\":\"specific work\",\"depends_on\":[]}],\"unmet_requirements\":[]}. These are the EXACT fields; unmet_requirements is an array of short strings. Create one independent vehicle, building or chair step per distinct requested asset. Buildings include facades, garages and shops. Chairs include other seating. Every asset step already includes materials and four renders; no separate view, render, material or lighting steps. If 2+ assets, add one assemble step depending on all assets. Assets have no dependencies. At most 5 assets and 8 steps; order by dependencies. Unknown requested components use unsupported with no dependencies. Never invent missing reference images. No file paths or code. Do not include unreal_handoff or mention Unreal. User request: Cr\u00e9e une voiture sportive d\u00e9taill\u00e9e avec carrosserie, quatre roues identifiables, mat\u00e9riaux r\u00e9alistes et quatre rendus.. Tool: blender.",
+  "attempts": [
+    {
+      "number": 1,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car_body\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a detailed car body with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"wheels\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create identifiable wheels with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assemble_car\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the car body with the wheels.\",\n      \"depends_on\": [\"car_body\", \"wheels\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 240,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 148,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 37.427,
+        "facts": {
+          "id": "chatcmpl-f2dd05ef-5385-4118-9272-9b0080d5857a",
+          "created": 1792152610
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car_body\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a detailed car body with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"wheels\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create identifiable wheels with realistic materials and four renders.\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assemble_car\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the car body with the wheels.\",\n      \"depends_on\": [\"car_body\", \"wheels\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```"
+    }
+  ],
+  "accepted": true,
+  "status": "validated",
+  "plan": {
+    "schema_version": 1,
+    "feasibility_scope": "DAG, resource budget and known specialist capability; objective coverage is not semantically verified",
+    "steps": [
+      {
+        "key": "car_body",
+        "kind": "vehicle",
+        "description": "Create a detailed car body with realistic materials and four renders.",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "wheels",
+        "kind": "vehicle",
+        "description": "Create identifiable wheels with realistic materials and four renders.",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "assemble_car",
+        "kind": "assemble",
+        "description": "Assemble the car body with the wheels.",
+        "depends_on": [
+          "car_body",
+          "wheels"
+        ],
+        "status": "available_unqualified",
+        "reason": null
+      }
+    ],
+    "unmet_requirements": [],
+    "estimated_minimum_s": 1200,
+    "feasible_steps": 3,
+    "blocked_steps": 0,
+    "fully_feasible": true
+  }
+}

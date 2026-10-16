@@ -143,7 +143,7 @@ export function GameStudioPage() {
       const criteria = JSON.parse(criteriaText) as GameStudioRequest["criteria"];
       if (!criteria || Array.isArray(criteria) || typeof criteria !== "object") throw new Error("Critères JSON invalides");
       const references = await encodeReferences(files, provenance);
-      if (form.creation_type === "environnement") projectSubmit.mutate({ ...form, criteria, references });
+      if (["environnement", "autre", "monde_ouvert"].includes(form.creation_type) || form.plan_only) projectSubmit.mutate({ ...form, criteria, references });
       else submit.mutate({ ...form, criteria, references });
     } catch (failure) { setError(String(failure)); }
   }
@@ -165,7 +165,7 @@ export function GameStudioPage() {
             : form.description });
         }}>
           <option value="vehicule">Véhicule</option><option value="batiment">Bâtiment</option><option value="objet_3d">Objet 3D</option>
-          <option value="environnement">Environnement : recette garage Blender (3 assets)</option><option value="monde_ouvert">Monde ouvert (indisponible)</option><option value="autre">Autre (indisponible)</option>
+          <option value="environnement">Environnement : plan autonome</option><option value="monde_ouvert">Monde ouvert (plan et limites)</option><option value="autre">Autre (plan et limites)</option>
         </select></label>
         {form.creation_type === "autre" && <label>Type libre<input value={form.creation_other ?? ""} onChange={(e) => setForm({ ...form, creation_other: e.target.value })} /></label>}
         <label>Style<select value={form.style} onChange={(e) => setForm({ ...form, style: e.target.value as GameStudioRequest["style"] })}>
@@ -190,11 +190,12 @@ export function GameStudioPage() {
         <label className="game-form__wide">Provenance et droits des références<input value={provenance} onChange={(e) => setProvenance(e.target.value)} placeholder="Fichiers créés par moi, usage autorisé…" /></label>
         <label className="game-check"><input type="checkbox" checked={form.judges_all_tasks} onChange={(e) => setForm({ ...form, judges_all_tasks: e.target.checked })} /> Activer les juges sur toutes les tâches</label>
         <label className="game-check"><input type="checkbox" checked={form.automatic_corrections} onChange={(e) => setForm({ ...form, automatic_corrections: e.target.checked })} /> Autoriser les corrections automatiques</label>
+        <label className="game-check"><input type="checkbox" checked={Boolean(form.plan_only)} onChange={(e) => setForm({ ...form, plan_only: e.target.checked })} /> Évaluer le plan sans lancer Blender</label>
         <label>Temps maximum (s)<input type="number" min={120} max={3600} value={form.max_time_s} onChange={(e) => setForm({ ...form, max_time_s: Number(e.target.value) })} /></label>
         <label>RAM échantillonnée max (Mio)<input type="number" min={512} max={16384} value={form.max_rss_mib} onChange={(e) => setForm({ ...form, max_rss_mib: Number(e.target.value) })} /></label>
         <label>Versions max par asset<input type="number" min={1} max={3} value={form.max_attempts} onChange={(e) => setForm({ ...form, max_attempts: Number(e.target.value) })} /></label>
         <label className="game-form__wide">Critères de qualité personnalisés (JSON)<textarea rows={2} value={criteriaText} onChange={(e) => setCriteriaText(e.target.value)} /></label>
-        <p className="game-form__wide">Environnement lance une recette fixe de garage : voiture, bâtiment puis fauteuil de décor, chacun vérifié séparément, avant assemblage dans Blender. Les références visuelles ne sont pas interprétées par le contrôleur texte ; ce parcours multi-assets les refuse. UE5 et CUDA affichent leur état réel dans les capacités.</p>
+        <p className="game-form__wide">Les projets construisent un plan borné avec le modèle local. Les familles exécutables sont véhicule, bâtiment et fauteuil ; les autres demandes restent signalées comme bloquées. Les références sont conservées avec provenance, mais leur contenu visuel n'est pas encore interprété. UE5 et CUDA gardent leur statut mesuré.</p>
         {error && <p role="alert" className="game-form__wide">{error}</p>}
         <button type="submit" disabled={submit.isPending || projectSubmit.isPending}>{submit.isPending || projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</button>
       </form>
@@ -204,15 +205,24 @@ export function GameStudioPage() {
         {item.recipe} · {item.status} · {new Date(item.created_at).toLocaleString()}
       </button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
       {project && <section className="game-mission" aria-label="Suivi du projet">
-        <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · {project.elapsed_s != null ? `dernière exécution : ${project.elapsed_s} s` : "en cours"}</p>
+        <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · livraison {project.delivery_status ?? "en cours"} · {project.elapsed_s != null ? `dernière exécution : ${project.elapsed_s} s` : "en cours"}</p>
+        {project.plan && <article><h4>Plan généré et validé</h4><p>{project.plan.steps.length} tâches · estimation minimale {project.plan.estimated_minimum_s} s · tâches proposées exécutables : {project.plan.fully_feasible ? "oui" : "non"}. La couverture de la demande reste à contrôler.</p>
+          {project.plan.unmet_requirements.length > 0 && <p>Demandes non satisfaites : {project.plan.unmet_requirements.join(" ; ")}</p>}
+        </article>}
+        {project.planning_artifact && <ArtifactDownload jobId={project.id} artifact={project.planning_artifact} project />}
         <div className="game-actions">
           {["running", "queued"].includes(project.status) && <button type="button" onClick={() => projectCancel.mutate(project.id)}>Arrêter le projet</button>}
           {(["failed", "interrupted", "cancelled"].includes(project.status) || (project.status === "review" && !project.assembly)) &&
             <button type="button" onClick={() => projectResume.mutate(project.id)}>Reprendre le projet</button>}
         </div>
         {project.steps.map((step) => <article key={step.key}>
-          <h4>{step.key} · {step.specialist} · {step.status}</h4>
-          <p>Dépendances : {step.depends_on.length ? step.depends_on.join(", ") : "aucune"}</p>
+          <h4>{step.key} · {step.kind ?? step.creation_type} · {step.specialist} · {step.status}</h4>
+          <p>{step.description}</p><p>Dépendances : {step.depends_on.length ? step.depends_on.join(", ") : "aucune"}</p>
+          {step.reason && <p>Limite : {step.reason}</p>}
+          {step.handoff && <details><summary>Précontrôle Game Engineer et correction · {step.handoff.status}</summary>
+            <pre>{JSON.stringify({ before: step.handoff.before, after: step.handoff.after }, null, 2)}</pre>
+            <div className="game-files">{step.handoff.artifacts?.map((item) =>
+              <ArtifactDownload key={item.hash + item.name} jobId={project.id} artifact={item} project />)}</div></details>}
           {step.mission && <MissionDetail mission={step.mission} controls={false} onCancel={() => cancel.mutate(step.mission!.id)} onResume={() => resume.mutate(step.mission!.id)} />}
         </article>)}
         {project.assembly && <article>

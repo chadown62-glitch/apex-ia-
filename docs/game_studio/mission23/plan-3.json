@@ -1,0 +1,54 @@
+{
+  "prompt": "Return ONLY JSON: {\"steps\":[{\"key\":\"x\",\"kind\":\"vehicle|building|chair|assemble|unreal_handoff|unsupported\",\"description\":\"specific work\",\"depends_on\":[]}],\"unmet_requirements\":[]}. These are the EXACT fields; unmet_requirements is an array of short strings. Create one independent vehicle, building or chair step per distinct requested asset. Buildings include facades, garages and shops. Chairs include other seating. Every asset step already includes materials and four renders; no separate view, render, material or lighting steps. If 2+ assets, add one assemble step depending on all assets. Assets have no dependencies. At most 5 assets and 8 steps; order by dependencies. Unknown requested components use unsupported with no dependencies. Never invent missing reference images. No file paths or code. Include one unreal_handoff depending on assemble or the asset; UE5 remains blocked. User request: Construis une fa\u00e7ade de librairie et pr\u00e9pare son import dans Unreal Engine 5 avec un contr\u00f4le des limitations du moteur.. Tool: blender.",
+  "attempts": [
+    {
+      "number": 1,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"library_facade\",\n      \"kind\": \"building\",\n      \"description\": \"Construct a library facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"unreal_handoff_library_facade\",\n      \"kind\": \"unsupported\",\n      \"description\": \"Hand off the library facade to Unreal Engine 5 for import and control of engine limitations\",\n      \"depends_on\": [\"library_facade\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 244,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 113,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 19.79,
+        "facts": {
+          "id": "chatcmpl-ca09c8b0-8123-40c9-a251-0bf17f1d54ce",
+          "created": 1792151625
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"library_facade\",\n      \"kind\": \"building\",\n      \"description\": \"Construct a library facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"unreal_handoff_library_facade\",\n      \"kind\": \"unsupported\",\n      \"description\": \"Hand off the library facade to Unreal Engine 5 for import and control of engine limitations\",\n      \"depends_on\": [\"library_facade\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+      "rejection": "ValueError: unsupported_requirement_cannot_block_supported_tasks"
+    },
+    {
+      "number": 2,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"library_facade\",\n      \"kind\": \"building\",\n      \"description\": \"Construct a library facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"unreal_handoff_library_facade\",\n      \"kind\": \"unsupported\",\n      \"description\": \"Hand off the library facade to Unreal Engine 5 for import\",\n      \"depends_on\": [\"library_facade\"]\n    }\n  ],\n  \"unmet_requirements\": [\"import_into_unreal_engine_5_with_control_over_engine_limits\"]\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 263,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 121,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 57.966,
+        "facts": {
+          "id": "chatcmpl-797c3e8a-f9e1-4a17-bb4f-8d07ddc167e3",
+          "created": 1792151645
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"library_facade\",\n      \"kind\": \"building\",\n      \"description\": \"Construct a library facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"unreal_handoff_library_facade\",\n      \"kind\": \"unsupported\",\n      \"description\": \"Hand off the library facade to Unreal Engine 5 for import\",\n      \"depends_on\": [\"library_facade\"]\n    }\n  ],\n  \"unmet_requirements\": [\"import_into_unreal_engine_5_with_control_over_engine_limits\"]\n}\n```",
+      "rejection": "ValueError: unsupported_requirement_cannot_block_supported_tasks"
+    }
+  ],
+  "accepted": false,
+  "status": "rejected",
+  "rejection": "ValueError: unsupported_requirement_cannot_block_supported_tasks"
+}

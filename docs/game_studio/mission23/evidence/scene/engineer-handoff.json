@@ -1,0 +1,11 @@
+{
+  "specialist": "Game Engineer preflight",
+  "status": "blocked",
+  "source_vehicle_artifact": null,
+  "glb_structure_verified": false,
+  "missing_vehicle_contract_wheel_nodes": [],
+  "unreal_editor_executed": false,
+  "vehicle_physics_executed": false,
+  "reason": "no_vehicle_requested",
+  "vehicle_reports": {}
+}

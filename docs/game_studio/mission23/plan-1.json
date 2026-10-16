@@ -1,0 +1,107 @@
+{
+  "prompt": "Return ONLY JSON: {\"steps\":[{\"key\":\"x\",\"kind\":\"vehicle|building|chair|assemble|unreal_handoff|unsupported\",\"description\":\"specific work\",\"depends_on\":[]}],\"unmet_requirements\":[]}. These are the EXACT fields; unmet_requirements is an array of short strings. Create one independent vehicle, building or chair step per distinct requested asset. Buildings include facades, garages and shops. Chairs include other seating. Every asset step already includes materials and four renders; no separate view, render, material or lighting steps. If 2+ assets, add one assemble step depending on all assets. Assets have no dependencies. At most 5 assets and 8 steps; order by dependencies. Unknown requested components use unsupported with no dependencies. Never invent missing reference images. No file paths or code. Do not include unreal_handoff or mention Unreal. User request: Cr\u00e9e deux coup\u00e9s sportifs distincts devant une galerie urbaine avec un fauteuil de terrasse; assemble la sc\u00e8ne.. Tool: blender.",
+  "attempts": [
+    {
+      "number": 1,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car1\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"car2\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create another distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"garage\",\n      \"kind\": \"building\",\n      \"description\": \"Create a garage facade for the cars\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"terraceChair\",\n      \"kind\": \"chair\",\n      \"description\": \"Create a terrace chair model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assembleScene\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the scene with both cars, garage, and terrace chair\",\n      \"depends_on\": [\"car1\", \"car2\", \"garage\", \"terraceChair\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 237,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 229,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 55.237,
+        "facts": {
+          "id": "chatcmpl-b0478b41-a9f9-4ed9-be1e-9d41311611fb",
+          "created": 1792151516
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car1\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"car2\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create another distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"garage\",\n      \"kind\": \"building\",\n      \"description\": \"Create a garage facade for the cars\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"terraceChair\",\n      \"kind\": \"chair\",\n      \"description\": \"Create a terrace chair model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assembleScene\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the scene with both cars, garage, and terrace chair\",\n      \"depends_on\": [\"car1\", \"car2\", \"garage\", \"terraceChair\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+      "rejection": "ValueError: plan_step_key_invalid"
+    },
+    {
+      "number": 2,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car1\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"car2\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create another distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"gallery\",\n      \"kind\": \"building\",\n      \"description\": \"Create a gallery building facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"terrace_chair\",\n      \"kind\": \"chair\",\n      \"description\": \"Create a terrace chair model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assemble_scene\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the scene with car1, car2, gallery, and terrace_chair\",\n      \"depends_on\": [\"car1\", \"car2\", \"gallery\", \"terrace_chair\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 252,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 231,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 39.236,
+        "facts": {
+          "id": "chatcmpl-6d15f8eb-2121-46d2-873c-405a8ae5d640",
+          "created": 1792151571
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"car1\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"car2\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create another distinct sports car model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"gallery\",\n      \"kind\": \"building\",\n      \"description\": \"Create a gallery building facade\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"terrace_chair\",\n      \"kind\": \"chair\",\n      \"description\": \"Create a terrace chair model\",\n      \"depends_on\": []\n    },\n    {\n      \"key\": \"assemble_scene\",\n      \"kind\": \"assemble\",\n      \"description\": \"Assemble the scene with car1, car2, gallery, and terrace_chair\",\n      \"depends_on\": [\"car1\", \"car2\", \"gallery\", \"terrace_chair\"]\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```"
+    }
+  ],
+  "accepted": true,
+  "status": "validated",
+  "plan": {
+    "schema_version": 1,
+    "steps": [
+      {
+        "key": "car1",
+        "kind": "vehicle",
+        "description": "Create a distinct sports car model",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "car2",
+        "kind": "vehicle",
+        "description": "Create another distinct sports car model",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "gallery",
+        "kind": "building",
+        "description": "Create a gallery building facade",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "terrace_chair",
+        "kind": "chair",
+        "description": "Create a terrace chair model",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      },
+      {
+        "key": "assemble_scene",
+        "kind": "assemble",
+        "description": "Assemble the scene with car1, car2, gallery, and terrace_chair",
+        "depends_on": [
+          "car1",
+          "car2",
+          "gallery",
+          "terrace_chair"
+        ],
+        "status": "available_unqualified",
+        "reason": null
+      }
+    ],
+    "unmet_requirements": [],
+    "estimated_minimum_s": 2040,
+    "feasible_steps": 5,
+    "blocked_steps": 0,
+    "fully_feasible": true
+  }
+}

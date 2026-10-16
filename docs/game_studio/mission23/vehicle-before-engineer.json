@@ -1,0 +1,6 @@
+{
+  "verdict": "fail_preflight",
+  "error": "ValueError: independent_root_wheel_required:wheel_front_left",
+  "source_artifact": "sha256:5c5368b48107d31e828f5e17ecfd5c9531eb094bc2efaead001e17a8a5e43904",
+  "unreal_import_verified": false
+}

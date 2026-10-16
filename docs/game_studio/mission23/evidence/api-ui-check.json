@@ -1,0 +1,32 @@
+{
+  "project_get_http": 200,
+  "project_id": "3712b584-b5d4-4f5d-bc8c-e47436bf2479",
+  "status": "review",
+  "delivery_status": "technical_review",
+  "plan_steps": [
+    [
+      "task_1",
+      "building",
+      "review"
+    ],
+    [
+      "task_2",
+      "chair",
+      "review"
+    ],
+    [
+      "task_3",
+      "assemble",
+      "review"
+    ]
+  ],
+  "artifact_get_http": 200,
+  "artifact_name": "front_three_quarter.png",
+  "artifact_hash": "sha256:4fcef88aa5072d78a03acad0976a8464442da7a6b01d4a3f6e8d681ca7c96e59",
+  "received_sha256": "4fcef88aa5072d78a03acad0976a8464442da7a6b01d4a3f6e8d681ca7c96e59",
+  "bytes": 1011150,
+  "hash_matches": true,
+  "browser_project_plan_visible": true,
+  "browser_native_render_images_loaded": 20,
+  "browser_page_errors": []
+}

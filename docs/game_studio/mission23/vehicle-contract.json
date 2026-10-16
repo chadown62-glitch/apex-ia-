@@ -1,0 +1,97 @@
+{
+  "wheels": [
+    {
+      "object": "wheel_front_left",
+      "center_m": [
+        1.399999976158142,
+        -0.8999999761581421,
+        0.35499998927116394
+      ],
+      "radius_m": 0.355,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "object": "wheel_front_right",
+      "center_m": [
+        1.399999976158142,
+        0.8999999761581421,
+        0.35499998927116394
+      ],
+      "radius_m": 0.355,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "object": "wheel_rear_left",
+      "center_m": [
+        -1.399999976158142,
+        -0.8999999761581421,
+        0.35499998927116394
+      ],
+      "radius_m": 0.355,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    },
+    {
+      "object": "wheel_rear_right",
+      "center_m": [
+        -1.399999976158142,
+        0.8999999761581421,
+        0.35499998927116394
+      ],
+      "radius_m": 0.355,
+      "spin_axis_local": [
+        0,
+        0,
+        1
+      ],
+      "spin_axis_blender_world": [
+        0,
+        1,
+        0
+      ]
+    }
+  ],
+  "spec": {
+    "length_m": 4.925,
+    "width_m": 2.24,
+    "height_m": 1.2888,
+    "wheelbase_m": 2.8,
+    "wheel_radius_m": 0.355,
+    "wheel_width_m": 0.232,
+    "mass_kg": 1200,
+    "body_color": [
+      0.800000011920929,
+      0.20000000298023224,
+      0.10000000149011612
+    ],
+    "paint_metallic": 0.0,
+    "paint_roughness": 0.30000001192092896
+  },
+  "measurement_scope": "bounds, wheel centers and material from Blender; mass is a design estimate"
+}

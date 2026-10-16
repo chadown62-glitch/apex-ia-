@@ -1121,6 +1121,7 @@ export interface GameStudioRequest {
   max_attempts: number;
   criteria: Record<string, number | boolean>;
   references: GameStudioReferenceInput[];
+  plan_only?: boolean;
 }
 
 export interface GameStudioArtifact {
@@ -1164,13 +1165,25 @@ export interface GameStudioMission {
 
 export interface GameStudioProjectStep {
   key: string;
-  creation_type: string;
+  kind?: string;
+  creation_type?: string;
   depends_on: string[];
   description: string;
   specialist: string;
   job_id: string | null;
   status: string;
+  reason?: string | null;
+  handoff?: { status?: string; before?: Record<string, unknown>; after?: Record<string, unknown> | null; artifacts?: GameStudioArtifact[] };
   mission: GameStudioMission | null;
+}
+
+export interface GameStudioPlanStep {
+  key: string;
+  kind: string;
+  description: string;
+  depends_on: string[];
+  status: string;
+  reason?: string | null;
 }
 
 export interface GameStudioProject {
@@ -1183,6 +1196,10 @@ export interface GameStudioProject {
   finished_at?: string;
   elapsed_s?: number;
   recipe: string;
+  delivery_status?: string;
+  plan?: { steps: GameStudioPlanStep[]; fully_feasible: boolean; estimated_minimum_s: number; unmet_requirements: string[]; feasibility_scope?: string } | null;
+  planning_artifact?: GameStudioArtifact;
+  planner_model?: Record<string, unknown>;
   request: Omit<GameStudioRequest, "references">;
   steps: GameStudioProjectStep[];
   limitations: string[];
