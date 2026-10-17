@@ -155,6 +155,12 @@ Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par
 
 ## 8. Laissé à Codex (ses fichiers ; détail dans l'Issue #21)
 
+Synthèse de reprise, dans l'ordre où le parcours rencontre chaque blocage, avec la cause et la correction
+proposée : [`docs/REPRISE_CODEX_GAME_STUDIO.md`](REPRISE_CODEX_GAME_STUDIO.md). Deux constats s'y ajoutent :
+- **rien n'appelle `fetch_coder()`** : aucune commande, aucun bouton n'installe le planificateur 7B ;
+- **`llama-cpp-python` n'existe sur PyPI qu'en sources**, sans roue Windows. « Préparer APEX » installe avec
+  `--only-binary=:all:` et ne peut donc pas l'installer.
+
 1. `jsonschema` dans `requirements-windows.in` / `.lock`. Proposition vérifiée : 5 paquets ajoutés, aucune
    version existante changée, empreintes Windows identiques à PyPI, licences MIT.
 2. Le planificateur 7B et `llama-cpp-python` : déclaration, source Windows, CPU ou CUDA.
