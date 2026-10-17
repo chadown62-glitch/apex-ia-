@@ -29,16 +29,28 @@ qualifiera, ou non, la RTX 4060 Ti 8 Go de l'utilisateur.
 ## 3. Fonctionnement
 
 **Choix de la variante.**
-- `nvidia-smi` donne la version CUDA **maximale** que le pilote accepte (en-tête « CUDA Version »).
+- La version CUDA **maximale** que le pilote accepte est relevée deux fois :
+  - auprès du pilote lui-même : `cuDriverGetVersion` de `nvcuda.dll`, appelé dans un Python séparé, sans
+    initialiser le GPU. Il rend un entier, par exemple 13030 pour 13.3 ;
+  - dans l'en-tête de `nvidia-smi` : « CUDA Version » (libellé historique) ou « CUDA UMD Version » (pilote
+    610.62, constaté le 17/10/2026 sur le PC de l'utilisateur).
+- Si les deux relevés diffèrent, **le plus bas** est retenu. Un seul suffit. S'il n'y en a aucun, l'installation
+  est refusée et la raison est donnée.
+- Trois valeurs ne sont jamais confondues :
+  - la version du **pilote** (610.62), lue dans la sortie structurée `--query-gpu` ;
+  - la version CUDA **du pilote** (13.3), seule utilisée pour choisir ;
+  - une boîte à outils CUDA éventuellement installée (`nvcc`, `CUDA_PATH`), jamais consultée.
 - La variante retenue est la plus récente des variantes figées dont la version CUDA ne la dépasse pas.
-  Exemples : un pilote à CUDA 12.9 reçoit `cu128` ; un pilote à 13.0 reçoit `cu130`.
+  Exemples : un pilote qui accepte CUDA 13.0 à 13.3 reçoit `cu130` ; un pilote à 12.6–12.9 reçoit `cu126`
+  (`cu128` n'existe pas pour Windows et CPython 3.12).
 - On ne s'appuie pas sur la compatibilité « mineure » de CUDA : jamais de variante plus récente que le pilote.
 - Une variante sans liste figée, ou dont les tailles sont inconnues, n'est jamais proposée.
 
 **Installation** (`gpu install`) :
 1. Refus si APEX tourne : ses bibliothèques seraient en cours d'usage.
-2. Pilote mesuré ; refus expliqué si `nvidia-smi` est absent, en échec, sans GPU, ou si le pilote est trop
-   ancien (« mettez à jour le pilote NVIDIA »).
+2. Pilote mesuré ; refus expliqué si `nvidia-smi` est absent, en échec, sans GPU, si aucune version CUDA du
+   pilote n'est lisible, ou si le pilote est trop ancien (« mettez à jour le pilote NVIDIA »). Le journal
+   donne chaque relevé : « CUDA accepté par le pilote : 13.3 (API du pilote 13.3, nvidia-smi 13.3) ».
 3. Espace disque vérifié sur le volume d'`APEX_HOME` : roue, plus contenu extrait, plus 1 Go de marge.
    Les fichiers temporaires de pip sont placés sur ce même volume.
 4. Installation par pip en mode `--require-hashes --no-deps --only-binary=:all: --no-cache-dir --target`.
@@ -94,10 +106,10 @@ pendant qu'APEX tourne. La désinstallation d'APEX supprime aussi la surcouche :
 |---|---|---|
 | Python | 3.12 (python.org, NuGet 3.12.10), roues `cp312-win_amd64` | IMPLEMENTED |
 | torch du runtime de base | 2.14.0 (PyPI : processeur seulement sous Windows) | MEASURED (liste figée) |
-| torch de la surcouche | 2.14.0+`cu130` / `cu128` / `cu126` — **même version** que la base | UNVERIFIED : existence des roues Windows non vérifiée d'ici |
+| torch de la surcouche | 2.14.0+`cu130` et `cu126` figées (`cu128` absente de l'index) — **même version** que la base | listes produites sur un runner Windows (`gpu-locks`, 16/10/2026). Existence, taille, empreinte et installation de `cu130` vérifiées par `windows-candidate` (`gpu_overlay_check.py`), sans GPU |
 | Dépendances de torch | aucune n'est installée par la surcouche (`--no-deps`). `lock_gpu.py` exige que chaque `Requires-Dist` de la roue Windows, évalué pour Windows x64 / CPython 3.12, soit satisfait par le runtime de base. Celui-ci contient déjà filelock, typing-extensions, sympy, networkx, jinja2, fsspec et setuptools. | TESTED (sur des roues de test) ; à confirmer sur les vraies roues |
 | Bibliothèques CUDA | incluses dans les roues Windows de PyTorch d'après leur format habituel. Les dépendances `nvidia-*` des roues Linux portent le marqueur `platform_system == "Linux"`, constaté sur torch 2.14.0 de cet environnement. | INFERRED, à confirmer par `lock_gpu.py` |
-| Pilote NVIDIA | doit annoncer, dans `nvidia-smi`, une version CUDA ≥ celle de la variante. Le minimum exact par variante est celui des notes de version de NVIDIA ; APEX applique la règle mesurée sur le PC, jamais un numéro de pilote supposé. | IMPLEMENTED |
+| Pilote NVIDIA | doit accepter (API du pilote, `nvidia-smi`) une version CUDA ≥ celle de la variante. Le minimum exact par variante est celui des notes de version de NVIDIA ; APEX applique la règle mesurée sur le PC, jamais un numéro de pilote supposé. | IMPLEMENTED |
 | RTX 4060 Ti (Ada, capacité 8.9) | à qualifier par la sonde : présence d'un noyau pour ce GPU, calcul de contrôle | BLOCKED (aucun test matériel) |
 | Visual C++ Redistributable | déjà requis par le runtime de base ; la préparation d'APEX l'indique si une DLL manque | IMPLEMENTED (message) |
 | `llama-cpp-python` CUDA (planificateur de Game Studio) | **hors de ce composant** : bibliothèque et construction distinctes, à déclarer par Codex | BLOCKED (Codex) |
@@ -126,10 +138,11 @@ l'environnement de développement : ce choix revient à l'utilisateur.
 À faire sur le PC de l'utilisateur, une fois les listes figées générées et APEX.exe reconstruit :
 
 1. `APEX.exe --install-gpu`, ou le bouton du Panel. Attendu : code 0, et `last-install.json` contient la
-   variante, le nom du GPU, `cuda_available: true` et `matmul.ok: true`.
+   variante (`cu130` pour un pilote qui accepte CUDA 13.3), le nom du GPU, `cuda_available: true` et
+   `matmul.ok: true`.
 2. « Démarrer APEX », puis `GET /api/v1/assistant/gpu` → `component.state == "active"`.
-3. Une réponse du Cerveau : ses mesures disent `device: cuda` ; on compare le débit (tokens/s) à celui sur
-   le processeur.
+3. Une réponse du Cerveau : sa ligne de mesures affiche « GPU (CUDA) » (`device: cuda`), au lieu de
+   « processeur » ; on compare le débit (tokens/s) à celui sur le processeur.
 4. Une mission Game Studio pendant une génération : l'accusé de `request_gpu` contient `released: true` et
    la VRAM rendue ; le Cerveau répond sur le processeur pendant la mission, puis revient sur CUDA.
 5. Repli : `gpu disable`, puis redémarrage → `disabled`, et le Cerveau tourne sur le processeur. Ensuite

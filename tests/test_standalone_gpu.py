@@ -34,6 +34,29 @@ HEADER = """+-------------------------------------------------------------------
 |-----------------------------------------+------------------------+----------------------+
 """
 QUERY = "GPU de test, 999.01, 8188, 8.9\n"
+#: PC de l'utilisateur, 17/10/2026 (Windows 11, RTX 4060 Ti) : valeurs RÉELLES relevées — pilote 610.62,
+#: 8188 MiB, la requête `--query-gpu` qui fonctionne, et le nouveau libellé « CUDA UMD Version: 13.3 » au
+#: lieu de « CUDA Version ». Seule la mise en page des cadres de l'en-tête reprend le format habituel.
+USER_HEADER = """Sat Oct 17 19:02:11 2026
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 610.62                 Driver Version: 610.62         CUDA UMD Version: 13.3  |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                  Driver-Model | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+|   0  NVIDIA GeForce RTX 4060 Ti   WDDM  |   00000000:01:00.0  On |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+"""
+#: `--query-gpu=name,driver_version,memory.total --format=csv,noheader` relevé sur ce PC (avec unités), et
+#: la même requête telle qu'APEX la fait (sans unités, avec la capacité de calcul de l'Ada Lovelace : 8.9).
+USER_QUERY_WITH_UNITS = "NVIDIA GeForce RTX 4060 Ti, 610.62, 8188 MiB\n"
+USER_QUERY = "NVIDIA GeForce RTX 4060 Ti, 610.62, 8188, 8.9\n"
+
+
+def _api(cuda: str | None) -> dict:
+    """Réponse de `DRIVER_API` : `cuDriverGetVersion` rend 1000 * majeure + 10 * mineure (13.3 → 13030)."""
+    if cuda is None:
+        return {"error": "nvcuda.dll : [WinError 126] module introuvable"}
+    major, minor = (int(x) for x in cuda.split("."))
+    return {"library": "nvcuda.dll", "status": 0, "version": major * 1000 + minor * 10}
 
 
 def _ok_probe(**overrides):
@@ -45,8 +68,12 @@ def _ok_probe(**overrides):
 class _Machine:
     """Double du PC : `nvidia-smi`, pip (qui « installe » un paquet torch vide) et la sonde."""
 
-    def __init__(self, *, cuda="12.8", query=QUERY, probe=None, pip_code=0, header_code=0):
+    def __init__(self, *, cuda="12.8", query=QUERY, probe=None, pip_code=0, header_code=0, header=None,
+                 api="same"):
         self.cuda, self.query, self.pip_code, self.header_code = cuda, query, pip_code, header_code
+        self.header = header
+        #: Réponse de l'API du pilote : par défaut la même version CUDA que l'en-tête.
+        self.api = _api(cuda) if api == "same" else api
         self.probe_result = _ok_probe() if probe is None else probe
         self.calls: list[list[str]] = []
         self.pip_env: dict[str, str] | None = None
@@ -56,7 +83,8 @@ class _Machine:
         self.calls.append(cmd)
         if cmd[0] == SMI:
             if len(cmd) == 1:
-                text = HEADER.format(cuda=self.cuda) if self.cuda else "NVIDIA-SMI sans version CUDA\n"
+                text = self.header if self.header is not None else (
+                    HEADER.format(cuda=self.cuda) if self.cuda else "NVIDIA-SMI sans version CUDA\n")
                 return subprocess.CompletedProcess(cmd, self.header_code, text, "erreur du pilote")
             code = 0 if self.query is not None else 6
             return subprocess.CompletedProcess(cmd, code, self.query or "", "")
@@ -67,6 +95,8 @@ class _Machine:
                 (target / "torch").mkdir(parents=True)
                 (target / "torch" / "__init__.py").write_text("", encoding="utf-8")
             return subprocess.CompletedProcess(cmd, self.pip_code, "", "")
+        if cmd[1:3] == ["-I", "-c"] and cmd[3] == gpu.DRIVER_API:
+            return subprocess.CompletedProcess(cmd, 0, json.dumps(self.api) + "\n", "")
         if cmd[1:3] == ["-I", "-c"]:
             out = json.dumps({**self.probe_result, "overlay": cmd[4]})
             return subprocess.CompletedProcess(cmd, 0, out + "\n", "")
@@ -164,6 +194,121 @@ def test_the_variant_never_exceeds_what_the_driver_accepts(app, cuda, expected) 
     assert (variant["id"] if variant else None) == expected
     if expected is None:
         assert "pilote NVIDIA trop ancien" in why and "mettez à jour" in why
+
+
+def _users_pc(**overrides):
+    return _Machine(**{"cuda": "13.3", "header": USER_HEADER, "query": USER_QUERY, **overrides})
+
+
+def test_the_users_real_driver_610_62_is_read_and_gets_the_cu130_variant() -> None:
+    """Régression (17/10/2026) : « CUDA UMD Version: 13.3 » faisait refuser l'installation (code 2,
+    « version CUDA du pilote illisible »). Pilote, CUDA du pilote et GPU restent trois valeurs
+    distinctes."""
+    driver = gpu.detect_driver(smi=SMI, run=_users_pc())
+    assert "reason" not in driver and "cuda_disagreement" not in driver
+    assert driver["driver_version"] == "610.62" and driver["cuda_driver"] == "13.3"
+    assert driver["cuda_sources"] == {"driver_api": "13.3", "nvidia_smi": "13.3"}
+    assert driver["gpus"] == [{"name": "NVIDIA GeForce RTX 4060 Ti", "driver_version": "610.62",
+                               "memory_total_mib": 8188, "compute_capability": "8.9"}]
+    assert gpu.describe_cuda(driver) == "13.3 (API du pilote 13.3, nvidia-smi 13.3)"
+    # Avec la description et les listes figées LIVRÉES : cu130 (CUDA 13.0 ≤ 13.3), jamais au-delà.
+    spec, folder, _ = gpu.load_spec(ROOT)
+    variant, why = gpu.choose(spec, folder, driver)
+    assert variant["id"] == "cu130" and why == "CUDA 13.0 ≤ CUDA 13.3 accepté par le pilote"
+    assert variant["lock"].endswith("torch-cu130.lock") and variant["wheel_bytes"] == 1990604486
+
+
+def test_the_users_query_with_units_reads_the_same_memory() -> None:
+    driver = gpu.detect_driver(smi=SMI, run=_users_pc(query=USER_QUERY_WITH_UNITS))
+    assert driver["gpus"][0]["memory_total_mib"] == 8188 and driver["gpus"][0]["compute_capability"] is None
+
+
+@pytest.mark.parametrize(("text", "expected"), [
+    (HEADER.format(cuda="12.8"), "12.8"),                       # libellé historique
+    (USER_HEADER, "13.3"),                                      # pilote 610.62
+    ("| CUDA Version : 12.4 |", "12.4"),
+    ("| CUDA Version: 13.0 | CUDA UMD Version: 12.9 |", "12.9"),  # deux relevés : le plus bas
+    ("| NVIDIA-SMI 610.62    Driver Version: 610.62 |", None),  # la version du PILOTE n'est pas CUDA
+    ("| CUDA KMD Version: 610.62 |", None),                     # aucun autre libellé n'est deviné
+    ("", None),
+])
+def test_the_header_accepts_the_old_and_new_labels_and_nothing_else(text, expected) -> None:
+    assert gpu.smi_header_cuda(text) == expected
+
+
+@pytest.mark.parametrize(("answer", "expected"), [
+    ({"status": 0, "version": 13030}, ("13.3", None)),
+    ({"status": 0, "version": 12080}, ("12.8", None)),
+    ({"status": 0, "version": 13000}, ("13.0", None)),
+])
+def test_the_driver_api_integer_is_decoded_exactly(answer, expected) -> None:
+    machine = _Machine(api=answer)
+    assert gpu.driver_api_cuda(python="python-apex", run=machine) == expected
+    assert machine.calls == [["python-apex", "-I", "-c", gpu.DRIVER_API]]
+
+
+@pytest.mark.parametrize(("answer", "problem"), [
+    ({"error": "nvcuda.dll : module introuvable"}, "API du pilote indisponible (nvcuda.dll"),
+    ({"status": 3, "version": 0}, "cuDriverGetVersion a rendu le code 3"),
+    ({"status": 0, "version": -1}, "cuDriverGetVersion a rendu le code 0 (-1)"),
+    ("pas du JSON", "réponse illisible"),
+])
+def test_an_unusable_driver_api_answer_is_never_a_version(answer, problem) -> None:
+    def run(cmd, **_kwargs):
+        text = answer if isinstance(answer, str) else json.dumps(answer)
+        return subprocess.CompletedProcess(cmd, 0, text + "\n", "")
+
+    version, why = gpu.driver_api_cuda(run=run)
+    assert version is None and problem in why
+
+
+def test_the_real_driver_api_query_runs_apart_and_reports_its_absence_here() -> None:
+    """Exécutée pour de vrai (processus séparé) : cette machine n'a pas de pilote NVIDIA."""
+    version, why = gpu.driver_api_cuda()
+    assert version is None and why.startswith("API du pilote indisponible (")
+
+
+@pytest.mark.parametrize(("api", "header", "cuda", "sources"), [
+    (None, HEADER.format(cuda="12.8"), "12.8", {"nvidia_smi": "12.8"}),   # ancien format, sans l'API
+    (None, USER_HEADER, "13.3", {"nvidia_smi": "13.3"}),                   # nouveau format, sans l'API
+    ("13.3", "| NVIDIA-SMI 610.62  Driver Version: 610.62 |", "13.3", {"driver_api": "13.3"}),
+])
+def test_either_reading_alone_is_enough(api, header, cuda, sources) -> None:
+    driver = gpu.detect_driver(smi=SMI, run=_users_pc(header=header, api=_api(api)))
+    assert "reason" not in driver and driver["cuda_driver"] == cuda and driver["cuda_sources"] == sources
+    assert ("driver_api_problem" in driver) is (api is None)
+
+
+@pytest.mark.parametrize(("api", "header_cuda", "kept", "expected"), [
+    ("12.9", "13.3", "12.9", "cu128"),
+    ("13.3", "12.6", "12.6", "cu126"),
+])
+def test_when_the_readings_disagree_the_lowest_wins(app, api, header_cuda, kept, expected) -> None:
+    machine = _users_pc(header=HEADER.format(cuda=header_cuda), api=_api(api))
+    driver = gpu.detect_driver(smi=SMI, run=machine)
+    assert driver["cuda_driver"] == kept and "la plus basse est retenue" in driver["cuda_disagreement"]
+    spec, folder, _ = gpu.load_spec(app)
+    assert gpu.choose(spec, folder, driver)[0]["id"] == expected
+
+
+def test_neither_the_driver_version_nor_an_installed_toolkit_is_taken_for_cuda(app, monkeypatch) -> None:
+    """Une boîte à outils CUDA 13.3 installée (CUDA_PATH, nvcc) ne dit rien de ce que le pilote accepte."""
+    monkeypatch.setenv("CUDA_PATH", r"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3")
+    machine = _users_pc(header="| NVIDIA-SMI 610.62  Driver Version: 610.62 |", api=_api(None))
+    driver = gpu.detect_driver(smi=SMI, run=machine)
+    assert driver["cuda_driver"] is None and driver["driver_version"] == "610.62"
+    assert "version CUDA du pilote illisible" in driver["reason"] and "nvcuda.dll" in driver["reason"]
+    assert not machine.ran("nvcc")
+    spec, folder, _ = gpu.load_spec(app)
+    assert gpu.choose(spec, folder, driver)[0] is None
+
+
+def test_the_users_pc_installs_and_activates_cu130(home, app, no_torch) -> None:
+    code, report = _install(home, app, _users_pc())
+    assert code == gpu.EXIT_OK and report["variant"] == "cu130"
+    path: list[str] = []
+    result = _activate(home, app, _users_pc(), path)
+    assert result["state"] == "active" and path == [report["overlay"]]
 
 
 # -- installation ---------------------------------------------------------------------------------------

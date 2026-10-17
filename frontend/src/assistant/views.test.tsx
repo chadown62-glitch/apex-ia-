@@ -438,6 +438,15 @@ describe("MessageItem", () => {
     expect(screen.getByText(/Cerveau APEX peu sûr \(confiance 0\.50\), aucun autre moteur disponible/)).toBeInTheDocument();
     expect(screen.getByText(/confié par le Cerveau APEX \(il dit ne pas pouvoir le savoir\)/)).toBeInTheDocument();
   });
+
+  it("says where the engine really computed the answer: GPU or processor", async () => {
+    const { MessageItem } = await import("./MessageItem");
+    const gpu = message({ id: "g", role: "assistant", content: "888", model_id: "apex-brain:v2:apex-q5", meta: { runtime: { backend: "apex_brain", device: "cuda", dtype: "torch.bfloat16", tokens_per_s: 131.2 } } });
+    const cpu = message({ id: "p", role: "assistant", content: "888", model_id: "apex-brain:v2:apex-q5", meta: { runtime: { backend: "apex_brain", device: "cpu", dtype: "torch.float32", tokens_per_s: 12.5 } } });
+    renderAt("/", [{ path: "/", element: <><MessageItem message={gpu as never} /><MessageItem message={cpu as never} /></> }]);
+    expect(screen.getByText(/apex-brain:v2:apex-q5 · GPU \(CUDA\) · torch\.bfloat16 · .*131\.2 tokens\/s/)).toBeInTheDocument();
+    expect(screen.getByText(/apex-brain:v2:apex-q5 · processeur · torch\.float32 · .*12\.5 tokens\/s/)).toBeInTheDocument();
+  });
 });
 
 describe("crosscheckLine", () => {

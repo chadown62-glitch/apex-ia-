@@ -3,6 +3,7 @@
 # n'est poussé, aucune PR n'est fusionnée — puis le parcours d'un utilisateur sur un Windows réel hébergé par
 # GitHub (Windows Server, CPU, sans GPU ni Blender ; ce n'est PAS le PC de l'utilisateur) :
 #   installateur construit depuis l'arbre combiné -> installation silencieuse -> APEX.exe --prepare
+#   -> accélération GPU vérifiée sans GPU (gpu_overlay_check.py : roues figées, variante, installation à part, sonde)
 #   -> --install-model -> --start -> un vrai tour de l'assistant (assistant_e2e.py run)
 #   -> parcours 3D réel (studio_e2e.py : composants, disponibilité, conversation 3D, proposition, clic,
 #      suivi) -> --stop -> désinstallation.
@@ -164,6 +165,17 @@ jobs:
             $out = & $py.FullName -X utf8 "$evidence\import_check.py" 2>&1 | ForEach-Object { "$_" }
             Note notice 'Imports dans APEX installé' ($out -join "`n")
           }
+          # Accélération GPU facultative : tout ce qui se vérifie sans GPU, par le Python et le code d'APEX installés
+          # (roues figées, choix de la variante, installation à part par la commande exacte d'APEX, sonde). Dossier
+          # jetable : rien n'est installé chez APEX. Seul le PC de l'utilisateur, avec son GPU, peut aller plus loin.
+          $gpuCheck = 1
+          if ($py) {
+            $lines = & $py.FullName -P "$tree/setup/packaging/windows/ci/gpu_overlay_check.py" --out $evidence --work "$env:RUNNER_TEMP\gpu-check" 2>&1 | ForEach-Object { "$_" }
+            $gpuCheck = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Accélération GPU sans GPU (code $gpuCheck)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|VERDICT)' }) -join "`n")
+          }
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\gpu-check" -ErrorAction SilentlyContinue
           $model = Panel '--install-model' 3600
           if ((Panel '--start' 900) -gt 1) {
             Note error 'Démarrage' ((Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 60) -join "`n")
@@ -184,9 +196,9 @@ jobs:
           Start-Sleep -Seconds 5
           $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
           Note notice 'Désinstallation' "code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
-          Note notice 'Codes' "modèle $model ; assistant $assistant ; parcours 3D $studio"
+          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio"
           if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
-          if ($assistant -eq 1 -or $studio -eq 1) { exit 1 }
+          if ($assistant -eq 1 -or $studio -eq 1 -or $gpuCheck -ne 0) { exit 1 }
           if ($assistant -eq 3 -or $studio -eq 3 -or $model -ne 0) { exit 3 }
       # L'installateur de QUALIFICATION, pour l'essayer sur le PC de l'utilisateur : un artefact de ce run (connexion
       # GitHub requise), jamais une release. Il s'annonce « 0.6.0 » ; son contenu exact est dans manifest.json.

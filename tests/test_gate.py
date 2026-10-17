@@ -20,6 +20,7 @@ from apex.gate.checks import (
     GateContext,
     gate_07_gpu_from_wsl,
     gate_09_vram,
+    gate_10_cuda_driver,
     gate_01_windows_host,
     gate_05_python,
     gate_12_ram,
@@ -728,3 +729,42 @@ class TestHardwareThresholdsAreNotACeiling(unittest.TestCase):
         document["compute"]["pools"]["local-gpu"]["gpus"][0]["vram_gb"] = 200
         outcome = gate_09_vram(GateContext(probe=healthy_probe(), config=parse_config(document), timeout_s=1.0))
         self.assertIs(outcome.status, GateStatus.DEGRADED)
+
+
+class TestGate10CudaDriver(unittest.TestCase):
+    """Version du pilote et version CUDA du pilote : deux valeurs distinctes, lues dans l'ancien comme dans
+    le nouveau format de `nvidia-smi` (« CUDA UMD Version », pilote 610.62 relevé le 17/10/2026)."""
+
+    def _gate10(self, header: str, query: str | None = None):
+        probe = healthy_probe()
+        probe.commands[("nvidia-smi",)] = CommandResult(("nvidia-smi",), 0, header, "")
+        if query is not None:
+            probe.commands[("nvidia-smi", "--query-gpu=name,memory.total,memory.free,driver_version",
+                            "--format=csv,noheader,nounits")] = CommandResult(("nvidia-smi",), 0, query, "")
+        return gate_10_cuda_driver(ctx(probe))
+
+    def test_a_the_historical_label(self) -> None:
+        outcome = self._gate10("Driver Version: 560.94       CUDA Version: 12.6\n")
+        self.assertIs(outcome.status, GateStatus.PASS)
+        facts = outcome.facts
+        self.assertEqual((facts["driver_version"], facts["cuda_version"]), ("560.94", "12.6"))
+
+    def test_b_the_cuda_umd_label_of_driver_610(self) -> None:
+        outcome = self._gate10("| NVIDIA-SMI 610.62  Driver Version: 610.62  CUDA UMD Version: 13.3 |\n",
+                               "NVIDIA GeForce RTX 4060 Ti, 8188, 7400, 610.62\n")
+        self.assertIs(outcome.status, GateStatus.PASS)
+        facts = outcome.facts
+        self.assertEqual((facts["driver_version"], facts["cuda_version"]), ("610.62", "13.3"))
+        self.assertEqual(outcome.message, "pilote 610.62, CUDA 13.3")
+
+    def test_c_the_driver_version_comes_from_the_structured_query_first(self) -> None:
+        outcome = self._gate10("| NVIDIA-SMI | CUDA UMD Version: 13.3 |\n",
+                               "NVIDIA GeForce RTX 4060 Ti, 8188, 7400, 610.62\n")
+        self.assertIs(outcome.status, GateStatus.PASS)
+        self.assertEqual(outcome.facts["driver_version"], "610.62")
+
+    def test_d_the_driver_version_is_never_read_as_cuda(self) -> None:
+        outcome = self._gate10("| NVIDIA-SMI 610.62    Driver Version: 610.62 |\n",
+                               "NVIDIA GeForce RTX 4060 Ti, 8188, 7400, 610.62\n")
+        self.assertIsNone(outcome.facts["cuda_version"])
+        self.assertEqual(outcome.message, "pilote 610.62, CUDA n/d")

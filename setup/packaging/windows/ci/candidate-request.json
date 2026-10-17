@@ -11,6 +11,6 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 4,
-  "why": "run 38984907317 a validé le correctif -P, mais avec PYTHONUTF8 hérité par APEX ; ce run reprend le parcours sans lui, comme sur le PC d'un utilisateur"
+  "attempt": 5,
+  "why": "candidate GPU : détection CUDA corrigée (pilote 610.62, « CUDA UMD Version : 13.3 » : API du pilote + deux libellés de nvidia-smi), roue cu130 vérifiée sur Windows (existence, empreinte, installation à part, sonde), mesure « GPU (CUDA) / processeur » sous chaque réponse"
 }

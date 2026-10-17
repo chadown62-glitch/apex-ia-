@@ -5,8 +5,9 @@ version PROCESSEUR seulement. L'accélération GPU est un composant à part, jam
 principal, installé SEULEMENT sur un geste de l'utilisateur (Panel, ou `python -m apex.standalone gpu
 install`) :
 
-- **variante** choisie d'après le pilote NVIDIA MESURÉ (`nvidia-smi` : version CUDA maximale que le pilote
-  accepte) : la plus récente des variantes figées dont la version CUDA ne la dépasse pas ;
+- **variante** choisie d'après le pilote NVIDIA MESURÉ (version CUDA maximale que le pilote accepte,
+  demandée au pilote lui-même et relue dans `nvidia-smi` : la plus basse des deux) : la plus récente des
+  variantes figées dont la version CUDA ne la dépasse pas ;
 - **roue `torch` CUDA figée** par adresse et empreinte SHA-256 (`runtime/gpu/torch-<variante>.lock`,
   produite par `setup/packaging/runtime/gpu/lock_gpu.py` là où download.pytorch.org est joignable),
   installée par pip en mode `--require-hashes --no-deps --only-binary=:all:` dans un dossier À PART
@@ -110,6 +111,33 @@ except BaseException as exc:
 done()
 """
 
+#: Exécutée elle aussi dans un Python séparé (`python -I -c DRIVER_API`) : la version CUDA que le PILOTE
+#: installé accepte, demandée au pilote lui-même (`cuDriverGetVersion` de nvcuda.dll ou libcuda.so.1, la
+#: partie « mode utilisateur » du pilote, UMD) : un entier, aucun texte à interpréter, sans `cuInit` (rien
+#: n'est initialisé sur le GPU).
+DRIVER_API = r"""
+import ctypes, json, sys
+names = ("nvcuda.dll",) if sys.platform == "win32" else ("libcuda.so.1", "libcuda.so")
+out = {"error": "aucune bibliothèque du pilote CUDA"}
+for name in names:
+    try:
+        lib = ctypes.WinDLL(name) if sys.platform == "win32" else ctypes.CDLL(name)
+    except OSError as exc:
+        out = {"error": ("%s : %s" % (name, exc))[:300]}
+        continue
+    version = ctypes.c_int(0)
+    out = {"library": name, "status": int(lib.cuDriverGetVersion(ctypes.byref(version))),
+           "version": int(version.value)}
+    break
+print(json.dumps(out))
+"""
+
+#: Version CUDA du PILOTE dans l'en-tête de `nvidia-smi` : « CUDA Version » (libellé historique) ou
+#: « CUDA UMD Version » (pilote 610.62, constaté sur le PC de l'utilisateur le 17/10/2026). Jamais « Driver
+#: Version » (version du pilote : 610.62), ni la version d'une boîte à outils CUDA installée (nvcc,
+#: CUDA_PATH), qui ne dit rien de ce que le pilote accepte et n'est jamais consultée.
+_SMI_CUDA = re.compile(r"\bCUDA(?: UMD)? Version\s*:\s*(\d+\.\d+)\b")
+
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
 
@@ -209,9 +237,45 @@ def nvidia_smi() -> str | None:
     return None
 
 
-def detect_driver(*, smi: str | None = None, run: Runner = subprocess.run) -> dict[str, Any]:
-    """Pilote et GPU NVIDIA tels que `nvidia-smi` les rapporte — jamais supposés. `cuda_driver` est la
-    version CUDA MAXIMALE que ce pilote accepte (en-tête de `nvidia-smi`)."""
+def smi_header_cuda(text: str) -> str | None:
+    """Version CUDA du pilote lue dans l'en-tête de `nvidia-smi` (les deux libellés) ; la plus basse si
+    l'en-tête en donne plusieurs."""
+    found = {match.group(1) for match in _SMI_CUDA.finditer(text or "")}
+    return min(found, key=lambda v: _cuda(v) or (0, 0)) if found else None
+
+
+def driver_api_cuda(*, python: str | None = None,
+                    run: Runner = subprocess.run) -> tuple[str | None, str | None]:
+    """(version « majeure.mineure » que le pilote accepte, ou None ; problème rencontré, ou None)."""
+    try:
+        done = run([python or sys.executable, "-I", "-c", DRIVER_API], capture_output=True, text=True,
+                   timeout=SMI_TIMEOUT_S)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, f"API du pilote non interrogée ({exc.__class__.__name__})"
+    lines = [line for line in (done.stdout or "").splitlines() if line.strip()]
+    try:
+        out = json.loads(lines[-1]) if lines else None
+    except ValueError:
+        out = None
+    if not isinstance(out, dict):
+        return None, f"API du pilote : réponse illisible (code {done.returncode})"
+    if out.get("error"):
+        return None, f"API du pilote indisponible ({out['error']})"[:300]
+    version = out.get("version")
+    if out.get("status") != 0 or not isinstance(version, int) or version <= 0:
+        return None, f"API du pilote : cuDriverGetVersion a rendu le code {out.get('status')} ({version})"
+    return f"{version // 1000}.{version % 1000 // 10}", None
+
+
+def detect_driver(*, smi: str | None = None, run: Runner = subprocess.run,
+                  python: str | None = None) -> dict[str, Any]:
+    """Pilote et GPU NVIDIA tels que le pilote les rapporte — jamais supposés.
+
+    - `driver_version` : version du PILOTE (ex. 610.62), sortie structurée `--query-gpu` ;
+    - `cuda_driver` : version CUDA MAXIMALE que ce pilote accepte. Deux relevés : l'API du pilote
+      (`cuDriverGetVersion`) et l'en-tête de `nvidia-smi` (`cuda_sources`) ; s'ils diffèrent, le plus BAS
+      est retenu, pour ne jamais choisir une variante que le pilote n'accepte pas.
+    """
     path = smi or nvidia_smi()
     if path is None:
         return {"found": False, "reason": "aucun pilote NVIDIA détecté (nvidia-smi introuvable)"}
@@ -230,22 +294,40 @@ def detect_driver(*, smi: str | None = None, run: Runner = subprocess.run) -> di
     if header.returncode != 0:
         detail = (header.stderr or header.stdout or "").strip().splitlines()[-1:] or ["sans message"]
         return {"found": False, "path": path, "reason": f"nvidia-smi a échoué : {detail[0][:200]}"}
-    match = re.search(r"CUDA Version\s*:\s*(\d+\.\d+)", header.stdout or "")
     gpus = []
     for line in (query.stdout or "").splitlines() if query.returncode == 0 else []:
         cells = [c.strip() for c in line.split(",")]
         if len(cells) >= 3 and cells[0]:
-            memory = int(cells[2]) if cells[2].isdigit() else None
+            amount = re.fullmatch(r"(\d+)(?:\s*MiB)?", cells[2])  # « 8188 » (nounits) ou « 8188 MiB »
+            memory = int(amount.group(1)) if amount else None
             capability = cells[3] if len(cells) > 3 and _cuda(cells[3]) else None
             gpus.append({"name": cells[0], "driver_version": cells[1], "memory_total_mib": memory,
                          "compute_capability": capability})
-    driver = {"found": True, "path": path, "cuda_driver": match.group(1) if match else None,
+    api, api_problem = driver_api_cuda(python=python, run=run)
+    readings = (("driver_api", api), ("nvidia_smi", smi_header_cuda(header.stdout)))
+    sources = {name: value for name, value in readings if value}
+    cuda_driver = min(sources.values(), key=lambda v: _cuda(v) or (0, 0)) if sources else None
+    driver = {"found": True, "path": path, "cuda_driver": cuda_driver, "cuda_sources": sources,
               "driver_version": gpus[0]["driver_version"] if gpus else None, "gpus": gpus}
+    if api_problem:
+        driver["driver_api_problem"] = api_problem
+    if len(set(sources.values())) > 1:
+        driver["cuda_disagreement"] = (f"API du pilote : CUDA {sources['driver_api']}, nvidia-smi : CUDA "
+                                       f"{sources['nvidia_smi']} — la plus basse est retenue")
     if not gpus:
         driver["reason"] = "nvidia-smi ne rapporte aucun GPU"
-    elif match is None:
-        driver["reason"] = "version CUDA du pilote illisible dans la sortie de nvidia-smi"
+    elif cuda_driver is None:
+        driver["reason"] = ("version CUDA du pilote illisible : ni l'API du pilote "
+                            f"({api_problem}) ni l'en-tête de nvidia-smi ne la donnent")
     return driver
+
+
+def describe_cuda(driver: dict[str, Any]) -> str:
+    """« 13.3 (API du pilote 13.3, nvidia-smi 13.3) » : la valeur retenue et chaque relevé."""
+    labels = {"driver_api": "API du pilote", "nvidia_smi": "nvidia-smi"}
+    sources = driver.get("cuda_sources") or {}
+    detail = ", ".join(f"{labels.get(k, k)} {v}" for k, v in sources.items())
+    return f"{driver.get('cuda_driver') or '—'}" + (f" ({detail})" if detail else "")
 
 
 def choose(spec: dict[str, Any], folder: Path, driver: dict[str, Any],
@@ -475,6 +557,14 @@ def _disk_free(path: Path) -> int:
     return shutil.disk_usage(path).free
 
 
+def pip_command(python: str, target: Path, lock: str) -> list[str]:
+    """La commande pip de l'installation (aussi exécutée telle quelle par la CI Windows) : empreintes exigées,
+    roues seulement, aucune dépendance, dans un dossier à part."""
+    return [python, "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
+            "--no-warn-script-location", "--no-cache-dir", "--require-hashes", "--only-binary=:all:",
+            "--no-deps", "--target", str(target), "-r", lock]
+
+
 def install(home: Path | None = None, *, root: Path | None = None, requested: str | None = None,
             run: Runner = subprocess.run, smi: str | None = None, python: str | None = None,
             disk_free: Callable[[Path], int] = _disk_free,
@@ -496,11 +586,14 @@ def install(home: Path | None = None, *, root: Path | None = None, requested: st
     spec, folder, problem = load_spec(root)
     if spec is None or folder is None:
         return refuse(EXIT_REFUSED, problem or "description du composant GPU absente")
-    driver = detect_driver(smi=smi, run=run)
+    driver = detect_driver(smi=smi, run=run, python=python)
     report["driver"] = driver
     names = ", ".join(g["name"] for g in driver.get("gpus", []))
-    _log(f"pilote NVIDIA : {driver.get('driver_version') or '—'} ; CUDA accepté : "
-         f"{driver.get('cuda_driver') or '—'} ; GPU : {names or '—'}")
+    _log(f"pilote NVIDIA : {driver.get('driver_version') or '—'} ; CUDA accepté par le pilote : "
+         f"{describe_cuda(driver)} ; GPU : {names or '—'}")
+    for note in (driver.get("cuda_disagreement"), driver.get("driver_api_problem")):
+        if note:
+            _log(note)
     variant, why = choose(spec, folder, driver, requested)
     if variant is None:
         return refuse(EXIT_REFUSED, why)
@@ -519,9 +612,7 @@ def install(home: Path | None = None, *, root: Path | None = None, requested: st
         shutil.rmtree(leftover, ignore_errors=True)
     scratch.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "TMP": str(scratch), "TEMP": str(scratch), "TMPDIR": str(scratch)}
-    command = [python or sys.executable, "-m", "pip", "install", "--disable-pip-version-check",
-               "--no-input", "--no-warn-script-location", "--no-cache-dir", "--require-hashes",
-               "--only-binary=:all:", "--no-deps", "--target", str(staging), "-r", variant["lock"]]
+    command = pip_command(python or sys.executable, staging, variant["lock"])
     _log(f"téléchargement et installation de torch {spec['torch']}+{variant['id']} "
          f"({int(variant['wheel_bytes']) / 1e9:.1f} Go, empreinte vérifiée) vers {staging}…")
     try:
