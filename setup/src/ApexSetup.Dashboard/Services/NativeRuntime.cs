@@ -104,6 +104,15 @@ public sealed class NativeRuntime
     public string PythonExecutable(RuntimeSpec? spec) =>
         _pythonOverride ?? (spec is null ? Path.Combine(Home, "python", "python.exe") : Path.Combine(PythonRoot(spec), "python.exe"));
 
+    /// <summary>
+    /// Arguments de CE Python, précédés de <c>-P</c> (Python 3.11 et plus) : ni le dossier courant (<c>-m</c>) ni
+    /// <c>''</c> (<c>-c</c>) en tête de <c>sys.path</c>, donc <c>apex</c> ne vient que du <c>.pth</c> de l'installation.
+    /// Sans lui, un dossier de travail qui contient un <c>apex\</c> (un clone du dépôt, le checkout d'une CI) fait
+    /// exécuter CE code-là à la place de l'application installée. Constaté le 17/10/2026 sur le runner Windows : une
+    /// candidate qui contenait Game Studio le disait absent, parce que le backend importait le checkout.
+    /// </summary>
+    public static List<string> PythonArguments(params string[] arguments) => ["-P", .. arguments];
+
     public string RequirementsFile(RuntimeSpec spec) => Path.Combine(AppRoot, "runtime", spec.Requirements);
 
     public string ReadyMarker(RuntimeSpec spec) => Path.Combine(PythonRoot(spec), ReadyMarkerName);

@@ -83,8 +83,9 @@ public sealed class RuntimePreparer(NativeRuntime runtime, HttpClient http, IPro
 
             Step($"Installation des bibliothèques d'APEX (environ {spec.DownloadEstimateMb} Mo depuis PyPI, empreintes vérifiées) — plusieurs minutes…");
             var pip = await runner.RunAsync(python,
-                ["-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location",
-                 "--require-hashes", "--only-binary=:all:", "--no-deps", "-r", runtime.RequirementsFile(spec)],
+                NativeRuntime.PythonArguments("-m", "pip", "install", "--disable-pip-version-check", "--no-input",
+                    "--no-warn-script-location", "--require-hashes", "--only-binary=:all:", "--no-deps", "-r",
+                    runtime.RequirementsFile(spec)),
                 PipTimeout, cancellationToken).ConfigureAwait(false);
             log.WriteLine(pip.Stdout);
             log.WriteLine(pip.Stderr);
@@ -100,7 +101,8 @@ public sealed class RuntimePreparer(NativeRuntime runtime, HttpClient http, IPro
             await File.WriteAllTextAsync(runtime.PthFile(spec), runtime.AppRoot + Environment.NewLine, cancellationToken).ConfigureAwait(false);
 
             Step("Vérification : ce Python importe APEX et ses bibliothèques…");
-            var verify = await runner.RunAsync(python, ["-c", VerifyScript], VerifyTimeout, cancellationToken).ConfigureAwait(false);
+            var verify = await runner.RunAsync(python, NativeRuntime.PythonArguments("-c", VerifyScript), VerifyTimeout,
+                cancellationToken).ConfigureAwait(false);
             log.WriteLine(verify.Stdout);
             log.WriteLine(verify.Stderr);
             if (!verify.Started || verify.TimedOut || verify.ExitCode != 0)
@@ -140,7 +142,8 @@ public sealed class RuntimePreparer(NativeRuntime runtime, HttpClient http, IPro
         var spec = runtime.TryReadSpec(out var problem);
         return spec is null
             ? Task.FromResult(ProcessRunResult.NotStarted(problem))
-            : runner.RunAsync(runtime.PythonExecutable(spec), ["-m", "apex.standalone", "model", "install", "--log"], ModelTimeout, cancellationToken);
+            : runner.RunAsync(runtime.PythonExecutable(spec),
+                NativeRuntime.PythonArguments("-m", "apex.standalone", "model", "install", "--log"), ModelTimeout, cancellationToken);
     }
 
     /// <summary>
@@ -153,7 +156,8 @@ public sealed class RuntimePreparer(NativeRuntime runtime, HttpClient http, IPro
         var spec = runtime.TryReadSpec(out var problem);
         return spec is null
             ? Task.FromResult(ProcessRunResult.NotStarted(problem))
-            : runner.RunAsync(runtime.PythonExecutable(spec), ["-m", "apex.standalone", "gpu", "install", "--log"], GpuTimeout, cancellationToken);
+            : runner.RunAsync(runtime.PythonExecutable(spec),
+                NativeRuntime.PythonArguments("-m", "apex.standalone", "gpu", "install", "--log"), GpuTimeout, cancellationToken);
     }
 
     private static PrepareResult Fail(Action<string> step, string message)

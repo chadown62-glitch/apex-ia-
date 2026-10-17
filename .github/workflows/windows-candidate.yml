@@ -165,6 +165,10 @@ jobs:
             Note error 'Démarrage' ((Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 60) -join "`n")
             exit 1
           }
+          # Le Panel est lancé depuis le checkout (qui contient un apex\) : ce doit être l'application INSTALLÉE qui tourne.
+          $prog = Select-String -Path "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Pattern 'programme : ' -ErrorAction SilentlyContinue | Select-Object -Last 1
+          Note notice 'Programme exécuté par APEX' "$($prog.Line)"
+          if ("$($prog.Line)" -notmatch [regex]::Escape("$env:LOCALAPPDATA\Programs\APEX\app")) { Note error 'Programme' "APEX n'exécute pas l'application installée : $($prog.Line)"; exit 1 }
           $assistant = RunPy 'Assistant' @("$tree/setup/packaging/windows/ci/assistant_e2e.py", 'run', '--out', $evidence, '--timeout', '2400')
           $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
           $request = Get-Content "$tree/setup/packaging/windows/ci/candidate-request.json" -Raw | ConvertFrom-Json

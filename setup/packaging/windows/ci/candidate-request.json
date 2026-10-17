@@ -11,6 +11,6 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 2,
-  "why": "run 38981526906 : l'APEX installé dit « Game Studio ne fait pas partie de cette installation » ; ce run ajoute le diagnostic des fichiers et des imports de l'application installée"
+  "attempt": 3,
+  "why": "run 38982990677 : l'APEX installé importe bien Game Studio, mais le backend lancé par le Panel exécutait le apex\\ du checkout (dossier courant en tête de sys.path). Ce run vérifie le correctif -P."
 }
