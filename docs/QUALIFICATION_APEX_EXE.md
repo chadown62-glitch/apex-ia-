@@ -11,8 +11,9 @@ Elle est construite sur un Windows réel de GitHub par le workflow `windows-cand
 
 1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé. Il apparaît « en échec » tant que
    le parcours 3D est bloqué : c'est attendu, et l'installateur est quand même joint. Le run de référence est
-   [38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861) (SHA-256 de l'installateur :
-   `2f16488024b44b21…`).
+   [39068337396](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39068337396) du 17/10/2026, avec la
+   détection CUDA corrigée : `APEX-Setup-x64-v0.6.0-candidate-8518860124ac.exe`, 51 957 998 octets, SHA-256
+   `7ff5f7efd311be05b8d5ee6650ea846f8ff24988eafcce45a14ea9063491a4c1`. Artefact disponible jusqu'au 16/11/2026.
 2. En bas de la page, **Artifacts** → `apex-qualification-installer`. Il faut être connecté à GitHub.
 3. Décompressez le zip. Il contient :
    - `APEX-Setup-x64-v0.6.0-candidate-<commit>.exe` ;
@@ -50,7 +51,7 @@ votre PC. Un composant jamais qualifié chez vous n'est jamais affiché « prêt
 |---|---|
 | Cerveau APEX | prêt |
 | Moteur intégré | prêt, une fois le modèle installé |
-| GPU CUDA | « GPU détecté : … », puis l'invitation « Accélération GPU (facultatif) » |
+| GPU CUDA | « GPU détecté : NVIDIA GeForce RTX 4060 Ti (pilote 610.62, CUDA 13.3) — accélération GPU non installée », puis l'invitation « Accélération GPU (facultatif) » |
 | Game Studio | « manque : … » avec la liste : Blender s'il n'est pas installé, le planificateur 7B, et les bibliothèques Python (`jsonschema`, pas encore déclarée par Codex). Constaté sur le runner Windows |
 | Planificateur 3D | absent : le Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne sont pas fournis |
 | Blender | sa version, s'il est installé et trouvé ; sinon « introuvable » |
