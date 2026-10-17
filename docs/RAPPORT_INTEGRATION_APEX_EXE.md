@@ -186,7 +186,7 @@ Configuration : RTX 4060 Ti 8 Go, i5-14400F, 16 Go, Windows 11. Procédure :
 
 | Domaine | Où | Résultat |
 |---|---|---|
-| Suite Python | arbre combiné frais `27a1e8d` | **en cours** au moment de ce commit. Mesure précédente, arbre `e9898bf` : 3 476 passent, 189 ignorés, 7 échouent, tous identifiés (`docs/REUNION_BRANCHES.md` §7) |
+| Suite Python | arbre combiné frais `27a1e8d` (43 min) | **3 497 passent, 189 ignorés, 7 échouent : les 7 déjà identifiés, aucun nouveau.** 4 viennent du worktree jetable (`test_apex_preflight_script` ×3, `test_evalrunner_generated_solution::…test_g_…`) ; 2 sont `test_game_graphics_contract` (`llama_cpp`, psutil : Codex) ; 1 est la garde de spécialité `test_no_second_specialty_task_provider_is_registered` (Codex). Aucun test n'a été modifié pour les faire disparaître |
 | Frontend | arbre combiné : vitest, `tsc --noEmit`, build | 183/183, OK, OK |
 | Panel (`dotnet test`) | arbre combiné | 590 passent, 2 échouent. Ces 2 tests exigent `.venv/bin/python3` à la racine : absent du worktree jetable. Ils passent dans le dépôt (8/8) |
 | États de préparation | ma branche | 111 passent, 17 ignorés |
