@@ -3,9 +3,9 @@
 **Verdict : aucune release « READY ».**
 - Le parcours de création 3D reste bloqué : le planificateur Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne
   sont pas fournis, et la liste Windows de Game Studio n'a pas `jsonschema`. Ces trois points sont à Codex.
-- Sous Windows, la candidate combinée installée ne chargeait pas Game Studio. Cause : le Panel laissait Python
-  exécuter le `apex\` du dossier courant. C'est corrigé dans le Panel (`24edcbc`) et vérifié sur Windows : APEX
-  démarre READY, et le parcours 3D va jusqu'au clic, puis Game Studio refuse faute de `jsonschema` (§4 ter).
+- Sous Windows réel, la candidate combinée s'installe, démarre READY et répond. Le parcours 3D va jusqu'au clic
+  humain, puis Game Studio refuse faute de `jsonschema` (§4). En chemin, trois défauts ont été trouvés et
+  corrigés ; le principal est dans le Panel : il exécutait le code du dossier courant.
 - Rien n'a été fusionné dans `apex/integration`. La PR [#27](https://github.com/chadown62-glitch/apex-ia-/pull/27)
   est un **brouillon** ; l'utilisateur est l'intégrateur final.
 - Aucune release n'a été publiée.
@@ -61,7 +61,8 @@ Blender. » :
 |---|---|---|
 | Ma branche, `5a694ec` | runner Windows de GitHub, `build_desktop_release.sh` | **construit** ([run 38979850221](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38979850221)) |
 | Ma branche, `f941d90` | idem | **construit** ([run 38980883566](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38980883566)) |
-| Arbre combiné, `201e720` + pile Codex | runner Windows, workflow `windows-candidate` | **construit** ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) : 51 950 406 octets, SHA-256 `8a8efb0ce77c433b…` |
+| Arbre combiné + pile Codex | runner Windows, workflow `windows-candidate` | **construit** quatre fois ; le dernier, `cb4bf22` ([run 38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861)) : 51 947 368 octets, SHA-256 `2f16488024b44b21…` |
+| Ma branche, `cb4bf22` | runner Windows | **construit** ([run 38987535866](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535866)) |
 | Arbre combiné `e9898bf` (antérieur) | ici, Inno Setup sous Wine | construit (52 Mo) ; contrôle anti-fuite sans violation |
 
 Chaîne de fabrication auditée :
@@ -79,88 +80,62 @@ Chaîne de fabrication auditée :
 ## 4. Démarré réellement sous Windows
 
 Il s'agit de **Windows Server sur un runner GitHub** : processeur, sans GPU ni Blender. Ce n'est ni Windows 11
-client, ni le PC de l'utilisateur.
+client, ni le PC de l'utilisateur. Dans ces runs, le Panel est lancé depuis le checkout du dépôt. Chaque run lit la
+ligne « programme : … » du journal de démarrage d'APEX et échoue si ce n'est pas l'application installée.
 
 | Build | Parcours | Résultat |
 |---|---|---|
-| Ma branche, `5a694ec` et `f941d90` | installation silencieuse → « Préparer APEX » → installation du modèle → démarrage → vrais tours de l'assistant → arrêt, redémarrage, persistance → désinstallation (base conservée) | **PASS**, deux fois, avec une réserve : le code Python d'APEX venait très probablement du checkout (voir plus bas) |
-| Candidate combinée ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) | installation → « Préparer APEX » → modèle → démarrage → tours de l'assistant → parcours 3D → arrêt → désinstallation | voir ci-dessous : **job en échec**, parcours 3D BLOCKED |
+| Ma branche `cb4bf22` ([run 38987535866](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535866)) | installation silencieuse → « Préparer APEX » → installation du modèle → démarrage → vrais tours de l'assistant → arrêt → redémarrage → persistance → désinstallation | **PASS**. Programme : l'application installée. Démarrage READY deux fois. Tours A1, A2, A4, A6 PASS. Persistance V1 à V3 PASS (messages, réglages, projet). Base conservée à la désinstallation |
+| Candidate combinée `cb4bf22` + pile Codex ([run 38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861)) | installation → « Préparer APEX » → modèle → démarrage → tours de l'assistant → **parcours 3D réel** → arrêt → désinstallation | **job en échec, parcours 3D BLOCKED** (détail ci-dessous). Programme : l'application installée. Démarrage READY. Assistant PASS, dont A3 (`finance.loan` exact : 1 159,92 €). Base conservée |
+| Ma branche `5a694ec`, `f941d90` (avant le correctif `-P`) | même parcours que la première ligne | PASS, mais **le code Python d'APEX exécuté venait très probablement du checkout**, au même commit, et non des fichiers installés |
 
-**Candidate combinée sur Windows Server, mesures du run 38981526906** (annotations du job) :
-- installateur construit dans le runner : 51 950 406 octets, SHA-256 `8a8efb0ce77c433b…`, depuis le commit de
-  fusion `b861326` (créé dans le runner, jamais poussé) ;
-- installation silencieuse : OK. « Préparer APEX » : code 0. Installation du modèle : code 0 ;
-- démarrage : code 1, « APEX DEGRADED / PartialServices » ;
-- assistant : **PASS** (pièce jointe texte acceptée et PDF refusé, tour Finance, tour Code, réglage
-  enregistré) ;
-- lignes d'état : Cerveau APEX prêt, moteur intégré prêt, sandbox `WindowsAppContainerSandbox` prête, GPU
-  absent (aucun pilote NVIDIA), Blender introuvable ;
-- **défaut** : les lignes Game Studio, planificateur, Game Graphics et Game Engineer disent « Game Studio ne fait
-  pas partie de cette installation d'APEX ». Pourtant cette candidate le contient ;
-- parcours 3D : **BLOCKED** dès la disponibilité, à cause de ce défaut ; la conversation n'a pas été tentée ;
-- arrêt, puis désinstallation : code 0, base de l'utilisateur conservée.
+**Parcours 3D réel de la candidate sous Windows (run 38987535861)** :
+1. demande « Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender. » ;
+2. APEX **propose** la mission : « à lancer par vous : une mission n'est jamais lancée sans votre clic » ;
+3. **clic humain** (`authorization : confirmée par l'utilisateur`) ;
+4. Game Studio **refuse** : « une bibliothèque nécessaire à Game Studio manque sur ce PC
+   (ModuleNotFoundError: No module named 'jsonschema') ».
 
-**Cause du défaut, trouvée au [run 38982990677](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38982990677), et correction** (`24edcbc`, Panel, mon code) :
-- Ce que l'APEX installé contient vraiment : tous les fichiers de `apex\game_studio`, et le `.pth` qui pointe
-  vers l'application installée. Lancé depuis un autre dossier, le Python préparé importe `apex.game_studio` et
-  sa délégation. Il manque `jsonschema` et `llama_cpp`, comme attendu.
-- Le backend, lui, est lancé par le Panel avec `python -m apex.standalone serve`. **Avec `-m`, Python met le
-  dossier courant en tête de `sys.path`.** Dans la CI, le Panel hérite du checkout, qui contient le `apex\` de ma
-  branche, sans Game Studio : c'est ce code-là qui tournait, pas l'application installée.
-- Les raccourcis de l'installateur fixent `WorkingDir: "{app}"`, un dossier sans `apex\`. L'utilisateur qui passe
-  par eux n'était pas touché. En revanche, APEX.exe lancé depuis un dossier contenant un clone du dépôt
-  l'aurait été.
-- Correction : chaque Python lancé par le Panel reçoit `-P` (Python 3.11 et plus ; le runtime est figé en
-  3.12.10). Cela vaut pour pip, la vérification de « Préparer APEX », l'installation du modèle et du GPU, le
-  démarrage et l'arrêt. `apex` ne vient plus que du `.pth`. Un test vérifie les six lancements (Panel : 251/251).
-- Les workflows Windows lancent toujours le Panel depuis le checkout : ils servent désormais de test de
-  non-régression. Ils lisent la ligne « programme : … » du journal de démarrage d'APEX et échouent si ce n'est
-  pas l'application installée.
-- **Ce que cela change pour les PASS antérieurs de `windows-native`** (`5a694ec`, `f941d90`) :
-  - restent prouvés : l'installateur, le Python préparé, ses bibliothèques, le modèle, le Panel, la persistance
-    et la désinstallation ;
-  - le code Python d'APEX exécuté venait très probablement du checkout, au même commit, et non des fichiers
-    installés. Ce point n'est donc **pas** prouvé par ces runs. Il l'est par les runs suivants (§4 ter).
+Verdict **BLOCKED**, affiché tel quel. C'est le premier blocage ; le planificateur 7B et Blender viendraient
+ensuite.
 
-**§4 ter — candidate combinée avec le correctif `24edcbc`**
-([run 38984907317](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38984907317), Windows Server) :
-- programme exécuté : `C:\Users\runneradmin\AppData\Local\Programs\APEX\app`, **l'application installée**,
-  alors que le Panel était lancé depuis le checkout ;
-- démarrage : **READY** (code 0), « Tous les composants d'APEX répondent » ;
-- assistant : **PASS**. Le moteur intégré `qwen2.5-coder:1.5b-instruct:bf16` a répondu au tour Finance en
-  170 s (1 196 caractères, 475 tokens, processeur) ;
-- lignes d'état, enfin justes :
-  - Game Studio : « manque : Blender n'est pas installé… Le modèle planificateur des missions (Qwen2.5-Coder-7B
-    épinglé, avec llama-cpp-python) n'est pas installé. Bibliothèques Python manquantes… » ;
-  - planificateur : absent, avec la raison ;
-  - Game Engineer : « bibliothèque jsonschema absente » ;
-  - Blender : introuvable ;
-  - GPU : absent (pas de NVIDIA) ;
-- **parcours 3D réel sous Windows** :
-  1. demande en mode 3D ;
-  2. APEX **propose** la mission (« à lancer par vous ») ;
-  3. clic humain (`authorization : confirmée par l'utilisateur`) ;
-  4. Game Studio **refuse** : « une bibliothèque nécessaire à Game Studio manque sur ce PC
-     (ModuleNotFoundError: No module named 'jsonschema') ».
+Lignes d'état mesurées par cet APEX installé :
+- Cerveau APEX et moteur intégré : prêts ;
+- sandbox : `WindowsAppContainerSandbox` prête ;
+- GPU : absent (pas de NVIDIA) ;
+- Blender : introuvable ;
+- Game Studio et Game Graphics : « manque : Blender…, le planificateur 7B…, bibliothèques Python… » ;
+- planificateur : absent, avec la raison ;
+- Game Engineer : « bibliothèque jsonschema absente ».
 
-  Verdict **BLOCKED**. C'est le premier blocage ; le planificateur 7B et Blender viendraient ensuite ;
-- désinstallation : code 0, base conservée.
+Le paquet de qualification qui a passé ce run est en artefact (`apex-qualification-installer`, 30 jours) : SHA-256
+`2f16488024b44b21…`, 51 947 368 octets. Ce n'est pas une release.
 
-`windows-native` sur `24edcbc` (ma branche seule) : voir la ligne du tableau ci-dessus quand il aura fini.
+**Trois défauts trouvés par ces runs, et leurs corrections :**
+1. **Le Panel exécutait le code du dossier courant** (mon code, corrigé dans `24edcbc`).
+   - Avec `python -m`, Python met le dossier courant en tête de `sys.path`. Lancé depuis un dossier qui contient
+     `apex\` (le checkout de la CI, un clone du dépôt), APEX exécutait ce code-là. La candidate disait donc Game
+     Studio absent alors qu'elle le contenait.
+   - Les raccourcis de l'installateur (`WorkingDir: "{app}"`) n'étaient pas touchés.
+   - Correction : chaque Python lancé par le Panel reçoit `-P`. Un test couvre les six lancements.
+2. **Le script de test plantait sur une console cp1252** (`cb4bf22`). Le « − » (U+2212) du résultat de
+   `finance.loan` ne pouvait pas s'afficher. Le script de test écrit désormais en UTF-8, et une exception imprévue
+   devient une ligne FAIL explicite. APEX n'était pas touché : son journal est écrit en UTF-8.
+3. **La candidate transmettait `PYTHONUTF8` à APEX** (`cb4bf22`). Ce n'est plus le cas : APEX tourne comme sur le
+   PC d'un utilisateur.
 
 Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par `exit 3`, avant la ligne
 `exit $LASTEXITCODE` que GitHub ajoute ; `pwsh -Command` réduit alors le code à 1.
 
 ## 5. Exécuté avec un vrai modèle
 
-- **Windows Server, ma branche** : le Panel a installé le moteur intégré Qwen2.5-Coder-1.5B-Instruct (révision
-  figée, empreintes vérifiées), et un vrai modèle d'APEX a répondu aux tours (`assistant_e2e.py` exige
-  `message.status == "real"` et un `model_id`). **Quel moteur a répondu** est écrit dans l'artefact du run,
-  illisible d'ici : il n'est pas affirmé.
-- **Windows Server, candidate combinée** : le moteur intégré **`qwen2.5-coder:1.5b-instruct:bf16`** a répondu
-  au tour Finance (412 caractères, 173 tokens, 72,6 s, processeur). L'outil `finance.loan` n'a pas été appelé
-  par le modèle ; c'est rapporté tel quel.
-- **Ici, Linux** : le Cerveau APEX v2 a servi le tour 3D et a produit la proposition (§2).
+- **Windows Server** : le moteur intégré **`qwen2.5-coder:1.5b-instruct:bf16`** (Qwen2.5-Coder-1.5B-Instruct,
+  révision figée, empreintes vérifiées, installé par le Panel) a répondu aux tours réels, sur processeur :
+  - ma branche : tour Finance en 120 s ;
+  - candidate : tour Finance en 289 s. Le modèle y a appelé `finance.loan`, et la mensualité de 1 159,92 € est
+    exacte (A3 PASS).
+- **Ici, Linux** : le Cerveau APEX v2 a servi le tour 3D et a produit la proposition (§2). Sous Windows, la
+  proposition est venue de la détection d'intention d'APEX (`served_by_brain: false`).
 - **Planificateur Qwen2.5-Coder-7B : jamais exécuté.** Il n'est pas fourni.
 
 ## 6. Exécuté avec Blender
@@ -211,9 +186,9 @@ Configuration : RTX 4060 Ti 8 Go, i5-14400F, 16 Go, Windows 11. Procédure :
 |---|---|---|
 | Suite Python | arbre combiné frais `27a1e8d` (43 min) | **3 497 passent, 189 ignorés, 7 échouent : les 7 déjà identifiés, aucun nouveau.** 4 viennent du worktree jetable (`test_apex_preflight_script` ×3, `test_evalrunner_generated_solution::…test_g_…`) ; 2 sont `test_game_graphics_contract` (`llama_cpp`, psutil : Codex) ; 1 est la garde de spécialité `test_no_second_specialty_task_provider_is_registered` (Codex). Aucun test n'a été modifié pour les faire disparaître |
 | Frontend | arbre combiné : vitest, `tsc --noEmit`, build | 183/183, OK, OK |
-| Panel (`dotnet test`) | arbre combiné | 590 passent, 2 échouent. Ces 2 tests exigent `.venv/bin/python3` à la racine : absent du worktree jetable. Ils passent dans le dépôt (8/8) |
+| Panel (`dotnet test`) | arbre combiné ; ma branche | 590 passent, 2 échouent. Ces 2 tests exigent `.venv/bin/python3` à la racine, absent du worktree jetable ; ils passent dans le dépôt (8/8). Sur ma branche après le correctif `-P` : Dashboard 251/251 |
 | États de préparation | ma branche | 111 passent, 17 ignorés |
-| Installation, démarrage, persistance, désinstallation | Windows Server, ma branche | PASS (§4) |
+| Installation, démarrage, persistance, désinstallation | Windows Server : ma branche ; candidate | PASS sur l'application installée (§4) ; candidate : PASS sauf le parcours 3D, BLOCKED |
 | Sécurité | lancement par acte humain seulement ; jeton d'API ; bail GPU | tests dédiés dans la suite ; aucun chemin autonome de lancement |
 
 Le rapport Gate de l'utilisateur (`.apex/environment.json`) est intact : même empreinte avant et après.

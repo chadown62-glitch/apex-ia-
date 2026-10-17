@@ -9,7 +9,10 @@ Elle est construite sur un Windows réel de GitHub par le workflow `windows-cand
 
 ## 1. Télécharger
 
-1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé.
+1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé. Il apparaît « en échec » tant que
+   le parcours 3D est bloqué : c'est attendu, et l'installateur est quand même joint. Le run de référence est
+   [38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861) (SHA-256 de l'installateur :
+   `2f16488024b44b21…`).
 2. En bas de la page, **Artifacts** → `apex-qualification-installer`. Il faut être connecté à GitHub.
 3. Décompressez le zip. Il contient :
    - `APEX-Setup-x64-v0.6.0-candidate-<commit>.exe` ;
