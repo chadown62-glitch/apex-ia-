@@ -11,6 +11,7 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 5,
-  "why": "candidate GPU : détection CUDA corrigée (pilote 610.62, « CUDA UMD Version : 13.3 » : API du pilote + deux libellés de nvidia-smi), roue cu130 vérifiée sur Windows (existence, empreinte, installation à part, sonde), mesure « GPU (CUDA) / processeur » sous chaque réponse"
+  "attempt": 6,
+  "why": "pile Game Studio de Codex à d15fa02 (jsonschema déclaré, contrats dependencies / install-planner, liste du moteur CPU) : jsonschema importé, moteur du planificateur installé par le bouton et importé sous Windows, parcours 3D jusqu'au refus suivant ; poids de 5,4 Go jamais téléchargés",
+  "studio_engine": true
 }
