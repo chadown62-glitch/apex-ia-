@@ -20,8 +20,8 @@ from PIL import Image
 from apex.game_engineer.assets import decode_glb
 from apex.game_engineer.contract import WHEELS
 from apex.game_graphics.models import CoderSession
-from apex.game_graphics.resources import resource_lease
 from apex.game_graphics.studio.execution import refuse_personal_project, run_blender
+from apex.game_studio.gpu import resource_lease
 from apex.missions.service import MissionService
 from apex.policy.model import Subject
 from apex.sandbox.model import ExecutionStatus

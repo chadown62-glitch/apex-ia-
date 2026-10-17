@@ -198,7 +198,9 @@ def api_mission(output):
                     child = step.get("mission")
                     if not child:
                         continue
-                    for artifact in child.get("artifacts", []):
+                    for artifact in [
+                        a for revision in child.get("revisions", []) for a in revision.get("artifacts", [])
+                    ]:
                         digest = artifact["hash"]
                         result = client.get(
                             f"/api/v1/game-studio/missions/{child['id']}/artifacts/{digest}"
