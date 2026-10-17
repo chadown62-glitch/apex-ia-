@@ -112,6 +112,9 @@ jobs:
             $t = ($text -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A')
             if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
             Write-Host "::${level} title=${title}::$t"
+            # GitHub n'affiche que 10 annotations par niveau et par étape : le résumé du run les garde toutes.
+            $fence = '`' * 3
+            "### [$level] $title`n`n$fence`n$text`n$fence`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
           }
           $setup = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
           $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence\install.log" -Wait -PassThru
