@@ -1,0 +1,22 @@
+{
+  "setting": "courtyard",
+  "source_mesh_counts": {
+    "building": 143,
+    "chair_left": 32,
+    "chair_right": 32
+  },
+  "framing_verdicts": {
+    "front_three_quarter": "pass_geometric_framing",
+    "rear_three_quarter": "pass_geometric_framing",
+    "side": "pass_geometric_framing",
+    "top": "pass_geometric_framing"
+  },
+  "native_blender_render_views": [
+    "front_three_quarter",
+    "rear_three_quarter",
+    "side",
+    "top"
+  ],
+  "unreal_import_executed": false,
+  "visual_quality_certified": false
+}

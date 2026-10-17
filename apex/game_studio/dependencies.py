@@ -59,11 +59,6 @@ def install_planner(*, accept_download: bool, accept_license: bool) -> dict:
     if manifest.name != "coder-model.json":
         raise ValueError("planner_install_requires_coder_model_json_filename")
     directory = manifest.parent
-    ancestor = directory
-    while not ancestor.exists():
-        ancestor = ancestor.parent
-    if shutil.disk_usage(ancestor).free < info["required_free_bytes"]:
-        raise RuntimeError("planner_insufficient_disk_space")
     directory.mkdir(parents=True, exist_ok=True)
     with _locked(directory / "planner-install.lock"):
         if manifest.exists():
@@ -79,6 +74,8 @@ def install_planner(*, accept_download: bool, accept_license: bool) -> dict:
             ):
                 raise RuntimeError("existing_planner_manifest_unverified_preserved")
             return {"status": "already_verified", "manifest": str(manifest)}
+        if shutil.disk_usage(directory).free < info["required_free_bytes"]:
+            raise RuntimeError("planner_insufficient_disk_space")
         installed = fetch_coder(directory)
         if installed.resolve() != manifest:
             raise RuntimeError("unexpected_planner_manifest_location")

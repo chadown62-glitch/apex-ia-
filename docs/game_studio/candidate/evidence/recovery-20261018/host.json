@@ -1,0 +1,13 @@
+{
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+  "python": "3.12.14",
+  "logical_cpus": 5,
+  "available_ram_bytes": 33528504320,
+  "total_ram_bytes": 35743760384,
+  "cuda_available": false,
+  "cuda_measurements": null,
+  "blender": "Blender 4.3.2",
+  "model_weights_present": false,
+  "new_qwen_inference_executed": false,
+  "scope": "Native scene assembly of versioned prior assets, not neural generation"
+}

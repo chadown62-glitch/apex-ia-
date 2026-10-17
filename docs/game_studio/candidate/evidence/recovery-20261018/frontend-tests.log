@@ -1,0 +1,327 @@
+
+> apex-control-center@0.1.0 test
+> vitest run --run
+
+
+ RUN  v2.1.9 /workspace/apex-game-studio-candidate/frontend
+
+stderr | src/assistant/views.test.tsx > HomeView > creates the conversation in the chosen mode, submits the first message and opens it
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ ✓ src/pages/MissionCenterPage.test.tsx (8 tests) 381ms
+ ✓ src/pages/ExperimentLabPage.test.tsx (11 tests) 469ms
+stderr | src/assistant/views.test.tsx > SettingsView > applies and saves the theme, and saves a section with the backend's validation
+Warning: An update to SettingsView inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at SettingsView (/workspace/apex-game-studio-candidate/frontend/src/assistant/SettingsView.tsx:199:42)
+    at RenderedRoute (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:535:7)
+    at Routes (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1269:7)
+    at Router (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1203:17)
+    at MemoryRouter (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1097:7)
+    at ToastProvider (/workspace/apex-game-studio-candidate/frontend/src/components/ui/Toast.tsx:11:26)
+    at QueryClientProvider (file:///workspace/apex-game-studio-candidate/frontend/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:12:32)
+
+ ✓ src/assistant/views.test.tsx (20 tests) 596ms
+ ✓ src/pages/TaskRunsPage.test.tsx (7 tests) 158ms
+ ✓ src/pages/DesignStudioPage.test.tsx (6 tests) 204ms
+ ✓ src/pages/BrainLivePage.test.tsx (5 tests) 117ms
+stderr | src/pages/AgentsPage.responsive.test.tsx > AgentsPage — structure responsive (verrouillage anti-régression) > gives the configured-agent list header a shrinkable, truncating title element (never a bare unstyled div)
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/pages/AgentsPage.configured-agents.test.tsx > AgentsPage — Mes Agents (ConfiguredAgent, Agents V1) > lists real configured agents with their derived status, distinct from Clones and Templates
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ ✓ src/pages/AgentsPage.responsive.test.tsx (3 tests) 185ms
+ ✓ src/pages/AgentsPage.configured-agents.test.tsx (4 tests) 307ms
+ ✓ src/pages/ChatPage.test.tsx (4 tests) 194ms
+ ✓ src/api/client.test.ts (13 tests) 9ms
+stderr | src/theme/useTheme.test.tsx > appearance store / useTheme > defaults to Night when nothing is stored and the system does not prefer light
+Warning: An update to TestConsumer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at TestConsumer (/workspace/apex-game-studio-candidate/frontend/src/theme/useTheme.test.tsx:30:56)
+
+stderr | src/theme/useTheme.test.tsx > appearance store / useTheme > toggling applies the theme, caches it and saves it to the backend settings
+Warning: An update to TestConsumer inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at TestConsumer (/workspace/apex-game-studio-candidate/frontend/src/theme/useTheme.test.tsx:30:56)
+
+stderr | src/theme/useTheme.test.tsx > ThemeToggle > renders an accessible toggle button that flips between Night and Dune
+Warning: An update to ThemeToggle inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ThemeToggle (/workspace/apex-game-studio-candidate/frontend/src/theme/ThemeToggle.tsx:8:56)
+
+stderr | src/theme/useTheme.test.tsx > ThemeToggle > says when the theme could not be saved instead of pretending it was
+Warning: An update to ThemeToggle inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at ThemeToggle (/workspace/apex-game-studio-candidate/frontend/src/theme/ThemeToggle.tsx:8:56)
+
+ ✓ src/theme/useTheme.test.tsx (9 tests) 87ms
+stderr | src/pages/DashboardPage.test.tsx > DashboardPage > renders every real section label required by the UI Foundation, never a flat page
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+ ✓ src/pages/DashboardPage.test.tsx (5 tests) 173ms
+ ✓ src/components/ui/ui.test.tsx (10 tests) 139ms
+stderr | src/pages/AgentsPage.test.tsx > AgentsPage (Agent Center) > filters the real agent list client-side by search text without any extra network call
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/pages/AgentsPage.test.tsx > AgentsPage (Agent Center) > filters the real agent list client-side by search text without any extra network call
+Warning: Each child in a list should have a unique "key" prop.
+
+Check the render method of `ConfiguredAgentsPanel`. See https://reactjs.org/link/warning-keys for more information.
+    at li
+    at ConfiguredAgentsPanel (/workspace/apex-game-studio-candidate/frontend/src/pages/AgentsPage.tsx:92:40)
+    at div
+    at AgentsPage (/workspace/apex-game-studio-candidate/frontend/src/pages/AgentsPage.tsx:762:40)
+    at Router (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1203:17)
+    at MemoryRouter (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1097:7)
+    at QueryClientProvider (file:///workspace/apex-game-studio-candidate/frontend/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:12:32)
+Warning: Each child in a list should have a unique "key" prop.
+
+Check the render method of `AgentTemplatesPanel`. See https://reactjs.org/link/warning-keys for more information.
+    at li
+    at AgentTemplatesPanel (/workspace/apex-game-studio-candidate/frontend/src/pages/AgentsPage.tsx:499:43)
+    at div
+    at AgentsPage (/workspace/apex-game-studio-candidate/frontend/src/pages/AgentsPage.tsx:762:40)
+    at Router (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1203:17)
+    at MemoryRouter (/workspace/apex-game-studio-candidate/frontend/node_modules/react-router/dist/umd/react-router.development.js:1097:7)
+    at QueryClientProvider (file:///workspace/apex-game-studio-candidate/frontend/node_modules/@tanstack/react-query/build/modern/QueryClientProvider.js:12:32)
+
+ ✓ src/pages/AgentsPage.test.tsx (3 tests) 241ms
+ ✓ src/pages/WeaknessesPage.test.tsx (4 tests) 73ms
+ ✓ src/pages/GameStudioPage.test.tsx (1 test) 115ms
+ ✓ src/theme/contrast.test.ts (9 tests) 7ms
+ ✓ src/assistant/Markdown.test.tsx (6 tests) 93ms
+ ✓ src/components/status/SystemVerdict.test.tsx (7 tests) 50ms
+stderr | src/components/layout/AppShell.test.tsx > AppShell / Sidebar / Topbar > groups navigation entries under real section labels, never a flat list
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition.
+⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath.
+
+stderr | src/components/layout/AppShell.test.tsx > AppShell / Sidebar / Topbar > marks the current route's link active via NavLink, never by a fabricated flag
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+
+stderr | src/components/layout/AppShell.test.tsx > AppShell / Sidebar / Topbar > collapses the sidebar and persists the choice across remounts
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+
+stderr | src/components/layout/AppShell.test.tsx > AppShell / Sidebar / Topbar > opens the mobile sidebar via the hamburger and closes it when a link is clicked
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+
+stderr | src/components/layout/AppShell.test.tsx > AppShell / Sidebar / Topbar > shows the real APEX status derived from health/missions, never a hardcoded READY
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+
+stderr | src/components/layout/AppShell.test.tsx > AppShell / Sidebar / Topbar > renders the routed page content inside the shell
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at Module.paintAmbient (/workspace/apex-game-studio-candidate/frontend/src/theme/ambient.ts:192:22)
+    at paint (/workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:61:23)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:64:5
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7) undefined
+Error: Not implemented: HTMLCanvasElement.prototype.getContext (without installing the canvas npm package)
+    at module.exports (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at HTMLCanvasElementImpl.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/nodes/HTMLCanvasElement-impl.js:42:5)
+    at HTMLCanvasElement.getContext (/workspace/apex-game-studio-candidate/frontend/node_modules/jsdom/lib/jsdom/living/generated/HTMLCanvasElement.js:131:58)
+    at /workspace/apex-game-studio-candidate/frontend/src/theme/Backdrop.tsx:79:28
+    at commitHookEffectListMount (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:23189:26)
+    at commitPassiveMountOnFiber (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24970:11)
+    at commitPassiveMountEffects_complete (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24930:9)
+    at commitPassiveMountEffects_begin (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24917:7)
+    at commitPassiveMountEffects (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:24905:3)
+    at flushPassiveEffectsImpl (/workspace/apex-game-studio-candidate/frontend/node_modules/react-dom/cjs/react-dom.development.js:27078:3) undefined
+
+ ✓ src/components/layout/AppShell.test.tsx (6 tests) 346ms
+ ✓ src/pages/MemoryPage.test.tsx (2 tests) 79ms
+ ✓ src/theme/ambient.test.ts (3 tests) 7ms
+ ✓ src/components/status/ApexStatus.test.tsx (8 tests) 24ms
+ ✓ src/specialties/registry.test.ts (8 tests) 4ms
+ ✓ src/pages/SecurityGatePage.test.tsx (2 tests) 53ms
+ ✓ src/components/status/StatusBadge.test.tsx (4 tests) 31ms
+ ✓ src/components/status/MeasurementValue.test.tsx (4 tests) 31ms
+ ✓ src/components/common/StatCard.test.tsx (2 tests) 19ms
+
+ Test Files  28 passed (28)
+      Tests  174 passed (174)
+   Start at  22:18:34
+   Duration  7.18s (transform 1.18s, setup 1.13s, collect 3.33s, tests 4.19s, environment 8.09s, prepare 1.30s)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

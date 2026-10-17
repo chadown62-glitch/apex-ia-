@@ -1,0 +1,11 @@
+{
+  "setting": "courtyard",
+  "road_objects": [],
+  "courtyard_floor_present": true,
+  "views": {
+    "rear_three_quarter.png": "15deb87f58bad4d381955ca91e916e1e970b766eb2e6e9a4522252933753dde3",
+    "side.png": "f06827cbaa60b2e29db779457fc58f33feabbde98b4298d99948ddaac6c66f22",
+    "front_three_quarter.png": "5ee6df5cf97970c5e5ea8d9bdab5ad7658208189b90ff8413c611d403a4c4d58",
+    "top.png": "783e457395036c7a6158d1a18ac3a08e82a52944023ba86efea196833c114698"
+  }
+}

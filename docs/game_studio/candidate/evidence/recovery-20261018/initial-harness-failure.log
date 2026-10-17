@@ -1,0 +1,6 @@
+street ExecutionStatus.SUCCESS
+Traceback (most recent call last):
+  File "/tmp/apex25-real-scene.py", line 16, in <module>
+    if result.return_code != 0: raise RuntimeError(str(result.to_dict())[:1500])
+       ^^^^^^^^^^^^^^^^^^
+AttributeError: 'SandboxResult' object has no attribute 'return_code'

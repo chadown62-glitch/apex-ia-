@@ -1,0 +1,70 @@
+[
+  {
+    "setting": "street",
+    "phase": "build_and_four_renders",
+    "status": "success",
+    "elapsed_s": {
+      "value": 16.383081783998932,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 46.36,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 367.8359375,
+      "status": "real"
+    }
+  },
+  {
+    "setting": "street",
+    "phase": "reopen",
+    "status": "success",
+    "elapsed_s": {
+      "value": 1.0038100910023786,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 0.74,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 212.24609375,
+      "status": "real"
+    }
+  },
+  {
+    "setting": "courtyard",
+    "phase": "build_and_four_renders",
+    "status": "success",
+    "elapsed_s": {
+      "value": 18.653410734994395,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 57.33,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 380.4921875,
+      "status": "real"
+    }
+  },
+  {
+    "setting": "courtyard",
+    "phase": "reopen",
+    "status": "success",
+    "elapsed_s": {
+      "value": 1.257021072000498,
+      "status": "real"
+    },
+    "cpu_time_s": {
+      "value": 1.03,
+      "status": "real"
+    },
+    "memory_peak_mb": {
+      "value": 260.24609375,
+      "status": "real"
+    }
+  }
+]

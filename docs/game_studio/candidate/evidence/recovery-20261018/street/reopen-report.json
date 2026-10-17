@@ -1,0 +1,25 @@
+{
+  "reopened_in_second_blender_process": true,
+  "setting": "street",
+  "source_mesh_counts": {
+    "building": 143,
+    "chair_left": 32,
+    "chair_right": 32
+  },
+  "camera": "Garage camera",
+  "named_lights": [
+    "Key daylight",
+    "Garage fill",
+    "Street bounce"
+  ],
+  "street_and_sidewalk_present": true,
+  "courtyard_present": false,
+  "paver_count": 0,
+  "road_objects": [
+    "street",
+    "street_marking",
+    "street_marking.001",
+    "street_marking.002"
+  ],
+  "ground_context_verified": true
+}

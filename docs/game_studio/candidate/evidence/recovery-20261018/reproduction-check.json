@@ -1,0 +1,60 @@
+[
+  {
+    "setting": "street",
+    "reopen_report_identical": true,
+    "native_png_sha256_equal": {
+      "rear_three_quarter.png": false,
+      "side.png": false,
+      "front_three_quarter.png": false,
+      "top.png": false
+    },
+    "scope": "two trusted Blender assembly runs; not model-plan stability",
+    "pixel_comparison": {
+      "rear_three_quarter.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      },
+      "side.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      },
+      "front_three_quarter.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      },
+      "top.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      }
+    }
+  },
+  {
+    "setting": "courtyard",
+    "reopen_report_identical": true,
+    "native_png_sha256_equal": {
+      "rear_three_quarter.png": false,
+      "side.png": false,
+      "front_three_quarter.png": false,
+      "top.png": false
+    },
+    "scope": "two trusted Blender assembly runs; not model-plan stability",
+    "pixel_comparison": {
+      "rear_three_quarter.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      },
+      "side.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      },
+      "front_three_quarter.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      },
+      "top.png": {
+        "equal": true,
+        "rmse_8bit": 0.0
+      }
+    }
+  }
+]

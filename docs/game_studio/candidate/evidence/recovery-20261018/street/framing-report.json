@@ -1,0 +1,90 @@
+{
+  "front_three_quarter": {
+    "initial_violation": true,
+    "correction_attempts": 2,
+    "attempts": [
+      {
+        "ortho_scale": 15.0,
+        "normalized_source_bounds": [
+          0.3095,
+          0.8391,
+          0.1975,
+          1.0758
+        ],
+        "inside": false
+      },
+      {
+        "ortho_scale": 16.8,
+        "normalized_source_bounds": [
+          0.33,
+          0.8027,
+          0.23,
+          1.0141
+        ],
+        "inside": false
+      },
+      {
+        "ortho_scale": 18.816,
+        "normalized_source_bounds": [
+          0.3482,
+          0.7703,
+          0.2589,
+          0.959
+        ],
+        "inside": true
+      }
+    ],
+    "result": "pass_geometric_framing"
+  },
+  "rear_three_quarter": {
+    "initial_violation": false,
+    "correction_attempts": 0,
+    "attempts": [
+      {
+        "ortho_scale": 18.816,
+        "normalized_source_bounds": [
+          0.2252,
+          0.6509,
+          0.1684,
+          0.8017
+        ],
+        "inside": true
+      }
+    ],
+    "result": "pass_geometric_framing"
+  },
+  "side": {
+    "initial_violation": false,
+    "correction_attempts": 0,
+    "attempts": [
+      {
+        "ortho_scale": 18.816,
+        "normalized_source_bounds": [
+          0.3648,
+          0.6352,
+          0.297,
+          0.9401
+        ],
+        "inside": true
+      }
+    ],
+    "result": "pass_geometric_framing"
+  },
+  "top": {
+    "initial_violation": false,
+    "correction_attempts": 0,
+    "attempts": [
+      {
+        "ortho_scale": 18.816,
+        "normalized_source_bounds": [
+          0.3648,
+          0.6352,
+          0.3954,
+          0.8596
+        ],
+        "inside": true
+      }
+    ],
+    "result": "pass_geometric_framing"
+  }
+}

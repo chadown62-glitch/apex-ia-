@@ -1,0 +1,18 @@
+
+> apex-control-center@0.1.0 build
+> tsc -b && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 169 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.62 kB │ gzip:   0.37 kB
+dist/assets/index-DckdFLZT.css   86.36 kB │ gzip:  15.13 kB
+dist/assets/index-BXBw7HCF.js   456.12 kB │ gzip: 133.73 kB
+✓ built in 1.09s
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

@@ -148,3 +148,20 @@ def test_invalid_existing_manifest_is_preserved(tmp_path):
     ):
         install_planner(accept_download=True, accept_license=True)
     assert target.read_text() == original
+
+
+def test_low_disk_prevents_any_weight_download(tmp_path):
+    from types import SimpleNamespace
+
+    info = {
+        "manifest": str(tmp_path / "coder-model.json"),
+        "server_module_present": True,
+        "required_free_bytes": 100,
+    }
+    with (
+        patch("apex.game_studio.dependencies.planner_installation", return_value=info),
+        patch("apex.game_studio.dependencies.shutil.disk_usage", return_value=SimpleNamespace(free=99)),
+        patch("apex.game_graphics.models.fetch_coder", side_effect=AssertionError("network")),
+        pytest.raises(RuntimeError, match="insufficient_disk_space"),
+    ):
+        install_planner(accept_download=True, accept_license=True)
