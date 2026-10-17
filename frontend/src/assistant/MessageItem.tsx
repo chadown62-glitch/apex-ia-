@@ -56,10 +56,14 @@ export function ToolSteps({ steps, open }: { steps: ToolStep[]; open?: boolean }
   );
 }
 
+const DEVICES: Record<string, string> = { cuda: "GPU (CUDA)", cpu: "processeur" };
+
 function MetaLine({ message }: { message: Message }) {
   const meta = message.meta;
   const parts: string[] = [];
   if (message.model_id) parts.push(message.model_id);
+  // Où le modèle a RÉELLEMENT calculé cette réponse (mesuré par le moteur, jamais déduit du réglage).
+  if (meta?.runtime?.device) parts.push(DEVICES[meta.runtime.device] ?? meta.runtime.device);
   if (meta?.runtime?.dtype) parts.push(meta.runtime.dtype);
   if (typeof meta?.elapsed_s === "number") parts.push(formatDuration(meta.elapsed_s));
   if (typeof meta?.tokens_completion === "number") parts.push(`${meta.tokens_completion} tokens`);

@@ -65,10 +65,21 @@ Notez ce que vous voyez réellement : une capture de ces lignes suffit.
      environ 2,6 Go (4,2 Go installés).
    - Un pilote plus ancien est refusé, avec la raison.
 2. APEX vérifie le pilote, télécharge des fichiers figés et vérifiés par empreinte, puis teste le GPU.
-3. L'accélération n'est gardée que si ce test réussit. Sinon, APEX reste sur le processeur et dit pourquoi.
-4. **Démarrer APEX** : la ligne « GPU CUDA » doit dire « prêt » avec le nom de votre carte.
+   - Avec votre pilote 610.62, le journal du Panel doit dire « CUDA accepté par le pilote : 13.3 (API du
+     pilote 13.3, nvidia-smi 13.3) », puis « variante cu130 (CUDA 13.0 ≤ CUDA 13.3 accepté par le pilote) ».
+   - La candidate précédente refusait ici (code 2, « version CUDA du pilote illisible ») : elle ne lisait que
+     l'ancien libellé « CUDA Version ».
+3. L'accélération n'est gardée que si ce test réussit. Sinon, APEX reste sur le processeur et dit pourquoi
+   (`%LOCALAPPDATA%\APEX\python\gpu\last-install.json`).
+4. **Démarrer APEX** : la ligne « GPU CUDA » doit dire « prêt » avec le nom de votre carte, et « accélération
+   GPU active (cu130) ».
+5. **Le Cerveau sur le GPU** : posez la même question qu'avant (« 37 × 24 ? »). Sous la réponse, la ligne de
+   mesures dit maintenant où le calcul a eu lieu : « GPU (CUDA) » au lieu de « processeur », avec le type de
+   nombres et le débit en tokens/s. Comparez ce débit à celui mesuré sur le processeur (environ 131 tokens/s
+   chez vous).
 
-Rien de cela n'a été essayé sur une carte NVIDIA. Votre essai sera le premier.
+Rien de cela n'a été essayé sur une carte NVIDIA. Votre essai sera le premier ; d'ici là, CUDA n'est pas
+déclaré fonctionnel.
 
 ## 6. Le parcours 3D
 
