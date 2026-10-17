@@ -124,6 +124,20 @@ Le paquet de qualification qui a passé ce run est en artefact (`apex-qualificat
 3. **La candidate transmettait `PYTHONUTF8` à APEX** (`cb4bf22`). Ce n'est plus le cas : APEX tourne comme sur le
    PC d'un utilisateur.
 
+**Mode WSL d'APEX.exe (`windows-desktop`) : de nouveau vert depuis le 17/10/2026**
+([run 39040344678](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39040344678), `9ffcbd2`) : 48 PASS,
+0 FAIL, 5 BLOCKED. Les BLOCKED sont des limites du runner : administrateur, SmartScreen manuel, aucun backend lancé à
+la main, une seule distribution, ni Ollama ni GPU. Il était rouge depuis le 08/10 (21 FAIL), pour quatre raisons :
+1. depuis le mode natif (`2a38110`), l'APEX.exe installé ne regardait plus WSL. Le workflow impose maintenant
+   `APEX_PANEL_MODE=wsl` ; le mode natif est validé par `windows-native` ;
+2. le contrôle C03 cherchait un texte de l'interface d'avant la 0.4.0 ;
+3. **défaut réel de l'installateur** (I14) : avant une mise à jour, il lance `APEX.exe --stop` de la version
+   installée et attend qu'il se termine. La 0.2.1 ne connaît pas `--stop` : elle ouvrait sa fenêtre, et la mise à
+   jour ne se terminait jamais. L'installateur n'appelle plus `--stop` qu'à partir de la 0.3.0, qui l'a introduit.
+   Une mise à jour depuis la 0.3.0 ou plus récente ne change pas ;
+4. S04 observait le Panel resté ouvert par B06 (il affichait l'assistant), et non un Panel neuf face à
+   l'enregistrement hostile. Ses exigences n'ont pas changé.
+
 Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par `exit 3`, avant la ligne
 `exit $LASTEXITCODE` que GitHub ajoute ; `pwsh -Command` réduit alors le code à 1.
 
