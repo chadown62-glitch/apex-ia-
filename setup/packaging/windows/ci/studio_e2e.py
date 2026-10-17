@@ -34,7 +34,38 @@ COMPONENTS = ("apex_brain", "native_model", "gpu", "game_studio", "planner", "bl
               "game_engineer", "sandbox", "models")
 
 
-def run(api: Api, out: Path, label: str, *, cpu: bool, turn_timeout_s: float, mission_timeout_s: float) -> int:
+def _dependencies(api: Api, evidence: dict[str, Any], key: str) -> dict[str, Any]:
+    """Composants de Game Studio tels que l'Atelier 3D les présente (état, taille, provenance, et pourquoi
+    une installation n'est pas offerte)."""
+    listing = api.data("GET", "/assistant/game-studio/dependencies")
+    evidence[key] = listing
+    print(f"NOTE contrats d'installation de Game Studio : {listing['contract']} ({key})")
+    for item in listing.get("items", []):
+        offer = "installable" if item["install"]["available"] else item["install"]["reason"] or "—"
+        print(f"DEPENDENCY {item['id']} {item['state']} {offer[:160]}")
+    return listing
+
+
+def install_engine(api: Api, evidence: dict[str, Any], timeout_s: float = 1800.0) -> None:
+    """Le moteur du planificateur, installé comme l'utilisateur le ferait (bouton « Installer », confirmé) :
+    la liste figée facultative de Game Studio, par le mécanisme de « Préparer APEX ». Quelques Mo ; les poids
+    du planificateur (5,4 Go) ne sont JAMAIS téléchargés ici."""
+    items = {i["id"]: i for i in _dependencies(api, evidence, "dependencies_before_engine")["items"]}
+    engine = items.get("inference_engine") or {}
+    if not engine.get("install", {}).get("available"):
+        print(f"NOTE moteur du planificateur non installable ici : {engine.get('install', {}).get('reason')}")
+        return
+    job = api.data("POST", "/assistant/game-studio/dependencies/inference_engine/install", {"confirm": True})
+    deadline = time.monotonic() + timeout_s
+    while job.get("state") == "running" and time.monotonic() < deadline:
+        time.sleep(5)
+        job = api.data("GET", "/assistant/game-studio/dependencies").get("job") or job
+    evidence["engine_install"] = job
+    print(f"CHECK engine_install {job.get('state')} {job.get('detail')} | {' | '.join(job.get('log', [])[-3:])}"[:600])
+
+
+def run(api: Api, out: Path, label: str, *, cpu: bool, turn_timeout_s: float, mission_timeout_s: float,
+        engine: bool = False) -> int:
     evidence: dict[str, Any] = {"phase": "studio", "label": label, "request": REQUEST}
 
     def finish(verdict: int, reason: str) -> int:
@@ -50,6 +81,9 @@ def run(api: Api, out: Path, label: str, *, cpu: bool, turn_timeout_s: float, mi
                               for c in status["components"] if c["component"] in COMPONENTS}
     for name, value in evidence["components"].items():
         print(f"COMPONENT {name} {value['state']} {value['detail'][:200]}")
+    if engine:
+        install_engine(api, evidence)
+    _dependencies(api, evidence, "dependencies")
     evidence["availability"] = api.data("GET", "/assistant/game-studio/availability")
     if not evidence["availability"].get("installed"):
         return finish(BLOCKED, "Game Studio absent de cette installation : "
@@ -132,6 +166,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--home", default=home)
     parser.add_argument("--out", default=".")
     parser.add_argument("--cpu", action="store_true", help="calcul des missions sur le processeur (choix explicite)")
+    parser.add_argument("--install-engine", action="store_true",
+                        help="installe le moteur du planificateur (bouton « Installer », quelques Mo), jamais ses poids")
     parser.add_argument("--turn-timeout", type=float, default=1800.0)
     parser.add_argument("--mission-timeout", type=float, default=5400.0)
     args = parser.parse_args(argv)
@@ -146,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     api = Api(args.base, token_file.read_text(encoding="utf-8").strip())
     try:
         return run(api, out, args.label, cpu=args.cpu, turn_timeout_s=args.turn_timeout,
-                   mission_timeout_s=args.mission_timeout)
+                   mission_timeout_s=args.mission_timeout, engine=args.install_engine)
     except Exception as exc:  # un défaut du script de test ne se confond jamais avec un verdict sur APEX
         reason = f"{exc.__class__.__name__}: {exc}"
         print(f"FAIL {reason}")

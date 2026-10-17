@@ -1,119 +1,207 @@
-# Reprise de Codex : ce qui bloque Game Studio dans APEX.exe (17/10/2026)
+# Reprise de Codex : activer Game Studio dans APEX.exe (dossier du 17/10/2026, pile à `d15fa02`)
 
-Synthèse écrite par Claude pendant la pause de Codex. **Aucun fichier de Codex n'a été modifié.** Chaque point dit :
-- ce qui a été **mesuré** ;
-- la **cause** dans le code ;
-- une **correction proposée**, que Codex reste libre de faire autrement ;
-- comment la **vérifier**.
+Synthèse écrite par Claude pendant la pause de Codex, pour qu'il corrige ses derniers blocages **sans attendre
+de refonte du Cerveau ni du Panel**. **Aucun fichier de Codex n'a été modifié.** Chaque point dit ce qui est
+**mesuré**, ce qui reste **à vérifier**, et les **fichiers** concernés.
 
-## Où en est le parcours réel
+La version précédente de ce dossier (jsonschema, planificateur, Blender, `scripts/game_engineer`) est traitée
+par `c80ce11`/`d15fa02` : les points correspondants sont marqués « fait par Codex ».
 
-Mesuré sur un vrai Windows Server (runner GitHub), avec la candidate combinée : ma branche, #19, #22, #24, #26,
-#5, #11 et #13, reconstruites dans le runner sans rien pousser
-([run 38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861)).
+## 0. Où en est le parcours réel
 
-1. installation, « Préparer APEX », modèle intégré, démarrage : **READY** ;
-2. mode 3D : « Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender. » ;
-3. APEX **propose** la mission ; le **clic humain** la confie à `game_studio.create` ;
-4. Game Studio **refuse** : `ModuleNotFoundError: No module named 'jsonschema'`.
+- **PC Windows 11 de l'utilisateur** (RTX 4060 Ti), candidate d'avant `d15fa02` :
+  - APEX.exe READY ; le Cerveau ApexLM V2 tourne sur la RTX avec PyTorch CUDA ;
+  - conversations, puis la demande 3D est reconnue et **proposée** ;
+  - le **clic** de l'utilisateur la confie à Game Studio, qui refuse proprement : `jsonschema` absent.
+- **Runner Windows** (`windows-candidate`, arbre combiné avec `d15fa02`) : voir §8, résultats des tentatives 6
+  et 7.
 
-Les blocages ci-dessous sont rangés **dans l'ordre où le parcours les rencontre**. Chacun masque les suivants.
+## 1. Les contrats de Codex que Claude consomme
 
-## 1. `jsonschema` absent de la liste Windows
+| Contrat (Codex) | Lu ou appelé par (Claude) | Ce qui est lu |
+|---|---|---|
+| `apex.game_studio.capabilities.probe()` | `apex/assistant/game_studio.py` (`availability`, `missing_from`), `apex/obs/component_checks.py` | `vehicle_blender.{blender, blender_discovery, workers_present, coder_manifest_present, llama_cpp_present, python_dependencies, status}`, `cuda.{available, dispatch_qualified, reason}`, `specialist.gpu_policy`, `environment.status` |
+| `apex.game_studio.dependencies.planner_installation()` | `apex/assistant/studio_setup.py` (`_planner`) | `manifest_present`, `server_module_present`, `download_bytes`, `required_free_bytes`, `license`, `repo`, `revision`, `sha256`, `reason` |
+| `python -m apex.game_studio install-planner --accept-download --accept-apache-2-license` | bouton « Installer » du planificateur (`studio_setup._command`), après confirmation (5,4 Go, Apache-2.0) | code 0 et `status` `installed_verified` ou `already_verified` ; code 2 et `{status: "blocked", error}` |
+| `setup/packaging/runtime/requirements-planner-cpu-windows.lock` | bouton « Installer » du moteur : `pip install --require-hashes --only-binary=:all: --no-deps -r` dans le Python préparé | proposé seulement si chaque version partagée avec la liste de base est identique (`engine_offer`) ; copié dans `app/runtime` par `build_desktop_release.sh` |
+| outils `game_studio.create/status/results/cancel` | moteur d'outils, `ToolContext.extra["game_studio_service"]` | `project_id`, `status`, `steps`, `last_event`, artefacts (empreintes) |
+| `ProjectService.resume(project_id)` | bouton « Reprendre la mission » | `ValueError(code)` expliqué (§5) |
+| `ProjectService.artifact(project_id, digest)` | aperçus de l'Atelier 3D | images seulement, 4 Mo au plus |
+| `apex.game_graphics.resources.resource_lease` | prêt du GPU au lancement (§3) | prend `APEX_HOME/.apex/model-session.lock`, même primitive que le Cerveau |
 
-- **Mesuré** : le refus ci-dessus. Le Python préparé par APEX importe `apex.game_studio` et sa délégation, mais
-  pas `jsonschema`.
-- **Cause** : `apex/game_graphics/judge.py` et `apex/game_engineer/{assets,tools}.py` l'importent. Il n'est
-  déclaré :
-  - ni dans `setup/packaging/runtime/requirements-windows.in` ;
-  - ni dans l'extra `game_studio` de `runtime_build/pyproject.runtime.toml` (qui déclare psutil, numpy, pillow et
-    `llama-cpp-python`).
-- **Correction proposée** :
-  - ajouter `jsonschema>=4.20` aux deux fichiers ;
-  - puis régénérer la liste avec `setup/packaging/runtime/lock_runtime.sh`.
-  - Je l'ai fait sur une copie jetable. Résultat : 5 paquets ajoutés, aucune version existante changée, licences
-    MIT, empreintes Windows identiques à PyPI :
-    `attrs==26.1.0`, `jsonschema==4.26.0`, `jsonschema-specifications==2025.9.1`, `referencing==0.37.0`,
-    `rpds-py==2026.9.1` (détail dans l'Issue #21).
-- **Vérification** : le workflow `windows-candidate`. Le refus suivant doit être celui du planificateur (§2).
+États lus : `queued`, `running`, `review`, `failed`, `cancelled`, `interrupted` (mission `running` sans
+processus vivant).
 
-## 2. Planificateur des missions : rien ne permet de l'installer dans APEX.exe
+## 2. Ce que Claude a fait et vérifié
 
-- **Mesuré** :
-  - dans l'arbre combiné local, avec `jsonschema` présent, le refus suivant est `local_planner_model_missing` ;
-  - sous Windows, la sonde dit « Qwen2.5-Coder-7B épinglé absent ; llama-cpp-python absent ».
-- **Causes** :
-  - toute mission proposée par le Cerveau passe par la planification dynamique. Elle exige le 7B épinglé et
-    refuse le moteur intégré (`dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified`) ;
-  - `fetch_coder()` (`apex/game_graphics/models.py`) télécharge le GGUF épinglé, révision `13fb94bf…`, fichier
-    Q5_K_M de 5 444 831 232 octets, SHA-256 `586844ea…`, après vérification de la licence. Il écrit ensuite
-    `coder-model.json`. Mais **rien ne l'appelle** dans l'arbre combiné : ni commande, ni bouton. Le descripteur
-    est attendu dans `APEX_HOME/.apex/game-studio/coder-model.json` (`apex/game_studio/capabilities.py`) ;
-  - `CoderSession` lance `python -m llama_cpp.server`, donc `llama-cpp-python[server]`. Or **PyPI ne publie
-    `llama-cpp-python` qu'en sources** : 0.3.36, licence MIT, aucune roue Windows pour aucune version (vérifié le
-    17/10/2026). « Préparer APEX » installe avec `--only-binary=:all:`, donc il ne peut pas l'installer.
-- **Décisions pour Codex** (je ne suppose pas qu'une variante CUDA existe) :
-  - **source binaire** de `llama-cpp-python` pour Windows x64 et CPython 3.12. Options : roues construites et
-    figées par une CI Windows, comme `gpu-locks`, ou index tiers vérifié par empreinte. Préciser processeur ou
-    CUDA, et la licence de distribution ;
-  - **un point d'entrée** pour installer le planificateur sur un geste de l'utilisateur. Par exemple une
-    sous-commande de `python -m apex.game_graphics` qui appelle `fetch_coder(APEX_HOME/.apex/game-studio)`. Le
-    bouton du Panel viendra côté Claude, une fois ce contrat fixé. Il faut une confirmation explicite : 5,4 Go
-    plus la licence. Aucun téléchargement implicite ;
-  - éventuellement, le **moteur intégré** comme planificateur, une fois son transfert qualifié. Il est déjà
-    installé ; c'est le blocage nommé par le code.
-- **Côté Claude, prêt** : la ligne « Planificateur 3D » du Panel lit `coder_manifest_present` et
-  `llama_cpp_present` de la sonde, et passe d'« absent » à « dégradé » puis à « prêt » sans changement.
+| Quoi | Commit | Preuve |
+|---|---|---|
+| Liste des composants (planificateur, moteur, Blender, bibliothèques) : état, taille, provenance ; bouton seulement quand un contrat d'installation existe, sinon « En attente du composant Game Studio » et la raison | `d3658db`, `55c8f81` | `tests/test_studio_setup.py` ; vraie CLI de Codex refusant sans consentement |
+| Reprise d'une mission interrompue (APEX arrêté pendant la mission) ou échouée, par l'utilisateur seulement | `d3658db` | `tests/test_assistant_game_studio.py` |
+| Garde GPU de Codex expliquée avant le clic (« choisissez Processeur ») | `55c8f81` | idem |
+| **Prêt du GPU pendant toute la mission** (§3) | `20a7167` | tests avec le vrai `resource_lease` ; `lease_check.py` sous Windows |
+| Raison d'arrêt d'une mission affichée (dernier événement de Game Studio) | `20a7167` | `views.test.tsx` |
+| Candidate Windows : moteur installé comme par le bouton, import de `llama_cpp` et de `llama_cpp.server.app` | `b7e8b53`, `20a7167` | `windows-candidate`, tentatives 6 et 7 |
 
-## 3. Blender : cherché seulement dans le PATH
+## 3. Défaut trouvé et corrigé côté Claude : le bail partagé pendant une mission sur le processeur
 
-- **Mesuré** : le runner n'a pas Blender, et la ligne Blender le dit. Codex qualifie Blender 4.3.2.
-- **Cause** : `apex/game_studio/capabilities.py` utilise `shutil.which("blender")`. Sous Windows, l'installateur
-  de Blender n'ajoute pas son dossier au PATH (à ma connaissance ; à confirmer sur le PC de l'utilisateur).
-- **Correction proposée** :
-  - accepter aussi un chemin explicite (variable d'environnement ou réglage) ;
-  - et/ou chercher les emplacements standard (`%ProgramFiles%\Blender Foundation\Blender 4.3\blender.exe`).
-  - Sinon, documenter l'ajout au PATH pour l'utilisateur.
-- **Côté Claude** : la ligne Blender du Panel exécute `blender --background --version` sur le chemin que
-  rapporte la sonde de Game Studio. Elle suivra donc la correction.
+- **Mesuré** (arbre combiné, vrai `resource_lease`) : quand le Cerveau est chargé sur CUDA, il tient le bail
+  `model-session.lock`. Chaque étape de mission prend ce même bail, **même avec `compute_backend: "cpu"`**.
+  Elle échoue alors avec `BlockingIOError: [Errno 11] Resource temporarily unavailable`, et la mission passe
+  `failed`. C'est exactement la configuration validée chez l'utilisateur.
+- **Correction (fichiers de Claude seulement)** :
+  - au clic (lancement ou reprise), l'assistant demande le GPU au Cerveau : `request_gpu(30 s)`. S'il ne le
+    libère pas, rien n'est lancé (409 « réessayez ») ;
+  - le GPU reste prêté tant que la mission est `queued` ou `running` (lu par `game_studio.status`), puis il est
+    rendu. Il l'est aussi aussitôt après un refus, et après trois lectures en échec ;
+  - pendant le prêt, le Cerveau répond sur le processeur, et ses mesures le disent ;
+  - les prêts sont **comptés par demandeur** (`apex/models/gpu_handoff.py`). Les admissions CUDA ne rouvrent
+    qu'au dernier retour, et une demande pendant un prêt est accordée sans attente. Vos futurs appels
+    `request_gpu`/`return_gpu` autour de chaque étape restent donc compatibles avec le prêt de l'assistant.
+- **Non couvert** : une mission lancée **hors de l'assistant**, par la page ou les routes de Game Studio
+  (`POST /api/v1/game-studio/missions`, `/projects`, `/projects/{id}/resume`, `/missions/{id}/resume`). Voir
+  §4.4.
 
-## 4. Empaquetage : `scripts/game_engineer/` absent du runtime
+## 4. Ce qui reste à Codex, dans l'ordre du parcours
 
-- **Mesuré** : la candidate embarque `scripts/game_graphics/`, pas `scripts/game_engineer/`.
-- **Cause** :
-  - `_assemble_common` (`runtime_build/build.py`) ne copie que `scripts/game_graphics` ;
-  - `apex/game_engineer/__main__.py:102` lit `scripts/game_engineer/import_vehicle.py`.
-- **Effet** : la préparation de l'import UE5 échouerait dans APEX.exe. Les missions Blender n'en dépendent pas.
-- **Correction proposée** : le même `copytree` pour `scripts/game_engineer`.
+### 4.1 Moteur du planificateur (CPU) sous Windows
 
-## 5. Partage du GPU pendant une mission
+- **Fait par Codex** : `requirements-planner-cpu-windows.{in,lock}`, roue officielle GitHub v0.3.36 (MIT,
+  empreinte vérifiée), serveur et dépendances du serveur dans la liste.
+- **Mesuré par Claude** : installation et import sur le runner, voir §8.
+- **Reste** : exécution réelle du serveur avec les poids, sur le PC de l'utilisateur (§7). Ne pas déclarer le
+  moteur qualifié avant.
 
-- **État** : côté Cerveau, `request_gpu` / `return_gpu` existent et sont testés. Côté Game Studio, ils ne sont pas
-  encore appelés autour de `resource_lease`. La garde GPU de #26 reste en place.
-- **À faire** : appeler les deux autour de `resource_lease`. Ne lever la garde qu'après un test sur la RTX 4060 Ti
-  de l'utilisateur.
+### 4.2 Poids du planificateur (5,4 Go)
 
-## 6. Points de la réunion des branches, sans effet sur le parcours
+- **Fait par Codex** : `install-planner`, avec double consentement, vérification du disque, de la licence et
+  des empreintes.
+- **Côté Claude** : le bouton n'apparaît que si `server_module_present` est vrai ; confirmation avec la taille
+  et la licence.
+- **Reste** : premier téléchargement réel chez l'utilisateur. Vérifier ensuite que `coder-model.json` est
+  écrit dans `APEX_HOME/.apex/game-studio/` et que la sonde passe `coder_manifest_present: true`.
 
+### 4.3 Première mission réelle sur le processeur
+
+- **Prérequis** : Blender 4.3.2 trouvé (`APEX_BLENDER_EXECUTABLE`, PATH ou Program Files : fait par Codex),
+  calcul des missions sur « Processeur ».
+- **À vérifier** sur le PC de l'utilisateur, dans l'ordre : serveur `llama_cpp.server` démarré par
+  `CoderSession`, plan, base Blender, juge, fichiers livrés, aperçus.
+- **Risque à vérifier, non mesuré** : `check_external_workloads` refuse une étape si un `llama_cpp.server`
+  tourne encore. Un serveur d'une étape précédente encore vivant ferait refuser les suivantes
+  (`external_model_workload_active`).
+
+### 4.4 Missions sur GPU : lever la garde
+
+- **Garde actuelle** (fichiers de Codex) :
+  - `apex/game_studio/service.py:198-199` ;
+  - `apex/game_studio/project.py:167-168` et `228-229` ;
+  - `apex/game_studio/capabilities.py:162` (`dispatch_qualified: False`).
+- **À faire avant de la lever** :
+  1. un `llama-cpp-python` **CUDA** pour Windows : source, licence, empreintes. La roue GitHub actuelle est
+     CPU (aucune DLL CUDA). Il faut aussi passer `n_gpu_layers` selon `compute_backend` ;
+  2. pour les missions lancées hors de l'assistant (§3), appeler `request_gpu(timeout_s, requester=...)`
+     avant la première étape et `return_gpu(requester=...)` dans un `finally`. Avec un accusé
+     `released: false`, la mission reste en attente : jamais de déchargement direct, jamais de processus tué ;
+  3. un test sur la RTX 4060 Ti de l'utilisateur. La mémoire CUDA avant et après se lit dans l'accusé de
+     `request_gpu` (`cuda.before`, `cuda.after`).
+- **Décision à prendre par Codex** : les étapes sur le processeur ont-elles besoin du bail partagé ? Si elles
+  prenaient seulement le verrou de leur dossier, le Cerveau garderait le GPU pendant une mission sur le
+  processeur (meilleure expérience). Le prêt de l'assistant reste sans effet nuisible dans les deux cas.
+
+### 4.5 Un code pour le bail refusé
+
+- Aujourd'hui, la mission échoue avec le texte brut de l'exception : `BlockingIOError: [Errno 11] Resource
+  temporarily unavailable` sous Linux, `PermissionError: [Errno 13] Permission denied` sous Windows (mesuré,
+  tentative 7). Le texte Windows ressemble à n'importe quel refus d'accès.
+- **Proposé** : un code stable, par exemple `shared_resource_busy`. L'Atelier 3D explique déjà le texte brut et
+  propose de reprendre la mission.
+
+### 4.6 Hors parcours
+
+- Benchmark du modèle à refaire : les poids et les preuves non poussés ont été perdus à la restauration.
+- #12, #16, #17 : décision avec l'intégrateur humain, sans fusion aveugle après #19 → #26.
 - `apex/vision` (#7) à classer dans `runtime_build/selection.py`.
-- #12, #16 et #17 sont en conflit avec la pile #19 → #26 dans les deux ordres : les fermer ou les refaire sur la pile.
-- La spécialité `game-graphics` est déclarée `is_supported` au stade STUB. Cela fait échouer la garde historique
-  `test_no_second_specialty_task_provider_is_registered`, l'un des 7 échecs connus de l'arbre combiné.
-- `test_game_graphics_contract.py` : 2 échecs liés à `llama_cpp` et à psutil dans le sous-processus.
+- Les 11 échecs sandbox (Docker/AppContainer) : Codex propose que Claude en porte un lot séparé. Il n'est pas
+  commencé, et il ne bloque pas le parcours 3D.
 
-## 7. Ce qui a changé côté Claude, et qui touche Game Studio
+## 5. Refus expliqués à l'utilisateur
 
-- **Panel** : chaque Python reçoit `-P` (`24edcbc`). Sans cela, un dossier courant contenant `apex\` (un clone du
-  dépôt) passait avant l'application installée. Dans la CI, Game Studio paraissait absent pour cette raison.
-- **Fichier partagé** `runtime_build/build.py` : seule `_extract_commit` a changé (correction Windows `eb2713b`).
-  Votre `_assemble_common` est intact et fusionne sans conflit.
-- **États de préparation** (`apex/obs/component_checks.py`) : je lis le rapport de `capabilities.probe()` sans le
-  réimplémenter. Les clés lues sont listées dans l'Issue #21.
+Codes de Game Studio traduits dans l'assistant et l'Atelier 3D (`REFUSALS`, `GAME_STUDIO_REFUSALS`) :
+
+- **matériel et ressources** : `cuda_unavailable_choose_cpu_explicitly`,
+  `cuda_game_studio_requires_qualified_brain_quiescence_handoff`, `shared_resource_profile_required`,
+  `core_active_handoff_required`, `external_graphics_workload_active`, `external_model_workload_active` ;
+- **composants absents** : `local_planner_model_missing`, `pinned_7b_model_missing_no_download_performed`,
+  `blender_worker_or_local_coder_missing`, `dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified` ;
+- **missions** : `game_studio_project_missing`, `game_studio_project_process_interrupted`,
+  `game_studio_process_interrupted` ;
+- **reprise** : `only_interrupted_failed_or_incomplete_projects_can_resume`, `project_already_running`,
+  `project_already_delivered_for_review`, `cumulative_time_budget_exhausted`,
+  `legacy_budget_unknown_new_mission_required`.
+
+Un nouveau code non traduit s'affiche tel quel, jamais remplacé par une explication inventée.
+
+## 6. Dépendances
+
+| Composant | État | Qui l'installe |
+|---|---|---|
+| `jsonschema` (+4 dépendances) | dans la liste de base (fait par Codex) | « Préparer APEX » |
+| `llama-cpp-python` 0.3.36 CPU et son serveur | liste facultative figée (Codex) | bouton « Installer » (Claude), sur confirmation |
+| Qwen2.5-Coder-7B Q5_K_M (5 444 831 232 octets) | `install-planner` (Codex) | bouton « Installer » (Claude), sur confirmation |
+| Blender 4.3.2 | découverte (Codex) | l'utilisateur, installateur officiel |
+| `llama-cpp-python` CUDA | **absent** | à décider (Codex, §4.4) |
+
+## 7. Tests nécessaires
+
+- **Côté Codex** :
+  - `request_gpu`/`return_gpu` autour des étapes, y compris un accusé `released: false` ;
+  - le code du bail refusé ;
+  - le serveur du planificateur arrêté entre deux étapes ;
+  - la levée de la garde, derrière un test matériel.
+- **Côté Claude** (en place) :
+  - `tests/test_gpu_handoff.py` : prêts comptés, bail exclusif, vrai bail de Game Studio ;
+  - `tests/test_assistant_game_studio.py` : proposition, clic, suivi, fichiers, refus, annulation, reprise,
+    aperçus, prêt du GPU, Cerveau occupé ;
+  - `tests/test_studio_setup.py` : composants et contrats d'installation ;
+  - `frontend/src/assistant/views.test.tsx`.
+  Ces tests tournent sur des **doubles** des services de Game Studio : aucun ne prouve une génération Blender
+  réelle.
+
+## 8. Validations sur Windows
+
+- **Runner** (`windows-candidate`, automatique, sans GPU ni Blender) :
+  - tentative 6 (`b7e8b53` + `d15fa02`,
+    [run 39076155603](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39076155603)) :
+    - `jsonschema`, `PIL`, `psutil`, `apex.game_studio.delegation` importés par le Python préparé ;
+    - moteur installé par l'API du bouton (pip, empreintes vérifiées : `llama-cpp-python` 0.3.36,
+      `diskcache`, `pydantic-settings`, `sse-starlette`, `starlette-context`), puis importé :
+      `gpu_offload False` (build CPU), module `llama_cpp.server` présent ;
+    - le bouton du planificateur passe de « En attente du composant Game Studio : installez d'abord le
+      moteur » à « installable » ;
+    - proposition, clic, puis refus `local_planner_model_missing` : attendu, les poids ne sont pas
+      téléchargés sur le runner ;
+    - assistant PASS, accélération GPU sans GPU PASS, désinstallation sans perte de la base ;
+    - installateur `APEX-Setup-x64-v0.6.0-candidate-e44da1f76cb6.exe`, SHA-256 `366ffc6a6f402cce…`. Il n'a
+      pas le prêt du GPU : préférer celui de la tentative 7 ;
+  - tentative 7 (`20a7167` + `d15fa02`,
+    [run 39077478748](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39077478748)) :
+    - mêmes résultats que la tentative 6, plus `llama_cpp.server.app` importé (fastapi, sse-starlette,
+      starlette-context, pydantic-settings) ;
+    - partage du GPU, `lease_check.py`, 6 contrôles PASS. Cerveau sur un « CUDA » simulé, bail et verrous Windows
+      réels : votre vrai `resource_lease` est refusé tant que le Cerveau tient le bail
+      (`PermissionError: [Errno 13] Permission denied`, texte de `msvcrt.locking`), puis obtenu après
+      `request_gpu`. Le Cerveau passe sur le processeur pendant le prêt et reprend le GPU après ;
+    - installateur `APEX-Setup-x64-v0.6.0-candidate-991388a4860d.exe`, SHA-256 `e0ced6225aca7628…` : celui à
+      essayer sur le PC de l'utilisateur.
+- **PC de l'utilisateur** (manuel) : la première création réelle, étapes dans
+  `docs/QUALIFICATION_APEX_EXE.md`. C'est la seule preuve d'une génération Blender, du planificateur et des
+  fichiers livrés.
 
 ## Vérifier après chaque correction
 
 1. Modifier `setup/packaging/windows/ci/candidate-request.json` (champ `attempt`) sur la branche de Claude, ou
    lancer `windows-candidate` manuellement une fois le workflow sur la branche par défaut.
-2. Lire les annotations du run : programme exécuté, imports, lignes d'état, proposition, clic, refus ou mission.
-3. Le verdict PASS exige que la mission produise des fichiers. Ce n'est pas faisable sur le runner, qui n'a ni
-   Blender ni GPU, mais sur le PC de l'utilisateur.
+2. Lire les annotations du run : imports, composants (`DEPENDENCY`), moteur, partage du GPU, proposition, clic,
+   refus ou mission.
+3. Le verdict PASS exige des fichiers produits par une mission : seulement sur le PC de l'utilisateur.

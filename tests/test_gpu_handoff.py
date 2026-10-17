@@ -268,3 +268,53 @@ def test_the_brains_lease_and_game_studios_real_lease_exclude_each_other(tmp_pat
         governor.return_gpu(requester="game_studio:test")
         assert governor.place("auto") == ("cpu", "GPU tenu par un autre travail (bail model-session.lock)")
     assert governor.place("auto")[0] == "cuda"  # rendu par le spécialiste : repris par le Cerveau
+
+
+def test_loans_are_counted_and_admissions_reopen_only_at_the_last_return(tmp_path) -> None:
+    """L'assistant prête le GPU pour toute une mission, Game Studio autour de chaque étape : le retour d'un
+    prêt ne rouvre jamais les admissions tant qu'un autre court, et un inconnu ne les rouvre pas."""
+    governor = _governor(tmp_path)
+    model = _FakeCuda()
+    governor.register("apex_brain", model.residents)
+    assert governor.place("auto")[0] == "cuda"
+    mission = governor.request_gpu(1, requester="game_studio:launch-1")
+    assert mission["released"] is True and model.unloads == 1
+    step = governor.request_gpu(1, requester="game_studio:step")
+    assert step["released"] is True and step["unloaded"] == [] and "déjà prêté" in step["reason"]
+    assert governor.return_gpu(requester="game_studio:step") == {
+        "resumed": False, "requester": "game_studio:step",
+        "lent_to": "game_studio:launch-1, game_studio:step",
+        "reason": "GPU encore prêté (game_studio:launch-1)"}
+    assert governor.place("auto") == ("cpu", "GPU prêté à un spécialiste (game_studio:launch-1)")
+    assert governor.return_gpu(requester="inconnu")["resumed"] is False
+    assert governor.status()["admissions_open"] is False
+    assert governor.return_gpu(requester="game_studio:launch-1")["resumed"] is True
+    assert governor.status()["lent_to"] is None and governor.place("auto")[0] == "cuda"
+
+
+def test_with_nothing_on_cuda_a_loan_never_waits_for_processor_generations(tmp_path) -> None:
+    """Un Cerveau qui répond sur le processeur ne tient pas le bail : la mission n'attend pas sa réponse,
+    et toute génération suivante reste sur le processeur pendant le prêt."""
+    governor = _governor(tmp_path)
+    assert governor.place("cpu")[0] == "cpu"
+    running, release = threading.Event(), threading.Event()
+
+    def generation() -> None:
+        with governor.generation():
+            running.set()
+            release.wait(5)
+
+    worker = threading.Thread(target=generation)
+    worker.start()
+    running.wait(5)
+    try:
+        ack = governor.request_gpu(0.2, requester="game_studio:launch-2")
+    finally:
+        release.set()
+        worker.join()
+    assert ack["released"] is True and ack["reason"] == "aucun modèle principal sur CUDA"
+    assert ack["waited_s"] < 0.2 and ack["admissions_open"] is False
+    (tmp_path / ".apex").mkdir()
+    assert _other_process_can_lock(tmp_path / ".apex" / "model-session.lock")
+    assert governor.place("auto") == ("cpu", "GPU prêté à un spécialiste (game_studio:launch-2)")
+    assert governor.return_gpu(requester="game_studio:launch-2")["resumed"] is True

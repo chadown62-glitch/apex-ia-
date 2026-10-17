@@ -22,6 +22,11 @@ Protocole (Issue #21, accepté par les deux côtés) :
    n'est tué, et il n'y a jamais de bascule silencieuse.
 3. **Reprise** : `return_gpu(requester)` rouvre les admissions. Le prochain chargement reprend le bail
    s'il est libre.
+4. **Prêts multiples** : chaque demande acceptée est comptée par demandeur (l'assistant pour toute une
+   mission, Game Studio autour de chaque étape). Une demande pendant un prêt est accordée sans attente,
+   puisque rien n'a pu se charger sur CUDA depuis ; les admissions ne rouvrent qu'au DERNIER retour. Une
+   demande alors que rien n'est sur CUDA (ni bail ni modèle) n'attend pas non plus les générations sur le
+   processeur.
 
 Ce mécanisme est coopératif, comme le bail de Game Studio : il ne contrôle pas les programmes extérieurs à
 APEX. Aucune mesure CUDA n'a été faite sans GPU : sans CUDA, l'accusé le dit (`cuda.measured: false`)."""
@@ -152,7 +157,8 @@ class GpuGovernor:
     _lease: SharedLease | None = None
     _runtimes: dict[str, Callable[[], list[Resident]]] = field(default_factory=dict)
     _last_ack: dict[str, Any] | None = None
-    _lent_to: str | None = None
+    #: Prêts en cours : demandeur → nombre de demandes acceptées non rendues.
+    _lenders: dict[str, int] = field(default_factory=dict)
 
     # -- côté modèles principaux ------------------------------------------------------------------------
 
@@ -190,7 +196,7 @@ class GpuGovernor:
             return "cpu", "aucun GPU CUDA"
         with self._cond:
             if not self._open:
-                return "cpu", f"GPU prêté à un spécialiste ({self._lent_to or 'inconnu'})"
+                return "cpu", f"GPU prêté à un spécialiste ({self._lent_to() or 'inconnu'})"
             path = self.lease_path()
             if path is None:
                 return "cuda", "sans profil APEX partagé : bail non utilisé"
@@ -216,6 +222,16 @@ class GpuGovernor:
         with self._cond:
             if self._quiescing:
                 return self._ack(False, requester, started, "une transition est déjà en cours", [])
+            if not self._open and self._lenders:
+                # Déjà prêté : les admissions CUDA sont fermées depuis, rien n'a pu s'y charger.
+                self._lend(requester)
+                return self._ack(True, requester, started, f"GPU déjà prêté ({self._lent_to()})", [])
+            if not (self._lease is not None and self._lease.held) and not self._residents():
+                # Rien sur CUDA : fermer les admissions suffit (les générations sur le processeur
+                # continuent ; toute génération qui aurait obtenu CUDA tiendrait le bail).
+                self._open = False
+                self._lend(requester)
+                return self._ack(True, requester, started, "aucun modèle principal sur CUDA", [])
             self._quiescing, self._open = True, False
             deadline = started + timeout
             while self._active > 0:
@@ -242,7 +258,7 @@ class GpuGovernor:
                 after = self.cuda_memory()
                 if self._lease is not None:
                     self._lease.release()
-                self._lent_to = requester
+                self._lend(requester)
             except Exception as exc:  # déchargement en échec : rien n'est prétendu libéré
                 self._open = True
                 return self._ack(False, requester, started, f"déchargement impossible : {exc}"[:300], [])
@@ -255,12 +271,19 @@ class GpuGovernor:
                              [r.name for r in residents], before, after)
 
     def return_gpu(self, *, requester: str) -> dict[str, Any]:
-        """Le spécialiste a fini : les admissions CUDA rouvrent (le bail sera repris au prochain
-        chargement s'il est libre)."""
+        """Le spécialiste a fini : son prêt est rendu. Les admissions CUDA rouvrent au dernier prêt rendu
+        (le bail sera repris au prochain chargement s'il est libre)."""
         with self._cond:
             if self._quiescing:
                 return {"resumed": False, "requester": requester, "reason": "transition en cours"}
-            previous, self._lent_to, self._open = self._lent_to, None, True
+            previous = self._lent_to()
+            count = self._lenders.pop(requester, 0)
+            if count > 1:
+                self._lenders[requester] = count - 1
+            if self._lenders:
+                return {"resumed": False, "requester": requester, "lent_to": previous,
+                        "reason": f"GPU encore prêté ({self._lent_to()})"}
+            self._open = True
             self._cond.notify_all()
         return {"resumed": True, "requester": requester, "lent_to": previous}
 
@@ -269,11 +292,17 @@ class GpuGovernor:
             return {"admissions_open": self._open, "transition": self._quiescing,
                     "active_generations": self._active,
                     "lease_held": bool(self._lease and self._lease.held),
-                    "lease_path": str(self.lease_path() or "") or None, "lent_to": self._lent_to,
+                    "lease_path": str(self.lease_path() or "") or None, "lent_to": self._lent_to(),
                     "cuda_residents": [r.name for r in self._residents()],
                     "cuda_available": self.cuda_available(), "last_ack": self._last_ack}
 
     # -- interne ---------------------------------------------------------------------------------------
+
+    def _lend(self, requester: str) -> None:
+        self._lenders[requester] = self._lenders.get(requester, 0) + 1
+
+    def _lent_to(self) -> str | None:
+        return ", ".join(self._lenders) or None
 
     def _residents(self) -> list[Resident]:
         found: list[Resident] = []

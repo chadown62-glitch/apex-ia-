@@ -12,9 +12,16 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { contrast, extractHexColors } from "../theme/contrast";
-import { assistantApi, errorMessage, type GameStudioAvailability, type Message, type ToolStep } from "./api";
+import {
+  assistantApi,
+  errorMessage,
+  type GameStudioAvailability,
+  type GameStudioDependency,
+  type Message,
+  type ToolStep,
+} from "./api";
 import { keys } from "./hooks";
-import { explainRefusal } from "./MessageItem";
+import { explainFailure, explainRefusal } from "./MessageItem";
 import { IconFile, IconRefresh } from "./Icons";
 
 const euro = (value: unknown) =>
@@ -24,6 +31,11 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
   return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+}
+
+/** Taille d'un téléchargement, comme Game Studio et les guides la donnent (1 Go = 10⁹ octets). */
+function downloadSize(bytes: number): string {
+  return bytes >= 1e9 ? `${(bytes / 1e9).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Go` : formatSize(bytes);
 }
 
 export function CodePanel({ conversationId, notes }: { conversationId: string; notes: string[] }) {
@@ -421,10 +433,14 @@ async function download(conversationId: string, path: string): Promise<void> {
 }
 
 /** États après lesquels une mission Game Studio n'évolue plus (ses résultats sont alors lisibles). */
-const GAME_STUDIO_FINISHED = new Set(["review", "failed", "cancelled"]);
+/** États où la mission n'avance plus d'elle-même : le suivi s'arrête (il reprend après une reprise). */
+const GAME_STUDIO_FINISHED = new Set(["review", "failed", "cancelled", "interrupted"]);
+/** États où Game Studio peut reprendre la mission (il décide en dernier, et dit pourquoi s'il refuse). */
+const GAME_STUDIO_RESUMABLE = new Set(["interrupted", "failed", "cancelled"]);
 const GAME_STUDIO_STATES: Record<string, string> = {
   queued: "en file d'attente",
   running: "en cours",
+  interrupted: "interrompue (APEX a été arrêté pendant la mission)",
   review: "terminée, à revoir",
   technical_review: "revue technique",
   failed: "échouée",
@@ -479,6 +495,13 @@ function GameStudioMissionCard({ conversationId, projectId }: { conversationId: 
     mutationFn: () => assistantApi.cancelGameStudioMission(conversationId, projectId),
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   });
+  const resume = useMutation({
+    mutationFn: () => assistantApi.resumeGameStudioMission(conversationId, projectId),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: key });
+      client.invalidateQueries({ queryKey: keys.messages(conversationId) });
+    },
+  });
   const data = mission.data;
   const views = (data?.results.artifacts ?? []).filter((a) => a.role === "view").slice(0, 4);
   return (
@@ -505,6 +528,9 @@ function GameStudioMissionCard({ conversationId, projectId }: { conversationId: 
                 ))}
               </ul>
             )}
+            {GAME_STUDIO_RESUMABLE.has(data.status.status) && typeof data.status.last_event?.reason === "string" && (
+              <p className="ax-inline-error">Raison : {explainFailure(data.status.last_event.reason)}</p>
+            )}
             {data.results.blocked && data.results.blocked.length > 0 && (
               <ul className="ax-panel__notes">
                 {data.results.blocked.map((b) => (
@@ -529,7 +555,13 @@ function GameStudioMissionCard({ conversationId, projectId }: { conversationId: 
                 Annuler la mission
               </button>
             )}
+            {GAME_STUDIO_RESUMABLE.has(data.status.status) && (
+              <button type="button" className="ax-chip-btn" disabled={resume.isPending} onClick={() => resume.mutate()}>
+                Reprendre la mission
+              </button>
+            )}
             {cancel.isError && <p className="ax-inline-error" role="alert">{errorMessage(cancel.error)}</p>}
+            {resume.isError && <p className="ax-inline-error" role="alert">{errorMessage(resume.error)}</p>}
           </>
         )}
       </div>
@@ -558,6 +590,11 @@ function GameStudioProposal({ conversationId, message, request, reason, availabi
           Une mission dure plusieurs minutes et utilise {cpu ? "le processeur (choix explicite)" : "le GPU"}. Le calcul se règle dans
           Paramètres &gt; Outils.
         </p>
+        {availability?.gpu?.lease_held && (
+          <p className="ax-muted">
+            Le Cerveau APEX occupe le GPU : il le libère au lancement et répond sur le processeur jusqu'à la fin de la mission.
+          </p>
+        )}
         {availability && availability.installed && !availability.ready && (
           <ul className="ax-panel__notes">
             {availability.missing.map((m) => (
@@ -571,6 +608,75 @@ function GameStudioProposal({ conversationId, message, request, reason, availabi
         {launch.isError && <p className="ax-inline-error" role="alert">{errorMessage(launch.error)}</p>}
       </div>
     </li>
+  );
+}
+
+const DEPENDENCY_STATES: Record<GameStudioDependency["state"], string> = { present: "présent", missing: "absent", unknown: "inconnu" };
+
+/** Un composant de Game Studio : ce qu'il fait, son état mesuré, sa taille et sa provenance si elles sont connues, et
+ *  son installation — un bouton seulement quand Game Studio publie un contrat d'installation qui le couvre. */
+function StudioDependency({ item, busy }: { item: GameStudioDependency; busy: boolean }) {
+  const client = useQueryClient();
+  const install = useMutation({
+    mutationFn: () => assistantApi.installGameStudioDependency(item.id),
+    onSettled: () => client.invalidateQueries({ queryKey: ["assistant", "game-studio", "dependencies"] }),
+  });
+  const size = item.bytes ? downloadSize(item.bytes) : null;
+  const confirmAndInstall = () => {
+    const question = item.install.confirmation || `Installer ${item.name}${size ? ` (${size})` : ""} ?`;
+    if (window.confirm(question)) install.mutate();
+  };
+  return (
+    <li className="ax-gs-dependency" data-state={item.state}>
+      <strong>{item.name}</strong> — {DEPENDENCY_STATES[item.state]}
+      <span className="ax-muted"> · {item.role}</span>
+      {(size || item.source || item.license) && (
+        <p className="ax-muted">{[size, item.source, item.license && `licence ${item.license}`].filter(Boolean).join(" · ")}</p>
+      )}
+      {item.detail && <p className="ax-muted">{item.detail}</p>}
+      {item.state !== "present" && item.install.reason && <p className="ax-muted">{item.install.reason}</p>}
+      {item.state !== "present" && item.manual && <p className="ax-muted">{item.manual}</p>}
+      {item.install.available && (
+        <button type="button" className="ax-chip-btn" disabled={busy || install.isPending} onClick={confirmAndInstall}>
+          Installer
+        </button>
+      )}
+      {install.isError && <p className="ax-inline-error" role="alert">{errorMessage(install.error)}</p>}
+    </li>
+  );
+}
+
+function StudioDependencies() {
+  const listing = useQuery({
+    queryKey: ["assistant", "game-studio", "dependencies"],
+    queryFn: assistantApi.gameStudioDependencies,
+    staleTime: 30_000,
+    refetchInterval: (query) => (query.state.data?.job?.state === "running" ? 3000 : false),
+  });
+  const data = listing.data;
+  if (!data?.installed) return null;
+  const missing = data.items.filter((i) => i.state !== "present").length;
+  const job = data.job;
+  return (
+    <details className="ax-gs-dependencies">
+      <summary>
+        Composants de Game Studio : {missing === 0 ? "tous présents" : `${missing} à installer`}
+      </summary>
+      {data.problem && <p className="ax-inline-error">{data.problem}</p>}
+      {data.contract.reason && <p className="ax-muted">{data.contract.reason}.</p>}
+      {job && (
+        <p className={job.state === "failed" ? "ax-inline-error" : "ax-muted"} role="status">
+          {job.state === "running" ? `Installation de ${job.name} en cours…` : job.state === "succeeded"
+            ? `${job.name} installé${job.detail ? ` : ${job.detail}` : ""}.` : `Installation de ${job.name} échouée : ${job.detail}`}
+          {job.log.length > 0 && ` (${job.log[job.log.length - 1]})`}
+        </p>
+      )}
+      <ul className="ax-gs-dependency-list">
+        {data.items.map((item) => (
+          <StudioDependency key={item.id} item={item} busy={job?.state === "running"} />
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -589,6 +695,7 @@ function GameStudioMissions({ conversationId, messages, steps }: { conversationI
           Le Cerveau propose les missions ; vous seul les lancez ou les annulez.
         </p>
       )}
+      {report?.installed && <StudioDependencies />}
       {report && !report.ready && proposals.length === 0 && report.missing.length > 0 && (
         <ul className="ax-panel__notes">
           {report.missing.map((m) => (

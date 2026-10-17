@@ -478,10 +478,13 @@ def check_blender() -> ComponentStatus:
     import shutil
 
     _, report = _game_studio()
-    path = (report.get("vehicle_blender") or {}).get("blender") or shutil.which("blender")
+    vehicle = report.get("vehicle_blender") or {}
+    path = vehicle.get("blender") or shutil.which("blender")
     if not path:
-        return ComponentStatus("blender", OFFLINE,
-                               "Blender introuvable dans le PATH (requis par Game Studio)")
+        # Découverte de Game Studio (APEX_BLENDER_EXECUTABLE, PATH, Program Files) quand il la publie.
+        where = ("(APEX_BLENDER_EXECUTABLE, PATH, Program Files)" if "blender_discovery" in vehicle
+                 else "dans le PATH")
+        return ComponentStatus("blender", OFFLINE, f"Blender introuvable {where} (requis par Game Studio)")
     version = _blender_version(str(path))
     if version is None:
         return ComponentStatus("blender", ERROR, f"{path} ne répond pas à « --version »")

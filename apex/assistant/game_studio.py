@@ -1,16 +1,23 @@
 """Game Studio vu de l'assistant : disponibilité expliquée, lancement d'une mission PROPOSÉE par le Cerveau
-(acte de l'utilisateur), suivi (état, résultats, aperçus), annulation.
+(acte de l'utilisateur), suivi (état, résultats, aperçus), annulation, reprise d'une mission interrompue.
 
 Tout passe par les outils de Game Studio (`apex.game_studio.delegation`, propriété de Codex) et le moteur
 d'outils, avec l'espace de travail de la conversation (ou de son projet) : Game Studio ne rend une mission
 qu'à l'espace de travail qui l'a lancée. Seuls les octets d'un aperçu sont lus par ses services, et
 seulement pour un artefact que ses outils viennent de rendre à cette conversation. Rien de Game Studio n'est
-réimplémenté ici."""
+réimplémenté ici.
+
+Partage du GPU : chaque étape d'une mission prend le bail partagé `model-session.lock`
+(`apex.game_graphics.resources.resource_lease`), même sur le processeur, et le Cerveau APEX le tient tant
+qu'il est chargé sur CUDA. Avant de lancer ou de reprendre une mission, le GPU est donc demandé au Cerveau
+(`apex.models.gpu_handoff.request_gpu`) ; il lui est rendu quand la mission ne tourne plus. Pendant ce
+temps, le Cerveau répond sur le processeur, et ses mesures le disent."""
 
 from __future__ import annotations
 
 import threading
 import uuid
+from collections.abc import Callable
 from importlib.util import find_spec
 from typing import Any
 
@@ -23,8 +30,22 @@ class AlreadyLaunched(ValueError):
     """La mission proposée par ce message a déjà été lancée."""
 
 
+class GpuBusy(RuntimeError):
+    """Le Cerveau APEX n'a pas libéré le GPU dans le délai : rien n'a été lancé."""
+
+
 #: Un lancement à la fois : deux clics simultanés sur la même proposition ne lancent qu'une mission.
 _LAUNCH_LOCK = threading.Lock()
+#: Délai accordé au Cerveau pour finir ses générations en cours et quitter le GPU, au clic (secondes).
+GPU_HANDOFF_TIMEOUT_S = 30.0
+#: Intervalle entre deux lectures de l'état d'une mission qui détient le GPU (secondes).
+LOAN_POLL_S = 3.0
+#: États d'une mission qui détient encore le GPU (`ProjectService` de Game Studio).
+LOAN_ACTIVE = frozenset({"queued", "running"})
+#: Lectures en échec consécutives après lesquelles le GPU est rendu quand même.
+LOAN_READ_FAILURES = 3
+#: Prêts en cours : demandeur → signal d'arrêt de son suivi.
+_LOANS: dict[str, threading.Event] = {}
 #: Aperçus servis : images seulement, bornées (les fichiers restent sur la page Game Studio).
 PREVIEW_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
 PREVIEW_LIMIT = 4_000_000
@@ -36,6 +57,10 @@ REFUSALS: dict[str, str] = {
         "choisit dans Paramètres > Outils > Calcul des missions."),
     "local_planner_model_missing": (
         "le modèle planificateur local de Game Studio (Qwen2.5-Coder-7B) n'est pas installé."),
+    "cuda_game_studio_requires_qualified_brain_quiescence_handoff": (
+        "Game Studio n'accepte encore que le calcul sur processeur : le partage du GPU avec le Cerveau "
+        "n'est pas encore qualifié. Choisissez « Processeur » dans Paramètres > Outils > Calcul des "
+        "missions."),
     "dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified": (
         "le planificateur natif d'APEX n'est pas encore qualifié pour Game Studio."),
     "shared_resource_profile_required": "le profil APEX (APEX_HOME) n'est pas défini pour partager le GPU.",
@@ -44,7 +69,23 @@ REFUSALS: dict[str, str] = {
     "external_model_workload_active": (
         "un autre serveur de modèle tourne déjà sur ce PC : arrêtez-le d'abord."),
     "game_studio_project_missing": "mission introuvable dans cette conversation.",
+    "blender_worker_or_local_coder_missing": "Blender ou le planificateur local manque sur ce PC.",
+    "pinned_7b_model_missing_no_download_performed": (
+        "le modèle planificateur Qwen2.5-Coder-7B n'est pas installé (rien n'a été téléchargé)."),
+    "game_studio_project_process_interrupted": "APEX a été arrêté pendant la mission.",
+    "game_studio_process_interrupted": "APEX a été arrêté pendant la mission.",
+    # Reprise (`ProjectService.resume` de Game Studio).
+    "only_interrupted_failed_or_incomplete_projects_can_resume": (
+        "seule une mission interrompue, échouée ou incomplète peut être reprise."),
+    "project_already_running": "cette mission est déjà en cours.",
+    "project_already_delivered_for_review": "cette mission est déjà livrée : ses fichiers sont prêts.",
+    "cumulative_time_budget_exhausted": (
+        "le temps total accordé à cette mission est épuisé : lancez une nouvelle mission."),
+    "legacy_budget_unknown_new_mission_required": (
+        "cette mission est trop ancienne pour être reprise : lancez une nouvelle mission."),
 }
+#: États dans lesquels l'Atelier 3D propose de reprendre une mission (Game Studio décide en dernier).
+RESUMABLE = frozenset({"interrupted", "failed", "cancelled"})
 
 
 def explain(message: str | None) -> str:
@@ -106,6 +147,69 @@ def _permissions(*values: str) -> frozenset[Any]:
     return frozenset(p for p in GAME_STUDIO_PERMISSIONS if p.value in values)
 
 
+def _borrow_gpu(requester: str) -> dict[str, Any]:
+    """Le GPU demandé au Cerveau pour une mission ; GpuBusy (rien n'est lancé) s'il ne le libère pas."""
+    from apex.models.gpu_handoff import request_gpu
+
+    ack = request_gpu(GPU_HANDOFF_TIMEOUT_S, requester=requester)
+    if not ack.get("released"):
+        raise GpuBusy(f"le Cerveau APEX n'a pas libéré le GPU pour Game Studio ({ack.get('reason')}) : "
+                      "rien n'a été lancé, réessayez dans un instant")
+    return ack
+
+
+def _hand_back(requester: str) -> None:
+    from apex.models.gpu_handoff import return_gpu
+
+    stop = _LOANS.pop(requester, None)
+    if stop is not None:
+        stop.set()
+    return_gpu(requester=requester)
+
+
+def _keep_lent(requester: str, read_status: Callable[[], str | None]) -> None:
+    """Le GPU reste prêté tant que la mission tourne (lue par l'outil de suivi de Game Studio), puis il
+    est rendu au Cerveau, aussi quand la mission est illisible plusieurs fois de suite."""
+    stop = threading.Event()
+    _LOANS[requester] = stop
+
+    def watch() -> None:
+        failures = 0
+        try:
+            while not stop.wait(LOAN_POLL_S):
+                try:
+                    status = read_status()
+                except Exception:
+                    failures += 1
+                    if failures >= LOAN_READ_FAILURES:
+                        return
+                    continue
+                failures = 0
+                if status not in LOAN_ACTIVE:
+                    return
+        finally:
+            if _LOANS.get(requester) is stop:
+                _hand_back(requester)
+
+    threading.Thread(target=watch, daemon=True, name=f"apex-gpu-loan-{requester}").start()
+
+
+def _status_reader(session_factory: Any, conversation_id: str, project_id: str,
+                   service: Any) -> Callable[[], str | None]:
+    engine, context, _ = _engine(session_factory, conversation_id, _permissions("game_studio.read"),
+                                 service)
+
+    def read() -> str | None:
+        return _call(engine, context, "game_studio.status", project_id, conversation_id).get("status")
+
+    return read
+
+
+def _reset_loans_for_tests() -> None:
+    for requester in list(_LOANS):
+        _hand_back(requester)
+
+
 def follow(session_factory: Any, conversation_id: str, project_id: str, *,
            service: Any = None) -> dict[str, Any]:
     """État (`game_studio.status`) puis résultats (`game_studio.results`) d'une mission de cette
@@ -128,6 +232,48 @@ def cancel(session_factory: Any, conversation_id: str, project_id: str, *,
     engine, context, _ = _engine(session_factory, conversation_id, _permissions("game_studio.cancel"),
                                  service)
     return _call(engine, context, "game_studio.cancel", project_id, conversation_id)
+
+
+def resume(session_factory: Any, conversation_id: str, project_id: str, *,
+           service: Any = None) -> dict[str, Any]:
+    """L'utilisateur reprend une mission de CETTE conversation, interrompue (APEX arrêté pendant la mission)
+    ou échouée : acte humain, vérifié comme un lancement (la reprise relance le calcul). La mission est
+    d'abord retrouvée par l'outil de suivi de Game Studio (une mission d'un autre espace de travail est
+    introuvable), puis reprise par Game Studio lui-même, dans ses propres limites (budget cumulé, mission
+    déjà livrée…). La reprise est enregistrée comme un nouveau message ; rend ce message."""
+    from apex.conversations.model import MessageRole, MessageStatus
+    from apex.conversations.repository import ConversationRepository, MessageRepository
+    from apex.policy.engine import PolicyEngine
+    from apex.policy.model import Action, Subject
+
+    PolicyEngine().authorize(Subject.HUMAN, Action.CREATE_MISSION)
+    engine, context, conversation = _engine(session_factory, conversation_id,
+                                            _permissions("game_studio.read"), service)
+    before = _call(engine, context, "game_studio.status", project_id, conversation_id)
+    projects = service if service is not None else _default_services()[0]
+    # Un prêt par reprise (une reprise refusée ne rend jamais le prêt d'une autre).
+    requester = f"game_studio:{project_id[:8]}-{uuid.uuid4().hex[:4]}"
+    _borrow_gpu(requester)
+    try:
+        record = projects.resume(project_id)
+    except ValueError as exc:
+        _hand_back(requester)
+        raise ValueError(explain(str(exc))) from exc
+    except BaseException:
+        _hand_back(requester)
+        raise
+    status = record.get("status") if isinstance(record, dict) else None
+    _keep_lent(requester, _status_reader(session_factory, conversation_id, project_id, service))
+    content = f"Mission Game Studio reprise à votre demande : projet {project_id}, état « {status} »."
+    meta = {"mode": "3d", "source": "apex", "action": "game_studio.resume",
+            "game_studio": {"trigger": "utilisateur", "state": "resumed", "project_id": project_id,
+                            "previous_status": before.get("status"), "status": status,
+                            "authorization": "confirmée par l'utilisateur"}}
+    message = MessageRepository(session_factory).create(
+        conversation_id=conversation.id, role=MessageRole.ASSISTANT, content=content, model_id=None,
+        provider_id=None, status=MessageStatus.REAL, error=None, meta=meta)
+    ConversationRepository(session_factory).touch(conversation.id)
+    return {"message_id": message.id, "content": content, "meta": meta}
 
 
 def launch_proposed(session_factory: Any, conversation_id: str, message_id: str, *, compute: str,
@@ -160,10 +306,21 @@ def launch_proposed(session_factory: Any, conversation_id: str, message_id: str,
         if launched:
             raise AlreadyLaunched("cette mission proposée a déjà été lancée")
         arguments = {"description": game_studio_description(request.content), "compute_backend": compute}
-        result = _execute(engine, context, "game_studio.create", arguments,
-                          f"human:conversation:{conversation_id}")
+        requester = f"game_studio:launch-{message_id[:8]}"
+        _borrow_gpu(requester)  # GpuBusy : rien n'est lancé, la proposition reste à confirmer
+        try:
+            result = _execute(engine, context, "game_studio.create", arguments,
+                              f"human:conversation:{conversation_id}")
+        except BaseException:
+            _hand_back(requester)
+            raise
         output = dict(result.output) if result.ok else {}
         error = result.error.to_dict() if result.error else None
+        if result.ok and output.get("project_id"):
+            _keep_lent(requester, _status_reader(session_factory, conversation_id,
+                                                 str(output["project_id"]), service))
+        else:
+            _hand_back(requester)
         step = {"step": 1, "tool": "game_studio.create", "source": "utilisateur",
                 "arguments": {**arguments, "description": arguments["description"][:600]}, "ok": result.ok,
                 "observation": {"ok": result.ok, "output": output, "error": error},
@@ -238,7 +395,9 @@ def missing_from(report: dict[str, Any], compute: str) -> list[str]:
     cuda = report.get("cuda") or {}
     missing: list[str] = []
     if not blender.get("blender"):
-        missing.append("Blender n'est pas installé, ou introuvable dans le PATH.")
+        where = ("(APEX_BLENDER_EXECUTABLE, PATH, Program Files)" if "blender_discovery" in blender
+                 else "dans le PATH")
+        missing.append(f"Blender n'est pas installé, ou introuvable {where}.")
     if blender.get("workers_present") is False:
         missing.append("Les scripts de Game Studio (scripts/game_graphics/studio) sont absents.")
     # Les missions que le Cerveau propose passent par la planification dynamique de Game Studio
@@ -254,6 +413,12 @@ def missing_from(report: dict[str, Any], compute: str) -> list[str]:
     if compute != "cpu" and not cuda.get("available"):
         missing.append("Aucun GPU CUDA : choisissez « Processeur » dans Paramètres > Outils > Calcul des "
                        "missions (beaucoup plus lent), ou utilisez un PC équipé d'un GPU NVIDIA.")
+    elif compute != "cpu" and cuda.get("dispatch_qualified") is False:
+        # Garde de Game Studio : aucune mission sur GPU tant que le partage avec le Cerveau n'est pas
+        # qualifié.
+        missing.append("Game Studio n'accepte encore que le calcul sur processeur (partage du GPU avec "
+                       "le Cerveau non qualifié) : choisissez « Processeur » dans Paramètres > Outils > "
+                       "Calcul des missions.")
     return missing
 
 

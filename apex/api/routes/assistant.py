@@ -398,12 +398,12 @@ def cancel_turn(turn_id: str) -> DataEnvelope[dict[str, Any]]:
 
 
 def _game_studio_error(exc: Exception) -> HTTPException:
-    from apex.assistant.game_studio import AlreadyLaunched, GameStudioUnavailable
+    from apex.assistant.game_studio import AlreadyLaunched, GameStudioUnavailable, GpuBusy
     from apex.errors import PolicyDenied
 
     if isinstance(exc, (PermissionError, PolicyDenied)):
         return HTTPException(status_code=403, detail=str(exc))
-    if isinstance(exc, AlreadyLaunched):
+    if isinstance(exc, (AlreadyLaunched, GpuBusy)):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, GameStudioUnavailable):
         return HTTPException(status_code=503, detail=str(exc))
@@ -479,6 +479,55 @@ def game_studio_preview(conversation_id: str, project_id: str, digest: str) -> D
         raise _game_studio_error(exc) from exc
     return DataEnvelope(status="real", data={"content_type": mime, "size": len(data),
                                              "content_base64": base64.b64encode(data).decode("ascii")})
+
+
+@router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/resume",
+             response_model=DataEnvelope[dict[str, Any]])
+def resume_game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    """L'utilisateur reprend une mission interrompue ou échouée de cette conversation ; un refus de Game
+    Studio (mission déjà livrée, budget épuisé…) est rendu en clair (409)."""
+    from apex.assistant import game_studio
+    from apex.errors import PolicyDenied
+
+    try:
+        return DataEnvelope(status="real", data=game_studio.resume(_factory(), conversation_id, project_id))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except (LookupError, PermissionError, PolicyDenied, RuntimeError) as exc:
+        raise _game_studio_error(exc) from exc
+
+
+class StudioInstallIn(BaseModel):
+    #: L'utilisateur a lu la taille, la provenance et la licence, et accepte le téléchargement.
+    confirm: bool = False
+
+
+@router.get("/assistant/game-studio/dependencies", response_model=DataEnvelope[dict[str, Any]])
+def game_studio_dependencies() -> DataEnvelope[dict[str, Any]]:
+    """Chaque composant dont Game Studio a besoin : état mesuré, taille et provenance connues, et son
+    installation, offerte seulement quand Game Studio en publie le contrat
+    (`apex.assistant.studio_setup`)."""
+    from apex.assistant import studio_setup
+
+    return DataEnvelope(status="real", data=studio_setup.dependencies())
+
+
+@router.post("/assistant/game-studio/dependencies/{item_id}/install",
+             response_model=DataEnvelope[dict[str, Any]])
+def install_game_studio_dependency(item_id: str, payload: StudioInstallIn) -> DataEnvelope[dict[str, Any]]:
+    """L'utilisateur installe UN composant par le contrat de Game Studio, après confirmation explicite ;
+    l'installation tourne en arrière-plan (son état est relu par `GET …/dependencies`)."""
+    from apex.assistant import studio_setup
+
+    try:
+        job = studio_setup.start_install(item_id, confirmed=payload.confirm)
+        return DataEnvelope(status="real", data=job)
+    except PermissionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/cancel",

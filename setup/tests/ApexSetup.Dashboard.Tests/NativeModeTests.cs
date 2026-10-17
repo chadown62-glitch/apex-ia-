@@ -259,6 +259,36 @@ public sealed class NativeModeTests : IDisposable
     }
 
     [Fact]
+    public async Task Preparing_again_after_an_update_keeps_the_gpu_overlay_the_models_and_the_data()
+    {
+        // PC de l'utilisateur (17/10/2026) : surcouche CUDA validée sur sa RTX 4060 Ti. Une mise à jour d'APEX qui
+        // ajoute une bibliothèque redemande « Préparer APEX » : rien de ce qui vit à côté du Python de base n'est retiré.
+        var runtime = Install();
+        var spec = runtime.TryReadSpec(out _)!;
+        Touch(runtime.PythonExecutable(spec));
+        var overlay = Path.Combine(runtime.Home, "python", "gpu", "torch-2.14.0-cu130", "torch", "__init__.py");
+        Touch(overlay);
+        Touch(runtime.GpuMarker, """{"variant": "cu130"}""");
+        var weights = Path.Combine(runtime.ModelsDirectory, spec.ModelName, "model.safetensors");
+        Touch(weights, "poids");
+        var database = Path.Combine(runtime.Home, "data", "apex.db");
+        Touch(database, "conversations");
+        File.AppendAllText(runtime.RequirementsFile(spec), "jsonschema==4.26.0 --hash=sha256:22\n");
+        Assert.Equal(RuntimeState.Outdated, runtime.Inspect().State);
+        var runner = new FakeProcessRunner()
+            .WithRunResponse("pip install", FakeProcessRunner.Ok("Successfully installed jsonschema-4.26.0"))
+            .WithRunResponse("import apex.standalone", FakeProcessRunner.Ok("apex 0.1.2 torch 2.14.0"));
+        Assert.True((await new RuntimePreparer(runtime, new HttpClient(), runner).PrepareAsync(null)).Ok);
+        foreach (var kept in new[] { overlay, runtime.GpuMarker, weights, database })
+        {
+            Assert.True(File.Exists(kept), kept);
+        }
+        Assert.Equal("conversations", File.ReadAllText(database));
+        Assert.True(runtime.InspectGpu().Installed);
+        Assert.Equal(RuntimeState.Ready, runtime.Inspect().State);
+    }
+
+    [Fact]
     public async Task Every_python_the_panel_starts_ignores_its_working_directory()
     {
         // Sans « -P », Python met le dossier courant en tête de sys.path : lancé depuis un dossier qui contient un

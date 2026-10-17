@@ -112,6 +112,9 @@ jobs:
             $t = ($text -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A')
             if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
             Write-Host "::${level} title=${title}::$t"
+            # GitHub n'affiche que 10 annotations par niveau et par étape : le résumé du run les garde toutes.
+            $fence = '`' * 3
+            "### [$level] $title`n`n$fence`n$text`n$fence`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
           }
           $setup = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
           $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence\install.log" -Wait -PassThru
@@ -135,7 +138,7 @@ jobs:
             $lines = & python @arguments 2>&1 | ForEach-Object { "$_" }
             $code = $LASTEXITCODE
             $lines | Out-Host
-            $kept = $lines | Where-Object { $_ -match '^(CHECK|NOTE|COMPONENT|PROPOSAL|LAUNCH|MISSION|VERDICT|BLOCKED|FAIL)' }
+            $kept = $lines | Where-Object { $_ -match '^(CHECK|NOTE|COMPONENT|DEPENDENCY|PROPOSAL|LAUNCH|MISSION|VERDICT|BLOCKED|FAIL)' }
             Note notice "$title (code $code)" ($kept -join "`n")
             return $code
           }
@@ -189,16 +192,50 @@ jobs:
           $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
           $request = Get-Content "$tree/setup/packaging/windows/ci/candidate-request.json" -Raw | ConvertFrom-Json
           if ($request.studio_cpu) { $studioArgs += '--cpu' }
+          # Moteur du planificateur (llama-cpp-python, processeur) installé comme par le bouton « Installer » :
+          # qualifie son installation et son import sur un vrai Windows ; ses poids (5,4 Go) ne sont jamais téléchargés.
+          if ($request.studio_engine) { $studioArgs += '--install-engine' }
           $studio = RunPy 'Parcours 3D' $studioArgs
+          if ($request.studio_engine -and $py) {
+            $engineCheck = @'
+          import importlib.util, sys
+          print("python", sys.version.split()[0])
+          try:
+              import llama_cpp
+              from llama_cpp import llama_cpp as low
+              print("OK llama_cpp", llama_cpp.__version__, llama_cpp.__file__)
+              print("gpu_offload", bool(low.llama_supports_gpu_offload()))
+              print("server", importlib.util.find_spec("llama_cpp.server") is not None)
+          except BaseException as exc:
+              print("FAIL llama_cpp", type(exc).__name__, exc)
+          try:  # ce que lance le planificateur : fastapi, sse-starlette, starlette-context, pydantic-settings
+              import llama_cpp.server.app
+              print("OK llama_cpp.server.app")
+          except BaseException as exc:
+              print("FAIL llama_cpp.server.app", type(exc).__name__, exc)
+          '@
+            $engineCheck | Out-File -Encoding utf8 "$evidence\engine_check.py"
+            $out = & $py.FullName -P -X utf8 "$evidence\engine_check.py" 2>&1 | ForEach-Object { "$_" }
+            Note notice 'Moteur du planificateur dans APEX installé' ($out -join "`n")
+          }
           Panel '--stop' 300 | Out-Null
+          # Partage du GPU (Cerveau sur CUDA simulé, verrous Windows réels) : le vrai bail des étapes de Game Studio
+          # n'est obtenu qu'après le prêt fait au clic, et le GPU revient au Cerveau. APEX arrêté, profil jetable.
+          $leaseCheck = 1
+          if ($py) {
+            $lines = & $py.FullName -P -X utf8 "$tree/setup/packaging/windows/ci/lease_check.py" 2>&1 | ForEach-Object { "$_" }
+            $leaseCheck = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Partage du GPU avec Game Studio (code $leaseCheck)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|VERDICT)' }) -join "`n")
+          }
           Copy-Item "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" "$evidence\launch.log" -ErrorAction SilentlyContinue
           $u = Start-Process "$env:LOCALAPPDATA\Programs\APEX\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
           Start-Sleep -Seconds 5
           $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
           Note notice 'Désinstallation' "code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
-          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio"
+          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio ; partage du GPU $leaseCheck"
           if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
-          if ($assistant -eq 1 -or $studio -eq 1 -or $gpuCheck -ne 0) { exit 1 }
+          if ($assistant -eq 1 -or $studio -eq 1 -or $gpuCheck -ne 0 -or $leaseCheck -eq 1) { exit 1 }
           if ($assistant -eq 3 -or $studio -eq 3 -or $model -ne 0) { exit 3 }
       # L'installateur de QUALIFICATION, pour l'essayer sur le PC de l'utilisateur : un artefact de ce run (connexion
       # GitHub requise), jamais une release. Il s'annonce « 0.6.0 » ; son contenu exact est dans manifest.json.

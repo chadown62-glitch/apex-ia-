@@ -70,8 +70,9 @@ export interface MessageMeta {
 export interface GameStudioDelegation {
   /** Qui a lancé (ou proposé) : le Cerveau pendant le tour, ou l'utilisateur d'un clic. */
   trigger: "cerveau" | "utilisateur";
-  /** launched/refused : mission demandée à Game Studio ; proposed : à confirmer ; unavailable : Game Studio absent. */
-  state?: "launched" | "refused" | "proposed" | "unavailable";
+  /** launched/refused : mission demandée à Game Studio ; proposed : à confirmer ; unavailable : Game Studio absent ;
+   *  resumed : mission interrompue reprise d'un clic. */
+  state?: "launched" | "refused" | "proposed" | "unavailable" | "resumed";
   launched: boolean;
   intent?: "create" | "ambiguous";
   intent_reason?: string;
@@ -100,6 +101,39 @@ export interface GameStudioAvailability {
   cuda_available?: boolean;
   /** Partage du GPU avec les modèles principaux : bail tenu, prêté à un spécialiste. */
   gpu?: { lease_held: boolean; lent_to: string | null; admissions_open: boolean; cuda_available: boolean; cuda_residents: string[] };
+}
+
+/** Un composant dont Game Studio a besoin (`GET /assistant/game-studio/dependencies`) : état mesuré sur ce PC, taille
+ *  et provenance connues, et son installation — offerte seulement quand Game Studio en publie le contrat. */
+export interface GameStudioDependency {
+  id: string;
+  name: string;
+  role: string;
+  state: "present" | "missing" | "unknown";
+  detail: string;
+  bytes: number | null;
+  source: string | null;
+  license: string | null;
+  /** Geste à faire soi-même (Blender dans le PATH, « Préparer APEX »), quand APEX ne peut pas le faire. */
+  manual: string | null;
+  install: { available: boolean; reason: string; confirmation?: string };
+}
+
+export interface GameStudioInstallJob {
+  item: string;
+  name: string;
+  state: "running" | "succeeded" | "failed";
+  log: string[];
+  detail: string;
+}
+
+export interface GameStudioDependencies {
+  installed: boolean;
+  items: GameStudioDependency[];
+  /** Contrats d'installation publiés par Game Studio : poids du planificateur, et liste figée de son moteur. */
+  contract: { planner: boolean; engine: boolean; reason: string };
+  job: GameStudioInstallJob | null;
+  problem?: string;
 }
 
 /** Mission Game Studio d'une conversation, lue par ses outils `game_studio.status` et `game_studio.results`. */
@@ -283,6 +317,14 @@ export const assistantApi = {
     data<{ project_id: string; status: string }>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/cancel`,
       { method: "POST" }),
+  resumeGameStudioMission: (conversationId: string, projectId: string) =>
+    data<{ message_id: string; content: string; meta: MessageMeta }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/resume`,
+      { method: "POST" }),
+  gameStudioDependencies: () => data<GameStudioDependencies>("/assistant/game-studio/dependencies"),
+  installGameStudioDependency: (itemId: string) =>
+    data<GameStudioInstallJob>(`/assistant/game-studio/dependencies/${encodeURIComponent(itemId)}/install`,
+      json("POST", { confirm: true })),
 };
 
 /** Fichier local -> base64 (pièces jointes) ; la taille est vérifiée par le backend après décodage. */

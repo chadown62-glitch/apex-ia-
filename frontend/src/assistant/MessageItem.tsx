@@ -108,6 +108,8 @@ export const GAME_STUDIO_REFUSALS: Record<string, string> = {
   cuda_unavailable_choose_cpu_explicitly:
     "aucun GPU CUDA sur ce PC ; le calcul sur processeur se choisit dans Paramètres > Outils",
   local_planner_model_missing: "le modèle planificateur local de Game Studio n'est pas installé",
+  cuda_game_studio_requires_qualified_brain_quiescence_handoff:
+    "Game Studio n'accepte encore que le calcul sur processeur (partage du GPU avec le Cerveau non qualifié) ; choisissez « Processeur » dans Paramètres > Outils",
   limit: "une seule mission Game Studio par réponse",
   shared_resource_profile_required: "le profil APEX (APEX_HOME) n'est pas défini pour partager le GPU",
   external_graphics_workload_active: "Blender ou Unreal tourne déjà sur ce PC",
@@ -120,6 +122,18 @@ export function explainRefusal(message: string | undefined | null, explanation?:
   if (!message) return "échec sans détail";
   const known = GAME_STUDIO_REFUSALS[message];
   return known ? `${known} (${message})` : message;
+}
+
+/** Pourquoi une mission s'est arrêtée (raison du dernier événement de Game Studio) : en clair quand elle est connue, le
+ *  texte exact toujours à côté. */
+export function explainFailure(reason: string): string {
+  // Bail `model-session.lock` tenu ailleurs : texte de `fcntl.flock` (Linux) ou de `msvcrt.locking` (Windows, sans nom de
+  // fichier ; mesuré par lease_check.py sur le runner).
+  if (/BlockingIOError|Resource deadlock|Errno 36|PermissionError: \[Errno 13\] Permission denied$/.test(reason)) {
+    return `les ressources partagées d'APEX étaient tenues par un autre travail (bail model-session.lock) ; reprenez la mission quand il est terminé (${reason})`;
+  }
+  const known = GAME_STUDIO_REFUSALS[reason.split(":")[0].trim()];
+  return known ? `${known} (${reason})` : reason;
 }
 
 /** Une ligne sur la délégation d'une création 3D à Game Studio par le Cerveau APEX. */
