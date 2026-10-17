@@ -77,6 +77,12 @@ cp -r "$REPO_ROOT/frontend/dist" "$APP_DIR/frontend_dist"
 [[ -f "$APP_DIR/frontend_dist/index.html" ]] || { log "ERREUR : interface web non construite"; exit 1; }
 mkdir -p "$APP_DIR/runtime"
 cp "$SCRIPT_DIR/runtime/python-runtime.json" "$SCRIPT_DIR/runtime/requirements-windows.lock" "$APP_DIR/runtime/"
+# Moteur du planificateur de Game Studio (llama-cpp-python, processeur) : liste figée FACULTATIVE de Game Studio,
+# installée seulement sur un geste de l'utilisateur (apex/assistant/studio_setup.py), jamais par « Préparer APEX ».
+if [[ -f "$SCRIPT_DIR/runtime/requirements-planner-cpu-windows.lock" ]]; then
+  cp "$SCRIPT_DIR/runtime/requirements-planner-cpu-windows.lock" "$APP_DIR/runtime/"
+  log "moteur du planificateur de Game Studio : liste figée facultative embarquée"
+fi
 # Accélération GPU FACULTATIVE : seulement sa description et ses listes figées (quelques Ko) — jamais torch CUDA
 # lui-même (~2,5 Go), installé à part, sur demande, par `python -m apex.standalone gpu install`.
 mkdir -p "$APP_DIR/runtime/gpu"

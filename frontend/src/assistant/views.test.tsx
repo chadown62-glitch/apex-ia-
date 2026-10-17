@@ -412,7 +412,7 @@ describe("Game Studio in the 3D workshop", () => {
     api.on("GET", "/assistant/game-studio/availability", availability);
     api.on("GET", "/assistant/game-studio/dependencies", {
       installed: true, job: null,
-      contract: { present: false, module: "apex.game_studio.setup", reason: "Game Studio ne publie pas encore de contrat d'installation" },
+      contract: { planner: false, engine: false, reason: "Game Studio ne publie pas de contrat d'installation du planificateur" },
       items: [
         dependency({}),
         dependency({ id: "blender", name: "Blender 4.3.2", state: "present", bytes: null, detail: "Blender 4.3.2 (C:/Blender/blender.exe)",
@@ -427,7 +427,7 @@ describe("Game Studio in the 3D workshop", () => {
     expect(screen.getByText("En attente du composant Game Studio : aucun point d'entrée d'installation")).toBeInTheDocument();
     expect(screen.getByText("En attente du composant Game Studio : non déclarée dans la liste figée")).toBeInTheDocument();
     expect(screen.getByText("Blender 4.3.2 (C:/Blender/blender.exe)")).toBeInTheDocument();
-    expect(screen.getByText("Game Studio ne publie pas encore de contrat d'installation.")).toBeInTheDocument();
+    expect(screen.getByText("Game Studio ne publie pas de contrat d'installation du planificateur.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Installer" })).not.toBeInTheDocument();
   });
 
@@ -435,7 +435,7 @@ describe("Game Studio in the 3D workshop", () => {
     api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
     api.on("GET", "/assistant/game-studio/availability", availability);
     api.on("GET", "/assistant/game-studio/dependencies", {
-      installed: true, job: null, contract: { present: true, module: "apex.game_studio.setup", reason: "" },
+      installed: true, job: null, contract: { planner: true, engine: true, reason: "" },
       items: [dependency({ install: { available: true, reason: "", confirmation: "Télécharger 5,4 Go (licence Apache-2.0) ?" } })],
     });
     api.on("POST", "/assistant/game-studio/dependencies/planner_model/install", (body) =>

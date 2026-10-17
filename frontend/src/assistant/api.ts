@@ -130,7 +130,8 @@ export interface GameStudioInstallJob {
 export interface GameStudioDependencies {
   installed: boolean;
   items: GameStudioDependency[];
-  contract: { present: boolean; module: string; reason: string };
+  /** Contrats d'installation publiés par Game Studio : poids du planificateur, et liste figée de son moteur. */
+  contract: { planner: boolean; engine: boolean; reason: string };
   job: GameStudioInstallJob | null;
   problem?: string;
 }

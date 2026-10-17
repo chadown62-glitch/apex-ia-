@@ -36,6 +36,10 @@ REFUSALS: dict[str, str] = {
         "choisit dans Paramètres > Outils > Calcul des missions."),
     "local_planner_model_missing": (
         "le modèle planificateur local de Game Studio (Qwen2.5-Coder-7B) n'est pas installé."),
+    "cuda_game_studio_requires_qualified_brain_quiescence_handoff": (
+        "Game Studio n'accepte encore que le calcul sur processeur : le partage du GPU avec le Cerveau "
+        "n'est pas encore qualifié. Choisissez « Processeur » dans Paramètres > Outils > Calcul des "
+        "missions."),
     "dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified": (
         "le planificateur natif d'APEX n'est pas encore qualifié pour Game Studio."),
     "shared_resource_profile_required": "le profil APEX (APEX_HOME) n'est pas défini pour partager le GPU.",
@@ -288,7 +292,9 @@ def missing_from(report: dict[str, Any], compute: str) -> list[str]:
     cuda = report.get("cuda") or {}
     missing: list[str] = []
     if not blender.get("blender"):
-        missing.append("Blender n'est pas installé, ou introuvable dans le PATH.")
+        where = ("(APEX_BLENDER_EXECUTABLE, PATH, Program Files)" if "blender_discovery" in blender
+                 else "dans le PATH")
+        missing.append(f"Blender n'est pas installé, ou introuvable {where}.")
     if blender.get("workers_present") is False:
         missing.append("Les scripts de Game Studio (scripts/game_graphics/studio) sont absents.")
     # Les missions que le Cerveau propose passent par la planification dynamique de Game Studio
@@ -304,6 +310,12 @@ def missing_from(report: dict[str, Any], compute: str) -> list[str]:
     if compute != "cpu" and not cuda.get("available"):
         missing.append("Aucun GPU CUDA : choisissez « Processeur » dans Paramètres > Outils > Calcul des "
                        "missions (beaucoup plus lent), ou utilisez un PC équipé d'un GPU NVIDIA.")
+    elif compute != "cpu" and cuda.get("dispatch_qualified") is False:
+        # Garde de Game Studio : aucune mission sur GPU tant que le partage avec le Cerveau n'est pas
+        # qualifié.
+        missing.append("Game Studio n'accepte encore que le calcul sur processeur (partage du GPU avec "
+                       "le Cerveau non qualifié) : choisissez « Processeur » dans Paramètres > Outils > "
+                       "Calcul des missions.")
     return missing
 
 

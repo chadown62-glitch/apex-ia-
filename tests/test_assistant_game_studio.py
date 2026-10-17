@@ -475,6 +475,8 @@ def test_game_studio_refusals_and_failures_are_shown_as_they_are(env, studio_too
     (RuntimeError("local_planner_model_missing"), "planificateur"),               # modèle absent
     (ModuleNotFoundError("No module named 'jsonschema'"), "bibliothèque"),       # dépendance absente
     (RuntimeError("cuda_unavailable_choose_cpu_explicitly"), "aucun GPU CUDA"),  # GPU indisponible
+    (RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff"),  # GPU non qualifié
+     "que le calcul sur processeur"),
 ])
 def test_a_refused_user_launch_is_recorded_with_its_explanation(env, studio_tools, failure, said) -> None:
     studio = _Studio(refuse=failure)
@@ -624,6 +626,15 @@ def test_availability_explains_what_is_missing_from_game_studios_own_probe(env, 
              "cuda": {"available": True}}
     report = game_studio.availability(settings, probe=lambda: ready)
     assert [m for m in report["missing"] if "jsonschema" not in m] == []
+
+    # Garde GPU de Game Studio (17/10/2026) : CUDA présent mais missions sur GPU non qualifiées.
+    guarded = {**ready, "cuda": {"available": True, "dispatch_qualified": False}}
+    text = " ".join(game_studio.availability(settings, probe=lambda: guarded)["missing"])
+    assert "n'accepte encore que le calcul sur processeur" in text
+    SettingsService(env).update({"tools": {"game_studio_compute": "cpu"}})
+    cpu_settings, _ = SettingsService(env).load()
+    cpu_missing = game_studio.availability(cpu_settings, probe=lambda: guarded)["missing"]
+    assert not any("processeur" in m for m in cpu_missing)
 
     def failing():
         raise RuntimeError("sonde cassée")

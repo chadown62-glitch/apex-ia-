@@ -655,7 +655,7 @@ function StudioDependencies() {
         Composants de Game Studio : {missing === 0 ? "tous présents" : `${missing} à installer`}
       </summary>
       {data.problem && <p className="ax-inline-error">{data.problem}</p>}
-      {!data.contract.present && <p className="ax-muted">{data.contract.reason}.</p>}
+      {data.contract.reason && <p className="ax-muted">{data.contract.reason}.</p>}
       {job && (
         <p className={job.state === "failed" ? "ax-inline-error" : "ax-muted"} role="status">
           {job.state === "running" ? `Installation de ${job.name} en cours…` : job.state === "succeeded"

@@ -108,6 +108,8 @@ export const GAME_STUDIO_REFUSALS: Record<string, string> = {
   cuda_unavailable_choose_cpu_explicitly:
     "aucun GPU CUDA sur ce PC ; le calcul sur processeur se choisit dans Paramètres > Outils",
   local_planner_model_missing: "le modèle planificateur local de Game Studio n'est pas installé",
+  cuda_game_studio_requires_qualified_brain_quiescence_handoff:
+    "Game Studio n'accepte encore que le calcul sur processeur (partage du GPU avec le Cerveau non qualifié) ; choisissez « Processeur » dans Paramètres > Outils",
   limit: "une seule mission Game Studio par réponse",
   shared_resource_profile_required: "le profil APEX (APEX_HOME) n'est pas défini pour partager le GPU",
   external_graphics_workload_active: "Blender ou Unreal tourne déjà sur ce PC",
