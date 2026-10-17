@@ -1,0 +1,72 @@
+{
+  "mission_id": "game-graphics-studio",
+  "clone_id": "trusted-catalog-worker",
+  "status": "success",
+  "isolation_level": "none",
+  "exit_code": {
+    "value": 0,
+    "status": "real"
+  },
+  "signal": {
+    "value": null,
+    "status": "unknown"
+  },
+  "elapsed_s": {
+    "value": 1.0038100910023786,
+    "status": "real"
+  },
+  "cpu_time_s": {
+    "value": 0.74,
+    "status": "real"
+  },
+  "memory_peak_mb": {
+    "value": 212.24609375,
+    "status": "real"
+  },
+  "pids_peak": {
+    "value": 1,
+    "status": "real"
+  },
+  "stdout": "Blender 4.3.2\nRead blend: \"/workspace/apex-game-studio-candidate/docs/game_studio/candidate/evidence/recovery-20261018/street/garage.blend\"\n\nBlender quit\n",
+  "stderr": "",
+  "stdout_truncated": false,
+  "stderr_truncated": false,
+  "error_detail": null,
+  "facts": {
+    "command": [
+      "/usr/bin/blender",
+      "--background",
+      "--factory-startup",
+      "--disable-autoexec",
+      "--threads",
+      "4",
+      "--python-exit-code",
+      "2",
+      "--python",
+      "/workspace/apex-game-studio-candidate/scripts/game_graphics/studio/assemble_garage.py",
+      "--",
+      "--verify",
+      "--output",
+      "/workspace/apex-game-studio-candidate/docs/game_studio/candidate/evidence/recovery-20261018/street",
+      "--setting",
+      "street"
+    ],
+    "pid": 42158,
+    "process_stopped_verified": true,
+    "execution": "trusted_local_catalog",
+    "model_code_executed": false,
+    "script_sha256": "26d22084d0059b1d2db181f881e51665fd6d7dc72c642b68e0718f6d9797209c",
+    "rss_kind": "sampled process tree RSS, not an OS-enforced memory limit",
+    "sample_interval_s": 0.25,
+    "timeout_s": 120,
+    "rss_limit_mib": 6000,
+    "sources": {
+      "build_assets.py": "578e5777a19826a05dc7a6d8a78e0a5948fbf9257a1c22e33e081c3f3209d2a5",
+      "blender_ops.py": "a26087e1e474bebd69d9c485b6265e815a98a014060406b415ce9a7794d0161e",
+      "neural_cpu.py": "526b342830fe12d02def5c5016bee79d47f06ebe1f4f927dec6dd560154f4b8f",
+      "inspect_asset.py": "57e014159b8b8b2c54eb914f098fe1790906978c11ad2e24c3f066425f7c15df",
+      "render_asset.py": "d27d78f36bd5c6df658a5d7c5302c365da7f6639ba89781fccd36cc38d11e17a",
+      "assemble_garage.py": "26d22084d0059b1d2db181f881e51665fd6d7dc72c642b68e0718f6d9797209c"
+    }
+  }
+}

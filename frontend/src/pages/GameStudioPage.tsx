@@ -4,13 +4,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   cancelGameStudioMission, gameStudioCapabilities, getGameStudioArtifact,
   getGameStudioMission, listGameStudioMissions, resumeGameStudioMission,
-  submitGameStudioMission,
   cancelGameStudioProject, getGameStudioProject, listGameStudioProjects,
   resumeGameStudioProject, submitGameStudioProject, getGameStudioProjectArtifact,
 } from "../api/endpoints";
 import type { GameStudioArtifact, GameStudioMission, GameStudioRequest } from "../api/types";
 import { Panel } from "../components/common/Panel";
 import "./pages.css";
+import { Button } from "../components/ui/Button";
 import "./game-studio.css";
 
 const initial: GameStudioRequest = {
@@ -52,7 +52,7 @@ function ArtifactDownload({ jobId, artifact, project = false }: { jobId: string;
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } finally { setBusy(false); }
   }
-  return <button type="button" onClick={download} disabled={busy}>{artifact.name}</button>;
+  return <Button type="button" onClick={download} disabled={busy}>{artifact.name}</Button>;
 }
 
 function MissionDetail({ mission, onCancel, onResume, controls = true }: {
@@ -61,11 +61,12 @@ function MissionDetail({ mission, onCancel, onResume, controls = true }: {
   return <section className="game-mission" aria-label="Suivi de mission">
     <div className="game-mission__heading"><h3>{mission.request.description}</h3><strong>{mission.status}</strong></div>
     <p>Mission APEX {mission.mission_id} · {mission.specialist} · {mission.model}</p>
+    {mission.budget && <p>Temps cumulé : {Math.ceil(mission.budget.observed_s ?? mission.budget.charged_s)} / {mission.budget.limit_s} s</p>}
     <p>Tâche : {mission.current_task} · début {new Date(mission.created_at).toLocaleString()}</p>
     {mission.error && <p role="alert">{mission.error}</p>}
     {controls && <div className="game-actions">
-      {mission.status === "running" || mission.status === "queued" ? <button type="button" onClick={onCancel}>Arrêter</button> : null}
-      {["failed", "interrupted", "cancelled"].includes(mission.status) ? <button type="button" onClick={onResume}>Reprendre</button> : null}
+      {mission.status === "running" || mission.status === "queued" ? <Button type="button" onClick={onCancel}>Arrêter</Button> : null}
+      {["failed", "interrupted", "cancelled"].includes(mission.status) ? <Button type="button" onClick={onResume}>Reprendre</Button> : null}
     </div>}
     <div className="game-revisions">
       {mission.revisions.map((revision) => {
@@ -122,10 +123,6 @@ export function GameStudioPage() {
   const projects = useQuery({ queryKey: ["game-studio-projects"], queryFn: listGameStudioProjects, refetchInterval: 5000 });
   const projectDetail = useQuery({ queryKey: ["game-studio-project", selectedProject], queryFn: () => getGameStudioProject(selectedProject!),
     enabled: Boolean(selectedProject), refetchInterval: 3000 });
-  const submit = useMutation({ mutationFn: submitGameStudioMission, onSuccess: (result) => {
-    if (result.data) { setSelected(result.data.id); queryClient.invalidateQueries({ queryKey: ["game-studio-missions"] }); }
-    else setError(result.detail ?? "Mission indisponible");
-  }, onError: (failure) => setError(String(failure)) });
   const cancel = useMutation({ mutationFn: cancelGameStudioMission, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["game-studio-mission"] }) });
   const resume = useMutation({ mutationFn: resumeGameStudioMission, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["game-studio-mission"] }) });
   const projectSubmit = useMutation({ mutationFn: submitGameStudioProject, onSuccess: (result) => {
@@ -143,18 +140,18 @@ export function GameStudioPage() {
       const criteria = JSON.parse(criteriaText) as GameStudioRequest["criteria"];
       if (!criteria || Array.isArray(criteria) || typeof criteria !== "object") throw new Error("Critères JSON invalides");
       const references = await encodeReferences(files, provenance);
-      if (["environnement", "autre", "monde_ouvert"].includes(form.creation_type) || form.plan_only) projectSubmit.mutate({ ...form, criteria, references });
-      else submit.mutate({ ...form, criteria, references });
+      projectSubmit.mutate({ ...form, criteria, references });
     } catch (failure) { setError(String(failure)); }
   }
 
   return <main className="game-studio-page">
-    <header><h1>Game Studio</h1><p>Créations Blender, projets multi-assets, versions, jugements et fichiers dans APEX.</p></header>
+    <header><h1>Game Studio</h1><p>APEX Game Graphics — spécialiste composé : Qwen local, Blender et juges techniques. Aucun nouveau modèle entraîné.</p></header>
     <Panel title="Capacités observées">
       {capabilities.data?.data ? <div className="game-capabilities">
         {Object.entries(capabilities.data.data).filter(([, value]) => typeof value === "object" && value !== null && "status" in value)
-          .map(([name, value]) => <p key={name}><strong>{name}</strong> : {String((value as { status: string }).status)}</p>)}
+          .map(([name, value]) => <p key={name}><strong>{name}</strong> : {String((value as { status: string }).status)}{(typeof (value as { reason?: string }).reason === "string") && <small>{(value as { reason: string }).reason}</small>}</p>)}
       </div> : <p>{capabilities.data?.detail ?? "Diagnostic des dépendances en cours…"}</p>}
+      <details><summary>Spécialiste, modèles et dépendances</summary><pre>{JSON.stringify(capabilities.data?.data, null, 2)}</pre></details>
     </Panel>
     <Panel title="Nouvelle mission graphique">
       <form onSubmit={send} className="game-form">
@@ -183,9 +180,9 @@ export function GameStudioPage() {
           <option value="auto">CUDA prioritaire</option><option value="cuda">CUDA obligatoire</option><option value="cpu">CPU choisi explicitement</option>
         </select></label>
         <label>Modèle local<select value={form.controller_model} onChange={(e) => setForm({ ...form, controller_model: e.target.value as GameStudioRequest["controller_model"] })}>
-          <option value="auto">Sélection APEX</option><option value="pinned_7b">Qwen 7B épinglé</option><option value="apex_native">Modèle natif APEX</option>
+          <option value="auto">Sélection APEX</option><option value="pinned_7b">Qwen 7B épinglé</option><option value="apex_native" disabled>Modèle natif APEX — planification non qualifiée</option>
         </select></label>
-        <label className="game-form__wide">Description<textarea value={form.description} rows={4} onChange={(e) => setForm({ ...form, description: e.target.value })} required minLength={20} /></label>
+        <label className="game-form__wide">Description<textarea aria-label="Description" value={form.description} rows={4} onChange={(e) => setForm({ ...form, description: e.target.value })} required minLength={20} /></label>
         <label className="game-form__wide">Références (PNG, JPEG, texte ; 4 maximum)<input type="file" multiple accept="image/png,image/jpeg,text/plain" onChange={(e) => setFiles(e.target.files)} /></label>
         <label className="game-form__wide">Provenance et droits des références<input value={provenance} onChange={(e) => setProvenance(e.target.value)} placeholder="Fichiers créés par moi, usage autorisé…" /></label>
         <label className="game-check"><input type="checkbox" checked={form.judges_all_tasks} onChange={(e) => setForm({ ...form, judges_all_tasks: e.target.checked })} /> Activer les juges sur toutes les tâches</label>
@@ -195,25 +192,27 @@ export function GameStudioPage() {
         <label>RAM échantillonnée max (Mio)<input type="number" min={512} max={16384} value={form.max_rss_mib} onChange={(e) => setForm({ ...form, max_rss_mib: Number(e.target.value) })} /></label>
         <label>Versions max par asset<input type="number" min={1} max={3} value={form.max_attempts} onChange={(e) => setForm({ ...form, max_attempts: Number(e.target.value) })} /></label>
         <label className="game-form__wide">Critères de qualité personnalisés (JSON)<textarea rows={2} value={criteriaText} onChange={(e) => setCriteriaText(e.target.value)} /></label>
-        <p className="game-form__wide">Les projets construisent un plan borné avec le modèle local. Les familles exécutables sont véhicule, bâtiment et fauteuil ; les autres demandes restent signalées comme bloquées. Les références sont conservées avec provenance, mais leur contenu visuel n'est pas encore interprété. UE5 et CUDA gardent leur statut mesuré.</p>
+        <p className="game-form__wide">Les projets construisent un plan borné avec le modèle local. Les familles exécutables sont véhicule, bâtiment et fauteuil ; les autres demandes restent signalées comme bloquées. Les devantures spécialisées non qualifiées sont bloquées. Les références sont conservées avec provenance, mais leur contenu n'est pas encore exploité par le planificateur. UE5 et CUDA gardent leur statut mesuré.</p>
         {error && <p role="alert" className="game-form__wide">{error}</p>}
-        <button type="submit" disabled={submit.isPending || projectSubmit.isPending}>{submit.isPending || projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</button>
+        <Button type="submit" disabled={projectSubmit.isPending}>{projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</Button>
       </form>
     </Panel>
     <Panel title="Projets multi-assets">
-      {projects.data?.data?.length ? <ul>{projects.data.data.map((item) => <li key={item.id}><button type="button" onClick={() => setSelectedProject(item.id)}>
+      {projects.data?.data?.length ? <ul>{projects.data.data.map((item) => <li key={item.id}><Button type="button" onClick={() => setSelectedProject(item.id)}>
         {item.recipe} · {item.status} · {new Date(item.created_at).toLocaleString()}
-      </button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
+      </Button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
       {project && <section className="game-mission" aria-label="Suivi du projet">
-        <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · livraison {project.delivery_status ?? "en cours"} · {project.elapsed_s != null ? `dernière exécution : ${project.elapsed_s} s` : "en cours"}</p>
-        {project.plan && <article><h4>Plan généré et validé</h4><p>{project.plan.steps.length} tâches · estimation minimale {project.plan.estimated_minimum_s} s · tâches proposées exécutables : {project.plan.fully_feasible ? "oui" : "non"}. La couverture de la demande reste à contrôler.</p>
+        <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · livraison {project.delivery_status ?? "en cours"} · {project.elapsed_s != null ? `temps actif cumulé : ${project.elapsed_s} s` : "en cours"}</p>
+        {project.plan && <article><h4>Plan généré et validé</h4><p>{project.plan.steps.length} tâches · budget estimé pour admission {project.plan.estimated_minimum_s} s · tâches proposées exécutables : {project.plan.fully_feasible ? "oui" : "non"}. La fidélité artistique reste non certifiée.</p>
+          {project.plan.coverage && <details open><summary>Couverture des exigences · {project.plan.coverage.verdict}</summary><p>Contrôle indépendant des quantités et contextes reconnus ; les propriétés non analysées restent non vérifiées.</p><pre>{JSON.stringify(project.plan.coverage, null, 2)}</pre></details>}
           {project.plan.unmet_requirements.length > 0 && <p>Demandes non satisfaites : {project.plan.unmet_requirements.join(" ; ")}</p>}
         </article>}
+        {project.budget && <p>Budget cumulé : {Math.ceil(project.budget.observed_s ?? project.budget.charged_s)} / {project.budget.limit_s} s. Réservation conservatrice de 10 s maximum après interruption.</p>}
         {project.planning_artifact && <ArtifactDownload jobId={project.id} artifact={project.planning_artifact} project />}
         <div className="game-actions">
-          {["running", "queued"].includes(project.status) && <button type="button" onClick={() => projectCancel.mutate(project.id)}>Arrêter le projet</button>}
-          {(["failed", "interrupted", "cancelled"].includes(project.status) || (project.status === "review" && !project.assembly)) &&
-            <button type="button" onClick={() => projectResume.mutate(project.id)}>Reprendre le projet</button>}
+          {["running", "queued"].includes(project.status) && <Button type="button" onClick={() => projectCancel.mutate(project.id)}>Arrêter le projet</Button>}
+          {(["failed", "interrupted", "cancelled"].includes(project.status) && (!project.budget || project.budget.charged_s < project.budget.limit_s)) &&
+            <Button type="button" onClick={() => projectResume.mutate(project.id)}>Reprendre le projet</Button>}
         </div>
         {project.steps.map((step) => <article key={step.key}>
           <h4>{step.key} · {step.kind ?? step.creation_type} · {step.specialist} · {step.status}</h4>
@@ -226,7 +225,7 @@ export function GameStudioPage() {
           {step.mission && <MissionDetail mission={step.mission} controls={false} onCancel={() => cancel.mutate(step.mission!.id)} onResume={() => resume.mutate(step.mission!.id)} />}
         </article>)}
         {project.assembly && <article>
-          <h4>Scène de garage assemblée · version {project.assembly.version ?? 1} · {project.assembly.verdict}</h4>
+          <h4>Scène assemblée · version {project.assembly.version ?? 1} · {project.assembly.verdict}</h4>
           <p>Fichier Blender rouvert dans un second processus. Meshes par asset : {JSON.stringify(project.assembly.source_mesh_counts)}. Qualité visuelle certifiée : non.</p>
           {project.assembly.engineer_handoff && <p>Game Engineer : {project.assembly.engineer_handoff.status} · {project.assembly.engineer_handoff.reason}.</p>}
           <div className="game-renders">{project.assembly.artifacts.filter((item) => item.role === "view").map((item) =>
@@ -245,9 +244,9 @@ export function GameStudioPage() {
       </section>}
     </Panel>
     <Panel title="Missions Game Studio">
-      {list.data?.data?.length ? <ul>{list.data.data.map((item) => <li key={item.id}><button type="button" onClick={() => setSelected(item.id)}>
+      {list.data?.data?.length ? <ul>{list.data.data.map((item) => <li key={item.id}><Button type="button" onClick={() => setSelected(item.id)}>
         {item.request.creation_type} · {item.status} · {new Date(item.created_at).toLocaleString()}
-      </button></li>)}</ul> : <p>{list.data?.detail ?? "Aucune mission enregistrée."}</p>}
+      </Button></li>)}</ul> : <p>{list.data?.detail ?? "Aucune mission enregistrée."}</p>}
       {mission && <MissionDetail mission={mission} onCancel={() => cancel.mutate(mission.id)} onResume={() => resume.mutate(mission.id)} />}
     </Panel>
   </main>;

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
-import shutil
 from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
+
+from apex.game_graphics.software import discover_blender
 
 
 def coder_manifest() -> Path:
@@ -23,8 +24,11 @@ def native_coder_endpoint():
         from apex.models.provider import get_default_provider
 
         for endpoint in load_config().endpoints:
-            if (endpoint.runtime == "transformers" and "coder" in endpoint.served_model.lower()
-                    and get_default_provider(endpoint).detect().is_available):
+            if (
+                endpoint.runtime == "transformers"
+                and "coder" in endpoint.served_model.lower()
+                and get_default_provider(endpoint).detect().is_available
+            ):
                 return endpoint
     except (OSError, ValueError, ImportError):
         pass
@@ -33,8 +37,11 @@ def native_coder_endpoint():
 
 def probe() -> dict[str, Any]:
     scripts = Path(__file__).resolve().parents[2] / "scripts/game_graphics/studio"
-    blender = shutil.which("blender")
-    python_dependencies = {name: find_spec(name) is not None for name in ("psutil", "numpy", "PIL")}
+    blender_discovery = discover_blender()
+    blender = blender_discovery["path"]
+    python_dependencies = {
+        name: find_spec(name) is not None for name in ("psutil", "numpy", "PIL", "jsonschema")
+    }
     script_ready = all(
         (scripts / name).is_file() for name in ("render_asset.py", "inspect_asset.py", "build_assets.py")
     )
@@ -51,10 +58,12 @@ def probe() -> dict[str, Any]:
 
             data = json.loads(receipt.read_text())
             family = data.get("request", {}).get("creation_type")
-            if (isinstance(family, str) and family in validated_here
-                    and data.get("status") == "review" and any(
-                revision.get("verdict") == "pass" for revision in data.get("revisions", [])
-            )):
+            if (
+                isinstance(family, str)
+                and family in validated_here
+                and data.get("status") == "review"
+                and any(revision.get("verdict") == "pass" for revision in data.get("revisions", []))
+            ):
                 validated_here[family] = True
         except (OSError, ValueError):
             continue
@@ -83,7 +92,30 @@ def probe() -> dict[str, Any]:
             value and (Path(value).is_dir() if name == "source" else Path(value).is_file())
         )
     neural_inputs_present = all(neural_paths.values())
+    from apex.specialties.registry import by_id
+
+    specialist = by_id("game-graphics")
     return {
+        "specialist": {
+            "id": specialist.id,
+            "name": specialist.name,
+            "composition": "composed_specialist",
+            "description": specialist.description,
+            "capabilities": list(specialist.capabilities),
+            "tools": list(specialist.tools),
+            "page": "/game-studio",
+            "models": ["Qwen2.5-Coder-7B-Instruct Q5_K_M (pinned controller)"],
+            "trained_checkpoint": False,
+            "automatic_selection_contract": "Tool Engine explicit permissions + owner workspace",
+            "gpu_policy": "CUDA first; CPU explicit; in-process brain quiescence ACK still required",
+            "limits": [
+                "Three builder families only",
+                "Specialized buildings blocked",
+                "References archived, pixels unconsumed",
+                "Coverage judge limited to declared French/English rules",
+                "No aesthetic/photorealistic certification",
+            ],
+        },
         "vehicle_blender": {
             "status": "available_validated"
             if ready and validated_here["vehicule"]
@@ -91,6 +123,7 @@ def probe() -> dict[str, Any]:
             if ready
             else "blocked_dependency",
             "blender": blender,
+            "blender_discovery": blender_discovery,
             "workers_present": script_ready,
             "coder_manifest_present": manifest.is_file(),
             "llama_cpp_present": llama_available,
@@ -103,13 +136,17 @@ def probe() -> dict[str, Any]:
             ),
         },
         "building_blender": {
-            "status": "available_validated" if ready and validated_here["batiment"]
-            else "available_unqualified" if ready
+            "status": "available_validated"
+            if ready and validated_here["batiment"]
+            else "available_unqualified"
+            if ready
             else "blocked_dependency"
         },
         "chair_blender": {
-            "status": "available_validated" if ready and validated_here["objet_3d"]
-            else "available_unqualified" if ready
+            "status": "available_validated"
+            if ready and validated_here["objet_3d"]
+            else "available_unqualified"
+            if ready
             else "blocked_dependency"
         },
         "unreal": {
@@ -122,7 +159,8 @@ def probe() -> dict[str, Any]:
             "status": "available_unqualified" if cuda else "blocked_dependency",
             "available": cuda,
             "device_count": cuda_devices,
-            "reason": "No TripoSR CUDA performance or memory qualification yet",
+            "dispatch_qualified": False,
+            "reason": "Game Studio CUDA requires qualified brain quiescence and hardware evidence",
         },
         "neural_3d": {
             "status": "not_implemented" if cuda and neural_inputs_present else "blocked_dependency",
@@ -141,16 +179,16 @@ def probe() -> dict[str, Any]:
             ),
         },
         "game_engineer": {
-            "status": "not_implemented",
+            "status": "available_unqualified",
             "reason": (
-                "Game Engineer contract exists, but Game Studio does not dispatch "
-                "an engineer mission yet"
+                "VehicleAssetContract preflight and bounded Blender repair are integrated; "
+                "UE5 gameplay and physics remain blocked"
             ),
         },
         "environment": {
             "status": "available_unqualified" if ready else "blocked_dependency",
-            "recipe": "garage-v1",
-            "scope": "Three sequential Blender assets, per-asset technical judging and native Blender scene assembly",
+            "recipe": "dynamic-v1",
+            "scope": "Up to five planned assets, technical judging and native Blender scene assembly",
         },
         "open_world": {"status": "not_implemented"},
         "supported_styles": ["realiste"],

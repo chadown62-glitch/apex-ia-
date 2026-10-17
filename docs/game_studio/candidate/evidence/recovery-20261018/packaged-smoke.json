@@ -1,0 +1,156 @@
+{
+  "health_http": 200,
+  "health": {
+    "status": "real",
+    "data": {
+      "status": "ok",
+      "components": [
+        {
+          "component": "api",
+          "status": "ok",
+          "detail": "processus démarré",
+          "version": null,
+          "fallback_active": false,
+          "latency_ms": null
+        },
+        {
+          "component": "database",
+          "status": "ok",
+          "detail": "joignable",
+          "version": null,
+          "fallback_active": false,
+          "latency_ms": null
+        }
+      ]
+    },
+    "detail": null
+  },
+  "capabilities_http": 200,
+  "capabilities": {
+    "status": "real",
+    "data": {
+      "specialist": {
+        "id": "game-graphics",
+        "name": "Game Graphics",
+        "composition": "composed_specialist",
+        "description": "Spécialiste composé : contrôleur Qwen, outils Blender, contrats et juges techniques. Aucun nouveau checkpoint entraîné.",
+        "capabilities": [
+          "coupé Blender",
+          "bâtiment générique Blender",
+          "fauteuil Blender",
+          "planification multi-assets bornée",
+          "juges techniques et corrections versionnées"
+        ],
+        "tools": [
+          "blender",
+          "game_studio.create",
+          "game_studio.status",
+          "game_studio.cancel",
+          "game_studio.results"
+        ],
+        "page": "/game-studio",
+        "models": [
+          "Qwen2.5-Coder-7B-Instruct Q5_K_M (pinned controller)"
+        ],
+        "trained_checkpoint": false,
+        "automatic_selection_contract": "Tool Engine explicit permissions + owner workspace",
+        "gpu_policy": "CUDA first; CPU explicit; in-process brain quiescence ACK still required",
+        "limits": [
+          "Three builder families only",
+          "Specialized buildings blocked",
+          "References archived, pixels unconsumed",
+          "Coverage judge limited to declared French/English rules",
+          "No aesthetic/photorealistic certification"
+        ]
+      },
+      "vehicle_blender": {
+        "status": "blocked_dependency",
+        "blender": "/usr/bin/blender",
+        "blender_discovery": {
+          "path": "/usr/bin/blender",
+          "source": "PATH",
+          "reason": null
+        },
+        "workers_present": true,
+        "coder_manifest_present": false,
+        "llama_cpp_present": true,
+        "apex_native_coder_present": false,
+        "python_dependencies": {
+          "psutil": true,
+          "numpy": true,
+          "PIL": true,
+          "jsonschema": true
+        },
+        "qualification": "PR17 cloud Blender 4.3.2; this host awaits a successful mission"
+      },
+      "building_blender": {
+        "status": "blocked_dependency"
+      },
+      "chair_blender": {
+        "status": "blocked_dependency"
+      },
+      "unreal": {
+        "status": "blocked_dependency",
+        "engine_present": false,
+        "engine_qualified": false,
+        "reason": "UE5.8 scene execution and reopen have not been verified on this host"
+      },
+      "cuda": {
+        "status": "blocked_dependency",
+        "available": false,
+        "device_count": 0,
+        "dispatch_qualified": false,
+        "reason": "Game Studio CUDA requires qualified brain quiescence and hardware evidence"
+      },
+      "neural_3d": {
+        "status": "blocked_dependency",
+        "default_device": "cuda",
+        "cpu_requires_explicit_choice": true,
+        "configured_inputs_present": {
+          "source": false,
+          "weights": false,
+          "config": false,
+          "dino_config": false
+        },
+        "required_configuration": {
+          "source": "APEX_TRIPOSR_SOURCE",
+          "weights": "APEX_TRIPOSR_WEIGHTS",
+          "config": "APEX_TRIPOSR_CONFIG",
+          "dino_config": "APEX_TRIPOSR_DINO_CONFIG"
+        },
+        "reason": "TripoSR needs configured local inputs, actual CUDA qualification, and Game Studio mission dispatch"
+      },
+      "game_engineer": {
+        "status": "available_unqualified",
+        "reason": "VehicleAssetContract preflight and bounded Blender repair are integrated; UE5 gameplay and physics remain blocked"
+      },
+      "environment": {
+        "status": "blocked_dependency",
+        "recipe": "dynamic-v1",
+        "scope": "Up to five planned assets, technical judging and native Blender scene assembly"
+      },
+      "open_world": {
+        "status": "not_implemented"
+      },
+      "supported_styles": [
+        "realiste"
+      ],
+      "quality_certification": [
+        "prototype"
+      ]
+    },
+    "detail": null
+  },
+  "ui_available": true,
+  "page_errors": [],
+  "title": "APEX",
+  "native_controller_disabled": true,
+  "no_weights_downloaded": true,
+  "text_color": "rgb(236, 233, 247)",
+  "native_controller_markup": "<option value=\"apex_native\" disabled=\"\">Modèle natif APEX — planification non qualifiée</option>",
+  "dune_text_color": "rgb(43, 35, 24)",
+  "creation_http": 409,
+  "creation_response": {
+    "detail": "local_planner_model_missing"
+  }
+}

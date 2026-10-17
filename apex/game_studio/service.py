@@ -42,6 +42,17 @@ from apex.recovery.policy import decide
 from apex.sandbox.model import ExecutionStatus
 
 from .capabilities import coder_manifest, native_coder_endpoint, probe
+from .lifecycle import (
+    RunBudget,
+    atomic_json,
+    busy,
+    cancellable_session,
+    claim,
+    cleanup_owned,
+    remaining,
+    request_cancel,
+    snapshot,
+)
 
 BENCHMARK = ROOT / "docs/game_graphics/studio/benchmark-v1.json"
 FAMILY = {"vehicule": "vehicle", "batiment": "building", "objet_3d": "chair"}
@@ -63,6 +74,14 @@ def _validate_topology_repair(plan: dict[str, Any], *, target: str) -> None:
         raise ValueError("correction_outside_measured_topology_defect")
 
 
+def _validate_paint_repair(plan: dict[str, Any], *, material: str) -> None:
+    edits = [
+        op for op in plan["operations"] if op["op"] not in ("inspect_scene", "save_revision_and_render")
+    ]
+    if len(edits) != 1 or edits[0]["op"] != "set_material_pbr" or edits[0]["target"] != material:
+        raise ValueError("correction_outside_requested_paint_material")
+
+
 def _utc() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -82,11 +101,18 @@ class GameStudioService:
         self.missions = MissionService(session_factory)
         self.artifacts = artifacts or get_default_provider()
         self._lock = threading.RLock()
+        self._budgets: dict[str, RunBudget] = {}
         self._active: dict[str, tuple[threading.Thread, threading.Event, CoderSession | None]] = {}
-        # A prior API process cannot still own its daemon worker. Preserve
-        # completed revisions and make the stable job id resumable.
+        # Recovery takes the same exclusive lease as a worker. A second API
+        # process is an observer, never proof that a running job is stale.
         for path in self.root.glob("*/receipt.json"):
-            with suppress(OSError, ValueError, KeyError):
+            if busy(path.parent):
+                continue
+            try:
+                lease = claim(path.parent)
+            except ValueError:
+                continue
+            try:
                 stale = json.loads(path.read_text())
                 if stale.get("status") in ("running", "queued"):
                     stale["status"] = "interrupted"
@@ -95,10 +121,11 @@ class GameStudioService:
                     self._save(stale)
                     mission = self.missions.get(stale["mission_id"])
                     if mission and mission.state.value == "running":
-                        with suppress(Exception):
-                            self.missions.mark_failed(
-                                stale["mission_id"], error="game_studio_process_interrupted"
-                            )
+                        self.missions.mark_failed(
+                            stale["mission_id"], error="game_studio_process_interrupted"
+                        )
+            finally:
+                lease.__exit__(None, None, None)
 
     def _folder(self, job_id: str) -> Path:
         UUID(job_id)
@@ -115,13 +142,12 @@ class GameStudioService:
         folder.mkdir(parents=True, exist_ok=True)
         record["updated_at"] = _utc()
         target = folder / "receipt.json"
-        tmp = folder / "receipt.tmp"
-        tmp.write_text(json.dumps(record, ensure_ascii=False, indent=2, default=str))
-        os.replace(tmp, target)
+        atomic_json(target, record)
 
     def _view(self, record: dict[str, Any]) -> dict[str, Any]:
         mission = self.missions.get(record["mission_id"])
         record = {**record, "mission_state": mission.state.value if mission else "missing"}
+        record["budget"] = snapshot(self._folder(record["id"]))
         record.pop("references_private", None)
         return record
 
@@ -144,6 +170,16 @@ class GameStudioService:
         tool = request["tool"]
         if family is None or request["style"] != "realiste" or tool not in ("auto", "blender"):
             raise ValueError("requested_creation_style_or_tool_not_implemented")
+        from .requirements import extract, judge
+
+        contract = extract(request)
+        coverage = judge(contract, [{"kind": family, "description": request["description"]}])
+        if (
+            coverage["defects"]
+            or coverage["unavailable"]
+            or not any(r["kind"] == family for r in contract["requirements"])
+        ):
+            raise ValueError("requested_asset_requires_planning_or_unavailable_builder")
         if not BENCHMARK.is_file():
             raise RuntimeError("studio_benchmark_missing_from_package")
         capabilities = probe()
@@ -154,22 +190,31 @@ class GameStudioService:
         }[family]
         if capabilities[capability_key]["status"] == "blocked_dependency":
             raise RuntimeError("blender_worker_or_local_coder_missing")
-        if (request.get("compute_backend", "auto") in ("auto", "cuda")
-                and not capabilities["cuda"]["available"]):
+        if (
+            request.get("compute_backend", "auto") in ("auto", "cuda")
+            and not capabilities["cuda"]["available"]
+        ):
             raise RuntimeError("cuda_unavailable_choose_cpu_explicitly")
+        if request.get("compute_backend", "auto") != "cpu":
+            raise RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff")
         desired = request.get("controller_model", "auto")
         native = native_coder_endpoint()
         pinned = coder_manifest().is_file() and find_spec("llama_cpp") is not None
         if desired == "auto":
-            desired = "apex_native" if capabilities["cuda"]["available"] and native else (
-                "pinned_7b" if pinned else "apex_native"
+            desired = (
+                "apex_native"
+                if capabilities["cuda"]["available"] and native
+                else ("pinned_7b" if pinned else "apex_native")
             )
         if desired == "pinned_7b" and not pinned:
             raise RuntimeError("pinned_7b_model_missing_no_download_performed")
         if desired == "apex_native" and native is None:
             raise RuntimeError("apex_native_coder_missing_no_download_performed")
-        if (desired == "apex_native" and request.get("compute_backend") == "cpu"
-                and capabilities["cuda"]["available"]):
+        if (
+            desired == "apex_native"
+            and request.get("compute_backend") == "cpu"
+            and capabilities["cuda"]["available"]
+        ):
             raise RuntimeError("native_cpu_override_not_supported_choose_pinned_7b_or_cuda")
         request = {**request, "resolved_controller_model": desired}
         overrides = request.get("criteria") or {}
@@ -205,7 +250,8 @@ class GameStudioService:
             "specialist": "Game Graphics",
             "model": (
                 "Qwen2.5-Coder-7B-Instruct Q5_K_M (pinned local)"
-                if desired == "pinned_7b" else str(native.served_model)
+                if desired == "pinned_7b"
+                else str(native.served_model)
             ),
             "request": request,
             "references": ref_records,
@@ -220,15 +266,33 @@ class GameStudioService:
             ],
         }
         with self._lock:
-            self._save(record)
-            self._start(job_id)
+            lease = claim(self._folder(job_id))
+            try:
+                self._save(record)
+                self._start(job_id, lease)
+            except BaseException:
+                lease.__exit__(None, None, None)
+                raise
             return self._view(record)
 
-    def _start(self, job_id: str) -> None:
+    def _start(self, job_id: str, lease=None) -> None:
+        folder = self._folder(job_id)
+        lease = lease or claim(folder)
+        cleanup_owned(folder)
+        (folder / "cancel.request").unlink(missing_ok=True)
         cancel = threading.Event()
-        thread = threading.Thread(
-            target=self._execute, args=(job_id, cancel), name="apex-game-studio-" + job_id[:8], daemon=True
-        )
+        budget = RunBudget(folder, self._read(job_id)["request"]["max_time_s"], cancel)
+        self._budgets[job_id] = budget
+
+        def run():
+            try:
+                with budget:
+                    self._execute(job_id, cancel)
+            finally:
+                self._budgets.pop(job_id, None)
+                lease.__exit__(None, None, None)
+
+        thread = threading.Thread(target=run, name="apex-game-studio-" + job_id[:8], daemon=True)
         self._active[job_id] = (thread, cancel, None)
         thread.start()
 
@@ -237,17 +301,26 @@ class GameStudioService:
             record = self._read(job_id)
             if record["status"] in ("review", "failed", "cancelled"):
                 return self._view(record)
+            request_cancel(self._folder(job_id))
             active = self._active.get(job_id)
             if active:
                 active[1].set()
-                session = active[2]
-                if session is not None:
-                    session.__exit__(None, None, None)
-            record["events"].append({"at": _utc(), "kind": "cancel_requested"})
-            self._save(record)
+            # The owning worker writes the terminal receipt; no lost updates.
             return self._view(record)
 
     def resume(self, job_id: str) -> dict[str, Any]:
+        lease = claim(self._folder(job_id))
+        try:
+            if not snapshot(self._folder(job_id)) and self._read(job_id).get("events"):
+                raise ValueError("legacy_budget_unknown_new_mission_required")
+            if remaining(self._folder(job_id), self._read(job_id)["request"]["max_time_s"]) <= 0:
+                raise ValueError("cumulative_time_budget_exhausted")
+            return self._resume_owned(job_id, lease)
+        except BaseException:
+            lease.__exit__(None, None, None)
+            raise
+
+    def _resume_owned(self, job_id: str, lease) -> dict[str, Any]:
         with self._lock:
             record = self._read(job_id)
             if record["status"] not in ("failed", "interrupted", "cancelled"):
@@ -268,7 +341,7 @@ class GameStudioService:
             record["error"] = None
             record["events"].append({"at": _utc(), "kind": "resume", "mission_id": mission.id})
             self._save(record)
-            self._start(job_id)
+            self._start(job_id, lease)
             return self._view(record)
 
     def artifact(self, job_id: str, digest: str) -> tuple[bytes, str]:
@@ -290,6 +363,27 @@ class GameStudioService:
         record["current_task"] = kind
         self._save(record)
 
+    def _judge(self, root, family, criteria, benchmark, *, request, calibration=None, cancel_event=None):
+        report = judge_revision(
+            root, family, criteria, benchmark, calibration=calibration, cancel_event=cancel_event
+        )
+        if request["judges_all_tasks"]:
+            from .requirements import extract, material_defects
+
+            defects = material_defects(
+                extract(request), json.loads((root / "hierarchy.json").read_text()), family
+            )
+            if defects:
+                atomic_json(root / "technical-judge-report.json", report)
+                report = {
+                    **report,
+                    "technical_verdict": report["verdict"],
+                    "verdict": "fail",
+                    "defects": [*report["defects"], *defects],
+                }
+                atomic_json(root / "judge-report.json", report)
+        return report
+
     def _archive(self, folder: Path, record: dict[str, Any], judge: dict[str, Any]) -> None:
         from apex.game_graphics.studio.judge import verified_manifest
 
@@ -309,7 +403,7 @@ class GameStudioService:
                     "bytes": entry["bytes"],
                 }
             )
-        for name in ("manifest.json", "judge-report.json", "verdict.json"):
+        for name in ("manifest.json", "judge-report.json", "technical-judge-report.json", "verdict.json"):
             path = folder / name
             if path.is_file():
                 item = self.artifacts.put(path.read_bytes(), content_type="application/json")
@@ -326,17 +420,25 @@ class GameStudioService:
         if controller_dir.is_dir():
             for path in sorted(controller_dir.glob("*.json")):
                 item = self.artifacts.put(path.read_bytes(), content_type="application/json")
-                files.append({"name": "controller/" + path.name, "hash": item.content_hash,
-                              "content_type": "application/json", "role": "controller",
-                              "bytes": path.stat().st_size})
+                files.append(
+                    {
+                        "name": "controller/" + path.name,
+                        "hash": item.content_hash,
+                        "content_type": "application/json",
+                        "role": "controller",
+                        "bytes": path.stat().st_size,
+                    }
+                )
         execution = json.loads((folder / "execution.json").read_text())
-        record["resource_measurements"].append({
-            "revision": len(record["revisions"]) + 1,
-            "elapsed_s": execution.get("elapsed_s"),
-            "sampled_memory_peak_mb": execution.get("memory_peak_mb"),
-            "cpu_time_s": execution.get("cpu_time_s"),
-            "process_stopped_verified": execution.get("facts", {}).get("process_stopped_verified"),
-        })
+        record["resource_measurements"].append(
+            {
+                "revision": len(record["revisions"]) + 1,
+                "elapsed_s": execution.get("elapsed_s"),
+                "sampled_memory_peak_mb": execution.get("memory_peak_mb"),
+                "cpu_time_s": execution.get("cpu_time_s"),
+                "process_stopped_verified": execution.get("facts", {}).get("process_stopped_verified"),
+            }
+        )
         record["revisions"].append(
             {
                 "number": len(record["revisions"]) + 1,
@@ -350,7 +452,7 @@ class GameStudioService:
         self._save(record)
 
     def _execute(self, job_id: str, cancel: threading.Event) -> None:
-        started = time.monotonic()
+        started = time.monotonic() - self._budgets[job_id].used
         with self._lock:
             record = self._read(job_id)
         mission_id = record["mission_id"]
@@ -376,7 +478,8 @@ class GameStudioService:
                         self._event(record, "calibrate_visual_judge")
                         remaining = request["max_time_s"] - int(time.monotonic() - started)
                         calibrate(
-                            calibration, cancel_event=cancel,
+                            calibration,
+                            cancel_event=cancel,
                             timeout_s=min(600, max(1, remaining)),
                             rss_limit_mib=request["max_rss_mib"],
                         )
@@ -387,6 +490,7 @@ class GameStudioService:
                     root = folder / "revision-01"
                     if root.exists():
                         root.rename(folder / f"incomplete-revision-01-{uuid4().hex[:8]}")
+                    self._budgets[job_id].consume("asset_revision", budget)
                     self._event(record, "blender_baseline")
                     remaining = max(1, request["max_time_s"] - (time.monotonic() - started))
                     execution = create_revision(
@@ -399,9 +503,14 @@ class GameStudioService:
                     if execution.status is not ExecutionStatus.SUCCESS:
                         raise RuntimeError("blender_baseline_failed:" + str(execution.error_detail))
                     self._event(record, "mandatory_integrity_judge")
-                    judge = judge_revision(
-                        root, family, criteria, benchmark,
-                        calibration=calibration, cancel_event=cancel,
+                    judge = self._judge(
+                        root,
+                        family,
+                        criteria,
+                        benchmark,
+                        request=request,
+                        calibration=calibration,
+                        cancel_event=cancel,
                     )
                     self._archive(root, record, judge)
                 else:
@@ -414,19 +523,23 @@ class GameStudioService:
                         raise RuntimeError("no_verified_parent_revision_to_resume")
                     root = (
                         folder / f"revision-{passing[-1]['number']:02d}"
-                        if passing else folder / "revision-01"
+                        if passing
+                        else folder / "revision-01"
                     )
                     latest = folder / f"revision-{completed[-1]['number']:02d}"
                     judge = json.loads((latest / "judge-report.json").read_text())
-                    if (latest != root and judge["defects"]
-                            and all(d["id"] == "paired_component_alignment" for d in judge["defects"])):
+                    if (
+                        latest != root
+                        and judge["defects"]
+                        and all(d["id"] == "paired_component_alignment" for d in judge["defects"])
+                    ):
                         root = latest
                 for number in range(len(record["revisions"]) + 1, budget + 1):
                     if cancel.is_set():
                         raise InterruptedError("user_cancelled")
                     if judge["verdict"] == "pass" and number > 2:
                         break
-                    if number > 2 and not request["automatic_corrections"]:
+                    if judge["defects"] and not request["automatic_corrections"]:
                         break
                     remaining = request["max_time_s"] - (time.monotonic() - started)
                     if remaining < 120:
@@ -437,6 +550,7 @@ class GameStudioService:
                     controller_root = folder / f"controller-{number}"
                     if controller_root.exists():
                         controller_root.rename(folder / f"incomplete-controller-{number}-{uuid4().hex[:8]}")
+                    self._budgets[job_id].consume("asset_revision", budget)
                     self._event(record, "qwen_artistic_plan", iteration=number)
                     instruction = request["description"] + ". Style réaliste, matériaux PBR. "
                     instruction += "Niveau demandé: " + request["quality"] + ". "
@@ -447,16 +561,19 @@ class GameStudioService:
                     correction_target = None
                     correction_reference = None
                     repair_target = None
-                    if (request["automatic_corrections"] and judge["defects"]
-                            and all(d["id"] == "paired_component_alignment" for d in judge["defects"])):
+                    if (
+                        request["automatic_corrections"]
+                        and judge["defects"]
+                        and all(d["id"] == "paired_component_alignment" for d in judge["defects"])
+                    ):
                         targets = {d["object"] for d in judge["defects"]}
                         prior_passes = [r for r in record["revisions"] if r["verdict"] == "pass"]
                         if len(targets) == 1 and prior_passes:
                             correction_target = targets.pop()
                             verified_root = folder / f"revision-{prior_passes[-1]['number']:02d}"
-                            correction_reference = compact_hierarchy(
-                                verified_root / "hierarchy.json"
-                            )[correction_target]["location_m"]
+                            correction_reference = compact_hierarchy(verified_root / "hierarchy.json")[
+                                correction_target
+                            ]["location_m"]
                             instruction = (
                                 "Correct ONLY " + correction_target + " height according to the judge. "
                                 "Use EXACTLY one set_location and no other artistic operation. "
@@ -465,22 +582,28 @@ class GameStudioService:
                                 + json.dumps(correction_reference)
                                 + ". Preserve all other objects and materials."
                             )
-                    if (request["automatic_corrections"] and judge["defects"]
-                            and all(d["id"] == "invalid_geometry" for d in judge["defects"])):
+                    if (
+                        request["automatic_corrections"]
+                        and judge["defects"]
+                        and all(d["id"] == "invalid_geometry" for d in judge["defects"])
+                    ):
                         targets = {d["object"] for d in judge["defects"]}
                         if len(targets) == 1:
                             repair_target = targets.pop()
                             instruction = (
-                                "Correct ONLY the measured degenerate geometry of " + repair_target
+                                "Correct ONLY the measured degenerate geometry of "
+                                + repair_target
                                 + ". Use EXACTLY one repair_degenerate_topology operation on that object, "
                                 "between inspect_scene and save_revision_and_render. "
                                 "Do not edit materials or any other mesh."
                             )
                     plan_args = {
-                        "family": family, "instruction": instruction,
+                        "family": family,
+                        "instruction": instruction,
                         "hierarchy": compact_hierarchy(root / "hierarchy.json"),
-                        "feedback": judge if request["judges_all_tasks"] or correction_target
-                        or repair_target else None,
+                        "feedback": judge
+                        if request["judges_all_tasks"] or correction_target or repair_target
+                        else None,
                         "output": folder / f"controller-{number}/plan.json",
                         "protected_topology": ("chassis",) if family == "vehicle" else (),
                         "timeout_s": min(300, max(1, int(remaining - 60))),
@@ -493,8 +616,16 @@ class GameStudioService:
                         )
                     elif repair_target is not None:
                         plan_args["plan_validator"] = partial(
-                            _validate_topology_repair, target=repair_target,
+                            _validate_topology_repair,
+                            target=repair_target,
                         )
+                    if (
+                        request["automatic_corrections"]
+                        and judge["defects"]
+                        and all(defect["id"] == "requested_paint_channels" for defect in judge["defects"])
+                    ):
+                        material = judge["defects"][0]["material"]
+                        plan_args["plan_validator"] = partial(_validate_paint_repair, material=material)
                     try:
                         if request.get("resolved_controller_model", "pinned_7b") == "apex_native":
                             endpoint = native_coder_endpoint()
@@ -509,7 +640,8 @@ class GameStudioService:
                             }
                         else:
                             session = CoderSession(
-                                coder_manifest(), folder / f"controller-{number}",
+                                coder_manifest(),
+                                folder / f"controller-{number}",
                                 compute_backend=request.get("compute_backend", "cpu"),
                             )
                             with self._lock:
@@ -517,7 +649,9 @@ class GameStudioService:
                                 if active:
                                     self._active[job_id] = (active[0], active[1], session)
                             try:
-                                with session:
+                                with cancellable_session(
+                                    session, cancel, max_rss_mib=request["max_rss_mib"]
+                                ):
                                     plan = propose_plan(session.endpoint, **plan_args)
                                     session.sample_memory()
                             finally:
@@ -528,18 +662,22 @@ class GameStudioService:
                             lifecycle = session.facts
                     except (ValueError, TimeoutError, TimeoutExceeded) as exc:
                         for path in sorted(controller_root.glob("*.json")):
-                            item = self.artifacts.put(
-                                path.read_bytes(), content_type="application/json"
+                            item = self.artifacts.put(path.read_bytes(), content_type="application/json")
+                            record.setdefault("controller_attempts", []).append(
+                                {
+                                    "name": f"controller-{number}/{path.name}",
+                                    "hash": item.content_hash,
+                                    "content_type": "application/json",
+                                    "role": "rejected_controller_plan",
+                                    "bytes": path.stat().st_size,
+                                }
                             )
-                            record.setdefault("controller_attempts", []).append({
-                                "name": f"controller-{number}/{path.name}",
-                                "hash": item.content_hash,
-                                "content_type": "application/json",
-                                "role": "rejected_controller_plan",
-                                "bytes": path.stat().st_size,
-                            })
-                        self._event(record, "controller_plan_rejected", iteration=number,
-                                    reason=f"{type(exc).__name__}: {exc}")
+                        self._event(
+                            record,
+                            "controller_plan_rejected",
+                            iteration=number,
+                            reason=f"{type(exc).__name__}: {exc}",
+                        )
                         if repair_target is None or cancel.is_set():
                             record["limitations"].append(
                                 "The local controller could not produce a permitted artistic plan. "
@@ -549,20 +687,30 @@ class GameStudioService:
                         # Measured invalid geometry has one trusted, target-scoped
                         # catalog repair. Keep the rejected model traces and label
                         # this recovery as deterministic, never as a Qwen plan.
-                        plan = {"family": family, "operations": [
-                            {"op": "inspect_scene", "target": "scene", "params": {}},
-                            {"op": "repair_degenerate_topology", "target": repair_target, "params": {}},
-                            {"op": "save_revision_and_render", "target": "scene", "params": {}},
-                        ]}
+                        plan = {
+                            "family": family,
+                            "operations": [
+                                {"op": "inspect_scene", "target": "scene", "params": {}},
+                                {"op": "repair_degenerate_topology", "target": repair_target, "params": {}},
+                                {"op": "save_revision_and_render", "target": "scene", "params": {}},
+                            ],
+                        }
                         _validate_topology_repair(plan, target=repair_target)
                         controller_root.mkdir(parents=True, exist_ok=True)
                         (controller_root / "deterministic-repair.json").write_text(
                             json.dumps({"source": "measured_invalid_geometry", "plan": plan}, indent=2)
                         )
-                        lifecycle = {"model": None, "strategy": "deterministic_catalog_repair",
-                                     "rejected_controller": f"{type(exc).__name__}: {exc}"}
-                        self._event(record, "deterministic_topology_recovery", iteration=number,
-                                    target=repair_target)
+                        lifecycle = {
+                            "model": None,
+                            "strategy": "deterministic_catalog_repair",
+                            "rejected_controller": f"{type(exc).__name__}: {exc}",
+                        }
+                        self._event(
+                            record,
+                            "deterministic_topology_recovery",
+                            iteration=number,
+                            target=repair_target,
+                        )
                     (folder / f"controller-{number}/lifecycle.json").write_text(
                         json.dumps(lifecycle, indent=2)
                     )
@@ -582,9 +730,14 @@ class GameStudioService:
                     if execution.status is not ExecutionStatus.SUCCESS:
                         raise RuntimeError("blender_revision_failed:" + str(execution.error_detail))
                     self._event(record, "mandatory_integrity_judge", iteration=number)
-                    next_judge = judge_revision(
-                        next_root, family, criteria, benchmark,
-                        calibration=calibration, cancel_event=cancel,
+                    next_judge = self._judge(
+                        next_root,
+                        family,
+                        criteria,
+                        benchmark,
+                        request=request,
+                        calibration=calibration,
+                        cancel_event=cancel,
                     )
                     self._archive(next_root, record, next_judge)
                     if number > 2 and compare_studio_defects(judge["defects"], next_judge["defects"]):
@@ -595,8 +748,9 @@ class GameStudioService:
                     else:
                         # Keep the last verified parent. The failed version
                         # remains immutable and visible for the next judge.
-                        self._event(record, "revision_rejected", iteration=number,
-                                    defects=next_judge["defects"])
+                        self._event(
+                            record, "revision_rejected", iteration=number, defects=next_judge["defects"]
+                        )
                         decision = decide(
                             FailureCategory.INCORRECT_SOLUTION,
                             attempt_number=number,
@@ -606,9 +760,9 @@ class GameStudioService:
                         self._event(record, "recovery_decided", **decision.to_dict())
                         if decision.action is not RecoveryAction.RETRY:
                             break
-                        if (next_judge["defects"] and all(
+                        if next_judge["defects"] and all(
                             d["id"] == "paired_component_alignment" for d in next_judge["defects"]
-                        )):
+                        ):
                             root = next_root
                         judge = next_judge
                 if cancel.is_set():
@@ -616,7 +770,10 @@ class GameStudioService:
             passing = [r for r in record["revisions"] if r["verdict"] == "pass"]
             if not passing:
                 raise RuntimeError("no_revision_passed_mandatory_technical_judge")
-            record["selected_revision_number"] = passing[-1]["number"]
+            record["selected_revision_number"] = passing[0]["number"]
+            record["selection_reason"] = (
+                "Earliest technical PASS retained on tied defects; aesthetic improvement is unverified"
+            )
             if record["revisions"][-1]["verdict"] != "pass":
                 record["limitations"].append(
                     "The latest artistic revision failed technical checks; an earlier PASS is selected."

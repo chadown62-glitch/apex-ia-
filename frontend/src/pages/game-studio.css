@@ -1,8 +1,8 @@
-.game-studio-page { display: grid; gap: 1.25rem; max-width: 1200px; padding: 1.5rem; margin: auto; }
+.game-studio-page { color: var(--text); display: grid; gap: 1.25rem; max-width: 1200px; padding: 1.5rem; margin: auto; }
 .game-studio-page header h1 { margin-bottom: .25rem; }
 .game-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .game-form label { display: grid; gap: .35rem; }
-.game-form select, .game-form input, .game-form textarea { width: 100%; padding: .55rem; color: inherit; background: transparent; border: 1px solid currentColor; border-radius: .4rem; }
+.game-form select, .game-form input, .game-form textarea { width: 100%; padding: .55rem; color: inherit; background: var(--bg-elevated); border: 1px solid var(--border-strong); border-radius: .4rem; }
 .game-form__wide { grid-column: 1 / -1; }
 .game-form .game-check { display: flex; align-items: center; gap: .5rem; }
 .game-form .game-check input { width: auto; }
@@ -18,3 +18,6 @@
 .game-renders img { width: 100%; height: auto; border-radius: .35rem; }
 .game-mission pre { max-height: 350px; overflow: auto; }
 @media (max-width: 700px) { .game-form, .game-renders { grid-template-columns: 1fr; } .game-studio-page { padding: .75rem; } }
+
+.game-form select option { color: var(--text); background: var(--bg-panel); }
+.game-capabilities small { display: block; color: var(--text-muted); }

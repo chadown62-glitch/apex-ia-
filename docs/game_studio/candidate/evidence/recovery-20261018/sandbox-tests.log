@@ -1,0 +1,176 @@
+.................F.FFFFFFFFF.F.                                          [100%]
+=================================== FAILURES ===================================
+_ test_code_runs_in_the_sandbox_with_structured_output_and_never_touches_the_workspace _
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb298633620>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': 'f735137d9677a50b02bf2769c8b17f6744cf82fc8db049af4073ab498aa6fd8b'})]})
+
+    def test_code_runs_in_the_sandbox_with_structured_output_and_never_touches_the_workspace(ctx) -> None:
+        call(ctx, "fs.write", path="main.py", content=(
+            "import sys\nopen('created_in_sandbox.txt', 'w').write('x')\nprint('bonjour', sys.argv[1:])\n"
+            "sys.exit(3)\n"))
+        result = call(ctx, "code.run", path="main.py", args=["a; rm -rf /", "$(id)"])
+>       assert result.ok is True
+E       AssertionError: assert False is True
+E        +  where False = ToolResult(call_id='a0a2ea6a-e4d2-4685-bf8e-f3971b22e6da', tool='code.run', ok=False, output=None, error=ToolError(cod...t', 'workspace_id': 'ws-test', 'arguments_sha256': 'f735137d9677a50b02bf2769c8b17f6744cf82fc8db049af4073ab498aa6fd8b'}).ok
+
+tests/test_tool_engine.py:192: AssertionError
+____________________ test_timeout_is_enforced_and_reported _____________________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb29851cce0>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '350634e7114618f36b9682b025e614e799a81c7987c5962c82aea590f92552da'})]})
+
+    def test_timeout_is_enforced_and_reported(ctx) -> None:
+        call(ctx, "fs.write", path="slow.py", content="import time\nprint('start', flush=True)\ntime.sleep(60)\n")
+        result = call(ctx, "code.run", path="slow.py", timeout_s=2)
+>       assert result.error.code is ErrorCode.TIMEOUT and result.output["status"] == "timeout"
+E       assert (<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> is <ErrorCode.TIMEOUT: 'timeout'>)
+E        +  where <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> = ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée").code
+E        +    where ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée") = ToolResult(call_id='6725cd44-06e1-43bf-a20a-81e879beef3a', tool='code.run', ok=False, output=None, error=ToolError(cod...t', 'workspace_id': 'ws-test', 'arguments_sha256': '350634e7114618f36b9682b025e614e799a81c7987c5962c82aea590f92552da'}).error
+E        +  and   <ErrorCode.TIMEOUT: 'timeout'> = ErrorCode.TIMEOUT
+
+tests/test_tool_engine.py:209: AssertionError
+_____________________ test_resource_exhaustion_is_reported _____________________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb29851c0e0>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': 'c3b30159d3efe276227bfbef44095cb19696c563bf1734fcf7c17e46304439ba'})]})
+
+    def test_resource_exhaustion_is_reported(ctx) -> None:
+        call(ctx, "fs.write", path="hog.py", content="blocks = []\nwhile True:\n    blocks.append(bytearray(10_000_000))\n")
+        result = call(ctx, "code.run", path="hog.py")
+>       assert result.ok is False and result.error.code in (ErrorCode.RESOURCE_LIMIT, ErrorCode.TIMEOUT), result
+E       AssertionError: ToolResult(call_id='e70e151a-d5fd-4810-bee7-bf508a8bbce5', tool='code.run', ok=False, output=None, error=ToolError(cod...t', 'workspace_id': 'ws-test', 'arguments_sha256': 'c3b30159d3efe276227bfbef44095cb19696c563bf1734fcf7c17e46304439ba'})
+E       assert (False is False and <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> in (<ErrorCode.RESOURCE_LIMIT: 'resource_limit'>, <ErrorCode.TIMEOUT: 'timeout'>))
+E        +  where False = ToolResult(call_id='e70e151a-d5fd-4810-bee7-bf508a8bbce5', tool='code.run', ok=False, output=None, error=ToolError(cod...t', 'workspace_id': 'ws-test', 'arguments_sha256': 'c3b30159d3efe276227bfbef44095cb19696c563bf1734fcf7c17e46304439ba'}).ok
+E        +  and   <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> = ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée").code
+E        +    where ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée") = ToolResult(call_id='e70e151a-d5fd-4810-bee7-bf508a8bbce5', tool='code.run', ok=False, output=None, error=ToolError(cod...t', 'workspace_id': 'ws-test', 'arguments_sha256': 'c3b30159d3efe276227bfbef44095cb19696c563bf1734fcf7c17e46304439ba'}).error
+
+tests/test_tool_engine.py:216: AssertionError
+__________________ test_huge_output_is_truncated_and_flagged ___________________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb298346150>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '98344265e763efd9ca61788d24605b3ecee8be037ecff496ee28e6dfa7b0e83f'})]})
+
+    def test_huge_output_is_truncated_and_flagged(ctx) -> None:
+        call(ctx, "fs.write", path="loud.py", content="print('x' * 5_000_000)\nprint('FIN')\n")
+        out = call(ctx, "code.run", path="loud.py").output
+>       assert out["stdout_truncated"] is True and len(out["stdout"]) <= 20_000 and out["stdout"].rstrip().endswith("FIN")
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_tool_engine.py:226: TypeError
+____________________ test_no_process_survives_the_execution ____________________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb29851cb60>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': 'af355d7f4b3c459ccdd5daba91d72413c7236fe45a8afb62c76e0b7a703e401d'})]})
+
+    def test_no_process_survives_the_execution(ctx) -> None:
+        marker = f"apex_persist_{uuid.uuid4().hex[:8]}"
+        call(ctx, "fs.write", path="fork.py", content=(
+            "import subprocess, sys\n"
+            f"subprocess.Popen(['sleep', '300', '{marker}'] if False else ['python3', '-c', 'import time; time.sleep(300)', '{marker}'])\n"
+            "print('parent exits')\n"))
+>       assert call(ctx, "code.run", path="fork.py").output["exit_code"] == 0
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_tool_engine.py:235: TypeError
+_____________________________ test_network_is_cut ______________________________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb2983606b0>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '5a8a72c6379d943fa08a80b7da2f4c08a429ee69f49965d9f40a7378cdae3bf5'})]})
+
+    def test_network_is_cut(ctx) -> None:
+        call(ctx, "fs.write", path="net.py", content=(
+            "import socket\ntry:\n    socket.create_connection(('1.1.1.1', 80), timeout=3)\n    print('CONNECTED')\n"
+            "except OSError as exc:\n    print('BLOCKED', type(exc).__name__)\n"))
+        out = call(ctx, "code.run", path="net.py").output
+>       assert "BLOCKED" in out["stdout"] and "CONNECTED" not in out["stdout"]
+                            ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_tool_engine.py:245: TypeError
+____ test_the_apex_repository_and_secrets_are_not_readable_from_the_sandbox ____
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb2983f7830>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '94f6571dbfbeeb8196abd3b20a06e180b22cbe0a434cf2efe6ba90aedc17171b'})]})
+
+    def test_the_apex_repository_and_secrets_are_not_readable_from_the_sandbox(ctx) -> None:
+        repo_config = Path(__file__).resolve().parents[1] / "config.yaml"
+        call(ctx, "fs.write", path="peek.py", content=(
+            f"try:\n    print(open({str(repo_config)!r}).read()[:20])\nexcept OSError as exc:\n"
+            "    print('DENIED', type(exc).__name__)\nimport os\nprint('ENV', sorted(k for k in os.environ if 'PASS' in k))\n"))
+        out = call(ctx, "code.run", path="peek.py").output
+>       assert "DENIED" in out["stdout"] and "ENV []" in out["stdout"]
+                           ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_tool_engine.py:254: TypeError
+___________ test_the_test_runner_reports_failures_with_ids_and_files ___________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb2984181a0>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '165c23b54807600f41258684ae86545704017d08b1a9ea9aab039aa30622c398'})]})
+
+    def test_the_test_runner_reports_failures_with_ids_and_files(ctx) -> None:
+        _project(ctx, "    def test_add(self):\n        self.assertEqual(add(1, 2), 3)\n"
+                      "    def test_zero(self):\n        self.assertEqual(add(0, 0), 0)\n")
+        out = call(ctx, "tests.run", start_dir="tests").output
+>       assert out["status"] == "failed" and out["tests_run"] == 2 and out["failures"] == 1
+               ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_tool_engine.py:270: TypeError
+_______________ test_the_test_runner_reports_success_after_a_fix _______________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb298a37650>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '165c23b54807600f41258684ae86545704017d08b1a9ea9aab039aa30622c398'})]})
+
+    def test_the_test_runner_reports_success_after_a_fix(ctx) -> None:
+        _project(ctx, "    def test_add(self):\n        self.assertEqual(add(1, 2), 3)\n")
+        call(ctx, "fs.write", path="calc.py", content="def add(a, b):\n    return a + b\n")
+        out = call(ctx, "tests.run", start_dir="tests").output
+>       assert out["status"] == "passed" and out["tests_run"] == 1 and out["failing_tests"] == []
+               ^^^^^^^^^^^^^
+E       TypeError: 'NoneType' object is not subscriptable
+
+tests/test_tool_engine.py:279: TypeError
+_____ test_pytest_absent_from_the_sandbox_is_an_explicit_unavailable_error _____
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb2983dadb0>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': '7affe50a093abb1313150623a3dccac49098ba2ea9a6a5eaff37b19743b96e45'})]})
+
+    def test_pytest_absent_from_the_sandbox_is_an_explicit_unavailable_error(ctx) -> None:
+        probe = subprocess.run(["python3", "-c", "import pytest"], capture_output=True)
+        _project(ctx, "    def test_add(self):\n        pass\n")
+        result = call(ctx, "tests.run", framework="pytest", start_dir="tests")
+        if probe.returncode != 0:
+>           assert result.error.code is ErrorCode.UNAVAILABLE
+E           assert <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> is <ErrorCode.UNAVAILABLE: 'unavailable'>
+E            +  where <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> = ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée").code
+E            +    where ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée") = ToolResult(call_id='c93d9214-4f8e-4a16-8d4e-2a13b8eee7cc', tool='tests.run', ok=False, output=None, error=ToolError(co...t', 'workspace_id': 'ws-test', 'arguments_sha256': '7affe50a093abb1313150623a3dccac49098ba2ea9a6a5eaff37b19743b96e45'}).error
+E            +  and   <ErrorCode.UNAVAILABLE: 'unavailable'> = ErrorCode.UNAVAILABLE
+
+tests/test_tool_engine.py:287: AssertionError
+_____________ test_an_endless_output_stream_is_bounded_on_the_host _____________
+
+ctx = ToolContext(workspace=<apex.tools.workspace.Workspace object at 0x7fb2982968d0>, granted=frozenset({<Permission.GAME_S... 'workspace_id': 'ws-test', 'arguments_sha256': 'beb40fbc72a4b5f58121484780d2e31c72f3a481fe29974fc1e50dca6db9ad98'})]})
+
+    def test_an_endless_output_stream_is_bounded_on_the_host(ctx) -> None:
+        """Flux infini jusqu'au délai : l'hôte ne garde que début + fin (avant le 06/10/2026, `communicate()`
+        accumulait tout en mémoire)."""
+        import resource
+    
+        call(ctx, "fs.write", path="flood.py", content="import sys\nwhile True:\n    sys.stdout.write('y' * 100_000)\n")
+        before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        result = call(ctx, "code.run", path="flood.py", timeout_s=4)
+        grown_mb = (resource.getrusage(resource.RUSAGE_SELF).ru_maxrss - before) / 1024
+>       assert result.error.code is ErrorCode.TIMEOUT
+E       assert <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> is <ErrorCode.TIMEOUT: 'timeout'>
+E        +  where <ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'> = ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée").code
+E        +    where ToolError(code=<ErrorCode.SANDBOX_UNAVAILABLE: 'sandbox_unavailable'>, message="« exécution de mission en sandbox (Con...lation « un conteneur réellement démarré » ; seul « aucun conteneur créé » est disponible — fonctionnalité désactivée") = ToolResult(call_id='96db1b8b-c643-4036-a12a-5fba6112ab6e', tool='code.run', ok=False, output=None, error=ToolError(cod...t', 'workspace_id': 'ws-test', 'arguments_sha256': 'beb40fbc72a4b5f58121484780d2e31c72f3a481fe29974fc1e50dca6db9ad98'}).error
+E        +  and   <ErrorCode.TIMEOUT: 'timeout'> = ErrorCode.TIMEOUT
+
+tests/test_tool_engine.py:310: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_tool_engine.py::test_code_runs_in_the_sandbox_with_structured_output_and_never_touches_the_workspace
+FAILED tests/test_tool_engine.py::test_timeout_is_enforced_and_reported - ass...
+FAILED tests/test_tool_engine.py::test_resource_exhaustion_is_reported - Asse...
+FAILED tests/test_tool_engine.py::test_huge_output_is_truncated_and_flagged
+FAILED tests/test_tool_engine.py::test_no_process_survives_the_execution - Ty...
+FAILED tests/test_tool_engine.py::test_network_is_cut - TypeError: 'NoneType'...
+FAILED tests/test_tool_engine.py::test_the_apex_repository_and_secrets_are_not_readable_from_the_sandbox
+FAILED tests/test_tool_engine.py::test_the_test_runner_reports_failures_with_ids_and_files
+FAILED tests/test_tool_engine.py::test_the_test_runner_reports_success_after_a_fix
+FAILED tests/test_tool_engine.py::test_pytest_absent_from_the_sandbox_is_an_explicit_unavailable_error
+FAILED tests/test_tool_engine.py::test_an_endless_output_stream_is_bounded_on_the_host
+11 failed, 20 passed in 34.79s

@@ -1,0 +1,20 @@
+{
+  "reopened_in_second_blender_process": true,
+  "setting": "courtyard",
+  "source_mesh_counts": {
+    "building": 143,
+    "chair_left": 32,
+    "chair_right": 32
+  },
+  "camera": "Garage camera",
+  "named_lights": [
+    "Key daylight",
+    "Garage fill",
+    "Street bounce"
+  ],
+  "street_and_sidewalk_present": false,
+  "courtyard_present": true,
+  "paver_count": 90,
+  "road_objects": [],
+  "ground_context_verified": true
+}

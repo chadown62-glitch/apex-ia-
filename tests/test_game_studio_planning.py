@@ -77,7 +77,7 @@ def test_unavailable_asset_blocks_assembly_without_fallback():
 def test_unreal_handoff_from_model_is_labeled_blocked_and_never_executed():
     raw = {
         "steps": [
-            step("libraryFacade", "building"),
+            {**step("libraryFacade", "building"), "description": "Create a library facade"},
             step("unrealHandoffLibrary", "unsupported", ("libraryFacade",)),
         ],
         "unmet_requirements": [],
@@ -118,3 +118,49 @@ def test_car_body_and_wheels_cannot_be_misplanned_as_two_vehicles():
         "unmet_requirements": [],
     }
     assert validate_plan(two_car_plan, request=two_cars, capabilities=CAP)["fully_feasible"]
+
+
+def test_coverage_defect_is_returned_to_model_and_retry_is_bounded(tmp_path, monkeypatch):
+    import json
+    from dataclasses import dataclass
+    from types import SimpleNamespace
+
+    from apex.game_studio import planning
+
+    @dataclass
+    class Result:
+        text: str
+
+    bad = {"steps": [step("seat", "chair")], "unmet_requirements": []}
+    good = {
+        "steps": [
+            step("seat1", "chair"),
+            step("seat2", "chair"),
+            step("scene", "assemble", ("seat1", "seat2")),
+        ],
+        "unmet_requirements": [],
+    }
+    prompts = []
+
+    def generate(req):
+        prompts.append(req.prompt)
+        return Result(json.dumps(bad if len(prompts) == 1 else good))
+
+    monkeypatch.setattr(
+        planning, "get_default_provider", lambda endpoint: SimpleNamespace(generate=generate)
+    )
+    endpoint = SimpleNamespace(runtime="openai_compatible", url="http://127.0.0.1:9876")
+    req = {**REQ, "description": "Crée deux fauteuils dans une scène.", "automatic_corrections": True}
+    trace = tmp_path / "trace.json"
+    assert len(planning.generate_plan(endpoint, request=req, capabilities=CAP, output=trace)["steps"]) == 3
+    assert len(prompts) == 2 and "quantity_mismatch" in prompts[1]
+    assert "requirement_coverage_failed" in json.loads(trace.read_text())["attempts"][0]["rejection"]
+    prompts.clear()
+    with pytest.raises(ValueError, match="requirement_coverage_failed"):
+        planning.generate_plan(
+            endpoint,
+            request={**req, "automatic_corrections": False},
+            capabilities=CAP,
+            output=tmp_path / "disabled.json",
+        )
+    assert len(prompts) == 1

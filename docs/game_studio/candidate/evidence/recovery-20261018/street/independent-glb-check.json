@@ -1,0 +1,16 @@
+{
+  "setting": "street",
+  "road_objects": [
+    "street",
+    "street_marking",
+    "street_marking.001",
+    "street_marking.002"
+  ],
+  "courtyard_floor_present": false,
+  "views": {
+    "rear_three_quarter.png": "aeff4523af49d353a601f2e7e2a058da6d8ef025ff073197818ff26d9bab3037",
+    "side.png": "95d477833e9510d47fe694a17076aca16712081709abc90779162fc56806e8c3",
+    "front_three_quarter.png": "630d7bd66e6fb41785e0187791801dc7ce991ccc3b07116b42d5f286c532b4ef",
+    "top.png": "517f88eacfd305c4ccfca9f3816de9b4f567c5d6f52f8db50d1e192e66d90efb"
+  }
+}

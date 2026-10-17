@@ -1,0 +1,32 @@
+[
+  {
+    "key": "building",
+    "path": "/workspace/apex-game-studio-candidate/docs/game_studio/mission23/evidence/assets/building/asset.glb",
+    "offset_m": [
+      0,
+      3.2,
+      0
+    ],
+    "sha256": "b0adadd5438d8ac502b8869efa9bc5e8175ae2f5ca0b3355a9f19ce23cc04707"
+  },
+  {
+    "key": "chair_left",
+    "path": "/workspace/apex-game-studio-candidate/docs/game_studio/mission23/evidence/assets/chair/asset.glb",
+    "offset_m": [
+      -2,
+      -1,
+      0
+    ],
+    "sha256": "2d2c4a12a14a228773a2ec4285cf7ea7f26d6a454279ebde8cdf0b2086d3d543"
+  },
+  {
+    "key": "chair_right",
+    "path": "/workspace/apex-game-studio-candidate/docs/game_studio/mission23/evidence/assets/chair/asset.glb",
+    "offset_m": [
+      2,
+      -1,
+      0
+    ],
+    "sha256": "2d2c4a12a14a228773a2ec4285cf7ea7f26d6a454279ebde8cdf0b2086d3d543"
+  }
+]

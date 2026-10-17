@@ -1,0 +1,58 @@
+[
+  {
+    "base": "agent/codex/20-game-studio-multi-agent",
+    "base_sha": "c0a85919bba6bcf724c9caa0a2b984ac4c535369",
+    "head": "agent/codex/23-game-studio-planning",
+    "head_sha": "10bd282c4c8bfaff39ec1ffb5b2e84d2397bc16c",
+    "number": 24
+  },
+  {
+    "base": "agent/codex/18-game-studio-integration",
+    "base_sha": "db58f30b6cbef86858582f368f76a7e2533a2bac",
+    "head": "agent/codex/20-game-studio-multi-agent",
+    "head_sha": "c0a85919bba6bcf724c9caa0a2b984ac4c535369",
+    "number": 22
+  },
+  {
+    "base": "apex/integration",
+    "base_sha": "bd2edd285ad2f796991ce5460715cb4ee9f3f06c",
+    "head": "agent/codex/18-game-studio-integration",
+    "head_sha": "db58f30b6cbef86858582f368f76a7e2533a2bac",
+    "number": 19
+  },
+  {
+    "base": "agent/codex/9-game-graphics",
+    "base_sha": "b2334f4c26a7a56f7f6d72453cbf25a7b14eaaea",
+    "head": "agent/codex/14-neural-3d",
+    "head_sha": "a990ebfbaa0bcfb22c02e8a61070abacf6fe89ff",
+    "number": 17
+  },
+  {
+    "base": "agent/codex/9-game-graphics",
+    "base_sha": "b2334f4c26a7a56f7f6d72453cbf25a7b14eaaea",
+    "head": "agent/codex/15-graphics-ue",
+    "head_sha": "04af232cd4b372ce178b04d3dd9590b1d97ee110",
+    "number": 16
+  },
+  {
+    "base": "apex/integration",
+    "base_sha": "bd2edd285ad2f796991ce5460715cb4ee9f3f06c",
+    "head": "agent/codex/10-game-engineer",
+    "head_sha": "3fb175e71891529a91538fb0098a988dc778d7f5",
+    "number": 13
+  },
+  {
+    "base": "apex/integration",
+    "base_sha": "bd2edd285ad2f796991ce5460715cb4ee9f3f06c",
+    "head": "agent/codex/9-game-graphics",
+    "head_sha": "b2334f4c26a7a56f7f6d72453cbf25a7b14eaaea",
+    "number": 12
+  },
+  {
+    "base": "apex/integration",
+    "base_sha": "bd2edd285ad2f796991ce5460715cb4ee9f3f06c",
+    "head": "agent/codex/8-project-orchestrator",
+    "head_sha": "e475a8aad0a33f97eeec81cc8bfda43dd0d2d125",
+    "number": 11
+  }
+]

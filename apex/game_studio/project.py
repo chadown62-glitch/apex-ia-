@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import threading
 import time
 from datetime import UTC, datetime
@@ -28,6 +27,17 @@ from apex.policy.model import Subject
 from apex.sandbox.model import ExecutionStatus
 
 from .capabilities import coder_manifest, probe
+from .lifecycle import (
+    RunBudget,
+    atomic_json,
+    busy,
+    cancellable_session,
+    claim,
+    cleanup_owned,
+    remaining,
+    request_cancel,
+    snapshot,
+)
 from .planning import ASSETS, generate_plan
 from .service import GameStudioService
 from .vehicle_handoff import prepare_bundle
@@ -62,6 +72,7 @@ class GameStudioProjectService:
         refuse_personal_project(self.root)
         self.root.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
+        self._budgets: dict[str, RunBudget] = {}
         self._active: dict[str, tuple[threading.Thread, threading.Event]] = {}
 
     def _path(self, project_id: str) -> Path:
@@ -76,9 +87,7 @@ class GameStudioProjectService:
 
     def _save(self, receipt: dict[str, Any]) -> None:
         path = self._path(receipt["id"])
-        temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
-        os.replace(temporary, path)
+        atomic_json(path, receipt)
 
     @staticmethod
     def _event(kind: str, **facts: Any) -> dict[str, Any]:
@@ -104,9 +113,15 @@ class GameStudioProjectService:
             "failed": "failed",
             "cancelled": "cancelled",
         }.get(state, state)
-        if state == "running" and receipt["id"] not in self._active:
+        if state == "running" and not busy(self.root / receipt["id"]):
             status = "interrupted"
-        return {**receipt, "mission_state": state, "status": status, "steps": steps}
+        return {
+            **receipt,
+            "mission_state": state,
+            "status": status,
+            "steps": steps,
+            "budget": snapshot(self.root / receipt["id"]),
+        }
 
     def list(self) -> list[dict[str, Any]]:
         with self._lock:
@@ -149,6 +164,8 @@ class GameStudioProjectService:
             raise RuntimeError("blender_worker_or_local_coder_missing")
         if request.get("compute_backend", "auto") != "cpu" and not capabilities["cuda"]["available"]:
             raise RuntimeError("cuda_unavailable_choose_cpu_explicitly")
+        if request.get("compute_backend", "auto") != "cpu":
+            raise RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff")
         mission = self.missions.create(
             title="Game Studio — garage multi-assets",
             description=request["description"],
@@ -199,9 +216,17 @@ class GameStudioProjectService:
         from apex.game_graphics.contract import QualityCriteria
 
         QualityCriteria.for_level(request["quality"], **(request.get("criteria") or {}))
+        if request.get("controller_model") == "apex_native":
+            raise RuntimeError("dynamic_planner_requires_pinned_7b_until_native_handoff_is_qualified")
+        request = dict(request)
+        for field in ("creation_other", "style_other"):
+            if request.get(field):
+                request["description"] += "\n" + field + ": " + request[field]
         available = probe()
         if request.get("compute_backend", "auto") != "cpu" and not available["cuda"]["available"]:
             raise RuntimeError("cuda_unavailable_choose_cpu_explicitly")
+        if request.get("compute_backend", "auto") != "cpu":
+            raise RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff")
         if not coder_manifest().is_file():
             raise RuntimeError("local_planner_model_missing")
         if not 1 <= len(references) <= 4 and references:
@@ -241,7 +266,7 @@ class GameStudioProjectService:
             "assembly_history": [],
             "delivery_status": "planning",
             "limitations": [
-                "Visual references are preserved but not interpreted by this planner.",
+                "Reference files are preserved but their content is not interpreted by this planner.",
                 "Unreal and CUDA remain unqualified on this host.",
             ],
         }
@@ -250,19 +275,32 @@ class GameStudioProjectService:
             self._start(receipt["id"])
         return self.get(receipt["id"])
 
-    def _start(self, project_id: str) -> None:
+    def _start(self, project_id: str, lease=None) -> None:
+        folder = self.root / project_id
+        lease = lease or claim(folder)
+        cleanup_owned(folder)
+        (folder / "cancel.request").unlink(missing_ok=True)
         cancel = threading.Event()
-        worker = threading.Thread(
-            target=self._run,
-            args=(project_id, cancel),
-            daemon=True,
-            name="apex-game-project-" + project_id[:8],
-        )
+        budget = RunBudget(folder, self._read(project_id)["request"]["max_time_s"], cancel)
+        self._budgets[project_id] = budget
+
+        def run():
+            try:
+                with budget:
+                    self._run(project_id, cancel)
+            finally:
+                current = self.missions.get(self._read(project_id)["mission_id"])
+                if cancel.is_set() and current and current.state.value in ("queued", "running"):
+                    self.missions.cancel(current.id, requested_by=Subject.HUMAN)
+                self._budgets.pop(project_id, None)
+                lease.__exit__(None, None, None)
+
+        worker = threading.Thread(target=run, daemon=True, name="apex-game-project-" + project_id[:8])
         self._active[project_id] = (worker, cancel)
         worker.start()
 
     def _run(self, project_id: str, cancel: threading.Event) -> None:
-        started = time.monotonic()
+        started = time.monotonic() - self._budgets[project_id].used
         with self._lock:
             initial = self._read(project_id)
         if initial["recipe"] == "dynamic-v1":
@@ -332,6 +370,8 @@ class GameStudioProjectService:
             self._assemble(project_id, receipt, cancel, started)
             if cancel.is_set():
                 return
+            if cancel.is_set():
+                raise InterruptedError("mission_cancelled_or_budget_exhausted")
             self.missions.mark_review(
                 mission_id,
                 result=json.dumps(
@@ -351,11 +391,17 @@ class GameStudioProjectService:
         except Exception as exc:
             current = self.missions.get(mission_id)
             if current and current.state.value == "running":
-                self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
+                if cancel.is_set():
+                    self.missions.cancel(mission_id, requested_by=Subject.HUMAN)
+                else:
+                    self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
             with self._lock:
                 receipt = self._read(project_id)
                 receipt["events"].append(
-                    self._event("project_failed", reason=f"{type(exc).__name__}: {exc}"[:500])
+                    self._event(
+                        "project_cancelled" if cancel.is_set() else "project_failed",
+                        reason=f"{type(exc).__name__}: {exc}"[:500],
+                    )
                 )
                 self._save(receipt)
         finally:
@@ -393,13 +439,16 @@ class GameStudioProjectService:
                             folder / "planner-model",
                             compute_backend=request["compute_backend"],
                         )
-                        with session:
+                        with cancellable_session(session, cancel, max_rss_mib=request["max_rss_mib"]):
                             plan = generate_plan(
                                 session.endpoint,
                                 request={**request, "reference_count": len(receipt["references"])},
                                 capabilities=probe(),
                                 output=trace_file,
-                                timeout_s=min(240, request["max_time_s"] // 3),
+                                timeout_s=min(
+                                    240, int(request["max_time_s"] - (time.monotonic() - started))
+                                ),
+                                reserve_attempt=self._budgets[project_id].consume,
                             )
                             session.sample_memory()
                         model_facts = session.facts
@@ -441,7 +490,11 @@ class GameStudioProjectService:
                 for index, step in enumerate(receipt["steps"]):
                     if cancel.is_set():
                         return
-                    if step["kind"] not in ASSETS or not step["status"].startswith("available"):
+                    if step["kind"] not in ASSETS or step["status"] not in (
+                        "review",
+                        "available_validated",
+                        "available_unqualified",
+                    ):
                         continue
                     if step["job_id"]:
                         child = self.graphics.get(step["job_id"])
@@ -462,6 +515,7 @@ class GameStudioProjectService:
                                 1200, max(120, int(remaining / max(1, len(receipt["steps"]) - index)))
                             ),
                         }
+                        self._budgets[project_id].consume("child:" + step["key"], 1)
                         child = self.graphics.create(child_request, [])
                         step["job_id"] = child["id"]
                         receipt["events"].append(
@@ -518,6 +572,8 @@ class GameStudioProjectService:
                     )
                     else "technical_review"
                 )
+            if cancel.is_set():
+                raise InterruptedError("mission_cancelled_or_budget_exhausted")
             self.missions.mark_review(
                 mission_id,
                 result=json.dumps(
@@ -538,7 +594,10 @@ class GameStudioProjectService:
         except Exception as exc:
             current = self.missions.get(mission_id)
             if current and current.state.value == "running":
-                self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
+                if cancel.is_set():
+                    self.missions.cancel(mission_id, requested_by=Subject.HUMAN)
+                else:
+                    self.missions.mark_failed(mission_id, error=f"{type(exc).__name__}: {exc}"[:500])
             with self._lock:
                 receipt = self._read(project_id)
                 trace_file = folder / "planner-trace.json"
@@ -554,7 +613,10 @@ class GameStudioProjectService:
                         "bytes": trace_file.stat().st_size,
                     }
                 receipt["events"].append(
-                    self._event("project_failed", reason=f"{type(exc).__name__}: {exc}"[:500])
+                    self._event(
+                        "project_cancelled" if cancel.is_set() else "project_failed",
+                        reason=f"{type(exc).__name__}: {exc}"[:500],
+                    )
                 )
                 self._save(receipt)
         finally:
@@ -578,6 +640,9 @@ class GameStudioProjectService:
         selected = child["revisions"][child["selected_revision_number"] - 1]
         revision = self.graphics._folder(child["id"]) / f"revision-{child['selected_revision_number']:02d}"
         glb_item = next(a for a in selected["artifacts"] if a["name"] == "asset.glb")
+        self._budgets[project_id].consume(
+            "handoff:" + step["key"], self._read(project_id)["request"]["max_attempts"]
+        )
         before = prepare_bundle(revision, folder / "before", source_hash=glb_item["hash"])
 
         def archived(bundle: Path) -> list[dict[str, Any]]:
@@ -687,7 +752,12 @@ class GameStudioProjectService:
     def _assemble(
         self, project_id: str, receipt: dict[str, Any], cancel: threading.Event, started: float
     ) -> None:
+        from apex.game_studio.requirements import scene_setting
+
+        setting = scene_setting(receipt["request"])
         if receipt.get("assembly"):
+            if receipt["assembly"].get("setting", "street") != setting:
+                raise RuntimeError("assembly_context_mismatch_previous_version_preserved")
             for item in receipt["assembly"]["artifacts"]:
                 self.artifact(project_id, item["hash"])
             return
@@ -719,6 +789,8 @@ class GameStudioProjectService:
             ):
                 selected_path = folder / "handoff" / step["key"] / "corrected" / "asset.glb"
                 data = selected_path.read_bytes()
+                if "sha256:" + hashlib.sha256(data).hexdigest() != step["handoff"]["selected_hash"]:
+                    raise RuntimeError("corrected_vehicle_artifact_integrity_failed")
                 glb = {**glb, "hash": "sha256:" + hashlib.sha256(data).hexdigest()}
             gltf = decode_glb(data)
             if step.get("kind") == "vehicle" or step["key"] == "vehicle":
@@ -767,8 +839,10 @@ class GameStudioProjectService:
                     str(inputs / "furniture.glb"),
                 ]
             )
+            arguments.extend(["--setting", setting])
             if dynamic:
                 (inputs / "assets.json").write_text(json.dumps(manifest_assets))
+            self._budgets[project_id].consume("assembly", receipt["request"]["max_attempts"])
             result = run_blender(
                 "assemble_garage.py",
                 arguments,
@@ -788,7 +862,7 @@ class GameStudioProjectService:
                 raise TimeoutError("project_time_budget_exhausted_before_reopen")
             reopened = run_blender(
                 "assemble_garage.py",
-                ["--verify", "--output", str(output)],
+                ["--verify", "--output", str(output), "--setting", setting],
                 folder / "assembly-reopen.log",
                 timeout_s=min(120, remaining),
                 rss_limit_mib=receipt["request"]["max_rss_mib"],
@@ -813,7 +887,8 @@ class GameStudioProjectService:
         if (
             len(report.get("named_lights", [])) != 3
             or not report.get("camera")
-            or not report.get("street_and_sidewalk_present")
+            or not report.get("ground_context_verified")
+            or report.get("setting") != setting
         ):
             raise RuntimeError("garage_reopen_environment_missing")
         decode_glb((output / "garage.glb").read_bytes())
@@ -933,6 +1008,7 @@ class GameStudioProjectService:
             current["assembly"] = {
                 "version": len(current.get("assembly_history", [])) + 1,
                 "verdict": "pass_technical",
+                "setting": setting,
                 "artifacts": files,
                 "source_mesh_counts": counts,
                 "source_artifacts": source_artifacts,
@@ -999,20 +1075,30 @@ class GameStudioProjectService:
     def cancel(self, project_id: str) -> dict[str, Any]:
         with self._lock:
             receipt = self._read(project_id)
+            request_cancel(self.root / project_id)
             active = self._active.get(project_id)
             if active:
                 active[1].set()
             for step in receipt["steps"]:
-                if step["job_id"]:
+                if step.get("job_id"):
                     child = self.graphics.get(step["job_id"])
                     if child["status"] in ("queued", "running"):
                         self.graphics.cancel(child["id"])
-            mission = self.missions.get(receipt["mission_id"])
-            if mission and mission.state.value in ("queued", "running"):
-                self.missions.cancel(mission.id, requested_by=Subject.HUMAN)
         return self.get(project_id)
 
     def resume(self, project_id: str) -> dict[str, Any]:
+        lease = claim(self.root / project_id)
+        try:
+            if not snapshot(self.root / project_id) and self._read(project_id).get("events"):
+                raise ValueError("legacy_budget_unknown_new_mission_required")
+            if remaining(self.root / project_id, self._read(project_id)["request"]["max_time_s"]) <= 0:
+                raise ValueError("cumulative_time_budget_exhausted")
+            return self._resume_owned(project_id, lease)
+        except BaseException:
+            lease.__exit__(None, None, None)
+            raise
+
+    def _resume_owned(self, project_id: str, lease) -> dict[str, Any]:
         with self._lock:
             receipt = self._read(project_id)
             if project_id in self._active:
@@ -1039,5 +1125,5 @@ class GameStudioProjectService:
             receipt["mission_history"].append(fresh.id)
             receipt["events"].append(self._event("resume", mission_id=fresh.id))
             self._save(receipt)
-            self._start(project_id)
+            self._start(project_id, lease)
         return self.get(project_id)

@@ -42,14 +42,13 @@ describe("Game Studio multi-asset project", () => {
     }) as unknown as typeof fetch;
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={client}><GameStudioPage /></QueryClientProvider>);
-    fireEvent.change(screen.getByLabelText("Type de création"), { target: { value: "environnement" } });
     fireEvent.change(screen.getByLabelText("Calcul du modèle"), { target: { value: "cpu" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer la mission APEX" }));
     await waitFor(() => expect(submitted).not.toBeNull());
-    expect(submitted).toMatchObject({ creation_type: "environnement", compute_backend: "cpu",
+    expect(submitted).toMatchObject({ creation_type: "vehicule", compute_backend: "cpu",
       judges_all_tasks: true, automatic_corrections: true });
     await waitFor(() => expect(screen.getByText("Dépendances : vehicle")).toBeInTheDocument());
-    expect(screen.getByText(/Scène de garage assemblée/)).toBeInTheDocument();
+    expect(screen.getByText(/Scène assemblée/)).toBeInTheDocument();
     expect(screen.getByText(/Game Engineer : blocked/)).toBeInTheDocument();
   });
 });
