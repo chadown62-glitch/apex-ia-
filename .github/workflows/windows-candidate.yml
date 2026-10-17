@@ -33,8 +33,8 @@ jobs:
     timeout-minutes: 240
     env:
       APEX_PANEL_START_TIMEOUT_S: "870"
-      PYTHONUTF8: "1"
-      PYTHONIOENCODING: utf-8
+      # Pas de PYTHONUTF8 pour tout le job : APEX (lancé par le Panel) en hériterait et ne tournerait plus comme sur
+      # le PC d'un utilisateur. Les scripts de test forcent eux-mêmes leur sortie en UTF-8.
     steps:
       - uses: actions/checkout@v4
         with:
@@ -50,6 +50,8 @@ jobs:
           python-version: "3.12"
       - name: Combined tree (merges local to this runner, nothing pushed)
         shell: bash
+        env:
+          PYTHONUTF8: "1"
         run: |
           order=$(python -c "import json; print(' '.join(json.load(open('setup/packaging/windows/ci/candidate-request.json', encoding='utf-8'))['order']))")
           set +e
@@ -76,6 +78,8 @@ jobs:
           echo "APEX_BUILD_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
       - name: Build the candidate installer from the combined tree (same script as the release)
         shell: bash
+        env:
+          PYTHONUTF8: "1"
         working-directory: ${{ env.TREE }}
         run: |
           command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }

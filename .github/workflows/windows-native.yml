@@ -100,11 +100,21 @@ jobs:
             $out | Out-File -Append -Encoding utf8 "$evidence\panel.log"
             $s = $null; try { $s = $out | ConvertFrom-Json } catch { }
             Write-Host "APEX.exe $action : code $($proc.ExitCode) ; $($s.headline) / $($s.cause)"
+            Note "APEX.exe $action (code $($proc.ExitCode))" "$($s.headline) / $($s.cause)`n$($s.guidance)"
             return $proc.ExitCode
           }
+          # Annotations : lisibles par l'API (check-runs/<id>/annotations), sans accès au journal du runner.
+          function Note([string]$title, [string]$text) {
+            $t = ($text -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A')
+            if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
+            Write-Host "::notice title=${title}::$t"
+          }
           function Assistant([string]$phase) {
-            python setup/packaging/windows/ci/assistant_e2e.py $phase --out $evidence --timeout 2400 | Out-Host
-            return $LASTEXITCODE
+            $lines = & python setup/packaging/windows/ci/assistant_e2e.py $phase --out $evidence --timeout 2400 | ForEach-Object { "$_" }
+            $code = $LASTEXITCODE
+            $lines | Out-Host
+            Note "Assistant $phase (code $code)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|VERDICT|BLOCKED|FAIL)' }) -join "`n")
+            return $code
           }
           if ((Panel '--prepare') -ne 0) { Write-Host 'BLOCKED : « Préparer APEX » a échoué (voir panel.log)'; exit 3 }
           $model = Panel '--install-model' 3600
@@ -118,7 +128,10 @@ jobs:
           $codes = @()
           $codes += Assistant 'run'
           Panel '--stop' 300 | Out-Null
-          if ((Panel '--start' 900) -gt 1) { Write-Host 'FAIL : APEX ne redémarre pas'; exit 1 }
+          if ((Panel '--start' 900) -gt 1) {
+            Note 'Redémarrage' ((Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 60) -join "`n")
+            Write-Host 'FAIL : APEX ne redémarre pas'; exit 1
+          }
           $codes += Assistant 'verify'
           Panel '--stop' 300 | Out-Null
           Copy-Item "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" "$evidence\launch.log" -ErrorAction SilentlyContinue
@@ -127,6 +140,7 @@ jobs:
           $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
           Write-Host "désinstallation : code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
           Write-Host "codes des phases (run, verify) : $($codes -join ', ')"
+          Note 'Codes' "modèle $model ; phases (run, verify) $($codes -join ', ') ; désinstallation $($u.ExitCode), base conservée $kept"
           if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
           if ($codes -contains 1) { exit 1 }
           if ($codes -contains 3 -or $model -ne 0) { exit 3 }
