@@ -1,0 +1,7 @@
+# Optional qualification candidate, CPython 3.12 Windows x64; explicit CPU only.
+# NOT installed by Prepare APEX and NOT a CUDA backend. Windows execution unqualified.
+# Regenerate with uv pip compile --python-platform x86_64-pc-windows-msvc --python-version 3.12
+# --only-binary :all: --generate-hashes --no-header --constraint requirements-windows.lock
+# requirements-planner-cpu-windows.in -o requirements-planner-cpu-windows.lock
+# Official upstream release; MIT; wheel SHA also verified against GitHub's asset digest.
+llama-cpp-python[server] @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36/llama_cpp_python-0.3.36-py3-none-win_amd64.whl#sha256=ae5e88a2cf464e5a2dde7c8898c2d5c71cc24d03cac6396bf7509456bde0b9fb

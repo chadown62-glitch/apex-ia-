@@ -164,6 +164,8 @@ class GameStudioProjectService:
             raise RuntimeError("blender_worker_or_local_coder_missing")
         if request.get("compute_backend", "auto") != "cpu" and not capabilities["cuda"]["available"]:
             raise RuntimeError("cuda_unavailable_choose_cpu_explicitly")
+        if request.get("compute_backend", "auto") != "cpu":
+            raise RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff")
         mission = self.missions.create(
             title="Game Studio — garage multi-assets",
             description=request["description"],
@@ -223,6 +225,8 @@ class GameStudioProjectService:
         available = probe()
         if request.get("compute_backend", "auto") != "cpu" and not available["cuda"]["available"]:
             raise RuntimeError("cuda_unavailable_choose_cpu_explicitly")
+        if request.get("compute_backend", "auto") != "cpu":
+            raise RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff")
         if not coder_manifest().is_file():
             raise RuntimeError("local_planner_model_missing")
         if not 1 <= len(references) <= 4 and references:
@@ -748,7 +752,12 @@ class GameStudioProjectService:
     def _assemble(
         self, project_id: str, receipt: dict[str, Any], cancel: threading.Event, started: float
     ) -> None:
+        from apex.game_studio.requirements import scene_setting
+
+        setting = scene_setting(receipt["request"])
         if receipt.get("assembly"):
+            if receipt["assembly"].get("setting", "street") != setting:
+                raise RuntimeError("assembly_context_mismatch_previous_version_preserved")
             for item in receipt["assembly"]["artifacts"]:
                 self.artifact(project_id, item["hash"])
             return
@@ -830,6 +839,7 @@ class GameStudioProjectService:
                     str(inputs / "furniture.glb"),
                 ]
             )
+            arguments.extend(["--setting", setting])
             if dynamic:
                 (inputs / "assets.json").write_text(json.dumps(manifest_assets))
             self._budgets[project_id].consume("assembly", receipt["request"]["max_attempts"])
@@ -852,7 +862,7 @@ class GameStudioProjectService:
                 raise TimeoutError("project_time_budget_exhausted_before_reopen")
             reopened = run_blender(
                 "assemble_garage.py",
-                ["--verify", "--output", str(output)],
+                ["--verify", "--output", str(output), "--setting", setting],
                 folder / "assembly-reopen.log",
                 timeout_s=min(120, remaining),
                 rss_limit_mib=receipt["request"]["max_rss_mib"],
@@ -877,7 +887,8 @@ class GameStudioProjectService:
         if (
             len(report.get("named_lights", [])) != 3
             or not report.get("camera")
-            or not report.get("street_and_sidewalk_present")
+            or not report.get("ground_context_verified")
+            or report.get("setting") != setting
         ):
             raise RuntimeError("garage_reopen_environment_missing")
         decode_glb((output / "garage.glb").read_bytes())
@@ -997,6 +1008,7 @@ class GameStudioProjectService:
             current["assembly"] = {
                 "version": len(current.get("assembly_history", [])) + 1,
                 "verdict": "pass_technical",
+                "setting": setting,
                 "artifacts": files,
                 "source_mesh_counts": counts,
                 "source_artifacts": source_artifacts,

@@ -108,10 +108,11 @@ def _assemble_common(src_root: Path, out_dir: Path) -> None:
     # Fixed trusted Blender/UE workers and the frozen judging contract are
     # runtime inputs.  Large proof bundles and model weights stay outside
     # the distribution; operators install weights explicitly.
-    worker_source = src_root / "scripts" / "game_graphics"
-    if worker_source.is_dir():
-        shutil.copytree(worker_source, out_dir / "scripts" / "game_graphics",
-                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    for worker in ("game_graphics", "game_engineer"):
+        worker_source = src_root / "scripts" / worker
+        if worker_source.is_dir():
+            shutil.copytree(worker_source, out_dir / "scripts" / worker,
+                            ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     benchmark = src_root / "docs/game_graphics/studio/benchmark-v1.json"
     if benchmark.is_file():
         target = out_dir / "docs/game_graphics/studio/benchmark-v1.json"

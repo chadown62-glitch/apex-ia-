@@ -260,25 +260,20 @@ class TestResearchViaGenericEngine(unittest.TestCase):
 
 
 class TestSecondSpecialtyHonestAbsence(unittest.TestCase):
-    """Lettre T du §21 — aucune deuxième spécialité RÉELLE n'existe sans
-    fabriquer un moteur artificiel (§ Phase 18 de la mission : « si aucune
-    n'est possible sans inventer une infrastructure artificielle, ne pas la
-    fabriquer, documenter précisément le blocage ») — `apex.specialties.
-    registry` n'autorise un `SpecialtyTaskProvider` réel QUE derrière une
-    spécialité `is_supported` (`STUB`/`IMPLEMENTED`), et seule `research`
-    l'est aujourd'hui (`AgentRuntime` n'a jamais été exercé de bout en bout
-    pour une autre)."""
+    """Only Research has a curriculum TaskProvider. Game Graphics executes
+    bounded creative missions, but does not claim an evolutionary clone engine.
+    """
 
     def test_no_second_specialty_task_provider_is_registered(self) -> None:
         from apex.specialties.registry import SPECIALTIES
         from apex.taskgen.registry import supported_specialty_ids
 
         self.assertEqual(supported_specialty_ids(), ("research",))
-        other_supported = [s for s in SPECIALTIES if s.is_supported and s.id != "research"]
-        self.assertEqual(
-            other_supported, [],
-            "une deuxième spécialité is_supported serait fabriquée sans moteur réel derrière",
-        )
+        creative = [s for s in SPECIALTIES if s.is_supported and s.id != "research"]
+        self.assertEqual([s.id for s in creative], ["game-graphics"])
+        self.assertEqual(creative[0].compatible_agent_types, ())
+        self.assertIn("game_studio.create", creative[0].tools)
+
 
 
 class TestLearningOrchestratorIntegration(unittest.TestCase):

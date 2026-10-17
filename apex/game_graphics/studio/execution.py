@@ -5,7 +5,6 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-import shutil
 import signal
 import subprocess
 import time
@@ -14,6 +13,7 @@ from pathlib import Path
 import psutil
 
 from apex.game_graphics.models import file_sha256
+from apex.game_graphics.software import discover_blender
 from apex.game_graphics.studio.contract import parse_plan
 from apex.obs.status import Measurement
 from apex.sandbox.model import ExecutionStatus, IsolationLevel
@@ -76,7 +76,7 @@ def run_blender(
 ):
     if script not in ("render_asset.py", "inspect_asset.py", "assemble_garage.py"):
         raise ValueError("untrusted_script")
-    executable = shutil.which("blender")
+    executable = discover_blender()["path"]
     if not executable:
         raise RuntimeError("blender_missing")
     log.parent.mkdir(parents=True, exist_ok=True)

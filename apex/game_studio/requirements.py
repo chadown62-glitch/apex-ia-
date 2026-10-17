@@ -264,3 +264,10 @@ def material_defects(
             }
         ]
     )
+
+
+def scene_setting(request: dict[str, Any]) -> str:
+    """Only two measured ground contexts; not general semantic interpretation."""
+    return (
+        "courtyard" if re.search(r"\b(?:cour|courtyard)\b", normalize(request["description"])) else "street"
+    )

@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
-import shutil
 from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
+
+from apex.game_graphics.software import discover_blender
 
 
 def coder_manifest() -> Path:
@@ -36,8 +37,11 @@ def native_coder_endpoint():
 
 def probe() -> dict[str, Any]:
     scripts = Path(__file__).resolve().parents[2] / "scripts/game_graphics/studio"
-    blender = shutil.which("blender")
-    python_dependencies = {name: find_spec(name) is not None for name in ("psutil", "numpy", "PIL")}
+    blender_discovery = discover_blender()
+    blender = blender_discovery["path"]
+    python_dependencies = {
+        name: find_spec(name) is not None for name in ("psutil", "numpy", "PIL", "jsonschema")
+    }
     script_ready = all(
         (scripts / name).is_file() for name in ("render_asset.py", "inspect_asset.py", "build_assets.py")
     )
@@ -119,6 +123,7 @@ def probe() -> dict[str, Any]:
             if ready
             else "blocked_dependency",
             "blender": blender,
+            "blender_discovery": blender_discovery,
             "workers_present": script_ready,
             "coder_manifest_present": manifest.is_file(),
             "llama_cpp_present": llama_available,
@@ -154,7 +159,8 @@ def probe() -> dict[str, Any]:
             "status": "available_unqualified" if cuda else "blocked_dependency",
             "available": cuda,
             "device_count": cuda_devices,
-            "reason": "No TripoSR CUDA performance or memory qualification yet",
+            "dispatch_qualified": False,
+            "reason": "Game Studio CUDA requires qualified brain quiescence and hardware evidence",
         },
         "neural_3d": {
             "status": "not_implemented" if cuda and neural_inputs_present else "blocked_dependency",

@@ -195,6 +195,8 @@ class GameStudioService:
             and not capabilities["cuda"]["available"]
         ):
             raise RuntimeError("cuda_unavailable_choose_cpu_explicitly")
+        if request.get("compute_backend", "auto") != "cpu":
+            raise RuntimeError("cuda_game_studio_requires_qualified_brain_quiescence_handoff")
         desired = request.get("controller_model", "auto")
         native = native_coder_endpoint()
         pinned = coder_manifest().is_file() and find_spec("llama_cpp") is not None

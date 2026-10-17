@@ -161,13 +161,26 @@ def build(args: argparse.Namespace) -> None:
             "building": import_asset("building", args.building, (0, 3.2, 0)),
             "furniture": import_asset("furniture", args.furniture, (3.3, -0.5, 0)),
         }
-    asphalt = material("PBR asphalt", (0.075, 0.08, 0.09), 0.9)
-    concrete = material("PBR concrete", (0.32, 0.33, 0.32), 0.85)
-    paint = material("PBR road marking", (0.85, 0.78, 0.5), 0.65)
-    cube("street", (0, -3.3, -0.09), (15, 7, 0.18), asphalt)
-    cube("sidewalk", (0, 2.4, -0.11), (15, 4.3, 0.22), concrete)
-    for x in (-5, 0, 5):
-        cube("street_marking", (x, -5.5, 0.004), (2.5, 0.08, 0.01), paint)
+    if args.setting == "courtyard":
+        grout = material("PBR courtyard grout", (0.16, 0.16, 0.15), 0.9)
+        paving = material("PBR courtyard paving", (0.46, 0.42, 0.35), 0.8)
+        cube("courtyard_floor", (0, 0, -0.12), (15, 13.5, 0.18), grout)
+        for row in range(9):
+            for col in range(10):
+                cube(
+                    "courtyard_paver",
+                    (-6.75 + col * 1.5, -6 + row * 1.5, -0.015),
+                    (1.47, 1.47, 0.03),
+                    paving,
+                )
+    else:
+        asphalt = material("PBR asphalt", (0.075, 0.08, 0.09), 0.9)
+        concrete = material("PBR concrete", (0.32, 0.33, 0.32), 0.85)
+        paint = material("PBR road marking", (0.85, 0.78, 0.5), 0.65)
+        cube("street", (0, -3.3, -0.09), (15, 7, 0.18), asphalt)
+        cube("sidewalk", (0, 2.4, -0.11), (15, 4.3, 0.22), concrete)
+        for x in (-5, 0, 5):
+            cube("street_marking", (x, -5.5, 0.004), (2.5, 0.08, 0.01), paint)
     lighting()
     bpy.ops.object.select_all(action="DESELECT")
     for obj in bpy.data.objects:
@@ -179,6 +192,7 @@ def build(args: argparse.Namespace) -> None:
     (output / "assembly.json").write_text(
         json.dumps(
             {
+                "setting": args.setting,
                 "source_mesh_counts": counts,
                 "framing_verdicts": {name: item["result"] for name, item in framing.items()},
                 "native_blender_render_views": ["front_three_quarter", "rear_three_quarter", "side", "top"],
@@ -204,21 +218,33 @@ def verify(args: argparse.Namespace) -> None:
         for name in ("Key daylight", "Garage fill", "Street bounce")
         if name in bpy.data.objects and bpy.data.objects[name].type == "LIGHT"
     ]
-    if (
-        bpy.context.scene.camera is None
-        or len(named_lights) != 3
-        or "street" not in bpy.data.objects
-        or "sidewalk" not in bpy.data.objects
-    ):
+    if bpy.context.scene.camera is None or len(named_lights) != 3:
         raise RuntimeError("garage_camera_lighting_or_environment_missing")
+    road_objects = [
+        obj.name for obj in bpy.data.objects if obj.type == "MESH" and obj.name.startswith("street")
+    ]
+    courtyard = "courtyard_floor" in bpy.data.objects
+    pavers = sum(obj.type == "MESH" and obj.name.startswith("courtyard_paver") for obj in bpy.data.objects)
+    if args.setting == "courtyard":
+        valid_ground = courtyard and pavers == 90 and not road_objects
+    else:
+        valid_ground = "street" in bpy.data.objects and "sidewalk" in bpy.data.objects
+    if not valid_ground:
+        raise RuntimeError("requested_ground_context_missing")
     (args.output / "reopen-report.json").write_text(
         json.dumps(
             {
                 "reopened_in_second_blender_process": True,
+                "setting": args.setting,
                 "source_mesh_counts": counts,
                 "camera": bpy.context.scene.camera.name,
                 "named_lights": named_lights,
-                "street_and_sidewalk_present": True,
+                "street_and_sidewalk_present": "street" in bpy.data.objects
+                and "sidewalk" in bpy.data.objects,
+                "courtyard_present": courtyard,
+                "paver_count": pavers,
+                "road_objects": road_objects,
+                "ground_context_verified": True,
             },
             indent=2,
         )
@@ -233,6 +259,7 @@ def main() -> None:
     parser.add_argument("--furniture", type=Path)
     parser.add_argument("--assets-manifest", type=Path)
     parser.add_argument("--verify", action="store_true")
+    parser.add_argument("--setting", choices=("street", "courtyard"), default="street")
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1 :] if "--" in sys.argv else None)
     if args.verify:
         verify(args)

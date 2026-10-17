@@ -6,13 +6,10 @@ identifiants de Specialty pour que le frontend et l'API se comprennent, mais
 seul CE module décide ce qui est réellement `is_supported` côté serveur —
 le frontend ne fait qu'afficher REAL/PLANNED, jamais l'inverse.
 
-Une seule Specialty est réellement supportée pour l'instant : "research".
-`AgentRuntime` (registre : STUB) documente lui-même n'avoir été exercé de
-bout en bout que pour `Subject.RESEARCH` (voir apex/agents/runtime.py) — ce
-serait mentir que de déclarer "code-intelligence" ou "project-manager"
-supportées alors qu'aucun moteur ne leur correspond (CodeIntelligence reste
-PLANNED dans apex.interfaces.registry). Ne pas ajouter d'autres entrées
-`STUB`/`IMPLEMENTED` sans qu'un moteur réel existe derrière.
+Research dispose du moteur de clones AgentRuntime. Game Graphics dispose
+uniquement de missions créatives via GameStudioProjectService : aucun provider
+TaskGen ni moteur d'entraînement de clones n'est annoncé pour cette spécialité.
+Les autres entrées restent PLANNED tant qu'aucun moteur réel ne les exécute.
 """
 
 from __future__ import annotations

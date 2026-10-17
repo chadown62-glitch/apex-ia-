@@ -71,3 +71,11 @@ def test_paint_judge_measures_shader_channels_not_beauty():
     assert material_defects(contract, hierarchy([0.018, 0.105, 0.145, 1]), "vehicle")
     assert not material_defects(contract, hierarchy([0.02, 0.06, 0.5, 1]), "vehicle")
     assert material_defects(contract, hierarchy([0.5, 0.02, 0.02, 1]), "vehicle")
+
+
+def test_courtyard_ground_is_selected_from_request():
+    from apex.game_studio.requirements import scene_setting
+
+    assert scene_setting({"description": "Une cour avec deux fauteuils"}) == "courtyard"
+    assert scene_setting({"description": "A courtyard with a building"}) == "courtyard"
+    assert scene_setting({"description": "Un bâtiment de rue"}) == "street"

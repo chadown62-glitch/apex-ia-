@@ -10,6 +10,7 @@ import {
 import type { GameStudioArtifact, GameStudioMission, GameStudioRequest } from "../api/types";
 import { Panel } from "../components/common/Panel";
 import "./pages.css";
+import { Button } from "../components/ui/Button";
 import "./game-studio.css";
 
 const initial: GameStudioRequest = {
@@ -51,7 +52,7 @@ function ArtifactDownload({ jobId, artifact, project = false }: { jobId: string;
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } finally { setBusy(false); }
   }
-  return <button type="button" onClick={download} disabled={busy}>{artifact.name}</button>;
+  return <Button type="button" onClick={download} disabled={busy}>{artifact.name}</Button>;
 }
 
 function MissionDetail({ mission, onCancel, onResume, controls = true }: {
@@ -64,8 +65,8 @@ function MissionDetail({ mission, onCancel, onResume, controls = true }: {
     <p>Tâche : {mission.current_task} · début {new Date(mission.created_at).toLocaleString()}</p>
     {mission.error && <p role="alert">{mission.error}</p>}
     {controls && <div className="game-actions">
-      {mission.status === "running" || mission.status === "queued" ? <button type="button" onClick={onCancel}>Arrêter</button> : null}
-      {["failed", "interrupted", "cancelled"].includes(mission.status) ? <button type="button" onClick={onResume}>Reprendre</button> : null}
+      {mission.status === "running" || mission.status === "queued" ? <Button type="button" onClick={onCancel}>Arrêter</Button> : null}
+      {["failed", "interrupted", "cancelled"].includes(mission.status) ? <Button type="button" onClick={onResume}>Reprendre</Button> : null}
     </div>}
     <div className="game-revisions">
       {mission.revisions.map((revision) => {
@@ -148,7 +149,7 @@ export function GameStudioPage() {
     <Panel title="Capacités observées">
       {capabilities.data?.data ? <div className="game-capabilities">
         {Object.entries(capabilities.data.data).filter(([, value]) => typeof value === "object" && value !== null && "status" in value)
-          .map(([name, value]) => <p key={name}><strong>{name}</strong> : {String((value as { status: string }).status)}</p>)}
+          .map(([name, value]) => <p key={name}><strong>{name}</strong> : {String((value as { status: string }).status)}{(typeof (value as { reason?: string }).reason === "string") && <small>{(value as { reason: string }).reason}</small>}</p>)}
       </div> : <p>{capabilities.data?.detail ?? "Diagnostic des dépendances en cours…"}</p>}
       <details><summary>Spécialiste, modèles et dépendances</summary><pre>{JSON.stringify(capabilities.data?.data, null, 2)}</pre></details>
     </Panel>
@@ -181,7 +182,7 @@ export function GameStudioPage() {
         <label>Modèle local<select value={form.controller_model} onChange={(e) => setForm({ ...form, controller_model: e.target.value as GameStudioRequest["controller_model"] })}>
           <option value="auto">Sélection APEX</option><option value="pinned_7b">Qwen 7B épinglé</option><option value="apex_native" disabled>Modèle natif APEX — planification non qualifiée</option>
         </select></label>
-        <label className="game-form__wide">Description<textarea value={form.description} rows={4} onChange={(e) => setForm({ ...form, description: e.target.value })} required minLength={20} /></label>
+        <label className="game-form__wide">Description<textarea aria-label="Description" value={form.description} rows={4} onChange={(e) => setForm({ ...form, description: e.target.value })} required minLength={20} /></label>
         <label className="game-form__wide">Références (PNG, JPEG, texte ; 4 maximum)<input type="file" multiple accept="image/png,image/jpeg,text/plain" onChange={(e) => setFiles(e.target.files)} /></label>
         <label className="game-form__wide">Provenance et droits des références<input value={provenance} onChange={(e) => setProvenance(e.target.value)} placeholder="Fichiers créés par moi, usage autorisé…" /></label>
         <label className="game-check"><input type="checkbox" checked={form.judges_all_tasks} onChange={(e) => setForm({ ...form, judges_all_tasks: e.target.checked })} /> Activer les juges sur toutes les tâches</label>
@@ -193,13 +194,13 @@ export function GameStudioPage() {
         <label className="game-form__wide">Critères de qualité personnalisés (JSON)<textarea rows={2} value={criteriaText} onChange={(e) => setCriteriaText(e.target.value)} /></label>
         <p className="game-form__wide">Les projets construisent un plan borné avec le modèle local. Les familles exécutables sont véhicule, bâtiment et fauteuil ; les autres demandes restent signalées comme bloquées. Les devantures spécialisées non qualifiées sont bloquées. Les références sont conservées avec provenance, mais leur contenu n'est pas encore exploité par le planificateur. UE5 et CUDA gardent leur statut mesuré.</p>
         {error && <p role="alert" className="game-form__wide">{error}</p>}
-        <button type="submit" disabled={projectSubmit.isPending}>{projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</button>
+        <Button type="submit" disabled={projectSubmit.isPending}>{projectSubmit.isPending ? "Création…" : "Créer la mission APEX"}</Button>
       </form>
     </Panel>
     <Panel title="Projets multi-assets">
-      {projects.data?.data?.length ? <ul>{projects.data.data.map((item) => <li key={item.id}><button type="button" onClick={() => setSelectedProject(item.id)}>
+      {projects.data?.data?.length ? <ul>{projects.data.data.map((item) => <li key={item.id}><Button type="button" onClick={() => setSelectedProject(item.id)}>
         {item.recipe} · {item.status} · {new Date(item.created_at).toLocaleString()}
-      </button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
+      </Button></li>)}</ul> : <p>{projects.data?.detail ?? "Aucun projet enregistré."}</p>}
       {project && <section className="game-mission" aria-label="Suivi du projet">
         <h3>{project.request.description}</h3><p>Mission APEX {project.mission_id} · {project.status} · livraison {project.delivery_status ?? "en cours"} · {project.elapsed_s != null ? `temps actif cumulé : ${project.elapsed_s} s` : "en cours"}</p>
         {project.plan && <article><h4>Plan généré et validé</h4><p>{project.plan.steps.length} tâches · budget estimé pour admission {project.plan.estimated_minimum_s} s · tâches proposées exécutables : {project.plan.fully_feasible ? "oui" : "non"}. La fidélité artistique reste non certifiée.</p>
@@ -209,9 +210,9 @@ export function GameStudioPage() {
         {project.budget && <p>Budget cumulé : {Math.ceil(project.budget.observed_s ?? project.budget.charged_s)} / {project.budget.limit_s} s. Réservation conservatrice de 10 s maximum après interruption.</p>}
         {project.planning_artifact && <ArtifactDownload jobId={project.id} artifact={project.planning_artifact} project />}
         <div className="game-actions">
-          {["running", "queued"].includes(project.status) && <button type="button" onClick={() => projectCancel.mutate(project.id)}>Arrêter le projet</button>}
+          {["running", "queued"].includes(project.status) && <Button type="button" onClick={() => projectCancel.mutate(project.id)}>Arrêter le projet</Button>}
           {(["failed", "interrupted", "cancelled"].includes(project.status) && (!project.budget || project.budget.charged_s < project.budget.limit_s)) &&
-            <button type="button" onClick={() => projectResume.mutate(project.id)}>Reprendre le projet</button>}
+            <Button type="button" onClick={() => projectResume.mutate(project.id)}>Reprendre le projet</Button>}
         </div>
         {project.steps.map((step) => <article key={step.key}>
           <h4>{step.key} · {step.kind ?? step.creation_type} · {step.specialist} · {step.status}</h4>
@@ -243,9 +244,9 @@ export function GameStudioPage() {
       </section>}
     </Panel>
     <Panel title="Missions Game Studio">
-      {list.data?.data?.length ? <ul>{list.data.data.map((item) => <li key={item.id}><button type="button" onClick={() => setSelected(item.id)}>
+      {list.data?.data?.length ? <ul>{list.data.data.map((item) => <li key={item.id}><Button type="button" onClick={() => setSelected(item.id)}>
         {item.request.creation_type} · {item.status} · {new Date(item.created_at).toLocaleString()}
-      </button></li>)}</ul> : <p>{list.data?.detail ?? "Aucune mission enregistrée."}</p>}
+      </Button></li>)}</ul> : <p>{list.data?.detail ?? "Aucune mission enregistrée."}</p>}
       {mission && <MissionDetail mission={mission} onCancel={() => cancel.mutate(mission.id)} onResume={() => resume.mutate(mission.id)} />}
     </Panel>
   </main>;
