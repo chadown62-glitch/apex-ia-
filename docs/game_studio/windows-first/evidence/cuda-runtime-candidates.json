@@ -1,0 +1,28 @@
+[
+  {
+    "package": "nvidia-cuda-runtime-cu12",
+    "version": "12.4.127",
+    "url": "https://pypi.org/pypi/nvidia-cuda-runtime-cu12/12.4.127/json",
+    "windows": [
+      {
+        "filename": "nvidia_cuda_runtime_cu12-12.4.127-py3-none-win_amd64.whl",
+        "url": "https://files.pythonhosted.org/packages/a8/8b/450e93fab75d85a69b50ea2d5fdd4ff44541e0138db16f9cd90123ef4de4/nvidia_cuda_runtime_cu12-12.4.127-py3-none-win_amd64.whl",
+        "size": 878808,
+        "sha256": "09c2e35f48359752dfa822c09918211844a3d93c100a715d79b59591130c5e1e"
+      }
+    ]
+  },
+  {
+    "package": "nvidia-cublas-cu12",
+    "version": "12.4.5.8",
+    "url": "https://pypi.org/pypi/nvidia-cublas-cu12/12.4.5.8/json",
+    "windows": [
+      {
+        "filename": "nvidia_cublas_cu12-12.4.5.8-py3-none-win_amd64.whl",
+        "url": "https://files.pythonhosted.org/packages/e2/2a/4f27ca96232e8b5269074a72e03b4e0d43aa68c9b965058b1684d07c6ff8/nvidia_cublas_cu12-12.4.5.8-py3-none-win_amd64.whl",
+        "size": 396895858,
+        "sha256": "5a796786da89203a0657eda402bcdcec6180254a8ac22d72213abc42069522dc"
+      }
+    ]
+  }
+]

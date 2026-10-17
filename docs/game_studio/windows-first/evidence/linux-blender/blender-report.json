@@ -1,0 +1,478 @@
+{
+  "method": "explicit_fixed_catalog_fixture_not_Qwen",
+  "neural": false,
+  "before": {
+    "verdict": "fail_preflight",
+    "error": "ValueError: independent_root_wheel_required:wheel_front_left",
+    "source_artifact": "sha256:42bd485df960724d5cb82d81ff3ad71132bcd1e1117eb8634caa992c6d60c7e1",
+    "unreal_import_verified": false
+  },
+  "after": {
+    "status": "verified_intake",
+    "manifest": {
+      "schema_version": 1,
+      "contract": "VehicleAssetContract",
+      "producer": "apex.game_studio",
+      "geometry_method": "procedural_blender_with_bounded_contract_repair",
+      "spec": {
+        "length_m": 4.925,
+        "width_m": 2.24,
+        "height_m": 1.2888,
+        "wheelbase_m": 2.8,
+        "wheel_radius_m": 0.355,
+        "wheel_width_m": 0.232,
+        "mass_kg": 1200,
+        "body_color": [
+          0.6499999761581421,
+          0.02500000037252903,
+          0.014999999664723873
+        ],
+        "paint_metallic": 0.7799999713897705,
+        "paint_roughness": 0.23999999463558197
+      },
+      "units": "m",
+      "blender_axes": {
+        "forward": "+X",
+        "up": "+Z",
+        "handedness": "right"
+      },
+      "glb_axes": {
+        "up": "+Y",
+        "handedness": "right",
+        "exporter_converted": true
+      },
+      "unreal_target": {
+        "units": "cm",
+        "up": "+Z",
+        "forward": "+X",
+        "scale_conversion": 100,
+        "import_tested": false
+      },
+      "wheels": [
+        {
+          "object": "wheel_front_left",
+          "center_m": [
+            1.399999976158142,
+            -0.8999999761581421,
+            0.35499998927116394
+          ],
+          "radius_m": 0.355,
+          "spin_axis_local": [
+            0,
+            0,
+            1
+          ],
+          "spin_axis_blender_world": [
+            0,
+            1,
+            0
+          ]
+        },
+        {
+          "object": "wheel_front_right",
+          "center_m": [
+            1.399999976158142,
+            0.8999999761581421,
+            0.35499998927116394
+          ],
+          "radius_m": 0.355,
+          "spin_axis_local": [
+            0,
+            0,
+            1
+          ],
+          "spin_axis_blender_world": [
+            0,
+            1,
+            0
+          ]
+        },
+        {
+          "object": "wheel_rear_left",
+          "center_m": [
+            -1.399999976158142,
+            -0.8999999761581421,
+            0.35499998927116394
+          ],
+          "radius_m": 0.355,
+          "spin_axis_local": [
+            0,
+            0,
+            1
+          ],
+          "spin_axis_blender_world": [
+            0,
+            1,
+            0
+          ]
+        },
+        {
+          "object": "wheel_rear_right",
+          "center_m": [
+            -1.399999976158142,
+            0.8999999761581421,
+            0.35499998927116394
+          ],
+          "radius_m": 0.355,
+          "spin_axis_local": [
+            0,
+            0,
+            1
+          ],
+          "spin_axis_blender_world": [
+            0,
+            1,
+            0
+          ]
+        }
+      ],
+      "files": [
+        {
+          "path": "front.png",
+          "role": "source_or_contract",
+          "sha256": "e487695bd7e6838f771302c59e8f6daa68406f216247d293a301776f984dd6e6",
+          "bytes": 727027
+        },
+        {
+          "path": "front_three_quarter.png",
+          "role": "source_or_contract",
+          "sha256": "eca9584b77aa2b8da8de1b37e3cb0a25380f12620c4b05167343565e64a36bd2",
+          "bytes": 1000408
+        },
+        {
+          "path": "rear_three_quarter.png",
+          "role": "source_or_contract",
+          "sha256": "7509493a365b4b86056bdea034410ca2c59916b40ad9d746362e9a3191f1231f",
+          "bytes": 993146
+        },
+        {
+          "path": "side.png",
+          "role": "source_or_contract",
+          "sha256": "a0d37ac72b94657a37b35eac9dbf449aa73d52a34c8592542314b5deff0c35b3",
+          "bytes": 943210
+        },
+        {
+          "path": "spec.json",
+          "role": "source_or_contract",
+          "sha256": "5123be5c95c87287c8f1313256a4bdba8ab2c9c38a4375cbf0f877d4fdd53b12",
+          "bytes": 337
+        },
+        {
+          "path": "vehicle-asset-v1.schema.json",
+          "role": "source_or_contract",
+          "sha256": "1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51",
+          "bytes": 2637
+        },
+        {
+          "path": "vehicle-contract.json",
+          "role": "source_or_contract",
+          "sha256": "ed6c52377ed0c63d41a1618559971d42d57be9210266e513fe66f57f51e6f148",
+          "bytes": 1820
+        },
+        {
+          "path": "vehicle.blend",
+          "role": "source_or_contract",
+          "sha256": "b9b086077aef0c56540c19ae3039423b8b1c75e2bca794f679ddb8f783fd98a6",
+          "bytes": 3767816
+        },
+        {
+          "path": "vehicle.glb",
+          "role": "source_or_contract",
+          "sha256": "3e53185bdf6b042ea654da0680bdd9a1878beff7c01e0d510b191cd472ca429f",
+          "bytes": 1126604
+        }
+      ],
+      "rig": {
+        "kind": "separate_static_meshes",
+        "skeletal_rig": false,
+        "physics_asset": false
+      },
+      "lods": [],
+      "texture_maps": [],
+      "source_artifact": "sha256:3e53185bdf6b042ea654da0680bdd9a1878beff7c01e0d510b191cd472ca429f",
+      "measurement_scope": "bounds, wheel centers and material from Blender; mass is a design estimate"
+    },
+    "manifest_sha256": "f8c23958b962f392280771dcfa888b2c3f67fe19c91cf120370ddf93d5eb3e2f",
+    "verified_files": 9,
+    "mesh_nodes": 136,
+    "materials": 9,
+    "wheel_nodes": {
+      "wheel_front_left": {
+        "glb_pivot_m": [
+          1.399999976158142,
+          0.35499998927116394,
+          0.8999999761581421
+        ],
+        "blender_pivot_m": [
+          1.399999976158142,
+          -0.8999999761581421,
+          0.35499998927116394
+        ]
+      },
+      "wheel_front_right": {
+        "glb_pivot_m": [
+          1.399999976158142,
+          0.35499998927116394,
+          -0.8999999761581421
+        ],
+        "blender_pivot_m": [
+          1.399999976158142,
+          0.8999999761581421,
+          0.35499998927116394
+        ]
+      },
+      "wheel_rear_left": {
+        "glb_pivot_m": [
+          -1.399999976158142,
+          0.35499998927116394,
+          0.8999999761581421
+        ],
+        "blender_pivot_m": [
+          -1.399999976158142,
+          -0.8999999761581421,
+          0.35499998927116394
+        ]
+      },
+      "wheel_rear_right": {
+        "glb_pivot_m": [
+          -1.399999976158142,
+          0.35499998927116394,
+          -0.8999999761581421
+        ],
+        "blender_pivot_m": [
+          -1.399999976158142,
+          0.8999999761581421,
+          0.35499998927116394
+        ]
+      }
+    },
+    "engine_import_verified": false,
+    "handedness_in_unreal_verified": false,
+    "limits": "GLB byte/pivot checks do not qualify Unreal import, bones, collisions or physics",
+    "wheel_metadata_verified_in_glb": true,
+    "wheel_group_child_nodes": {
+      "wheel_front_left": 12,
+      "wheel_front_right": 12,
+      "wheel_rear_left": 12,
+      "wheel_rear_right": 12
+    },
+    "verdict": "pass_preflight"
+  },
+  "judge": {
+    "family": "vehicle",
+    "case_id": "sports_car",
+    "criteria": {
+      "level": "prototype",
+      "max_triangles": 100000,
+      "dimension_tolerance_m": 0.04,
+      "pivot_tolerance_m": 0.002,
+      "max_distinct_defect_attempts": 3,
+      "minimum_views": 4,
+      "required_lods": 0,
+      "required_texture_size": 0,
+      "require_calibrated_visual_reference": false
+    },
+    "benchmark_version": 1,
+    "scope": "measured_geometry_export_and_render_rules",
+    "defects": [],
+    "unavailable": [],
+    "facts": {
+      "render_settings": {
+        "engine": "CYCLES",
+        "device": "CPU",
+        "samples": 64,
+        "seed": 14,
+        "denoising": false
+      },
+      "distinct_camera_transforms": 4,
+      "blend": {
+        "triangles": 32604,
+        "dimensions": [
+          4.924999952316284,
+          2.2399998903274536,
+          1.288821374480083
+        ],
+        "objects": 136,
+        "materials": 9
+      },
+      "glb": {
+        "triangles": 32604,
+        "dimensions": [
+          4.924999952316284,
+          2.2399998903274536,
+          1.2888214147975106
+        ],
+        "objects": 136,
+        "materials": 9
+      },
+      "images": {
+        "front_three_quarter": {
+          "width": 960,
+          "height": 720,
+          "channel_stddev": 42.9719179246766,
+          "subject_fraction": 0.17352719907407407,
+          "subject_pixels_at_image_boundary": 0
+        },
+        "rear_three_quarter": {
+          "width": 960,
+          "height": 720,
+          "channel_stddev": 40.30231593535387,
+          "subject_fraction": 0.16786458333333334,
+          "subject_pixels_at_image_boundary": 0
+        },
+        "side": {
+          "width": 960,
+          "height": 720,
+          "channel_stddev": 64.07980609230823,
+          "subject_fraction": 0.15002025462962962,
+          "subject_pixels_at_image_boundary": 0
+        },
+        "front": {
+          "width": 960,
+          "height": 720,
+          "channel_stddev": 29.1992749506122,
+          "subject_fraction": 0.058313078703703704,
+          "subject_pixels_at_image_boundary": 0
+        }
+      }
+    },
+    "advisory": [
+      "Shader parameters and material count do not certify convincing PBR appearance."
+    ],
+    "aesthetic_certification": false,
+    "limits": [
+      "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+      "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+      "Unreal import and runtime performance have not been measured by this oracle."
+    ],
+    "manifest_sha256": "681350120ec766a25bc8c5ab4bdd339c59e91d5c3e401af17a33479ef55ca545",
+    "verdict": "pass"
+  },
+  "artifacts": [
+    {
+      "name": "asset.blend",
+      "hash": "sha256:b9b086077aef0c56540c19ae3039423b8b1c75e2bca794f679ddb8f783fd98a6",
+      "bytes": 3767816
+    },
+    {
+      "name": "asset.glb",
+      "hash": "sha256:3e53185bdf6b042ea654da0680bdd9a1878beff7c01e0d510b191cd472ca429f",
+      "bytes": 1126604
+    },
+    {
+      "name": "blend-inspection.json",
+      "hash": "sha256:105c1e68d64fcbac620cae84fa9a0242d9acef25ee854a6a663c12e362a91550",
+      "bytes": 103427
+    },
+    {
+      "name": "blend-inspection.owner.json",
+      "hash": "sha256:13010c673631090e9f67cb23363032fafbc25eda8f7c4dbb1cf5223d2386e84d",
+      "bytes": 495
+    },
+    {
+      "name": "blend-inspection.resources.json",
+      "hash": "sha256:fcf7c9145100c408924cfa4597e5a61042c1afaf0cbd42534c5aff95e59fad77",
+      "bytes": 2838
+    },
+    {
+      "name": "execution.json",
+      "hash": "sha256:60ee952c7760e44f1720945f329ca14da1c4a4c70eab0397e60d9b95c16968e4",
+      "bytes": 68343
+    },
+    {
+      "name": "front.png",
+      "hash": "sha256:e487695bd7e6838f771302c59e8f6daa68406f216247d293a301776f984dd6e6",
+      "bytes": 727027
+    },
+    {
+      "name": "front_three_quarter.png",
+      "hash": "sha256:eca9584b77aa2b8da8de1b37e3cb0a25380f12620c4b05167343565e64a36bd2",
+      "bytes": 1000408
+    },
+    {
+      "name": "glb-inspection.json",
+      "hash": "sha256:c6be22195cd1d21abbb9138a924e0d51f7976262afe8054849a69bc3bf0dcdcc",
+      "bytes": 103574
+    },
+    {
+      "name": "glb-inspection.owner.json",
+      "hash": "sha256:98ba5b3dfec7853fcb09fff74df436ecf16020c387cfb775e77da4ab1b5d871e",
+      "bytes": 491
+    },
+    {
+      "name": "glb-inspection.resources.json",
+      "hash": "sha256:feb1b8793c2fa81a370dc3cc799610890a41604bbf8818e5f336662f41086b4c",
+      "bytes": 10504
+    },
+    {
+      "name": "hierarchy-before.json",
+      "hash": "sha256:f630b6806b8c06787134ea326ef951b8fafa797514dc89fbb76295f6f4f3cc5d",
+      "bytes": 118374
+    },
+    {
+      "name": "hierarchy.json",
+      "hash": "sha256:9f6fead2226083fc93cb5e350725937bee46314051fe72526023b75a09989a02",
+      "bytes": 120818
+    },
+    {
+      "name": "judge-report.json",
+      "hash": "sha256:7f4a085831b6f880057dce9f93de718801d2c2952e8b4939370b97088476d288",
+      "bytes": 2517
+    },
+    {
+      "name": "manifest.json",
+      "hash": "sha256:681350120ec766a25bc8c5ab4bdd339c59e91d5c3e401af17a33479ef55ca545",
+      "bytes": 4897
+    },
+    {
+      "name": "operation-trace.json",
+      "hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2
+    },
+    {
+      "name": "rear_three_quarter.png",
+      "hash": "sha256:7509493a365b4b86056bdea034410ca2c59916b40ad9d746362e9a3191f1231f",
+      "bytes": 993146
+    },
+    {
+      "name": "render-settings.json",
+      "hash": "sha256:6e641c28f7ee1eb805ac5cc9ab55596b045c91d8fb167a399b195857aadccd69",
+      "bytes": 4557
+    },
+    {
+      "name": "side.png",
+      "hash": "sha256:a0d37ac72b94657a37b35eac9dbf449aa73d52a34c8592542314b5deff0c35b3",
+      "bytes": 943210
+    },
+    {
+      "name": "silhouette_front.png",
+      "hash": "sha256:c6bc2a7734f3d3450f4b5c371db7f919a307f87e63dd820e9d4b01837fe527c9",
+      "bytes": 327833
+    },
+    {
+      "name": "silhouette_front_three_quarter.png",
+      "hash": "sha256:4f45eb0b35a2493c0936214be69b4b6ffab368f1133e19dafb700fee6680291d",
+      "bytes": 293869
+    },
+    {
+      "name": "silhouette_rear_three_quarter.png",
+      "hash": "sha256:2e18206dab6584e5e703066d46ca8972ad41f7c98a8d8738ebfdcbf905fd2ff8",
+      "bytes": 295242
+    },
+    {
+      "name": "silhouette_side.png",
+      "hash": "sha256:74c07ee4cabff29945d8e3fadb2df86d77a1564ab311dc7b880dcfa0f7b8839f",
+      "bytes": 299196
+    },
+    {
+      "name": "vehicle-contract.json",
+      "hash": "sha256:ed6c52377ed0c63d41a1618559971d42d57be9210266e513fe66f57f51e6f148",
+      "bytes": 1820
+    },
+    {
+      "name": "verdict.json",
+      "hash": "sha256:4d1fe4642aa3ac27a0d42eac2e3711077a1527c168dcdc10cbea72af33493273",
+      "bytes": 15830
+    }
+  ]
+}

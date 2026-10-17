@@ -1,0 +1,31 @@
+{
+  "source_commit": "1bab1b030b7d62dfc3f8bed86f02310e452914de",
+  "source_sha256": "a3aa688db7ffed01fdd49bf5b78a11844c5c29640fe3fc21837894cdeb6e5fca",
+  "result": "PASS",
+  "scope": "Real PR27 governor loaded from immutable source; CPU host; OS lease and workload scanner unmodified; no model resident",
+  "cuda_qualified": false,
+  "after": {
+    "admissions_open": true,
+    "transition": false,
+    "active_generations": 0,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-governor-unmocked/.apex/model-session.lock",
+    "lent_to": null,
+    "cuda_residents": [],
+    "cuda_available": false,
+    "last_ack": {
+      "released": true,
+      "requester": "game-studio:bc70d169d3004a45b5fe3f6ad8d78cec",
+      "reason": "GPU lib\u00e9r\u00e9 par les mod\u00e8les principaux",
+      "unloaded": [],
+      "waited_s": 0.0,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-governor-unmocked/.apex/model-session.lock",
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    }
+  }
+}

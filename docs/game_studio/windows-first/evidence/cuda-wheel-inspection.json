@@ -1,0 +1,94 @@
+{
+  "browser_download_url": "https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36-cu124/llama_cpp_python-0.3.36-py3-none-win_amd64.whl",
+  "digest": "sha256:7086b98420cf9cca5e3f14181edc4332038bfb0a0e380370a693806bb527911f",
+  "name": "llama_cpp_python-0.3.36-py3-none-win_amd64.whl",
+  "size": 511381574,
+  "sha256_verified": "7086b98420cf9cca5e3f14181edc4332038bfb0a0e380370a693806bb527911f",
+  "dlls": [
+    {
+      "path": "bin/ggml-base.dll",
+      "bytes": 675328
+    },
+    {
+      "path": "bin/ggml-cpu.dll",
+      "bytes": 1101824
+    },
+    {
+      "path": "bin/ggml-cuda.dll",
+      "bytes": 915416064
+    },
+    {
+      "path": "bin/ggml.dll",
+      "bytes": 61952
+    },
+    {
+      "path": "bin/llama-common.dll",
+      "bytes": 8348160
+    },
+    {
+      "path": "bin/llama.dll",
+      "bytes": 7479296
+    },
+    {
+      "path": "bin/mtmd.dll",
+      "bytes": 2418688
+    },
+    {
+      "path": "llama_cpp/lib/ggml-base.dll",
+      "bytes": 675328
+    },
+    {
+      "path": "llama_cpp/lib/ggml-cpu.dll",
+      "bytes": 1101824
+    },
+    {
+      "path": "llama_cpp/lib/ggml-cuda.dll",
+      "bytes": 915416064
+    },
+    {
+      "path": "llama_cpp/lib/ggml.dll",
+      "bytes": 61952
+    },
+    {
+      "path": "llama_cpp/lib/llama.dll",
+      "bytes": 7479296
+    },
+    {
+      "path": "llama_cpp/lib/mtmd.dll",
+      "bytes": 2418688
+    }
+  ],
+  "metadata": [
+    "Version: 0.3.36",
+    "License: MIT",
+    "Requires-Python: >=3.8",
+    "Requires-Dist: typing-extensions>=4.5.0",
+    "Requires-Dist: numpy>=1.20.0",
+    "Requires-Dist: diskcache>=5.6.1",
+    "Requires-Dist: jinja2>=2.11.3",
+    "Requires-Dist: uvicorn>=0.22.0; extra == \"server\"",
+    "Requires-Dist: fastapi>=0.100.0; extra == \"server\"",
+    "Requires-Dist: pydantic-settings>=2.0.1; extra == \"server\"",
+    "Requires-Dist: sse-starlette>=1.6.1; extra == \"server\"",
+    "Requires-Dist: starlette-context<0.4,>=0.3.6; extra == \"server\"",
+    "Requires-Dist: PyYAML>=5.1; extra == \"server\"",
+    "Requires-Dist: pytest>=7.4.0; extra == \"test\"",
+    "Requires-Dist: httpx>=0.24.1; extra == \"test\"",
+    "Requires-Dist: scipy>=1.10; extra == \"test\"",
+    "Requires-Dist: fastapi>=0.100.0; extra == \"test\"",
+    "Requires-Dist: sse-starlette>=1.6.1; extra == \"test\"",
+    "Requires-Dist: starlette-context<0.4,>=0.3.6; extra == \"test\"",
+    "Requires-Dist: pydantic-settings>=2.0.1; extra == \"test\"",
+    "Requires-Dist: huggingface-hub>=0.23.0; extra == \"test\"",
+    "Requires-Dist: ruff>=0.15.7; extra == \"dev\"",
+    "Requires-Dist: twine>=4.0.2; extra == \"dev\"",
+    "Requires-Dist: mkdocs>=1.4.3; extra == \"dev\"",
+    "Requires-Dist: mkdocstrings[python]>=0.22.0; extra == \"dev\"",
+    "Requires-Dist: mkdocs-material>=9.1.18; extra == \"dev\"",
+    "Requires-Dist: pytest>=7.4.0; extra == \"dev\"",
+    "Requires-Dist: httpx>=0.24.1; extra == \"dev\"",
+    "Requires-Dist: llama_cpp_python[dev,server,test]; extra == \"all\""
+  ],
+  "loaded_on_windows": false,
+  "cuda_executed": false
+}

@@ -1,0 +1,6 @@
+{
+  "http_status": 409,
+  "body": {
+    "detail": "local_planner_model_missing"
+  }
+}

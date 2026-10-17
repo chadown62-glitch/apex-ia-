@@ -1,0 +1,12 @@
+{
+  "python": {
+    "url": "https://api.nuget.org/v3-flatcontainer/python/3.12.10/python.3.12.10.nupkg",
+    "bytes": 14515433,
+    "sha256": "0eb85c2dfccccf1b17352de4c397f69194035b7d37149eacc16f1147d93de3b8"
+  },
+  "blender": {
+    "url": "https://mirrors.ocf.berkeley.edu/blender/release/Blender4.3/blender-4.3.2-windows-x64.zip",
+    "bytes": 405138423,
+    "sha256": "933a62a770c941e316535f893629ff106ddd2aa5a956f0081ec557439073d4f6"
+  }
+}

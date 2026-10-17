@@ -1,0 +1,14 @@
+{
+  "creation_type": "vehicule",
+  "style": "realiste",
+  "quality": "prototype",
+  "tool": "blender",
+  "compute_backend": "cpu",
+  "controller_model": "pinned_7b",
+  "description": "Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender.",
+  "judges_all_tasks": true,
+  "automatic_corrections": true,
+  "max_time_s": 3600,
+  "max_rss_mib": 12000,
+  "max_attempts": 3
+}

@@ -29,6 +29,10 @@ Contrat lu dans PR #27, commit `1bab1b030b7d62dfc3f8bed86f02310e452914de` :
    l'opération, y compris après refus/échec. Les mesures CUDA restent celles du
    gouverneur ; aucun chiffre synthétique ne les remplace.
 
+Un refus de prêt remonte une erreur précise dans les états existants de MissionService
+(`failed`, reprenable via `resume`) ; aucun nouvel état ni attente infinie n’est
+ajouté. La remise en file automatique après disponibilité n’est pas implémentée.
+
 Une erreur de tâche ne supprime pas son diagnostic si le retour échoue aussi.
 Une acquisition OS refusée après l'ACK rend le prêt dans `finally`. Les appels
 Game Studio concurrents ne peuvent pas écraser ou rendre un prêt voisin.

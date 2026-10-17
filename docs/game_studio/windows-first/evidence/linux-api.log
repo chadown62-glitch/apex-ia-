@@ -1,0 +1,87 @@
+[apex-standalone] 2026-10-17 23:16:28 démarrage d'APEX autonome (données : /tmp/apex-first-windows-api-profile ; programme : /tmp/apex-first-windows-runtime-linux)
+[apex-standalone] 2026-10-17 23:16:28 schéma de la base embarquée (apex db upgrade)…
+apex db : schéma absent (aucune migration appliquée ; attendu c2e4a6b8d0f1) — application des migrations…
+apex db : schéma à jour (révision c2e4a6b8d0f1)
+[apex-standalone] 2026-10-17 23:16:29 apex doctor…
+
+APEX DOCTOR
+========================================================================
+
+[environnement]
+  [  OK  ] python.version           Python 3.12.14
+  [  OK  ] python.packages          toutes les dépendances présentes
+
+[profil autonome]
+  [  OK  ] host.platform            Linux 6.18.55 — profil autonome (sans WSL ni Docker)
+  [ SKIP ] host.cgroups             sans objet en profil autonome : mécanisme Linux de l'infrastructure serveur — les limites du code exécuté sont appliquées par le backend d'isolation de l'hôte (voir sandbox.provider)
+  [ SKIP ] wsl.interop              sans objet en profil autonome : aucune dépendance à WSL
+  [ SKIP ] wsl.systemd              sans objet en profil autonome : aucune dépendance à WSL
+
+[environnement]
+  [  OK  ] fs.data_root             répertoire de données prêt : /tmp/apex-first-windows-api-profile/data
+
+[profil autonome]
+  [ SKIP ] fs.placement             sans objet en profil autonome : données sous APEX_HOME — aucune contrainte ext4/WSL2
+
+[stockage]
+  [ WARN ] fs.space                 16 Go libres sur /tmp/apex-first-windows-api-profile/data — 150 Go recommandés
+                  -> Poids des modèles, images de conteneurs et journaux d'évaluation cumulent vite. Rappel : le disque virtuel WSL2 (.vhdx) croît sans se réduire seul.
+
+[profil autonome]
+  [ SKIP ] docker.present           sans objet en profil autonome : base embarquée : Docker n'est pas requis
+  [ SKIP ] docker.flavour           sans objet en profil autonome : Docker n'est pas requis
+  [ SKIP ] docker.isolation         sans objet en profil autonome : Docker n'est pas requis
+
+[gpu]
+  [ WARN ] gpu.present              nvidia-smi introuvable — mode autonome non viable SUR CETTE MACHINE (pas une limite d'APEX : dépend du matériel réellement connecté)
+                  -> Installer le pilote NVIDIA côté Windows ; WSL2 expose CUDA via /usr/lib/wsl/lib.
+  [ SKIP ] gpu.config_match         VRAM réelle inconnue
+
+[configuration]
+  [  OK  ] config.valid             configuration valide (version 1, phase 1)
+  [  OK  ] config.external          modèles externes désactivés — fonctionnement 100 % local
+  [  OK  ] interfaces.integrity     57 abstractions déclarées, registre cohérent avec le code ; 15 de recherche absentes de cette distribution (Runtime)
+
+[profil autonome]
+  [ SKIP ] service.postgres         sans objet en profil autonome : base SQLite embarquée (APEX_DATABASE_URL)
+  [ SKIP ] service.postgres.auth    sans objet en profil autonome : base SQLite embarquée (APEX_DATABASE_URL)
+  [ SKIP ] service.redis            sans objet en profil autonome : aucun service Redis dans ce profil
+  [ SKIP ] service.minio            sans objet en profil autonome : aucun service MinIO dans ce profil
+
+[services]
+  [ WARN ] service.ollama           ollama injoignable sur 127.0.0.1:11434 (service optionnel : non bloquant)
+                  -> Ollama est facultatif en profil autonome (APEX exécute son modèle natif lui-même) : installez-le depuis https://ollama.com seulement si vous voulez aussi ses modèles.
+  [ SKIP ] ollama.models            ollama injoignable
+  [ WARN ] models.native            aucun modèle natif exécutable — poids absents ou incomplets dans /tmp/apex-first-windows-api-profile/models/qwen2.5-coder-1.5b-instruct (config : False, tokenizer : False, poids : False) — « Installer le modèle » dans le Panel APEX (action explicite, réseau)
+                  -> Panel APEX : « Préparer APEX » (bibliothèques d'inférence), puis « Installer le modèle » (téléchargement unique) — ou `python -m apex.standalone model install`.
+
+[profil autonome]
+  [  OK  ] database.local           base SQLite embarquée — schéma à jour (révision c2e4a6b8d0f1)
+
+------------------------------------------------------------------------
+  8 ok · 4 avertissements · 0 échecs · 13 ignorés (1925 ms)
+  État : UTILISABLE avec réserves.
+
+  Ce diagnostic est en lecture seule : aucune modification du système.
+
+[apex-standalone] 2026-10-17 23:16:31 apex serve (Startup Gate, puis API sur http://127.0.0.1:43723)…
+apex serve : contrôles non vérifiés (n'empêchent pas le démarrage) : GATE-01 (not_applicable), GATE-08 (not_applicable), GATE-09 (not_applicable), GATE-10 (not_applicable), GATE-15 (not_authorized), GATE-17 (not_authorized), GATE-18 (not_authorized), GATE-20 (not_authorized), GATE-21 (not_applicable), GATE-22 (not_authorized)
+{"ts": "2026-10-17T23:16:32.202Z", "level": "WARNING", "logger": "apex.cli", "msg": "contrôles du Gate non vérifiés au démarrage", "ctx": {"checks": "GATE-01 (not_applicable), GATE-08 (not_applicable), GATE-09 (not_applicable), GATE-10 (not_applicable), GATE-15 (not_authorized), GATE-17 (not_authorized), GATE-18 (not_authorized), GATE-20 (not_authorized), GATE-21 (not_applicable), GATE-22 (not_authorized)", "phase_2_authorized": false}}
+{"ts": "2026-10-17T23:16:32.496Z", "level": "INFO", "logger": "apex.cli", "msg": "démarrage d'APEX (apex serve)", "ctx": {"host": "127.0.0.1", "port": 43723}}
+{"ts": "2026-10-17T23:16:32.497Z", "level": "INFO", "logger": "apex.cli", "msg": "enregistrement de découverte écrit", "ctx": {"path": "/tmp/apex-first-windows-api-profile/.apex/runtime/backend.json"}}
+INFO:     Started server process [55462]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:43723 (Press CTRL+C to quit)
+INFO:     127.0.0.1:41290 - "GET /api/v1/game-studio/capabilities HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:41290 - "GET /api/v1/game-studio/capabilities HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41290 - "GET /game-studio HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41290 - "POST /api/v1/game-studio/projects HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:41302 - "POST /api/v1/system/shutdown HTTP/1.1" 202 Accepted
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [55462]
+[apex-standalone] 2026-10-17 23:16:33 APEX arrêté proprement.
+arrêt d'APEX (pid 55462, phase serving)…
+APEX arrêté proprement.
