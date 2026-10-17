@@ -80,10 +80,12 @@ class _Studio:
     """Double des services de Game Studio : projets (méthodes qu'appellent ses outils et sa route
     d'artefacts) et missions graphiques (`artifact`)."""
 
-    def __init__(self, refuse: BaseException | None = None) -> None:
-        self.refuse = refuse
+    def __init__(self, refuse: BaseException | None = None, *,
+                 refuse_resume: BaseException | None = None) -> None:
+        self.refuse, self.refuse_resume = refuse, refuse_resume
         self.created: list[tuple[dict, str]] = []
         self.cancelled: list[str] = []
+        self.resumed: list[str] = []
         self.records: dict[str, dict] = {}
         self.blobs: dict[str, tuple[bytes, str]] = {}
 
@@ -107,6 +109,18 @@ class _Studio:
         self.cancelled.append(project_id)
         self.records[project_id]["status"] = "cancelled"
         return dict(self.records[project_id])
+
+    def resume(self, project_id):
+        """Comme `ProjectService.resume` : nouvelle mission pour le même projet, ou refus (ValueError)."""
+        if self.refuse_resume is not None:
+            raise self.refuse_resume
+        self.resumed.append(project_id)
+        self.records[project_id].update(status="running", mission_id=f"mission-{len(self.resumed) + 1}")
+        return dict(self.records[project_id])
+
+    def progress(self, project_id, status, steps):
+        """La mission avance : son état et ses étapes, telles que Game Studio les enregistre."""
+        self.records[project_id].update(status=status, steps=steps)
 
     def finish(self, project_id, artifacts):
         """La mission passe en revue avec ses artefacts d'assemblage (rendu, scène Blender…)."""
@@ -457,12 +471,103 @@ def test_game_studio_refusals_and_failures_are_shown_as_they_are(env, studio_too
     assert _messages(env, conversation.id)[-1].id == launched["message_id"]
 
 
-def test_a_refused_user_launch_is_recorded_with_its_explanation(env, studio_tools) -> None:
-    studio = _Studio(refuse=RuntimeError("local_planner_model_missing"))
+@pytest.mark.parametrize(("failure", "said"), [
+    (RuntimeError("local_planner_model_missing"), "planificateur"),               # modèle absent
+    (ModuleNotFoundError("No module named 'jsonschema'"), "bibliothèque"),       # dépendance absente
+    (RuntimeError("cuda_unavailable_choose_cpu_explicitly"), "aucun GPU CUDA"),  # GPU indisponible
+])
+def test_a_refused_user_launch_is_recorded_with_its_explanation(env, studio_tools, failure, said) -> None:
+    studio = _Studio(refuse=failure)
     _settings(env)
     launched, _, _ = _proposed_then_launched(env, studio)
-    assert launched["meta"]["game_studio"]["state"] == "refused"
-    assert "planificateur" in launched["content"]
+    assert launched["meta"]["game_studio"]["state"] == "refused" and studio.created == []
+    assert said in launched["content"]
+
+
+def test_an_accepted_mission_is_followed_from_its_steps_to_its_files(env, studio_tools) -> None:
+    """Parcours complet SUR UN DOUBLE (aucune génération Blender ici) : file d'attente, étapes, puis
+    fichiers rendus à cette conversation ; le téléchargement passe par la page Game Studio (`api_path`)."""
+    studio = _Studio()
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    studio.progress(project_id, "running", [
+        {"key": "vehicule", "kind": "vehicle", "status": "review", "job_id": None},
+        {"key": "garage", "kind": "building", "status": "running", "job_id": None},
+    ])
+    status = game_studio.follow(env, conversation.id, project_id, service=studio)["status"]
+    assert status["status"] == "running"
+    steps = [(s["key"], s["status"]) for s in status["steps"]]
+    assert steps == [("vehicule", "review"), ("garage", "running")]
+    studio.finish(project_id, [("scene.png", "h-view", "view", "image/png", b"\x89PNG"),
+                               ("scene.blend", "h-blend", "blender_project", "application/x-blender", b"B"),
+                               ("scene.glb", "h-glb", "exchange", "model/gltf-binary", b"glTF")])
+    results = game_studio.follow(env, conversation.id, project_id, service=studio)["results"]
+    assert results["ready"] is True and results["artifact_count"] == 3
+    assert {a["role"] for a in results["artifacts"]} == {"view", "blender_project", "exchange"}
+    assert results["api_path"] == f"/api/v1/game-studio/projects/{project_id}"
+
+
+def test_a_step_blocked_by_a_missing_dependency_says_which_and_why(env, studio_tools) -> None:
+    """Blender introuvable PENDANT la mission (le planificateur était là) : la mission est acceptée, puis
+    l'étape qui en a besoin est bloquée, et c'est dit."""
+    studio = _Studio()
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    studio.progress(project_id, "failed", [
+        {"key": "vehicule", "kind": "vehicle", "status": "blocked_dependency", "job_id": None,
+         "reason": "blender_worker_or_local_coder_missing"}])
+    results = game_studio.follow(env, conversation.id, project_id, service=studio)["results"]
+    assert results["ready"] is False
+    assert results["blocked"] == [{"key": "vehicule", "reason": "blender_worker_or_local_coder_missing"}]
+    assert game_studio.explain("blender_worker_or_local_coder_missing").startswith("Blender")
+
+
+def test_an_interrupted_mission_is_resumed_only_by_the_user_in_its_conversation(env, studio_tools,
+                                                                               monkeypatch) -> None:
+    from apex.policy.engine import PolicyDenied, PolicyEngine
+    from apex.policy.model import Subject
+
+    studio = _Studio()
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    studio.progress(project_id, "interrupted", [])  # APEX arrêté pendant la mission
+    assert "interrupted" in game_studio.RESUMABLE
+    other = _conversation(env, mode="3d")
+    with pytest.raises(LookupError):
+        game_studio.resume(env, other.id, project_id, service=studio)
+    real = PolicyEngine.authorize
+    def as_core(self, _subject, action):
+        return real(self, Subject.CORE, action)
+
+    monkeypatch.setattr(PolicyEngine, "authorize", as_core)
+    with pytest.raises(PolicyDenied):
+        game_studio.resume(env, conversation.id, project_id, service=studio)
+    monkeypatch.setattr(PolicyEngine, "authorize", real)
+    assert studio.resumed == []
+    resumed = game_studio.resume(env, conversation.id, project_id, service=studio)
+    assert studio.resumed == [project_id]
+    record = resumed["meta"]["game_studio"]
+    assert record == {"trigger": "utilisateur", "state": "resumed", "project_id": project_id,
+                      "previous_status": "interrupted", "status": "running",
+                      "authorization": "confirmée par l'utilisateur"}
+    assert _messages(env, conversation.id)[-1].id == resumed["message_id"]  # enregistrée, jamais réécrite
+
+
+@pytest.mark.parametrize(("code", "said"), [
+    ("project_already_delivered_for_review", "déjà livrée"),
+    ("cumulative_time_budget_exhausted", "temps total"),
+    ("only_interrupted_failed_or_incomplete_projects_can_resume", "seule une mission interrompue"),
+])
+def test_a_resume_refused_by_game_studio_is_explained(env, studio_tools, code, said) -> None:
+    studio = _Studio(refuse_resume=ValueError(code))
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    with pytest.raises(ValueError, match=said):
+        game_studio.resume(env, conversation.id, project_id, service=studio)
 
 
 def test_previews_are_served_only_for_this_conversations_rendered_images(env, studio_tools) -> None:

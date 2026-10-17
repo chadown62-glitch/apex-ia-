@@ -1,5 +1,5 @@
 """Game Studio vu de l'assistant : disponibilité expliquée, lancement d'une mission PROPOSÉE par le Cerveau
-(acte de l'utilisateur), suivi (état, résultats, aperçus), annulation.
+(acte de l'utilisateur), suivi (état, résultats, aperçus), annulation, reprise d'une mission interrompue.
 
 Tout passe par les outils de Game Studio (`apex.game_studio.delegation`, propriété de Codex) et le moteur
 d'outils, avec l'espace de travail de la conversation (ou de son projet) : Game Studio ne rend une mission
@@ -44,7 +44,23 @@ REFUSALS: dict[str, str] = {
     "external_model_workload_active": (
         "un autre serveur de modèle tourne déjà sur ce PC : arrêtez-le d'abord."),
     "game_studio_project_missing": "mission introuvable dans cette conversation.",
+    "blender_worker_or_local_coder_missing": "Blender ou le planificateur local manque sur ce PC.",
+    "pinned_7b_model_missing_no_download_performed": (
+        "le modèle planificateur Qwen2.5-Coder-7B n'est pas installé (rien n'a été téléchargé)."),
+    "game_studio_project_process_interrupted": "APEX a été arrêté pendant la mission.",
+    "game_studio_process_interrupted": "APEX a été arrêté pendant la mission.",
+    # Reprise (`ProjectService.resume` de Game Studio).
+    "only_interrupted_failed_or_incomplete_projects_can_resume": (
+        "seule une mission interrompue, échouée ou incomplète peut être reprise."),
+    "project_already_running": "cette mission est déjà en cours.",
+    "project_already_delivered_for_review": "cette mission est déjà livrée : ses fichiers sont prêts.",
+    "cumulative_time_budget_exhausted": (
+        "le temps total accordé à cette mission est épuisé : lancez une nouvelle mission."),
+    "legacy_budget_unknown_new_mission_required": (
+        "cette mission est trop ancienne pour être reprise : lancez une nouvelle mission."),
 }
+#: États dans lesquels l'Atelier 3D propose de reprendre une mission (Game Studio décide en dernier).
+RESUMABLE = frozenset({"interrupted", "failed", "cancelled"})
 
 
 def explain(message: str | None) -> str:
@@ -128,6 +144,40 @@ def cancel(session_factory: Any, conversation_id: str, project_id: str, *,
     engine, context, _ = _engine(session_factory, conversation_id, _permissions("game_studio.cancel"),
                                  service)
     return _call(engine, context, "game_studio.cancel", project_id, conversation_id)
+
+
+def resume(session_factory: Any, conversation_id: str, project_id: str, *,
+           service: Any = None) -> dict[str, Any]:
+    """L'utilisateur reprend une mission de CETTE conversation, interrompue (APEX arrêté pendant la mission)
+    ou échouée : acte humain, vérifié comme un lancement (la reprise relance le calcul). La mission est
+    d'abord retrouvée par l'outil de suivi de Game Studio (une mission d'un autre espace de travail est
+    introuvable), puis reprise par Game Studio lui-même, dans ses propres limites (budget cumulé, mission
+    déjà livrée…). La reprise est enregistrée comme un nouveau message ; rend ce message."""
+    from apex.conversations.model import MessageRole, MessageStatus
+    from apex.conversations.repository import ConversationRepository, MessageRepository
+    from apex.policy.engine import PolicyEngine
+    from apex.policy.model import Action, Subject
+
+    PolicyEngine().authorize(Subject.HUMAN, Action.CREATE_MISSION)
+    engine, context, conversation = _engine(session_factory, conversation_id,
+                                            _permissions("game_studio.read"), service)
+    before = _call(engine, context, "game_studio.status", project_id, conversation_id)
+    projects = service if service is not None else _default_services()[0]
+    try:
+        record = projects.resume(project_id)
+    except ValueError as exc:
+        raise ValueError(explain(str(exc))) from exc
+    status = record.get("status") if isinstance(record, dict) else None
+    content = f"Mission Game Studio reprise à votre demande : projet {project_id}, état « {status} »."
+    meta = {"mode": "3d", "source": "apex", "action": "game_studio.resume",
+            "game_studio": {"trigger": "utilisateur", "state": "resumed", "project_id": project_id,
+                            "previous_status": before.get("status"), "status": status,
+                            "authorization": "confirmée par l'utilisateur"}}
+    message = MessageRepository(session_factory).create(
+        conversation_id=conversation.id, role=MessageRole.ASSISTANT, content=content, model_id=None,
+        provider_id=None, status=MessageStatus.REAL, error=None, meta=meta)
+    ConversationRepository(session_factory).touch(conversation.id)
+    return {"message_id": message.id, "content": content, "meta": meta}
 
 
 def launch_proposed(session_factory: Any, conversation_id: str, message_id: str, *, compute: str,

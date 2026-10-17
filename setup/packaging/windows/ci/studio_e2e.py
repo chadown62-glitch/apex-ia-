@@ -50,6 +50,15 @@ def run(api: Api, out: Path, label: str, *, cpu: bool, turn_timeout_s: float, mi
                               for c in status["components"] if c["component"] in COMPONENTS}
     for name, value in evidence["components"].items():
         print(f"COMPONENT {name} {value['state']} {value['detail'][:200]}")
+    # Composants de Game Studio tels que l'Atelier 3D les présente (état, taille, provenance, et pourquoi
+    # aucune installation n'est offerte tant que Game Studio n'en publie pas le contrat).
+    listing = api.data("GET", "/assistant/game-studio/dependencies")
+    evidence["dependencies"] = listing
+    print(f"NOTE contrat d'installation de Game Studio : {listing['contract']['present']} "
+          f"({listing['contract']['reason'] or 'présent'})")
+    for item in listing.get("items", []):
+        offer = "installable" if item["install"]["available"] else item["install"]["reason"] or "—"
+        print(f"DEPENDENCY {item['id']} {item['state']} {offer[:160]}")
     evidence["availability"] = api.data("GET", "/assistant/game-studio/availability")
     if not evidence["availability"].get("installed"):
         return finish(BLOCKED, "Game Studio absent de cette installation : "

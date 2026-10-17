@@ -135,7 +135,7 @@ jobs:
             $lines = & python @arguments 2>&1 | ForEach-Object { "$_" }
             $code = $LASTEXITCODE
             $lines | Out-Host
-            $kept = $lines | Where-Object { $_ -match '^(CHECK|NOTE|COMPONENT|PROPOSAL|LAUNCH|MISSION|VERDICT|BLOCKED|FAIL)' }
+            $kept = $lines | Where-Object { $_ -match '^(CHECK|NOTE|COMPONENT|DEPENDENCY|PROPOSAL|LAUNCH|MISSION|VERDICT|BLOCKED|FAIL)' }
             Note notice "$title (code $code)" ($kept -join "`n")
             return $code
           }

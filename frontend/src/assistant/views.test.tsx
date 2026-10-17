@@ -398,6 +398,80 @@ describe("Game Studio in the 3D workshop", () => {
     expect(screen.queryByRole("button", { name: "Lancer la mission" })).not.toBeInTheDocument();
   });
 
+  const availability = { installed: true, ready: false, missing: [], notes: [], launch: "human", compute: "auto" };
+  const dependency = (overrides: Record<string, unknown>) => ({
+    id: "planner_model", name: "Modèle planificateur Qwen2.5-Coder-7B-Instruct (Q5_K_M)", role: "planifie chaque mission",
+    state: "missing", detail: "", bytes: 5_444_831_232, source: "Hugging Face Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+    license: "Apache-2.0", manual: null,
+    install: { available: false, reason: "En attente du composant Game Studio : aucun point d'entrée d'installation" },
+    ...overrides,
+  });
+
+  it("lists Game Studio's components and offers no install button without its contract", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", "/assistant/game-studio/availability", availability);
+    api.on("GET", "/assistant/game-studio/dependencies", {
+      installed: true, job: null,
+      contract: { present: false, module: "apex.game_studio.setup", reason: "Game Studio ne publie pas encore de contrat d'installation" },
+      items: [
+        dependency({}),
+        dependency({ id: "blender", name: "Blender 4.3.2", state: "present", bytes: null, detail: "Blender 4.3.2 (C:/Blender/blender.exe)",
+                     install: { available: false, reason: "" } }),
+        dependency({ id: "python:jsonschema", name: "Bibliothèque Python jsonschema", bytes: null, source: null, license: null,
+                     install: { available: false, reason: "En attente du composant Game Studio : non déclarée dans la liste figée" } }),
+      ],
+    });
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={[] as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText("Composants de Game Studio : 2 à installer")).toBeInTheDocument();
+    expect(screen.getByText(/5,4 Go · Hugging Face Qwen\/Qwen2\.5-Coder-7B-Instruct-GGUF · licence Apache-2\.0/)).toBeInTheDocument();
+    expect(screen.getByText("En attente du composant Game Studio : aucun point d'entrée d'installation")).toBeInTheDocument();
+    expect(screen.getByText("En attente du composant Game Studio : non déclarée dans la liste figée")).toBeInTheDocument();
+    expect(screen.getByText("Blender 4.3.2 (C:/Blender/blender.exe)")).toBeInTheDocument();
+    expect(screen.getByText("Game Studio ne publie pas encore de contrat d'installation.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Installer" })).not.toBeInTheDocument();
+  });
+
+  it("installs only what Game Studio's contract covers, after an explicit confirmation", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", "/assistant/game-studio/availability", availability);
+    api.on("GET", "/assistant/game-studio/dependencies", {
+      installed: true, job: null, contract: { present: true, module: "apex.game_studio.setup", reason: "" },
+      items: [dependency({ install: { available: true, reason: "", confirmation: "Télécharger 5,4 Go (licence Apache-2.0) ?" } })],
+    });
+    api.on("POST", "/assistant/game-studio/dependencies/planner_model/install", (body) =>
+      real({ item: "planner_model", name: "Modèle planificateur", state: "running", log: [], detail: "", echo: body }));
+    const asked: string[] = [];
+    const confirm = window.confirm;
+    window.confirm = (question?: string) => { asked.push(String(question)); return asked.length > 1; };
+    try {
+      renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={[] as never} liveSteps={[]} notes={[]} /> }]);
+      const button = await screen.findByRole("button", { name: "Installer" });
+      fireEvent.click(button); // refusé : rien n'est demandé à APEX
+      expect(api.calls.some((c) => c.method === "POST" && c.path.endsWith("/install"))).toBe(false);
+      fireEvent.click(button);
+      await waitFor(() => expect(api.calls.find((c) => c.method === "POST" && c.path.endsWith("/install"))?.body).toEqual({ confirm: true }));
+      expect(asked).toEqual(["Télécharger 5,4 Go (licence Apache-2.0) ?", "Télécharger 5,4 Go (licence Apache-2.0) ?"]);
+    } finally {
+      window.confirm = confirm;
+    }
+  });
+
+  it("stops following an interrupted mission and lets the user resume it", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: { status: "interrupted", mission_id: "m1", steps: [], delivery_status: null, last_event: null },
+      results: { status: "interrupted", ready: false },
+    });
+    api.on("POST", `/assistant/conversations/c1/game-studio/${PROJECT}/resume`, real({ message_id: "r1", content: "Mission reprise.", meta: {} }));
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText("interrompue (APEX a été arrêté pendant la mission)")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Annuler la mission" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Reprendre la mission" }));
+    await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path.endsWith("/resume"))).toBe(true));
+  });
+
   it("shows Game Studio's refusal as it is, explained, never as a mission", async () => {
     api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
     const messages = [created(false, null, { code: "unavailable", message: "cuda_unavailable_choose_cpu_explicitly" })];
