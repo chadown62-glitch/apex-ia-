@@ -4,8 +4,8 @@
 - Le parcours de création 3D reste bloqué : le planificateur Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne
   sont pas fournis, et la liste Windows de Game Studio n'a pas `jsonschema`. Ces trois points sont à Codex.
 - Sous Windows, la candidate combinée installée ne chargeait pas Game Studio. Cause : le Panel laissait Python
-  exécuter le `apex\` du dossier courant. C'est corrigé dans le Panel (`24edcbc`) ; la vérification sur
-  Windows est en cours (§4).
+  exécuter le `apex\` du dossier courant. C'est corrigé dans le Panel (`24edcbc`) et vérifié sur Windows : APEX
+  démarre READY, et le parcours 3D va jusqu'au clic, puis Game Studio refuse faute de `jsonschema` (§4 ter).
 - Rien n'a été fusionné dans `apex/integration`. La PR [#27](https://github.com/chadown62-glitch/apex-ia-/pull/27)
   est un **brouillon** ; l'utilisateur est l'intégrateur final.
 - Aucune release n'a été publiée.
@@ -122,8 +122,31 @@ client, ni le PC de l'utilisateur.
   - le code Python d'APEX exécuté venait très probablement du checkout, au même commit, et non des fichiers
     installés. Ce point n'est donc **pas** prouvé par ces runs. Il l'est par les runs suivants (§4 ter).
 
-**§4 ter — runs du correctif `24edcbc`** (`windows-native` et `windows-candidate`) : **en cours** au moment de
-ce commit. Aucun résultat n'est affirmé avant leur fin.
+**§4 ter — candidate combinée avec le correctif `24edcbc`**
+([run 38984907317](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38984907317), Windows Server) :
+- programme exécuté : `C:\Users\runneradmin\AppData\Local\Programs\APEX\app`, **l'application installée**,
+  alors que le Panel était lancé depuis le checkout ;
+- démarrage : **READY** (code 0), « Tous les composants d'APEX répondent » ;
+- assistant : **PASS**. Le moteur intégré `qwen2.5-coder:1.5b-instruct:bf16` a répondu au tour Finance en
+  170 s (1 196 caractères, 475 tokens, processeur) ;
+- lignes d'état, enfin justes :
+  - Game Studio : « manque : Blender n'est pas installé… Le modèle planificateur des missions (Qwen2.5-Coder-7B
+    épinglé, avec llama-cpp-python) n'est pas installé. Bibliothèques Python manquantes… » ;
+  - planificateur : absent, avec la raison ;
+  - Game Engineer : « bibliothèque jsonschema absente » ;
+  - Blender : introuvable ;
+  - GPU : absent (pas de NVIDIA) ;
+- **parcours 3D réel sous Windows** :
+  1. demande en mode 3D ;
+  2. APEX **propose** la mission (« à lancer par vous ») ;
+  3. clic humain (`authorization : confirmée par l'utilisateur`) ;
+  4. Game Studio **refuse** : « une bibliothèque nécessaire à Game Studio manque sur ce PC
+     (ModuleNotFoundError: No module named 'jsonschema') ».
+
+  Verdict **BLOCKED**. C'est le premier blocage ; le planificateur 7B et Blender viendraient ensuite ;
+- désinstallation : code 0, base conservée.
+
+`windows-native` sur `24edcbc` (ma branche seule) : voir la ligne du tableau ci-dessus quand il aura fini.
 
 Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par `exit 3`, avant la ligne
 `exit $LASTEXITCODE` que GitHub ajoute ; `pwsh -Command` réduit alors le code à 1.

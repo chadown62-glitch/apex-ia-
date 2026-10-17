@@ -48,7 +48,7 @@ votre PC. Un composant jamais qualifié chez vous n'est jamais affiché « prêt
 | Cerveau APEX | prêt |
 | Moteur intégré | prêt, une fois le modèle installé |
 | GPU CUDA | « GPU détecté : … », puis l'invitation « Accélération GPU (facultatif) » |
-| Game Studio | constaté sur le runner Windows : « Game Studio ne fait pas partie de cette installation d'APEX », alors que la candidate le contient. Défaut en cours de diagnostic (rapport §4). Une fois corrigé, attendu : « manque : jsonschema », bibliothèque pas encore déclarée par Codex |
+| Game Studio | « manque : … » avec la liste : Blender s'il n'est pas installé, le planificateur 7B, et les bibliothèques Python (`jsonschema`, pas encore déclarée par Codex). Constaté sur le runner Windows |
 | Planificateur 3D | absent : le Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne sont pas fournis |
 | Blender | sa version, s'il est installé et trouvé ; sinon « introuvable » |
 | Game Graphics, Game Engineer | selon la sonde de Game Studio |
@@ -74,9 +74,11 @@ Rien de cela n'a été essayé sur une carte NVIDIA. Votre essai sera le premier
 3. APEX doit **proposer** une mission Game Studio, sans la lancer.
 4. Cliquez sur le bouton de lancement.
 
-Tant que le planificateur 7B n'est pas fourni par Codex, Game Studio refuse la mission. Le message attendu est
-« le modèle planificateur local de Game Studio (Qwen2.5-Coder-7B) n'est pas installé ». **C'est le blocage
-connu, pas une panne.** Si un autre message s'affiche, faites une capture.
+Game Studio refuse aujourd'hui la mission. Message attendu, constaté sur le runner Windows avec cette
+candidate : « une bibliothèque nécessaire à Game Studio manque sur ce PC (ModuleNotFoundError: No module named
+'jsonschema') ». Une fois `jsonschema` déclarée par Codex, le refus suivant sera « le modèle planificateur local
+de Game Studio (Qwen2.5-Coder-7B) n'est pas installé ». **Ce sont les blocages connus, pas des pannes.** Si un
+autre message s'affiche, faites une capture.
 
 ## 7. Quoi renvoyer
 
