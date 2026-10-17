@@ -3,8 +3,9 @@
 **Verdict : aucune release « READY ».**
 - Le parcours de création 3D reste bloqué : le planificateur Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne
   sont pas fournis, et la liste Windows de Game Studio n'a pas `jsonschema`. Ces trois points sont à Codex.
-- Sous Windows, la candidate combinée installée ne charge pas Game Studio : « ne fait pas partie de cette
-  installation ». La cause est en cours de diagnostic (§4).
+- Sous Windows, la candidate combinée installée ne chargeait pas Game Studio. Cause : le Panel laissait Python
+  exécuter le `apex\` du dossier courant. C'est corrigé dans le Panel (`24edcbc`) ; la vérification sur
+  Windows est en cours (§4).
 - Rien n'a été fusionné dans `apex/integration`. La PR [#27](https://github.com/chadown62-glitch/apex-ia-/pull/27)
   est un **brouillon** ; l'utilisateur est l'intégrateur final.
 - Aucune release n'a été publiée.
@@ -82,7 +83,7 @@ client, ni le PC de l'utilisateur.
 
 | Build | Parcours | Résultat |
 |---|---|---|
-| Ma branche, `5a694ec` et `f941d90` | installation silencieuse → « Préparer APEX » → installation du modèle → démarrage → vrais tours de l'assistant → arrêt, redémarrage, persistance → désinstallation (base conservée) | **PASS**, deux fois |
+| Ma branche, `5a694ec` et `f941d90` | installation silencieuse → « Préparer APEX » → installation du modèle → démarrage → vrais tours de l'assistant → arrêt, redémarrage, persistance → désinstallation (base conservée) | **PASS**, deux fois, avec une réserve : le code Python d'APEX venait très probablement du checkout (voir plus bas) |
 | Candidate combinée ([run 38981526906](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38981526906)) | installation → « Préparer APEX » → modèle → démarrage → tours de l'assistant → parcours 3D → arrêt → désinstallation | voir ci-dessous : **job en échec**, parcours 3D BLOCKED |
 
 **Candidate combinée sur Windows Server, mesures du run 38981526906** (annotations du job) :
@@ -95,12 +96,34 @@ client, ni le PC de l'utilisateur.
 - lignes d'état : Cerveau APEX prêt, moteur intégré prêt, sandbox `WindowsAppContainerSandbox` prête, GPU
   absent (aucun pilote NVIDIA), Blender introuvable ;
 - **défaut** : les lignes Game Studio, planificateur, Game Graphics et Game Engineer disent « Game Studio ne fait
-  pas partie de cette installation d'APEX ». Pourtant cette candidate le contient. Ce message ne sort que si
-  `apex.game_studio` lui-même est introuvable à l'import. Sous Linux, les mêmes étapes de build empaquettent et
-  importent bien `apex.game_studio` (vérifié). La cause propre à Windows est **en cours de diagnostic** : le run
-  suivant liste les fichiers installés et importe Game Studio avec le Python préparé ;
+  pas partie de cette installation d'APEX ». Pourtant cette candidate le contient ;
 - parcours 3D : **BLOCKED** dès la disponibilité, à cause de ce défaut ; la conversation n'a pas été tentée ;
 - arrêt, puis désinstallation : code 0, base de l'utilisateur conservée.
+
+**Cause du défaut, trouvée au [run 38982990677](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38982990677), et correction** (`24edcbc`, Panel, mon code) :
+- Ce que l'APEX installé contient vraiment : tous les fichiers de `apex\game_studio`, et le `.pth` qui pointe
+  vers l'application installée. Lancé depuis un autre dossier, le Python préparé importe `apex.game_studio` et
+  sa délégation. Il manque `jsonschema` et `llama_cpp`, comme attendu.
+- Le backend, lui, est lancé par le Panel avec `python -m apex.standalone serve`. **Avec `-m`, Python met le
+  dossier courant en tête de `sys.path`.** Dans la CI, le Panel hérite du checkout, qui contient le `apex\` de ma
+  branche, sans Game Studio : c'est ce code-là qui tournait, pas l'application installée.
+- Les raccourcis de l'installateur fixent `WorkingDir: "{app}"`, un dossier sans `apex\`. L'utilisateur qui passe
+  par eux n'était pas touché. En revanche, APEX.exe lancé depuis un dossier contenant un clone du dépôt
+  l'aurait été.
+- Correction : chaque Python lancé par le Panel reçoit `-P` (Python 3.11 et plus ; le runtime est figé en
+  3.12.10). Cela vaut pour pip, la vérification de « Préparer APEX », l'installation du modèle et du GPU, le
+  démarrage et l'arrêt. `apex` ne vient plus que du `.pth`. Un test vérifie les six lancements (Panel : 251/251).
+- Les workflows Windows lancent toujours le Panel depuis le checkout : ils servent désormais de test de
+  non-régression. Ils lisent la ligne « programme : … » du journal de démarrage d'APEX et échouent si ce n'est
+  pas l'application installée.
+- **Ce que cela change pour les PASS antérieurs de `windows-native`** (`5a694ec`, `f941d90`) :
+  - restent prouvés : l'installateur, le Python préparé, ses bibliothèques, le modèle, le Panel, la persistance
+    et la désinstallation ;
+  - le code Python d'APEX exécuté venait très probablement du checkout, au même commit, et non des fichiers
+    installés. Ce point n'est donc **pas** prouvé par ces runs. Il l'est par les runs suivants (§4 ter).
+
+**§4 ter — runs du correctif `24edcbc`** (`windows-native` et `windows-candidate`) : **en cours** au moment de
+ce commit. Aucun résultat n'est affirmé avant leur fin.
 
 Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par `exit 3`, avant la ligne
 `exit $LASTEXITCODE` que GitHub ajoute ; `pwsh -Command` réduit alors le code à 1.
