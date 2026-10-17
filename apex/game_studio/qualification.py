@@ -47,6 +47,33 @@ def sha(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def lease_fixture(output):
+    """Exercise OS exclusion with a separate interpreter, never fake GPU memory."""
+    from apex.game_studio.gpu import resource_lease
+
+    shared = str(Path(os.environ["APEX_HOME"]) / ".apex/model-session.lock")
+    code = (
+        "import sys; from pathlib import Path; from apex.game_graphics.resources import _locked\n"
+        "try:\n with _locked(Path(sys.argv[1])): pass\n"
+        "except (BlockingIOError, PermissionError): raise SystemExit(73)\n"
+    )
+    command = [sys.executable, "-c", code, shared]
+    with resource_lease(output / "lease-proof/resource.lock"):
+        blocked = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
+    available = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
+    report = {
+        "contender_while_held": blocked.returncode,
+        "contender_after_release": available.returncode,
+        "stderr": [blocked.stderr, available.stderr],
+        "cuda_qualified": False,
+        "scope": "real separate-process OS lease exclusion, no GPU resident",
+    }
+    save(output / "lease-report.json", report)
+    if blocked.returncode != 73 or available.returncode != 0:
+        raise RuntimeError("native_shared_lease_exclusion_failed")
+    return report
+
+
 def blender_fixture(output):
     from apex.artifacts.local_filesystem import LocalFilesystemArtifactStore
     from apex.game_graphics.contract import QualityCriteria
@@ -281,6 +308,7 @@ def main(argv=None):
         )
         version.check_returncode()
         report["blender"] = {**blender, "version": version.stdout}
+        report["lease"] = lease_fixture(output)
         report["fixture"] = blender_fixture(output)
         report["mission"] = api_mission(output)
         report["status"] = (

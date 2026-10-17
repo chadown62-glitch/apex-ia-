@@ -113,8 +113,8 @@ def main():
         BLENDER_SHA,
     )
     with zipfile.ZipFile(output / BLENDER_ZIP) as archive:
-        archive.extractall(output / "blender")
-    blender = output / "blender/blender-4.3.2-windows-x64/blender.exe"
+        archive.extractall(output / "Blender portable")
+    blender = output / "Blender portable/blender-4.3.2-windows-x64/blender.exe"
     env = {
         **os.environ,
         "APEX_HOME": str(output / "profile"),
