@@ -25,7 +25,6 @@ from apex.config.schema import RecoveryPolicy
 from apex.errors import TimeoutExceeded
 from apex.game_graphics.contract import QualityCriteria
 from apex.game_graphics.models import CoderSession
-from apex.game_graphics.resources import resource_lease
 from apex.game_graphics.studio.benchmark import (
     calibrate,
     compact_hierarchy,
@@ -35,6 +34,7 @@ from apex.game_graphics.studio.benchmark import (
 from apex.game_graphics.studio.contract import validate_correction_scope
 from apex.game_graphics.studio.controller import propose_plan
 from apex.game_graphics.studio.execution import ROOT, create_revision, refuse_personal_project
+from apex.game_studio.gpu import resource_lease
 from apex.missions.service import MissionService
 from apex.policy.model import Subject
 from apex.recovery.model import FailureCategory, RecoveryAction

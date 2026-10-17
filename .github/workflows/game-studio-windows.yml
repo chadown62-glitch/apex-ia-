@@ -1,0 +1,60 @@
+name: game-studio-windows
+on:
+  push:
+    branches: [agent/codex/28-first-windows-creation]
+    paths:
+      - '.github/workflows/game-studio-windows.yml'
+      - 'apex/game_studio/**'
+      - 'apex/game_graphics/**'
+      - 'scripts/game_studio/qualify_windows.py'
+      - 'setup/packaging/runtime/requirements*'
+  workflow_dispatch:
+    inputs:
+      download_pinned_qwen:
+        description: 'Explicitly download the pinned Apache-2.0 Qwen 7B weights (5.4 GB) in this disposable runner'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: game-studio-windows-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows-cpu:
+    runs-on: windows-2022
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build the existing frontend
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          exit $LASTEXITCODE
+      - name: Qualify packaged Game Studio in pinned APEX Python and Blender
+        shell: pwsh
+        env:
+          ALLOW_PINNED_WEIGHTS: ${{ inputs.download_pinned_qwen || false }}
+        run: |
+          $args = @('scripts/game_studio/qualify_windows.py', '--output', "$env:RUNNER_TEMP\game-studio-qualification")
+          if ($env:ALLOW_PINNED_WEIGHTS -eq 'true') { $args += '--download-pinned-qwen' }
+          python @args
+          exit $LASTEXITCODE
+      - name: Preserve actual results, including failures
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: game-studio-windows-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/game-studio-qualification/*.log
+            ${{ runner.temp }}/game-studio-qualification/provenance.json
+            ${{ runner.temp }}/game-studio-qualification/evidence/**
+          retention-days: 14

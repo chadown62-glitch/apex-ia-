@@ -1,0 +1,90 @@
+{
+  "family": "vehicle",
+  "case_id": "sports_car",
+  "criteria": {
+    "level": "prototype",
+    "max_triangles": 100000,
+    "dimension_tolerance_m": 0.04,
+    "pivot_tolerance_m": 0.002,
+    "max_distinct_defect_attempts": 3,
+    "minimum_views": 4,
+    "required_lods": 0,
+    "required_texture_size": 0,
+    "require_calibrated_visual_reference": false
+  },
+  "benchmark_version": 1,
+  "scope": "measured_geometry_export_and_render_rules",
+  "defects": [],
+  "unavailable": [],
+  "facts": {
+    "render_settings": {
+      "engine": "CYCLES",
+      "device": "CPU",
+      "samples": 64,
+      "seed": 14,
+      "denoising": false
+    },
+    "distinct_camera_transforms": 4,
+    "blend": {
+      "triangles": 32604,
+      "dimensions": [
+        4.924999952316284,
+        2.2399998903274536,
+        1.288821374480083
+      ],
+      "objects": 136,
+      "materials": 9
+    },
+    "glb": {
+      "triangles": 32604,
+      "dimensions": [
+        4.924999952316284,
+        2.2399998903274536,
+        1.2888214147975106
+      ],
+      "objects": 136,
+      "materials": 9
+    },
+    "images": {
+      "front_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 42.9719179246766,
+        "subject_fraction": 0.17352719907407407,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "rear_three_quarter": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 40.30231593535387,
+        "subject_fraction": 0.16786458333333334,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "side": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 64.07980609230823,
+        "subject_fraction": 0.15002025462962962,
+        "subject_pixels_at_image_boundary": 0
+      },
+      "front": {
+        "width": 960,
+        "height": 720,
+        "channel_stddev": 29.1992749506122,
+        "subject_fraction": 0.058313078703703704,
+        "subject_pixels_at_image_boundary": 0
+      }
+    }
+  },
+  "advisory": [
+    "Shader parameters and material count do not certify convincing PBR appearance."
+  ],
+  "aesthetic_certification": false,
+  "limits": [
+    "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+    "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+    "Unreal import and runtime performance have not been measured by this oracle."
+  ],
+  "manifest_sha256": "681350120ec766a25bc8c5ab4bdd339c59e91d5c3e401af17a33479ef55ca545",
+  "verdict": "pass"
+}

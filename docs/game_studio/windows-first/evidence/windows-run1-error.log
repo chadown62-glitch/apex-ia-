@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:\a\_temp\game-studio-qualification\runtime\apex\game_studio\qualification.py", line 301, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "D:\a\_temp\game-studio-qualification\runtime\apex\game_studio\qualification.py", line 279, in main
+    report["fixture"] = blender_fixture(output)
+                        ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\a\_temp\game-studio-qualification\runtime\apex\game_studio\qualification.py", line 124, in blender_fixture
+    raise RuntimeError("vehicle_preflight_still_failed")
+RuntimeError: vehicle_preflight_still_failed

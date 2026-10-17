@@ -1,0 +1,7 @@
+{
+  "status": "BLOCKED",
+  "reason": "verified_Qwen_weights_absent",
+  "api_auth": "unauthenticated_401_authenticated_200",
+  "frontend_served": true,
+  "inference_executed": false
+}

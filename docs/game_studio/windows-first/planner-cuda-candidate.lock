@@ -1,0 +1,12 @@
+# Optional CUDA candidate, NOT RTX-qualified. Does not replace the runtime's CPU lock.
+# Install only into an isolated qualification runtime, after CPU/server dependency locks.
+# Source: official abetlen/llama-cpp-python release v0.3.36-cu124.
+# Never install CPU and CUDA variants together in the same pip invocation.
+llama-cpp-python @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36-cu124/llama_cpp_python-0.3.36-py3-none-win_amd64.whl \
+    --hash=sha256:7086b98420cf9cca5e3f14181edc4332038bfb0a0e380370a693806bb527911f
+# NVIDIA package metadata hashes; pip must verify downloaded bytes.
+# Redistribution licenses must be accepted by the package operator.
+nvidia-cuda-runtime-cu12==12.4.127 \
+    --hash=sha256:09c2e35f48359752dfa822c09918211844a3d93c100a715d79b59591130c5e1e
+nvidia-cublas-cu12==12.4.5.8 \
+    --hash=sha256:5a796786da89203a0657eda402bcdcec6180254a8ac22d72213abc42069522dc
