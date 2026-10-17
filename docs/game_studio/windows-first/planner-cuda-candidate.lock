@@ -1,0 +1,6 @@
+# Optional CUDA candidate, NOT RTX-qualified. Does not replace the runtime's CPU lock.
+# Install only into an isolated qualification runtime, after CPU/server dependency locks.
+# Source: official abetlen/llama-cpp-python release v0.3.36-cu124.
+# Never install CPU and CUDA variants together in the same pip invocation.
+llama-cpp-python @ https://github.com/abetlen/llama-cpp-python/releases/download/v0.3.36-cu124/llama_cpp_python-0.3.36-py3-none-win_amd64.whl \
+    --hash=sha256:7086b98420cf9cca5e3f14181edc4332038bfb0a0e380370a693806bb527911f

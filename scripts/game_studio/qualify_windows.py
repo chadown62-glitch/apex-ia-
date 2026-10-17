@@ -70,6 +70,9 @@ def main():
     if os.name != "nt":
         raise RuntimeError("native_windows_required_no_wine_substitute")
     output = args.output.resolve()
+    normalized = str(output).replace("\\", "/").casefold()
+    if "c:/gameproject" in normalized:
+        raise ValueError("personal_game_project_protected")
     output.mkdir(parents=True, exist_ok=False)
     manifest = json.loads((ROOT / "setup/packaging/runtime/python-runtime.json").read_text())
     provenance = {
@@ -77,6 +80,7 @@ def main():
             [manifest["python"]["url"]], output / "python.nupkg", manifest["python"]["sha256"]
         )
     }
+    (output / "provenance.json").write_text(json.dumps(provenance, indent=2))
     with zipfile.ZipFile(output / "python.nupkg") as archive:
         archive.extractall(output / "python")
     python = output / "python/tools/python.exe"

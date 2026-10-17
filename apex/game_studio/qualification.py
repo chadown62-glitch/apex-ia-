@@ -98,6 +98,7 @@ def blender_fixture(output):
         )
         if repair.status is not ExecutionStatus.SUCCESS or sha(first / "asset.blend") != source_sha:
             raise RuntimeError("vehicle_repair_failed_or_parent_changed")
+        save(selected / "execution.json", repair.to_dict())
         judge = judge_revision(selected, "vehicle", criteria, benchmark)
         after = prepare_bundle(
             selected, output / "engineer-after", source_hash="sha256:" + sha(selected / "asset.glb")
@@ -122,6 +123,8 @@ def blender_fixture(output):
     save(output / "blender-report.json", report)
     if after["verdict"] != "pass_preflight":
         raise RuntimeError("vehicle_preflight_still_failed")
+    if judge["verdict"] != "pass":
+        raise RuntimeError("blender_technical_judge_failed")
     return report
 
 

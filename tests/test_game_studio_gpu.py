@@ -36,7 +36,7 @@ class BrainContract:
         with _locked(self.path):
             self.calls.append("return")
         self.open, self.lent_to = True, None
-        return {"resumed": True, "requester": requester}
+        return {"resumed": True, "requester": requester, "lent_to": requester}
 
 
 @pytest.fixture
@@ -131,21 +131,27 @@ def test_profile_mismatch_never_requests_unload(contract):
 
 def test_absent_module_keeps_standalone_exclusive_lease(contract):
     brain, path = contract
-    with patch("apex.game_studio.gpu._brain", return_value=None), resource_lease(path):
-        with pytest.raises(OSError), _locked(brain.path):
-            pytest.fail("lease absent")
+    with (
+        patch("apex.game_studio.gpu._brain", return_value=None),
+        resource_lease(path),
+        pytest.raises(OSError),
+        _locked(brain.path),
+    ):
+        pytest.fail("lease absent")
     assert brain.calls == []
 
 
 def test_broken_brain_dependency_does_not_fall_back():
     from apex.game_studio.gpu import _brain
 
-    with patch(
-        "apex.game_studio.gpu.importlib.import_module",
-        side_effect=ModuleNotFoundError("broken dependency", name="torch"),
+    with (
+        patch(
+            "apex.game_studio.gpu.importlib.import_module",
+            side_effect=ModuleNotFoundError("broken dependency", name="torch"),
+        ),
+        pytest.raises(ModuleNotFoundError, match="broken dependency"),
     ):
-        with pytest.raises(ModuleNotFoundError, match="broken dependency"):
-            _brain()
+        _brain()
 
 
 def test_packaged_vehicle_schema_matches_source(tmp_path):
@@ -155,4 +161,27 @@ def test_packaged_vehicle_schema_matches_source(tmp_path):
     built = tmp_path / "runtime"
     build_runtime_from_worktree(built)
     relative = Path("docs/game_graphics/vehicle-asset-v1.schema.json")
-    assert (built / relative).read_bytes() == (source / relative).read_bytes()
+    assert (built / relative).read_bytes() == (source / relative).read_bytes().replace(b"\r\n", b"\n")
+    from apex.game_engineer.contract import CONTRACT_SCHEMA_SHA256
+    from apex.game_graphics.models import file_sha256
+
+    assert file_sha256(built / relative) == CONTRACT_SCHEMA_SHA256
+
+
+def test_packaged_crlf_schema_keeps_agreed_hash(tmp_path):
+    from apex.game_engineer.contract import CONTRACT_SCHEMA_SHA256
+    from apex.game_graphics.models import file_sha256
+    from runtime_build.build import build_runtime_from_worktree
+
+    original = Path.read_bytes
+
+    def windows_checkout(path):
+        data = original(path)
+        if path.name == "vehicle-asset-v1.schema.json":
+            return data.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+        return data
+
+    built = tmp_path / "runtime"
+    with patch.object(Path, "read_bytes", windows_checkout):
+        build_runtime_from_worktree(built)
+    assert file_sha256(built / "docs/game_graphics/vehicle-asset-v1.schema.json") == CONTRACT_SCHEMA_SHA256

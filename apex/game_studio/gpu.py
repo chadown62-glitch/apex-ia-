@@ -101,7 +101,11 @@ def resource_lease(path: Path):
                         # The context above released our OS locks even on an exception.
                         returned = brain.return_gpu(requester=requester)
                         receipt["return"] = returned
-                        if returned.get("resumed") is not True or returned.get("requester") != requester:
+                        if (
+                            returned.get("resumed") is not True
+                            or returned.get("requester") != requester
+                            or returned.get("lent_to") != requester
+                        ):
                             raise RuntimeError("brain_return_not_acknowledged")
                         receipt["events"].append("brain_admissions_returned")
                     elif status.get("lent_to") is not None:

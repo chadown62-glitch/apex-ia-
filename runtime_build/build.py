@@ -121,7 +121,9 @@ def _assemble_common(src_root: Path, out_dir: Path) -> None:
         if contract.is_file():
             target = out_dir / relative
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(contract, target)
+            # Windows Git checkouts may use CRLF. The agreed JSON contract
+            # SHA256 identifies canonical LF bytes; never change the verifier.
+            target.write_bytes(contract.read_bytes().replace(b"\r\n", b"\n"))
 
     # Chaîne Alembic officielle COMPLÈTE, jamais un sous-ensemble — voir
     # runtime_build/README.md, décision explicite : une seule chaîne de
