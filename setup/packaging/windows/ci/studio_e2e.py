@@ -22,7 +22,6 @@ import json
 import os
 import sys
 import time
-import urllib.error
 from pathlib import Path
 from typing import Any
 
@@ -136,6 +135,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--turn-timeout", type=float, default=1800.0)
     parser.add_argument("--mission-timeout", type=float, default=5400.0)
     args = parser.parse_args(argv)
+    # Sortie UTF-8 quelle que soit la page de codes de la console (cp1252 sous Windows).
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[union-attr]
     token_file = Path(args.home).expanduser() / ".apex" / "api-token"
     if not token_file.is_file():
         print(f"BLOCKED jeton introuvable : {token_file} (APEX n'a jamais démarré ?)")
@@ -146,9 +147,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return run(api, out, args.label, cpu=args.cpu, turn_timeout_s=args.turn_timeout,
                    mission_timeout_s=args.mission_timeout)
-    except (RuntimeError, TimeoutError, urllib.error.URLError) as exc:
-        print(f"FAIL {exc}")
-        (out / f"studio-{args.label}-error.txt").write_text(str(exc), encoding="utf-8")
+    except Exception as exc:  # un défaut du script de test ne se confond jamais avec un verdict sur APEX
+        reason = f"{exc.__class__.__name__}: {exc}"
+        print(f"FAIL {reason}")
+        (out / f"studio-{args.label}-error.txt").write_text(reason, encoding="utf-8")
         return FAIL
 
 

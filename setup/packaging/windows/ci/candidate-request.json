@@ -11,6 +11,6 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 3,
-  "why": "run 38982990677 : l'APEX installé importe bien Game Studio, mais le backend lancé par le Panel exécutait le apex\\ du checkout (dossier courant en tête de sys.path). Ce run vérifie le correctif -P."
+  "attempt": 4,
+  "why": "run 38984907317 a validé le correctif -P, mais avec PYTHONUTF8 hérité par APEX ; ce run reprend le parcours sans lui, comme sur le PC d'un utilisateur"
 }
