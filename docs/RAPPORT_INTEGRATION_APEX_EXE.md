@@ -161,9 +161,23 @@ Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par
 
 ## 7. Exécuté sur CUDA
 
-**Rien.** Aucune carte NVIDIA n'était disponible.
-- Les listes figées viennent de l'index PyTorch : métadonnées et empreintes, sans téléchargement des roues.
-- Aucune compatibilité GPU n'est annoncée.
+**Rien sur CUDA.** Aucune carte NVIDIA n'était disponible. Aucune compatibilité GPU n'est annoncée.
+- Les listes figées viennent de l'index PyTorch : métadonnées et empreintes.
+- **Premier essai de l'utilisateur** (17/10/2026, Windows 11, RTX 4060 Ti, pilote 610.62) :
+  - le Cerveau répond, environ 131 tokens/s, sur le processeur ;
+  - « Accélération GPU » refusait aussitôt (code 2, « version CUDA du pilote illisible »). Ce pilote écrit
+    « CUDA UMD Version: 13.3 », et APEX ne lisait que l'ancien libellé « CUDA Version ».
+- **Correction (`1a7fc23`)** : la version CUDA acceptée est demandée au pilote lui-même (`cuDriverGetVersion`)
+  et relue dans `nvidia-smi`, avec les deux libellés. Si les deux diffèrent, la plus basse est retenue. Les
+  tests de régression reprennent les valeurs relevées par l'utilisateur.
+- **Vérifié sans GPU sur Windows réel**
+  ([run 39068337396](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39068337396)), avec le Python et
+  le code d'APEX installés :
+  - les roues cu130 et cu126 existent, à la taille figée près ;
+  - cu130 est choisie pour CUDA 13.3 ;
+  - la roue cu130 est téléchargée, son empreinte vérifiée, et installée à part en 38 s ;
+  - la sonde charge `torch 2.14.0+cu130` depuis la surcouche, et refuse faute de GPU.
+- Reste à constater sur le PC de l'utilisateur : la sonde réussie, puis le Cerveau sur « GPU (CUDA) ».
 - `llama-cpp-python` CUDA (planificateur) est un sujet distinct de PyTorch CUDA (Cerveau, Game Studio). Il
   n'est pas traité ici.
 
