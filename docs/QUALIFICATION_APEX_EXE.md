@@ -10,10 +10,13 @@ Elle est construite sur un Windows réel de GitHub par le workflow `windows-cand
 ## 1. Télécharger
 
 1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé. Il apparaît « en échec » tant que
-   le parcours 3D est bloqué : c'est attendu, et l'installateur est quand même joint. Le run de référence est
-   [39068337396](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39068337396) du 17/10/2026, avec la
-   détection CUDA corrigée : `APEX-Setup-x64-v0.6.0-candidate-8518860124ac.exe`, 51 957 998 octets, SHA-256
-   `7ff5f7efd311be05b8d5ee6650ea846f8ff24988eafcce45a14ea9063491a4c1`. Artefact disponible jusqu'au 16/11/2026.
+   le parcours 3D est bloqué sur le runner (ni poids du planificateur ni Blender) : c'est attendu, et
+   l'installateur est quand même joint. Le run de référence est
+   [39077478748](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39077478748) du 17/10/2026 (pile de
+   Codex à `d15fa02`, prêt du GPU pendant les missions) : `APEX-Setup-x64-v0.6.0-candidate-991388a4860d.exe`,
+   51 967 814 octets, SHA-256 `e0ced6225aca76285b12dc59b96b1a105d645f02c666b2933e5cf4438e7a8666`. Artefact
+   disponible jusqu'au 16/11/2026. Elle remplace la candidate du run 39068337396, qui n'avait ni ces composants ni
+   le prêt du GPU.
 2. En bas de la page, **Artifacts** → `apex-qualification-installer`. Il faut être connecté à GitHub.
 3. Décompressez le zip. Il contient :
    - `APEX-Setup-x64-v0.6.0-candidate-<commit>.exe` ;

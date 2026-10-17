@@ -111,8 +111,9 @@ processus vivant).
 
 ### 4.5 Un code pour le bail refusé
 
-- Aujourd'hui, la mission échoue avec le texte brut de l'exception (`BlockingIOError: …` sous Linux ; le texte
-  Windows est dans le run de la tentative 7).
+- Aujourd'hui, la mission échoue avec le texte brut de l'exception : `BlockingIOError: [Errno 11] Resource
+  temporarily unavailable` sous Linux, `PermissionError: [Errno 13] Permission denied` sous Windows (mesuré,
+  tentative 7). Le texte Windows ressemble à n'importe quel refus d'accès.
 - **Proposé** : un code stable, par exemple `shared_resource_busy`. L'Atelier 3D explique déjà le texte brut et
   propose de reprendre la mission.
 
@@ -183,8 +184,16 @@ Un nouveau code non traduit s'affiche tel quel, jamais remplacé par une explica
     - assistant PASS, accélération GPU sans GPU PASS, désinstallation sans perte de la base ;
     - installateur `APEX-Setup-x64-v0.6.0-candidate-e44da1f76cb6.exe`, SHA-256 `366ffc6a6f402cce…`. Il n'a
       pas le prêt du GPU : préférer celui de la tentative 7 ;
-  - tentative 7 (`20a7167`) : partage du GPU avec les verrous Windows réels, import du serveur du
-    planificateur.
+  - tentative 7 (`20a7167` + `d15fa02`,
+    [run 39077478748](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39077478748)) :
+    - mêmes résultats que la tentative 6, plus `llama_cpp.server.app` importé (fastapi, sse-starlette,
+      starlette-context, pydantic-settings) ;
+    - partage du GPU, `lease_check.py`, 6 contrôles PASS. Cerveau sur un « CUDA » simulé, bail et verrous Windows
+      réels : votre vrai `resource_lease` est refusé tant que le Cerveau tient le bail
+      (`PermissionError: [Errno 13] Permission denied`, texte de `msvcrt.locking`), puis obtenu après
+      `request_gpu`. Le Cerveau passe sur le processeur pendant le prêt et reprend le GPU après ;
+    - installateur `APEX-Setup-x64-v0.6.0-candidate-991388a4860d.exe`, SHA-256 `e0ced6225aca7628…` : celui à
+      essayer sur le PC de l'utilisateur.
 - **PC de l'utilisateur** (manuel) : la première création réelle, étapes dans
   `docs/QUALIFICATION_APEX_EXE.md`. C'est la seule preuve d'une génération Blender, du planificateur et des
   fichiers livrés.

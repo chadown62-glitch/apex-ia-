@@ -498,6 +498,18 @@ describe("Game Studio in the 3D workshop", () => {
   });
 });
 
+describe("explainFailure", () => {
+  it("recognizes the shared lease refused on Linux and on Windows, and nothing broader", async () => {
+    const { explainFailure } = await import("./MessageItem");
+    for (const reason of ["BlockingIOError: [Errno 11] Resource temporarily unavailable", "PermissionError: [Errno 13] Permission denied"]) {
+      expect(explainFailure(reason)).toMatch(/^les ressources partagées d'APEX étaient tenues par un autre travail/);
+    }
+    // Un fichier refusé n'est pas le bail : rendu tel quel.
+    expect(explainFailure("PermissionError: [Errno 13] Permission denied: 'C:\\\\x.blend'")).toBe("PermissionError: [Errno 13] Permission denied: 'C:\\\\x.blend'");
+    expect(explainFailure("local_planner_model_missing")).toMatch(/^le modèle planificateur local/);
+  });
+});
+
 describe("gameStudioLine", () => {
   it("says whether the brain handed the creation to Game Studio, and why not", async () => {
     const { gameStudioLine } = await import("./MessageItem");

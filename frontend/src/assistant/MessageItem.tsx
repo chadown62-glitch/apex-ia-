@@ -127,7 +127,9 @@ export function explainRefusal(message: string | undefined | null, explanation?:
 /** Pourquoi une mission s'est arrêtée (raison du dernier événement de Game Studio) : en clair quand elle est connue, le
  *  texte exact toujours à côté. */
 export function explainFailure(reason: string): string {
-  if (/BlockingIOError|Resource deadlock|Errno 36/.test(reason)) {
+  // Bail `model-session.lock` tenu ailleurs : texte de `fcntl.flock` (Linux) ou de `msvcrt.locking` (Windows, sans nom de
+  // fichier ; mesuré par lease_check.py sur le runner).
+  if (/BlockingIOError|Resource deadlock|Errno 36|PermissionError: \[Errno 13\] Permission denied$/.test(reason)) {
     return `les ressources partagées d'APEX étaient tenues par un autre travail (bail model-session.lock) ; reprenez la mission quand il est terminé (${reason})`;
   }
   const known = GAME_STUDIO_REFUSALS[reason.split(":")[0].trim()];
