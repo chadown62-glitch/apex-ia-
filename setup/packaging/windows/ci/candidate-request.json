@@ -10,5 +10,7 @@
     "agent/codex/8-project-orchestrator",
     "agent/codex/10-game-engineer"
   ],
-  "studio_cpu": true
+  "studio_cpu": true,
+  "attempt": 3,
+  "why": "run 38982990677 : l'APEX installé importe bien Game Studio, mais le backend lancé par le Panel exécutait le apex\\ du checkout (dossier courant en tête de sys.path). Ce run vérifie le correctif -P."
 }

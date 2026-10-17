@@ -159,7 +159,7 @@ public sealed class NativeModeTests : IDisposable
         Assert.Equal(2, result.ExitCode);
         var (executable, arguments) = Assert.Single(runner.RunInvocations);
         Assert.Equal(runtime.PythonExecutable(runtime.TryReadSpec(out _)), executable);
-        Assert.Equal(["-m", "apex.standalone", "gpu", "install", "--log"], arguments);
+        Assert.Equal(["-P", "-m", "apex.standalone", "gpu", "install", "--log"], arguments);
     }
 
     // -- préparation : téléchargement vérifié, extraction confinée, pip à empreintes, vérification réelle ----------
@@ -229,7 +229,7 @@ public sealed class NativeModeTests : IDisposable
         Assert.True(result.Ok, result.Message);
         var pip = runner.RunInvocations[0];
         Assert.Equal(runtime.PythonExecutable(spec), pip.Executable);
-        Assert.Equal(["-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location",
+        Assert.Equal(["-P", "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location",
             "--require-hashes", "--only-binary=:all:", "--no-deps", "-r", runtime.RequirementsFile(spec)], pip.Arguments);
         Assert.Equal(runtime.AppRoot, File.ReadAllText(runtime.PthFile(spec)).Trim());
         Assert.Equal(RuntimeState.Ready, runtime.Inspect().State);
@@ -258,6 +258,30 @@ public sealed class NativeModeTests : IDisposable
         Assert.NotEqual(RuntimeState.Ready, runtime.Inspect().State);
     }
 
+    [Fact]
+    public async Task Every_python_the_panel_starts_ignores_its_working_directory()
+    {
+        // Sans « -P », Python met le dossier courant en tête de sys.path : lancé depuis un dossier qui contient un
+        // apex\ (le checkout de la CI, un clone du dépôt), le backend exécutait CE code et non l'application installée.
+        var runtime = Install();
+        var spec = runtime.TryReadSpec(out _)!;
+        Touch(runtime.PythonExecutable(spec));
+        var runner = new FakeProcessRunner()
+            .WithRunResponse("pip install", FakeProcessRunner.Ok(""))
+            .WithRunResponse("import apex.standalone", FakeProcessRunner.Ok("apex 0.1.2 torch 2.14.0"));
+        var preparer = new RuntimePreparer(runtime, new HttpClient(), runner);
+        Assert.True((await preparer.PrepareAsync(null)).Ok);
+        await preparer.InstallModelAsync();
+        await preparer.InstallGpuAsync();
+        var launcher = new BackendLauncher(new RealProcessRunner(), new FakeProcessRunner(), wsl: false, native: runtime);
+        var all = runner.RunInvocations.Select(i => i.Arguments)
+            .Append(launcher.Command(null, "x", BackendLauncher.StartCommand)!.Value.Arguments)
+            .Append(launcher.Command(null, "x", BackendLauncher.StopCommand)!.Value.Arguments)
+            .ToList();
+        Assert.Equal(6, all.Count); // pip, vérification, modèle, GPU, démarrage, arrêt
+        Assert.All(all, arguments => Assert.Equal("-P", arguments[0]));
+    }
+
     private sealed class Collect(List<string> steps) : IProgress<string>
     {
         public void Report(string value) => steps.Add(value);
@@ -272,8 +296,8 @@ public sealed class NativeModeTests : IDisposable
         var python = runtime.PythonExecutable(runtime.TryReadSpec(out _));
         var launcher = new BackendLauncher(new RealProcessRunner(), new FakeProcessRunner(), wsl: false, native: runtime);
         Assert.Equal(python, launcher.Command(null, "/ignored", BackendLauncher.StartCommand)!.Value.Executable);
-        Assert.Equal(["-m", "apex.standalone", "serve", "--log"], launcher.Command(null, "; rm -rf /", BackendLauncher.StartCommand)!.Value.Arguments);
-        Assert.Equal(["-m", "apex.standalone", "stop"], launcher.Command("Ubuntu", "x", BackendLauncher.StopCommand)!.Value.Arguments);
+        Assert.Equal(["-P", "-m", "apex.standalone", "serve", "--log"], launcher.Command(null, "; rm -rf /", BackendLauncher.StartCommand)!.Value.Arguments);
+        Assert.Equal(["-P", "-m", "apex.standalone", "stop"], launcher.Command("Ubuntu", "x", BackendLauncher.StopCommand)!.Value.Arguments);
     }
 
     // -- chemins : Windows accepté pour le mode natif, jamais transmis à WSL ---------------------------------------

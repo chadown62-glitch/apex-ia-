@@ -110,6 +110,11 @@ jobs:
           $model = Panel '--install-model' 3600
           if ($model -ne 0) { Write-Host "BLOCKED : le modèle n'a pas pu être installé (code $model)" }
           if ((Panel '--start' 900) -gt 1) { Write-Host 'FAIL : APEX ne démarre pas'; Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 80; exit 1 }
+          # Le Panel est lancé depuis le checkout (qui contient un apex\) : ce doit être l'application INSTALLÉE qui
+          # tourne (Python lancé avec -P), jamais le code du checkout. Annotation lisible par l'API.
+          $prog = Select-String -Path "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Pattern 'programme : ' -ErrorAction SilentlyContinue | Select-Object -Last 1
+          Write-Host "::notice title=Programme exécuté par APEX::$($prog.Line)"
+          if ("$($prog.Line)" -notmatch [regex]::Escape("$env:LOCALAPPDATA\Programs\APEX\app")) { Write-Host "FAIL : APEX n'exécute pas l'application installée ($($prog.Line))"; exit 1 }
           $codes = @()
           $codes += Assistant 'run'
           Panel '--stop' 300 | Out-Null

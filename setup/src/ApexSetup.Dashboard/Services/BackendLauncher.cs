@@ -81,8 +81,8 @@ public sealed class BackendLauncher(IDetachedProcessStarter starter, IProcessRun
         {
             var python = native.PythonExecutable(native.TryReadSpec(out _));
             return command == StartCommand
-                ? (python, ["-m", "apex.standalone", "serve", "--log"])
-                : (python, ["-m", "apex.standalone", "stop"]);
+                ? (python, NativeRuntime.PythonArguments("-m", "apex.standalone", "serve", "--log"))
+                : (python, NativeRuntime.PythonArguments("-m", "apex.standalone", "stop"));
         }
         var script = ScriptPath(projectRoot);
         if (script is null)
