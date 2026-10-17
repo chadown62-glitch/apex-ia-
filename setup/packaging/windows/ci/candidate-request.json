@@ -1,0 +1,16 @@
+{
+  "about": "Demande d'exécution du workflow windows-candidate (un commit qui modifie ce fichier la déclenche). L'ordre est celui de docs/REUNION_BRANCHES.md §3 : fusions propres seulement. Rien n'est poussé.",
+  "order": [
+    "claude/apex-official-development-4kao8t",
+    "agent/codex/18-game-studio-integration",
+    "agent/codex/20-game-studio-multi-agent",
+    "agent/codex/23-game-studio-planning",
+    "agent/codex/25-game-studio-candidate",
+    "agent/codex/4-inference-diagnostics",
+    "agent/codex/8-project-orchestrator",
+    "agent/codex/10-game-engineer"
+  ],
+  "studio_cpu": true,
+  "attempt": 4,
+  "why": "run 38984907317 a validé le correctif -P, mais avec PYTHONUTF8 hérité par APEX ; ce run reprend le parcours sans lui, comme sur le PC d'un utilisateur"
+}

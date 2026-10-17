@@ -21,12 +21,14 @@
 ; unins000.dat que la mise à jour réutilise ; un fichier .NET d'une version antérieure n'est pas chargé :
 ; .NET charge ce que liste APEX.deps.json). Seul app\ (l'application Python) est remplacé ENTIÈREMENT :
 ; un module Python resté d'une version antérieure, lui, serait importable. Un APEX en cours d'exécution
-; est d'abord arrêté proprement (APEX.exe --stop de la version installée), jamais remplacé sous ses pieds.
+; est d'abord arrêté proprement (APEX.exe --stop de la version installée, depuis la 0.3.0), jamais remplacé
+; sous ses pieds.
 ;
 ; Désinstallation — politique (voir docs/DESKTOP_DISTRIBUTION.md) :
 ;   ARRÊTÉ    : APEX s'il tourne (APEX.exe --stop : arrêt propre par l'API) avant toute suppression ;
 ;   SUPPRIMÉ  : le dossier d'installation (fichiers installés), le runtime préparé par le Panel
-;               (%LOCALAPPDATA%\APEX\python : Python et bibliothèques, re-téléchargeables), le raccourci Bureau,
+;               (%LOCALAPPDATA%\APEX\python : Python et bibliothèques, re-téléchargeables — y compris
+;               l'accélération GPU facultative, python\gpu), le raccourci Bureau,
 ;               le menu Démarrer, l'entrée « Applications installées » ;
 ;   CONSERVÉ  : les DONNÉES de l'utilisateur — %LOCALAPPDATA%\APEX\data (base, espaces de travail),
 ;               %LOCALAPPDATA%\APEX\models (modèle téléchargé), %APPDATA%\APEX (paramètres),
@@ -144,19 +146,48 @@ begin
   end;
 end;
 
-{ Mise à jour : un APEX en cours d'exécution est arrêté proprement (par la version installée) avant remplacement. }
+{ Vrai si la version « a.b.c » vaut au moins Major.Minor ; une version illisible ne vaut rien. }
+function VersionAtLeast(Version: String; Major, Minor: Integer): Boolean;
+var
+  Dot, A, B: Integer;
+begin
+  Result := False;
+  Dot := Pos('.', Version);
+  if Dot = 0 then
+    exit;
+  A := StrToIntDef(Copy(Version, 1, Dot - 1), -1);
+  Version := Copy(Version, Dot + 1, Length(Version));
+  Dot := Pos('.', Version);
+  if Dot > 0 then
+    Version := Copy(Version, 1, Dot - 1);
+  B := StrToIntDef(Version, -1);
+  Result := (A > Major) or ((A = Major) and (B >= Minor));
+end;
+
+{ Mise à jour : un APEX en cours d'exécution est arrêté proprement (par la version installée) avant remplacement.
+  « APEX.exe --stop » n'existe que depuis la 0.3.0 : une version antérieure ne le connaît pas, ouvre sa fenêtre et
+  ne rend jamais la main, et la mise à jour reste bloquée (Windows réel, mise à jour depuis la 0.2.1, 17/10/2026).
+  Avant la 0.3.0, APEX ne tournait que dans WSL, jamais depuis les fichiers remplacés ici : rien à arrêter. }
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
+  Installed: String;
 begin
   Result := '';
-  if FileExists(ExpandConstant('{app}\{#ApexExeName}')) then
+  if not FileExists(ExpandConstant('{app}\{#ApexExeName}')) then
+    exit;
+  if not RegQueryStringValue(HKA, ExpandConstant('Software\Microsoft\Windows\CurrentVersion\Uninstall\{#SetupSetting("AppId")}_is1'),
+     'DisplayVersion', Installed) then
+    Installed := '';
+  if not VersionAtLeast(Installed, 0, 3) then
   begin
-    if Exec(ExpandConstant('{app}\{#ApexExeName}'), '--stop', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-      Log(Format('APEX: arrêt avant mise à jour (APEX.exe --stop, code %d)', [ResultCode]))
-    else
-      Log('APEX: APEX.exe --stop non exécuté avant mise à jour');
+    Log(Format('APEX: version installée « %s » sans APEX.exe --stop (avant 0.3.0) : aucun arrêt avant mise à jour', [Installed]));
+    exit;
   end;
+  if Exec(ExpandConstant('{app}\{#ApexExeName}'), '--stop', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    Log(Format('APEX: arrêt avant mise à jour (version %s, APEX.exe --stop, code %d)', [Installed, ResultCode]))
+  else
+    Log('APEX: APEX.exe --stop non exécuté avant mise à jour');
 end;
 
 { Désinstallation : APEX est d'abord arrêté proprement (ses fichiers ne sont plus utilisés), puis supprimé. }

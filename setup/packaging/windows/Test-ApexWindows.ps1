@@ -649,7 +649,13 @@ function Test-InstallLifecycle {
         $after = (Invoke-Native $ApexExe @('--version') 30).Stdout.Trim()
         $st = 'FAIL'; if ($r1.ExitCode -eq 0 -and $r2.ExitCode -eq 0 -and $before -ne $after -and (Test-Path $DesktopLnk) -and (Test-Path $settings)) { $st = 'PASS' }
         if (-not $hadSettings) { Remove-Item $settings -Force -ErrorAction SilentlyContinue }
-        Add-Check 'I14' 'install' 'mise à jour depuis la version précédente' $st "$before -> $after ; raccourci : $(Test-Path $DesktopLnk) ; paramètres conservés"
+        $why = ''
+        if ($r2.TimedOut) { $why = ' ; mise à jour arrêtée après le délai (aucun code)' }
+        if ($st -eq 'FAIL') {
+            $upgradeLog = Join-Path $Evidence "run$($script:Run)-upgrade.install.log"
+            if (Test-Path $upgradeLog) { $why += ' ; fin du journal de la mise à jour : ' + ((Get-Content $upgradeLog -Tail 6) -join ' | ') }
+        }
+        Add-Check 'I14' 'install' 'mise à jour depuis la version précédente' $st "$before -> $after ; codes d'installation : $($r1.ExitCode) puis $($r2.ExitCode) ; raccourci : $(Test-Path $DesktopLnk) ; paramètres conservés$why"
     }
 }
 
@@ -1145,6 +1151,10 @@ function Test-Backend {
         $hostile = '{"schema":1,"service":"apex","phase":"serving","apex_version":"x","api_version":"v1","panel_protocol":1,' +
             '"project_root":"/tmp/$(touch /tmp/apex_pwned)","token_file":"../../etc/shadow","host":"127.0.0.1","port":8000,"pid":1,"started_at":"2026-01-01T00:00:00Z"}'
         [void](Invoke-Wsl ("mkdir -p ~/.apex/runtime && printf '%s' '" + $hostile + "' > ~/.apex/runtime/backend.json && rm -f /tmp/apex_pwned") 30)
+        # Un Panel neuf face à l'enregistrement hostile : celui de B06, resté ouvert, affichait l'assistant du vrai
+        # backend, et le double-clic (instance unique) le ramenait au lieu d'en lancer un (run 39035699981 :
+        # msedgewebview2 créé à 13:39:06 par ce Panel, avant S04).
+        Stop-AllPanels
         $since = (Get-Date).AddSeconds(-1)
         Start-Process -FilePath $DesktopLnk -WorkingDirectory $env:TEMP
         $p = Wait-PanelWindow 30
@@ -1154,10 +1164,15 @@ function Test-Backend {
         [void](Invoke-Wsl 'rm -f ~/.apex/runtime/backend.json' 30)
         Stop-AllPanels
         $o = Get-ChildrenOutcome $children $script:ProcessAudit.Active
+        # Le composant d'affichage (msedgewebview2) n'est créé que si le Panel a ouvert l'assistant : ses lignes du
+        # journal disent s'il l'a fait, et pour quel backend.
+        $panelLog = Get-ChildItem $LogsDir -Filter 'panel-*.log' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
+        $assistantLines = ''
+        if ($panelLog) { $assistantLines = ((Get-Content $panelLog.FullName -Tail 200 -Encoding UTF8 | Where-Object { $_ -match 'ssistant|couverte|Discovery' } | Select-Object -Last 5) -join ' | ') }
         # Le refus de l'enregistrement et l'absence d'exécution dans WSL sont mesurés sans ambiguïté : leur
         # échec est un FAIL ; sinon le verdict des processus enfants s'applique (jamais PASS sur un non identifié).
         $st = $o.Status; if ($s.Cause -ne 'DiscoveryInvalid' -or $pwned -ne 'no') { $st = 'FAIL' }
-        Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; $($o.Detail)"
+        Add-Check 'S04' 'security' 'enregistrement de découverte hostile : refusé, rien exécuté dans WSL ni Windows' $st "$($s.Verdict)/$($s.Cause) ; fichier témoin créé dans WSL : $pwned ; $($o.Detail) ; journal du Panel : $assistantLines"
     }
     Check 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul' {
         if (Skip-IfBackendDown 'B13' 'backend' 'Panel ouvert AVANT le backend : se met à jour tout seul') { return }
@@ -1289,10 +1304,13 @@ function Test-PanelControl {
         $panel = (Get-PanelStatus).Verdict
         $same = ($panel -eq 'Ready' -and $apiVerdict -eq 'ready') -or ($panel -eq 'Degraded' -and $apiVerdict -eq 'degraded')
         $httpOnly = [string]$login.SetCookie -match 'HttpOnly'
+        # Depuis 0.4.0, l'interface est une application monopage : « APEX Control Center » n'est rendu que par le
+        # navigateur ; le HTML servi porte <title>APEX</title> et le point d'ancrage id="root".
+        $isUi = ([string]$page.Body -match '<title>APEX</title>') -and ([string]$page.Body -match 'id="root"')
         $st = 'FAIL'
-        if ($login.Status -eq 303 -and $httpOnly -and $page.Status -eq 200 -and $page.Body -match 'APEX Control Center' -and $api.Status -eq 200 -and
+        if ($login.Status -eq 303 -and $httpOnly -and $page.Status -eq 200 -and $isUi -and $api.Status -eq 200 -and
             $noHeader.Status -eq 401 -and $reuse.Status -eq 401 -and $same) { $st = 'PASS' }
-        Add-Check 'C03' 'panel_control' $titles.C03 $st ("lien : $base/ui/login?code=<masqué> ; connexion : $($login.Status) (cookie HttpOnly : $httpOnly) ; page : $($page.Status) ; " +
+        Add-Check 'C03' 'panel_control' $titles.C03 $st ("lien : $base/ui/login?code=<masqué> ; connexion : $($login.Status) (cookie HttpOnly : $httpOnly) ; page : $($page.Status) (interface APEX : $isUi) ; " +
             "API avec la session : $($api.Status) ; sans l'en-tête de l'interface : $($noHeader.Status) ; lien réutilisé : $($reuse.Status) ; verdict API « $apiVerdict » = Panel « $panel » : $same")
     }
 

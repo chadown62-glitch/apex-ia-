@@ -2209,3 +2209,62 @@
     max-width: 11rem;
   }
 }
+
+/* Atelier 3D (mode 3D) */
+.ax-model3d-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ax-model3d {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+  border-radius: var(--radius-sm);
+}
+
+.ax-model3d h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+}
+
+.ax-model3d__preview {
+  width: 100%;
+  max-width: 384px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}
+
+.ax-model3d__preview--loading {
+  background: rgba(var(--accent-rgb), 0.08);
+}
+
+.ax-model3d__summary {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.ax-model3d__root code {
+  word-break: break-all;
+}
+
+.ax-gs-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.ax-gs-steps {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-sm);
+  font-family: var(--font-mono);
+}

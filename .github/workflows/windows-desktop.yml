@@ -113,6 +113,17 @@ jobs:
             $allErrors += $errors
           }
           if ($issues -or $allErrors) { exit 1 }
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Runtime libraries for the anti-leak check (the exact Windows lock, verified by hashes)
+        shell: bash
+        run: |
+          # build_desktop_release.sh IMPORTE chaque module de l'application qu'il embarque : sans ces bibliothèques,
+          # le contrôle anti-fuite échoue (cause de la CI rouge depuis 2a38110, identifiée le 16/10/2026).
+          python -m pip install --disable-pip-version-check --no-input --require-hashes --only-binary=:all: --no-deps \
+            -r setup/packaging/runtime/requirements-windows.lock
+          echo "APEX_BUILD_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
       - name: Build the installers on Windows (current and previous release)
         shell: bash
         run: |
@@ -137,11 +148,29 @@ jobs:
       - name: Validation script (Windows PowerShell 5.1, real WSL2, real launch.sh)
         shell: powershell
         run: |
+          # Ce script valide le mode WSL (launch.sh dans la distribution). Depuis 2a38110, l'APEX.exe INSTALLÉ passe de
+          # lui-même en mode Windows natif (application à côté de lui) : sans ce réglage, le Panel ne regardait jamais
+          # WSL (W01 à W04, B01 à B03 en échec depuis le 08/10). Le mode natif est validé par windows-native.
+          $env:APEX_PANEL_MODE = 'wsl'
           $new = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
           $old = Get-ChildItem "$env:RUNNER_TEMP\release-prev" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
           & setup/packaging/windows/Test-ApexWindows.ps1 -Installer $new.FullName -OlderInstaller $old.FullName `
             -AllowBackendControl -AllowWslShutdown -AuditProcessCreation -Repeat 1 -Label 'ci-windows-server-hosted' `
             -OutDir "$env:RUNNER_TEMP\validation"
+      # Le journal du runner n'est pas lisible par l'API : les contrôles FAIL et BLOCKED de results.json le sont, en
+      # annotations (check-runs/<id>/annotations). Exécuté même si le script a échoué.
+      - name: Publish the validation checks (annotations)
+        if: always()
+        shell: pwsh
+        run: |
+          $f = Get-ChildItem "$env:RUNNER_TEMP\validation" -Filter 'results*.json' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $f) { Write-Host "::warning title=Validation::results.json absent"; exit 0 }
+          $r = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+          $lines = @("PASS $($r.summary.PASS) ; FAIL $($r.summary.FAIL) ; BLOCKED $($r.summary.BLOCKED) ; NOT_APPLICABLE $($r.summary.NOT_APPLICABLE)")
+          $lines += $r.checks | Where-Object { $_.status -in 'FAIL', 'BLOCKED' } | ForEach-Object { "$($_.status) $($_.id) $($_.title) : $($_.detail)" }
+          $t = ($lines -join "`n") -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A'
+          if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
+          Write-Host "::notice title=Validation Windows (WSL2)::$t"
       # Contrat de démarrage (5736ec9) prouvé sur le vrai WSL2 par le vrai launch.sh, sans aucune dérogation :
       # décision et codes de sortie imprimés dans CE journal (le journal de launch.sh de l'étape précédente
       # n'est lisible que dans l'artefact). Les cas d'échec sont des fautes réelles injectées dans des copies.
@@ -264,10 +293,18 @@ jobs:
         shell: pwsh
         run: |
           $src = (wsl.exe -d $env:DISTRO -u root --exec wslpath -a ($env:GITHUB_WORKSPACE -replace '\\','/')).Trim()
-          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/build_minio_from_source.sh"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec bash -c 'COMPOSE_PROFILES=minio docker compose up -d --wait minio && docker compose ps minio && COMPOSE_PROFILES=minio docker compose stop minio'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # En cas d'échec, la fin du journal en annotation (lisible par l'API, sans le journal du runner).
+          function Fail([string]$title, [string]$log) {
+            $tail = (wsl.exe -d $env:DISTRO -u root --exec tail -n 40 $log) -join "`n"
+            $t = $tail -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A'
+            Write-Host "::error title=${title}::$t"
+          }
+          wsl.exe -d $env:DISTRO -u root --exec bash -c "bash '$src/setup/packaging/windows/ci/build_minio_from_source.sh' 2>&1 | tee /tmp/minio-build.log; exit `${PIPESTATUS[0]}"
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { Fail "MinIO : construction (code $code)" /tmp/minio-build.log; exit $code }
+          wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec bash -c 'set -o pipefail; (COMPOSE_PROFILES=minio docker compose up -d --wait minio && docker compose ps minio && COMPOSE_PROFILES=minio docker compose stop minio) 2>&1 | tee /tmp/minio-compose.log'
+          $code = $LASTEXITCODE
+          if ($code -ne 0) { Fail "MinIO : profil compose (code $code)" /tmp/minio-compose.log; exit $code }
           wsl.exe -d $env:DISTRO --exec bash -c 'docker volume ls --filter name=minio-data'
       - name: Validation kit for the user's PC (one folder)
         if: always()

@@ -22,7 +22,7 @@ from typing import Any
 
 import torch
 
-from apex.brain.chat import Message
+from apex.brain.chat import Message, visible_text
 from apex.brain.inference import BrainEngine, SamplingSettings
 
 
@@ -60,10 +60,26 @@ def evaluate_tasks(
         max_new_tokens, engine.context_length // 2
     )  # la moitié du contexte reste à l'invite
     per_family: dict[str, dict[str, Any]] = {}
+    refused, ordinary = 0, 0  # refus abusifs : « je ne peux pas » à une question ordinaire
+    confidences: list[tuple[float, bool]] = []
     started = time.perf_counter()
+    skipped: dict[str, int] = {}
     for row in rows:
+        if row["check"]["type"] == "polyglot":
+            from apex.neural.polyglot import available
+
+            if not available(
+                row["check"]["language"]
+            ):  # compilateur absent : non notable, jamais compté faux
+                skipped[row["family"]] = skipped.get(row["family"], 0) + 1
+                continue
         result = engine.chat(_messages(row), SamplingSettings(max_new_tokens=max_new_tokens))
-        passed = score(row["check"], result.text)
+        passed = score(row["check"], result.text, row["messages"][-2]["content"])
+        if result.stats.confidence is not None:
+            confidences.append((result.stats.confidence, bool(passed)))
+        if row["check"]["type"] != "refusal":
+            ordinary += 1
+            refused += int(score({"type": "refusal"}, result.text))
         family = per_family.setdefault(
             row["family"], {"passed": 0, "total": 0, "failures": [], "examples": []}
         )
@@ -72,7 +88,7 @@ def evaluate_tasks(
         sample = {
             "question": row["messages"][-2]["content"][:300],
             "answer": result.text[:400],
-            "expected": row["messages"][-1]["content"][:300],
+            "expected": visible_text(row["messages"][-1]["content"])[:300],
         }
         if not passed and len(family["failures"]) < keep_failures:
             family["failures"].append(sample)
@@ -87,8 +103,61 @@ def evaluate_tasks(
         "passed": passed,
         "total": total,
         "rate": round(passed / total, 4) if total else None,
+        "over_refusal_rate": round(refused / ordinary, 4) if ordinary else None,
+        "calibration": calibration(confidences),
+        "skipped_without_compiler": skipped,
         "elapsed_s": round(time.perf_counter() - started, 1),
     }
+
+
+def calibration(
+    pairs: Sequence[tuple[float, bool]], thresholds: Sequence[float] = (0.90, 0.95, 0.97, 0.98)
+) -> dict[str, Any]:
+    """La confiance mesurée du Cerveau (`GenerationStats.confidence`) sépare-t-elle ses réponses justes des
+    fausses ? AUROC : probabilité qu'une réponse juste ait une confiance plus haute qu'une fausse (0,5 :
+    aucune information ; 1 : séparation parfaite). Pour chaque seuil de délégation (réglage
+    `brain_delegate_below` de l'assistant) : part des réponses gardées, justesse des réponses gardées,
+    part des erreurs et des réponses justes confiées au moteur suivant. Propre à CE Cerveau : à re-mesurer
+    pour tout nouveau Cerveau."""
+    from bisect import bisect_left, bisect_right
+
+    good = sorted(c for c, ok in pairs if ok)
+    bad = [c for c, ok in pairs if not ok]
+    auroc = None
+    if good and bad:
+        wins = sum(len(good) - bisect_right(good, b) + 0.5 * (bisect_right(good, b) - bisect_left(good, b))
+                   for b in bad)
+        auroc = round(wins / (len(good) * len(bad)), 4)
+    table = {}
+    for threshold in thresholds:
+        kept = [ok for c, ok in pairs if c >= threshold]
+        table[f"{threshold:.2f}"] = {
+            "kept_rate": round(len(kept) / len(pairs), 4) if pairs else None,
+            "kept_precision": round(sum(kept) / len(kept), 4) if kept else None,
+            "errors_handed_over": (round(sum(1 for b in bad if b < threshold) / len(bad), 4)
+                                   if bad else None),
+            "correct_handed_over": (round(sum(1 for g in good if g < threshold) / len(good), 4)
+                                    if good else None),
+        }
+    return {"answers": len(pairs), "correct": len(good), "auroc": auroc, "thresholds": table}
+
+
+def baselines(rows: Sequence[dict[str, Any]]) -> dict[str, dict[str, float]]:
+    """Planchers de la notation, sans aucun modèle : réponse vide, et réponse qui RÉPÈTE la question (une
+    traduction notée par recouvrement partage des mots avec la phrase source, par exemple). Le taux d'une
+    famille n'a de sens qu'au-dessus de son plancher."""
+    from apex.neural.tasks import score
+
+    answers = {"empty": lambda row: "", "echo": lambda row: row["messages"][-2]["content"]}
+    result: dict[str, dict[str, float]] = {}
+    for name, answer_of in answers.items():
+        counts: dict[str, list[int]] = {}
+        for row in rows:
+            family = counts.setdefault(row["family"], [0, 0])
+            family[0] += int(score(row["check"], answer_of(row), row["messages"][-2]["content"]))
+            family[1] += 1
+        result[name] = {family: round(passed / total, 4) for family, (passed, total) in counts.items()}
+    return result
 
 
 def evaluate_bpb(model: Any, data_dir: Path, *, window: int, eval_tokens: int = 200_000) -> dict[str, Any]:
@@ -335,6 +404,7 @@ def full_report(
     report: dict[str, Any] = {"brain": str(brain_dir), "measured_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     engine = BrainEngine(brain_dir, device="cpu")
     report["tasks"] = evaluate_tasks(engine, eval_rows)
+    report["baselines"] = baselines(eval_rows)
     report["speed"] = benchmark_speed(engine)
     report["long_conversation"] = long_conversation(engine)
     report["stability"] = stability(engine, eval_rows, count=stability_count)

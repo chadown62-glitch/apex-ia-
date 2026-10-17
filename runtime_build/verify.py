@@ -14,6 +14,7 @@ fichiers ne suffit pas à elle seule — voir la consigne d'origine) :
    paresseusement, dans une fonction) existe dans l'artefact : un module de
    premier niveau oublié dans `RUNTIME_FILES` (constaté : `apex/discovery.py`,
    importé par `apex serve`) casse le Runtime au premier usage, pas à l'import.
+   Seule exception, déclarée : `OPTIONAL_PACKAGES` (import gardé, absence prévue).
 4. DYNAMIQUE — import réel de chaque module Runtime dans un sous-processus
    n'ayant QUE l'artefact sur `sys.path` (jamais le dépôt DEV complet, en
    exécutant depuis `artifact_dir` comme répertoire courant) : si un
@@ -77,13 +78,22 @@ def _check_forbidden_imports(apex_dir: Path) -> list[str]:
 
 _FROM_APEX_RE = re.compile(r"^\s*from\s+apex\s+import\s+([a-z_][a-z0-9_]*)", re.MULTILINE)
 
+#: Paquets que le Runtime importe SEULEMENT derrière une garde d'absence (la fonctionnalité n'est alors pas
+#: offerte, et c'est dit) : leur absence de l'artefact n'est pas une violation de complétude. Jamais une
+#: exemption des contrôles de recherche (1, 2, 4). Chacun a un test qui prouve que le Runtime marche
+#: sans lui :
+#: - `game_studio` : outils de délégation de Game Studio (Codex, PR #25, qui l'ajoute aussi à
+#:   `RUNTIME_PACKAGES`), enregistrés par `apex/assistant/tools.py::register_game_studio`
+#:   (`tests/test_assistant_game_studio.py`).
+OPTIONAL_PACKAGES: frozenset[str] = frozenset({"game_studio"})
+
 
 def _check_missing_runtime_modules(apex_dir: Path) -> list[str]:
     violations: list[str] = []
     for py_file in sorted(apex_dir.rglob("*.py")):
         text = py_file.read_text(encoding="utf-8", errors="replace")
         targets = {m.group(1) for m in _IMPORT_RE.finditer(text)} | {m.group(1) for m in _FROM_APEX_RE.finditer(text)}
-        for target in sorted(targets - RESEARCH_PACKAGES):
+        for target in sorted(targets - RESEARCH_PACKAGES - OPTIONAL_PACKAGES):
             if not (apex_dir / f"{target}.py").is_file() and not (apex_dir / target / "__init__.py").is_file():
                 rel = py_file.relative_to(apex_dir.parent)
                 violations.append(f"module absent de l'artefact, importé par {rel} : apex.{target}")

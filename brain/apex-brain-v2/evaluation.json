@@ -1,0 +1,1255 @@
+{
+ "brain": "/tmp/claude-0/-home-user-apex-ia-/2487a979-76d0-517a-a7d0-3ab81cdbe334/scratchpad/brainv2/brain-poly3d/apex-brain-v2",
+ "measured_at": "2026-10-12T17:22:12+0000",
+ "tasks": {
+  "families": {
+   "arithmetic": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "974 × 89 = ?",
+      "answer": "974 × 89 = 86686.",
+      "expected": "974 × 89 = 86686."
+     },
+     {
+      "question": "Combien font 8 + 3 ?",
+      "answer": "8 + 3 = 11.",
+      "expected": "8 + 3 = 11."
+     }
+    ],
+    "rate": 1.0
+   },
+   "logic": {
+    "passed": 34,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Is 161 < 136 true?",
+      "answer": "It is true.",
+      "expected": "It is false."
+     },
+     {
+      "question": "Is 164 <= 95 true?",
+      "answer": "It is true.",
+      "expected": "It is false."
+     },
+     {
+      "question": "Est-ce que -19 <= 18 est vrai ?",
+      "answer": "C'est faux.",
+      "expected": "C'est vrai."
+     }
+    ],
+    "examples": [
+     {
+      "question": "What does the Python expression `not True and True and False` evaluate to?",
+      "answer": "`not` binds first, then `and`, then `or`. The result is False.",
+      "expected": "`not` binds first, then `and`, then `or`. The result is False."
+     },
+     {
+      "question": "Is 79 >= 7 true?",
+      "answer": "It is true.",
+      "expected": "It is true."
+     }
+    ],
+    "rate": 0.85
+   },
+   "text_ops": {
+    "passed": 39,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Convert this word to uppercase: system",
+      "answer": "SYSTÈME",
+      "expected": "SYSTEM"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Combien de lettres contient le mot « jardin » ?",
+      "answer": "Le mot « jardin » contient 6 lettres.",
+      "expected": "Le mot « jardin » contient 6 lettres."
+     },
+     {
+      "question": "Convert this word to uppercase: cat",
+      "answer": " CAT",
+      "expected": "CAT"
+     }
+    ],
+    "rate": 0.975
+   },
+   "code_fix": {
+    "passed": 31,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Cette fonction devrait faire ceci : elle renvoie le carré de x. Elle contient un bug. Corrige-la.\n```python\ndef carre(x):\n    return x + x\n```",
+      "answer": "Le bug est sur la ligne `return x + 1` : `!=` doit être `==`.\n```python\ndef carre(x):\n    return x + 1\n```",
+      "expected": "Le bug est sur la ligne `return x + x` : `+` doit être `*`.\n```python\ndef carre(x):\n    return x * x\n```"
+     },
+     {
+      "question": "Cette fonction devrait faire ceci : elle renvoie un tuple (nombre de pairs, nombre d'impairs). Elle contient un bug. Corrige-la.\n```python\ndef compter_pairs_impairs(nombres):\n    pairs = sum(1 for n in nombres if n % 2 == 1)\n    return (pairs, len(nombres) - pairs)\n```",
+      "answer": "Le bug est sur la ligne `return [nombres]` : `+` doit être `*`.\n```python\ndef compter_pairs_impairs(nombres):\n    return [x for x in nombres if x % 2 == 0]\n```",
+      "expected": "Le bug est sur la ligne `pairs = sum(1 for n in nombres if n % 2 == 1)` : `% 2 == 1` doit être `% 2 == 0`.\n```python\ndef compter_pairs_impairs(nombres):\n    pairs = sum(1 for n in nombres if n % 2 == 0)\n    return (pairs, len(nombres) - pairs)\n```"
+     },
+     {
+      "question": "This function should do the following: it returns the square of x. It has a bug. Fix it.\n```python\ndef carre(x):\n    return x + x\n```",
+      "answer": "The bug is on the line `return x + `: `!=` should be `==`.\n```python\ndef carre(x):\n    return x + 1\n```",
+      "expected": "The bug is on the line `return x + x`: `+` should be `*`.\n```python\ndef carre(x):\n    return x * x\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Cette fonction devrait faire ceci : elle renvoie True si la chaîne se lit de la même façon dans les deux sens. Elle contient un bug. Corrige-la.\n```python\ndef est_palindrome(texte):\n    return texte != texte[::-1]\n```",
+      "answer": "Le bug est sur la ligne `return texte != texte[::-1]` : `+` doit être `*`.\n```python\ndef est_palindrome(texte):\n    return texte == texte[::-1]\n```",
+      "expected": "Le bug est sur la ligne `return texte != texte[::-1]` : `!=` doit être `==`.\n```python\ndef est_palindrome(texte):\n    return texte == texte[::-1]\n```"
+     },
+     {
+      "question": "This function should do the following: it returns the string texte reversed. It has a bug. Fix it.\n```python\ndef inverser_chaine(texte):\n    return texte[::1]\n```",
+      "answer": "The bug is on the line `return texte[::1]`: `[::1]` should be `[::-1]`.\n```python\ndef inverser_chaine(texte):\n    return texte[::-1]\n```",
+      "expected": "The bug is on the line `return texte[::1]`: `[::1]` should be `[::-1]`.\n```python\ndef inverser_chaine(texte):\n    return texte[::-1]\n```"
+     }
+    ],
+    "rate": 0.775
+   },
+   "json": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Donne un objet JSON avec les clés nom, age et ville pour Lina, 20 ans, qui habite à Lille.",
+      "answer": "```json\n{\"nom\": \"Lina\", \"age\": 20, \"ville\": \"Lille\"}\n```",
+      "expected": "```json\n{\"nom\": \"Lina\", \"age\": 20, \"ville\": \"Lille\"}\n```"
+     },
+     {
+      "question": "Donne un objet JSON avec les clés nom, age et ville pour Karim, 86 ans, qui habite à Rennes.",
+      "answer": "```json\n{\"nom\": \"Karim\", \"age\": 86, \"ville\": \"Rennes\"}\n```",
+      "expected": "```json\n{\"nom\": \"Karim\", \"age\": 86, \"ville\": \"Rennes\"}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "list_ops": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Sort these numbers in ascending order: -3, -7, 77, 80",
+      "answer": "-7, -3, 77, 80",
+      "expected": "-7, -3, 77, 80"
+     },
+     {
+      "question": "Quels sont les nombres pairs dans : -5, 39, -20 ?",
+      "answer": "Nombres pairs : -20.",
+      "expected": "Nombres pairs : -20."
+     }
+    ],
+    "rate": 1.0
+   },
+   "dates": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Quelle date sera-t-il 90 jours après le 16 avril 2020 ?",
+      "answer": "90 jours après le 16 avril 2020, nous serons le 15 juillet 2020.",
+      "expected": "90 jours après le 16 avril 2020, nous serons le 15 juillet 2020."
+     },
+     {
+      "question": "L'année 1983 est-elle bissextile ?",
+      "answer": "1983 bissextile : non. Une année est bissextile si elle est divisible par 4, et pas par 100 sauf si divisible par 400 ; 1983 ne remplit pas cette règle.",
+      "expected": "1983 bissextile : non. Une année est bissextile si elle est divisible par 4, et pas par 100 sauf si divisible par 400 ; 1983 ne remplit pas cette règle."
+     }
+    ],
+    "rate": 1.0
+   },
+   "honesty": {
+    "passed": 36,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Où est-ce que j'habite ?",
+      "answer": "Oui : tout élément des jours est un petit modèle : je peux me tromper, vérifie mes réponses importantes.",
+      "expected": "Je ne le sais pas : cette information ne m'a pas été donnée."
+     },
+     {
+      "question": "Corrige mon code.",
+      "answer": "1. Lis le message d'erreur complet, en partant de la dernière ligne : elle donne le type d'exception et la cause.\n2. Repère dans la trace la ligne de ton code concernée.\n3. Reproduis le problème avec l'entrée la plus petite possible.\n4. Affiche les valeurs utiles (`print` ou `breakpoint()`) juste avant la ligne fautive.\n5. Corrige, puis ajoute un test qui aurait détecté le problème.",
+      "expected": "Je n'ai pas assez d'informations. Peux-tu me montrer le code ou le texte en question, et ce que tu attends ?"
+     },
+     {
+      "question": "Est-ce que ma fonction est correcte ?",
+      "answer": "C'est faux.",
+      "expected": "Je n'ai pas assez d'informations. Peux-tu me montrer le code ou le texte en question, et ce que tu attends ?"
+     }
+    ],
+    "examples": [
+     {
+      "question": "What is the current price of bitcoin?",
+      "answer": "I do not have enough information. Can you show me the code or text in question, and what you expect?",
+      "expected": "I have no access to the Internet or to real-time information, so I cannot know that. I run locally with only what I learned during training."
+     },
+     {
+      "question": "Quel est mon nom ?",
+      "answer": "Je n'ai pas accès à Internet ni à des informations en temps réel : je ne peux pas le savoir. Je fonctionne uniquement en local avec ce que j'ai appris pendant mon entraînement.",
+      "expected": "Je ne le sais pas : cette information ne m'a pas été donnée."
+     }
+    ],
+    "rate": 0.9
+   },
+   "code_write": {
+    "passed": 27,
+    "total": 40,
+    "failures": [
+     {
+      "question": "J'ai besoin d'une fonction Python nommée `rotation_gauche` qui décale les éléments de liste de k positions vers la gauche (circulairement). Paramètres : liste, k.",
+      "answer": "```python\ndef rotation_gauche(liste, k):\n    return liste[:n]\n```\nLa fonction `rotation_gauche` renvoie une nouvelle liste avec les éléments de liste de k positions vers la droite (circulairement).",
+      "expected": "```python\ndef rotation_gauche(liste, k):\n    if not liste:\n        return []\n    k %= len(liste)\n    return liste[k:] + liste[:k]\n```\nLa fonction `rotation_gauche` décale les éléments de liste de k positions vers la gauche (circulairement)."
+     },
+     {
+      "question": "J'ai besoin d'une fonction Python nommée `deuxieme_plus_grand` qui renvoie la deuxième plus grande valeur distincte d'une liste (au moins deux valeurs distinctes). Paramètres : nombres.",
+      "answer": "```python\ndef deuxieme_plus_grand(nombres):\n    valeurs = [x + 1 for x in nombres if x % 2 != 0]\n    return deuxieme_plus_grand(valeurs, valeurs)\n```",
+      "expected": "```python\ndef deuxieme_plus_grand(nombres):\n    valeurs = sorted(set(nombres))\n    return valeurs[-2]\n```\nLa fonction `deuxieme_plus_grand` renvoie la deuxième plus grande valeur distincte d'une liste (au moins deux valeurs distinctes)."
+     },
+     {
+      "question": "Écris en Python la fonction compter_pairs_impairs(nombres) : elle renvoie un tuple (nombre de pairs, nombre d'impairs).",
+      "answer": "```python\ndef compter_pairs_impairs(nombres):\n    valeurs = [x for x in nombres if x % 2 == 0]\n    return compter_pairs(valeurs, valeurs)\n```",
+      "expected": "```python\ndef compter_pairs_impairs(nombres):\n    pairs = sum(1 for n in nombres if n % 2 == 0)\n    return (pairs, len(nombres) - pairs)\n```\nLa fonction `compter_pairs_impairs` renvoie un tuple (nombre de pairs, nombre d'impairs)."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Écris une fonction Python `compter_lettres(texte)` qui renvoie un dictionnaire lettre -> nombre d'apparitions dans texte.",
+      "answer": "```python\ndef compter_lettres(texte):\n    compte = {}\n    for c in texte:\n        compte[c] = compte.get(c, 0) + 1\n    return compte\n```",
+      "expected": "```python\ndef compter_lettres(texte):\n    compte = {}\n    for c in texte:\n        compte[c] = compte.get(c, 0) + 1\n    return compte\n```"
+     },
+     {
+      "question": "J'ai besoin d'une fonction Python nommée `mention` qui renvoie \"refusé\" si note < 10, \"passable\" si note < 12, \"bien\" si note < 16, sinon \"très bien\". Paramètres : note.",
+      "answer": "```python\ndef mention(note):\n    if note < 10:\n        return \"refusé\"\n    if note < 12:\n        return \"passable\"\n    if note < 16:\n        return \"bien\"\n    return \"très bien\"\n```",
+      "expected": "```python\ndef mention(note):\n    if note < 10:\n        return \"refusé\"\n    if note < 12:\n        return \"passable\"\n    if note < 16:\n        return \"bien\"\n    return \"très bien\"\n```\nLa fonction `mention` renvoie \"refusé\" si note < 10, \"passable\" si note < 12, \"bien\" si note < 16, sinon \"très bien\"."
+     }
+    ],
+    "rate": 0.675
+   },
+   "program_output": {
+    "passed": 12,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Qu'affiche ce programme Python ?\n```python\ntotal = 0\nfor i in range(0, 11):\n    total += i\nprint(total)\n```",
+      "answer": "Il affiche :\n```\n15\n```",
+      "expected": "Il affiche :\n```\n55\n```"
+     },
+     {
+      "question": "Qu'affiche ce programme Python ?\n```python\nfor i in range(1, 7):\n    if i % 4 == 0:\n        print(i)\n```",
+      "answer": "Il affiche :\n```\n4\n8\n```",
+      "expected": "Il affiche :\n```\n4\n```"
+     },
+     {
+      "question": "Qu'affiche ce programme Python ?\n```python\nvaleurs = [x * 2 for x in range(1, 4)]\nprint(valeurs)\nprint(sum(valeurs))\n```",
+      "answer": "Il affiche :\n```\n[2, 4, 6, 8]\n20\n```",
+      "expected": "Il affiche :\n```\n[2, 4, 6]\n12\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "What does this Python program print?\n```python\nfor i in range(1, 6):\n    if i % 2 == 0:\n        print(i)\n```",
+      "answer": "It prints:\n```\n2\n4\n```",
+      "expected": "It prints:\n```\n2\n4\n```"
+     },
+     {
+      "question": "What does this Python program print?\n```python\nfor i in range(1, 8):\n    if i % 2 == 0:\n        print(i)\n```",
+      "answer": "It prints:\n```\n2\n4\n6\n```",
+      "expected": "It prints:\n```\n2\n4\n6\n```"
+     }
+    ],
+    "rate": 0.3
+   },
+   "conversation_memory": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "What is my name?",
+      "answer": "Your name is Camille.",
+      "expected": "Your name is Camille."
+     },
+     {
+      "question": "Which city do I live in?",
+      "answer": "You live in Dijon.",
+      "expected": "You live in Dijon."
+     }
+    ],
+    "rate": 1.0
+   },
+   "word_problem": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Chloé range des billes dans 9 boîtes de 4. Combien de billes y a-t-il en tout ?",
+      "answer": "9 boîtes × 4 billes = 36. Il y a 36 billes en tout.",
+      "expected": "9 boîtes × 4 billes = 36. Il y a 36 billes en tout."
+     },
+     {
+      "question": "Léa range des billes dans 6 boîtes de 8. Combien de billes y a-t-il en tout ?",
+      "answer": "6 boîtes × 8 billes = 48. Il y a 48 billes en tout.",
+      "expected": "6 boîtes × 8 billes = 48. Il y a 48 billes en tout."
+     }
+    ],
+    "rate": 1.0
+   },
+   "conversion": {
+    "passed": 40,
+    "total": 40,
+    "failures": [],
+    "examples": [
+     {
+      "question": "How many centimeters are in 48 meters?",
+      "answer": "1 m = 100 cm, so 48 m = 48 × 100 = 4800 cm.",
+      "expected": "1 m = 100 cm, so 48 m = 48 × 100 = 4800 cm."
+     },
+     {
+      "question": "Convert 2940 seconds to minutes.",
+      "answer": "2940 ÷ 60 = 49, so 2940 s = 49 min.",
+      "expected": "2940 ÷ 60 = 49, so 2940 s = 49 min."
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_write_heldout": {
+    "passed": 1,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Écris une fonction Python `somme_carres(n)` qui renvoie 1² + 2² + ... + n².",
+      "answer": "```python\ndef somme_carres(n):\n    total = 0\n    while n > 0:\n        total += n % 2\n        n //= 2\n    return total\n```",
+      "expected": "```python\ndef somme_carres(n):\n    return sum(i * i for i in range(1, n + 1))\n```"
+     },
+     {
+      "question": "I need a Python function named `somme_carres` that returns 1² + 2² + ... + n². Parameters: n.",
+      "answer": "```python\ndef somme_carres(n):\n    total = 0\n    while n > 0:\n        total += n % 2\n        n //= 2\n    return total\n```",
+      "expected": "```python\ndef somme_carres(n):\n    return sum(i * i for i in range(1, n + 1))\n```"
+     },
+     {
+      "question": "Écris en Python la fonction multiples_de(n, limite) : elle renvoie la liste des multiples de n strictement inférieurs à limite (n > 0, en commençant par 0).",
+      "answer": "```python\ndef multiples_de(n):\n    return [n for i in range(1, n + 1) if n % 2 == 0]\n```\nLa fonction ` multiples_de` renvoie la liste des n premiers de n > 0.",
+      "expected": "```python\ndef multiples_de(n, limite):\n    return list(range(0, limite, n))\n```\nLa fonction `multiples_de` renvoie la liste des multiples de n strictement inférieurs à limite (n > 0, en commençant par 0)."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Écris en Python la fonction longueur_max(mots) : elle renvoie la longueur du mot le plus long d'une liste (0 si vide).",
+      "answer": "```python\ndef longueur_max(mots):\n    return len(mots)\n```\nLa fonction `nombre` renvoie la longueur du mot le plus long d'une liste (0 si vide).",
+      "expected": "```python\ndef longueur_max(mots):\n    return max((len(m) for m in mots), default=0)\n```\nLa fonction `longueur_max` renvoie la longueur du mot le plus long d'une liste (0 si vide)."
+     }
+    ],
+    "rate": 0.05
+   },
+   "knowledge_command": {
+    "passed": 2,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Briefly explain the `seccomp` system call.",
+      "answer": "`seccomp` : Afficher le nom de système de fichiers.",
+      "expected": "`seccomp`: Operate on Secure Computing state of the process."
+     },
+     {
+      "question": "Explique-moi brièvement la commande `b2sum`.",
+      "answer": "`b2sum` : Calculer et vérifier les boutons de base de données.",
+      "expected": "`b2sum` : Calculer et vérifier l'empreinte numérique BLAKE2."
+     },
+     {
+      "question": "Briefly explain the `strsignal` C function.",
+      "answer": "`strsignal` : Afficher le signal d'une file d'attente.",
+      "expected": "`strsignal, sigabbrev_np, sigdescr_np, sys_siglist`: Return string describing signal."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Explique-moi brièvement la notion `iso_8859-7`.",
+      "answer": "`iso_8859-7` : Jeu de caractères ISO 8859-7 en représentations octale, décimale et hexadécimale.",
+      "expected": "`iso_8859-7` : Jeu de caractères ISO 8859-7 en représentations octale, décimale et hexadécimale."
+     },
+     {
+      "question": "Explique-moi brièvement la fonction C `wcsncpy`.",
+      "answer": "`wcsncpy` : Copier une chaîne de caractères larges.",
+      "expected": "`wcsncpy` : Copier une chaîne de caractères larges de longueur fixe."
+     }
+    ],
+    "rate": 0.05
+   },
+   "knowledge_python": {
+    "passed": 4,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Explain what `statistics.quantiles` does in Python.",
+      "answer": "`statistics.quantiles`: Return the number of times in the statistics.",
+      "expected": "`statistics.quantiles`: Divide *data* into *n* continuous intervals with equal probability."
+     },
+     {
+      "question": "Explain what `base64.b16encode` does in Python.",
+      "answer": "`base64.b16encode` : d'après sa documentation, « Encode a bytes-like object. »",
+      "expected": "`base64.b16encode`: Encode the bytes-like object s using Base16 and return a bytes object."
+     },
+     {
+      "question": "Explain what `typing.Protocol` does in Python.",
+      "answer": "`typing.Protocol`: Protocol class for protocols.",
+      "expected": "`typing.Protocol`: Base class for protocol classes."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Explain what `base64.b64encode` does in Python.",
+      "answer": "`base64.b64encode`: Encode a bytes-like object with a bytes-like object.",
+      "expected": "`base64.b64encode`: Encode the bytes-like object s using Base64 and return a bytes object."
+     },
+     {
+      "question": "Explain what `sqlite3.DatabaseError` does in Python.",
+      "answer": "`sqlite3.DatabaseError` : d'après sa documentation, « Common base class for all database connections. »",
+      "expected": "`sqlite3.DatabaseError`: Common base class for all non-exit exceptions."
+     }
+    ],
+    "rate": 0.1
+   },
+   "translation": {
+    "passed": 17,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Traduis en français : « Sorry, cannot edit this hunk »",
+      "answer": "Sorry, ne peut pas éditer cette hunk",
+      "expected": "Désolé, impossible d'éditer cette section"
+     },
+     {
+      "question": "Traduis en français : « Indicates whether the longitude is east or west longitude. ASCII 'E' indicates east longitude, and 'W' is west longitude. »",
+      "answer": "Indique si la longitude est équivalente, « E » si le longitude est égal. ASCII « E » est west longitude.",
+      "expected": "Indique si la longitude est une longitude Est ou Ouest. La valeur ASCII 'E' indique la longitude Est et la valeur 'W' indique la longitude Ouest."
+     },
+     {
+      "question": "Traduis en français : « Removing essential system-critical packages is not permitted. This might break the system. »",
+      "answer": "La suppression des paquets essentiels de l'utilisation des paquets n'est pas autorisée. Cela peut-être dû à la place.",
+      "expected": "La suppression de paquets critiques pour le système n'est pas autorisée. Cela risque de casser le système."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Traduis en français : « Contains the exact build script that was used in the second build. »",
+      "answer": "Contient le script exact de construction qui est utilisé dans le second build.",
+      "expected": "Contient le script exact de construction utilisé par la seconde construction."
+     },
+     {
+      "question": "Translate into English: \"Indique si le curseur est placé en haut ou en bas du message lors de l’utilisation de la réponse alternative.\"",
+      "answer": "Whether the cursor is placing in the message when using the alternative reply.",
+      "expected": "This determines whether the cursor is placed at the top of the message or the bottom when using Alternative Reply."
+     }
+    ],
+    "rate": 0.425
+   },
+   "code_compose": {
+    "passed": 38,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Écris en Python la fonction phrase_envers_tous(texte) : elle renvoie les mots obtenus en retournant chaque mot du texte, réunis en un seul texte, séparés par des espaces.",
+      "answer": "```python\ndef phrase_envers_tous(texte):\n    valeurs = [m[::-1] for m in texte.split() if m.startswith('l')]\n    return \" \".join(valeurs)\n```",
+      "expected": "```python\ndef phrase_envers_tous(texte):\n    valeurs = [m[::-1] for m in texte.split()]\n    return \" \".join(valeurs)\n```"
+     },
+     {
+      "question": "Écris une fonction Python `nombre_envers_tous(texte)` qui renvoie le nombre des mots obtenus en retournant chaque mot du texte.",
+      "answer": "```python\ndef nombre_envers_tous(texte):\n    valeurs = [m[::-1] for m in texte.split() if m.startswith('t')]\n    return len(valeurs)\n```",
+      "expected": "```python\ndef nombre_envers_tous(texte):\n    valeurs = [m[::-1] for m in texte.split()]\n    return len(valeurs)\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Write a Python function `phrase_initiale_debut_i(texte)` that returns the words obtained by keeping the first letter of each word starting with \"i\" of the text, joined into one text separated by spaces.",
+      "answer": "```python\ndef phrase_initiale_debut_i(texte):\n    valeurs = [m[0] for m in texte.split() if m.startswith('i')]\n    return \" \".join(valeurs)\n```",
+      "expected": "```python\ndef phrase_initiale_debut_i(texte):\n    valeurs = [m[0] for m in texte.split() if m.startswith('i')]\n    return \" \".join(valeurs)\n```"
+     },
+     {
+      "question": "Write a Python function `liste_plus_3_negatifs(nombres)` that returns the list of the values obtained by adding 3 to each strictly negative number in the list nombres.",
+      "answer": "```python\ndef liste_plus_3_negatifs(nombres):\n    valeurs = [x + 3 for x in nombres if x < 0]\n    return valeurs\n```",
+      "expected": "```python\ndef liste_plus_3_negatifs(nombres):\n    valeurs = [x + 3 for x in nombres if x < 0]\n    return valeurs\n```"
+     }
+    ],
+    "rate": 0.95
+   },
+   "code_compose_heldout": {
+    "passed": 38,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Write the Python function nombre_majuscules_tous(texte): it returns the count of the words obtained by uppercasing each word of the text.",
+      "answer": "```python\ndef nombre_majuscules_tous(texte):\n    valeurs = [m.upper() for m in texte.split() if m.startswith('m')]\n    return len(valeurs)\n```",
+      "expected": "```python\ndef nombre_majuscules_tous(texte):\n    valeurs = [m.upper() for m in texte.split()]\n    return len(valeurs)\n```"
+     },
+     {
+      "question": "Write a Python function `nombre_capitale_tous(texte)` that returns the count of the words obtained by capitalizing each word of the text.",
+      "answer": "```python\ndef nombre_capitale_tous(texte):\n    valeurs = [m.capitalize() for m in texte.split() if m.startswith('capital')]\n    return len(valeurs)\n```",
+      "expected": "```python\ndef nombre_capitale_tous(texte):\n    valeurs = [m.capitalize() for m in texte.split()]\n    return len(valeurs)\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Écris en Python la fonction produit_moins_4_impairs(nombres) : elle renvoie le produit des valeurs obtenues en retirant 4 à chaque nombre impair de la liste nombres (1 s'il n'y en a aucune).",
+      "answer": "```python\ndef produit_moins_4_impairs(nombres):\n    valeurs = [x - 4 for x in nombres if x % 2 != 0]\n    produit = 1\n    for v in valeurs:\n        produit *= v\n    return produit\n```",
+      "expected": "```python\ndef produit_moins_4_impairs(nombres):\n    valeurs = [x - 4 for x in nombres if x % 2 != 0]\n    produit = 1\n    for v in valeurs:\n        produit *= v\n    return produit\n```"
+     },
+     {
+      "question": "Écris une fonction Python `somme_moins_3_tous(nombres)` qui renvoie la somme des valeurs obtenues en retirant 3 à chaque nombre de la liste nombres.",
+      "answer": "```python\ndef somme_moins_3_tous(nombres):\n    valeurs = [x - 3 for x in nombres]\n    return sum(valeurs)\n```",
+      "expected": "```python\ndef somme_moins_3_tous(nombres):\n    valeurs = [x - 3 for x in nombres]\n    return sum(valeurs)\n```"
+     }
+    ],
+    "rate": 0.95
+   },
+   "code_python": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write a Python function `min_fois_2_multiples_6(nombres)` that returns the smallest of the values obtained by multiplying by 2 each number multiple of 6 in the list nombres (0 if there are none).",
+      "answer": "```python\ndef min_fois_2_multiples_6(nombres):\n    valeurs = [x * 2 for x in nombres if x % 6 == 0]\n    return min(valeurs) if valeurs else 0\n```",
+      "expected": "```python\ndef min_fois_2_multiples_6(nombres):\n    valeurs = [x * 2 for x in nombres if x % 6 == 0]\n    return min(valeurs) if valeurs else 0\n```"
+     },
+     {
+      "question": "Écris en Python `somme_plus_6_impairs(nombres)` : elle renvoie la somme des valeurs obtenues en ajoutant 6 à chaque nombre impair de la liste nombres.",
+      "answer": "```python\ndef somme_plus_6_impairs(nombres):\n    valeurs = [x + 6 for x in nombres if x % 2 != 0]\n    return sum(valeurs)\n```",
+      "expected": "```python\ndef somme_plus_6_impairs(nombres):\n    valeurs = [x + 6 for x in nombres if x % 2 != 0]\n    return sum(valeurs)\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_python_heldout": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write in Python `max_doubles_positifs(nombres)`: it returns the largest of the values obtained by doubling each strictly positive number in the list nombres (0 if there are none).",
+      "answer": "```python\ndef max_doubles_positifs(nombres):\n    valeurs = [2 * x for x in nombres if x > 0]\n    return max(valeurs) if valeurs else 0\n```",
+      "expected": "```python\ndef max_doubles_positifs(nombres):\n    valeurs = [2 * x for x in nombres if x > 0]\n    return max(valeurs) if valeurs else 0\n```"
+     },
+     {
+      "question": "Écris une fonction Python `somme_valeurs_multiples_5(nombres)` qui renvoie la somme des nombres de la liste nombres qui sont multiples de 5.",
+      "answer": "```python\ndef somme_valeurs_multiples_5(nombres):\n    valeurs = [x for x in nombres if x % 5 == 0]\n    return sum(valeurs)\n```",
+      "expected": "```python\ndef somme_valeurs_multiples_5(nombres):\n    valeurs = [x for x in nombres if x % 5 == 0]\n    return sum(valeurs)\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_csharp": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Écris en C# `public static List<long> liste_absolus_sauf_9(long[] nombres)` de la classe statique `Solution` : elle renvoie la liste des valeurs obtenues en prenant la valeur absolue de chaque nombre différent de 9 de la liste nombres.",
+      "answer": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static List<long> liste_absolus_sauf_9(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x != 9) valeurs.Add(Math.Abs(x));\n        }\n        return valeurs;\n    }\n}\n```",
+      "expected": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static List<long> liste_absolus_sauf_9(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x != 9) valeurs.Ad"
+     },
+     {
+      "question": "Write in C# `public static long min_valeurs_inf_8(long[] nombres)` in the static class `Solution`: it returns the smallest of the numbers in the list nombres that are less than 8 (0 if there are none).",
+      "answer": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static long min_valeurs_inf_8(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x < 8) valeurs.Add(x);\n        }\n        return valeurs.Count > 0 ? valeurs.Min() : 0;\n    }\n}\n```",
+      "expected": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static long min_valeurs_inf_8(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x < 8) valeurs.Add(x);\n    "
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_csharp_heldout": {
+    "passed": 19,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Write a C# function `public static long somme_absolus_tous(long[] nombres)` in the static class `Solution` that returns the sum of the values obtained by taking the absolute value of each number in the list nombres.",
+      "answer": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static long somme_absolus_tous(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            valeurs.Add(x.abs());\n        }\n        return valeurs.Sum();\n    }\n}\n```",
+      "expected": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static long somme_absolus_tous(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            valeurs.Add(Math.Abs(x));\n    "
+     }
+    ],
+    "examples": [
+     {
+      "question": "Write in C# `public static List<long> liste_plus_7_pairs(long[] nombres)` in the static class `Solution`: it returns the list of the values obtained by adding 7 to each even number in the list nombres.",
+      "answer": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static List<long> liste_plus_7_pairs(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x % 2 == 0) valeurs.Add(x + 7);\n        }\n        return valeurs;\n    }\n}\n```",
+      "expected": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static List<long> liste_plus_7_pairs(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x % 2 == 0) valeurs."
+     },
+     {
+      "question": "Write in C# `public static long nombre_carres_pairs(long[] nombres)` in the static class `Solution`: it returns the count of the values obtained by squaring each even number in the list nombres.",
+      "answer": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static long nombre_carres_pairs(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x % 2 == 0) valeurs.Add(x * x);\n        }\n        return valeurs.Count;\n    }\n}\n```",
+      "expected": "```csharp\nusing System;\nusing System.Collections.Generic;\nusing System.Linq;\n\npublic static class Solution\n{\n    public static long nombre_carres_pairs(long[] nombres)\n    {\n        var valeurs = new List<long>();\n        foreach (var x in nombres)\n        {\n            if (x % 2 == 0) valeurs.Add(x"
+     }
+    ],
+    "rate": 0.95
+   },
+   "code_cpp": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write a C++ function `long long nombre_moins_5_inf_3(const std::vector<long long>& nombres)` that returns the count of the values obtained by subtracting 5 from each number less than 3 in the list nombres.",
+      "answer": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nlong long nombre_moins_5_inf_3(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x < 3) valeurs.push_back(x - 5);\n    }\n    return (long long)valeurs.size();\n}\n```",
+      "expected": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nlong long nombre_moins_5_inf_3(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x < 3) valeurs.push_back(x - 5);\n    }\n"
+     },
+     {
+      "question": "Write in C++ `std::vector<long long> liste_opposes_sup_6(const std::vector<long long>& nombres)`: it returns the list of the values obtained by negating each number greater than 6 in the list nombres.",
+      "answer": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nstd::vector<long long> liste_opposes_sup_6(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x > 6) valeurs.push_back(-x);\n    }\n    return valeurs;\n}\n```",
+      "expected": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nstd::vector<long long> liste_opposes_sup_6(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x > 6) valeurs.push_back(-x"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_cpp_heldout": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write in C++ `long long nombre_carres_inf_4(const std::vector<long long>& nombres)`: it returns the count of the values obtained by squaring each number less than 4 in the list nombres.",
+      "answer": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nlong long nombre_carres_inf_4(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x < 4) valeurs.push_back(x * x);\n    }\n    return (long long)valeurs.size();\n}\n```",
+      "expected": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nlong long nombre_carres_inf_4(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x < 4) valeurs.push_back(x * x);\n    }\n "
+     },
+     {
+      "question": "Écris une fonction C++ `long long max_opposes_multiples_3(const std::vector<long long>& nombres)` qui renvoie la plus grande des valeurs obtenues en prenant l'opposé de chaque nombre multiple de 3 de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nlong long max_opposes_multiples_3(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x % 3 == 0) valeurs.push_back(-x);\n    }\n    return valeurs.empty() ? 0 : *std::max_element(valeurs.begin(), valeurs.end());\n}\n```",
+      "expected": "```cpp\n#include <algorithm>\n#include <cstdlib>\n#include <functional>\n#include <numeric>\n#include <vector>\n\nlong long max_opposes_multiples_3(const std::vector<long long>& nombres) {\n    std::vector<long long> valeurs;\n    for (long long x : nombres) {\n        if (x % 3 == 0) valeurs.push_back(-x);\n "
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_javascript": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Écris en JavaScript `function produit_fois_9_positifs(nombres)` : elle renvoie le produit des valeurs obtenues en multipliant par 9 chaque nombre strictement positif de la liste nombres (1 s'il n'y en a aucune).",
+      "answer": "```javascript\nfunction produit_fois_9_positifs(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x > 0) valeurs.push(x * 9);\n  }\n  return valeurs.reduce((a, b) => a * b, 1);\n}\n```",
+      "expected": "```javascript\nfunction produit_fois_9_positifs(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x > 0) valeurs.push(x * 9);\n  }\n  return valeurs.reduce((a, b) => a * b, 1);\n}\n```"
+     },
+     {
+      "question": "Écris une fonction JavaScript `function max_fois_4_positifs(nombres)` qui renvoie la plus grande des valeurs obtenues en multipliant par 4 chaque nombre strictement positif de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```javascript\nfunction max_fois_4_positifs(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x > 0) valeurs.push(x * 4);\n  }\n  return valeurs.length ? Math.max(...valeurs) : 0;\n}\n```",
+      "expected": "```javascript\nfunction max_fois_4_positifs(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x > 0) valeurs.push(x * 4);\n  }\n  return valeurs.length ? Math.max(...valeurs) : 0;\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_javascript_heldout": {
+    "passed": 19,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Write a JavaScript function `function produit_absolus_tous(nombres)` that returns the product of the values obtained by taking the absolute value of each number in the list nombres (1 if there are none).",
+      "answer": "```javascript\nfunction produit_absolus_tous(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    valeurs.push(x.abs());\n  }\n  return valeurs.reduce((a, b) => a * b, 1);\n}\n```",
+      "expected": "```javascript\nfunction produit_absolus_tous(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    valeurs.push(Math.abs(x));\n  }\n  return valeurs.reduce((a, b) => a * b, 1);\n}\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Write in JavaScript `function max_moins_8_inf_1(nombres)`: it returns the largest of the values obtained by subtracting 8 from each number less than 1 in the list nombres (0 if there are none).",
+      "answer": "```javascript\nfunction max_moins_8_inf_1(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x < 1) valeurs.push(x - 8);\n  }\n  return valeurs.length ? Math.max(...valeurs) : 0;\n}\n```",
+      "expected": "```javascript\nfunction max_moins_8_inf_1(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x < 1) valeurs.push(x - 8);\n  }\n  return valeurs.length ? Math.max(...valeurs) : 0;\n}\n```"
+     },
+     {
+      "question": "Écris une fonction JavaScript `function liste_valeurs_negatifs(nombres)` qui renvoie la liste des nombres de la liste nombres qui sont strictement négatifs.",
+      "answer": "```javascript\nfunction liste_valeurs_negatifs(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x < 0) valeurs.push(x);\n  }\n  return valeurs;\n}\n```",
+      "expected": "```javascript\nfunction liste_valeurs_negatifs(nombres) {\n  const valeurs = [];\n  for (const x of nombres) {\n    if (x < 0) valeurs.push(x);\n  }\n  return valeurs;\n}\n```"
+     }
+    ],
+    "rate": 0.95
+   },
+   "code_typescript": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write in TypeScript `function nombre_plus_5_sauf_3(nombres: number[]): number`: it returns the count of the values obtained by adding 5 to each number different from 3 in the list nombres.",
+      "answer": "```typescript\nfunction nombre_plus_5_sauf_3(nombres: number[]): number {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x != 3) valeurs.push(x + 5);\n  }\n  return valeurs.length;\n}\n```",
+      "expected": "```typescript\nfunction nombre_plus_5_sauf_3(nombres: number[]): number {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x != 3) valeurs.push(x + 5);\n  }\n  return valeurs.length;\n}\n```"
+     },
+     {
+      "question": "Écris une fonction TypeScript `function max_plus_8_inf_6(nombres: number[]): number` qui renvoie la plus grande des valeurs obtenues en ajoutant 8 à chaque nombre inférieur à 6 de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```typescript\nfunction max_plus_8_inf_6(nombres: number[]): number {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x < 6) valeurs.push(x + 8);\n  }\n  return valeurs.length ? Math.max(...valeurs) : 0;\n}\n```",
+      "expected": "```typescript\nfunction max_plus_8_inf_6(nombres: number[]): number {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x < 6) valeurs.push(x + 8);\n  }\n  return valeurs.length ? Math.max(...valeurs) : 0;\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_typescript_heldout": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write in TypeScript `function liste_plus_5_pairs(nombres: number[]): number[]`: it returns the list of the values obtained by adding 5 to each even number in the list nombres.",
+      "answer": "```typescript\nfunction liste_plus_5_pairs(nombres: number[]): number[] {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x % 2 == 0) valeurs.push(x + 5);\n  }\n  return valeurs;\n}\n```",
+      "expected": "```typescript\nfunction liste_plus_5_pairs(nombres: number[]): number[] {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x % 2 == 0) valeurs.push(x + 5);\n  }\n  return valeurs;\n}\n```"
+     },
+     {
+      "question": "Write a TypeScript function `function nombre_fois_3_sup_6(nombres: number[]): number` that returns the count of the values obtained by multiplying by 3 each number greater than 6 in the list nombres.",
+      "answer": "```typescript\nfunction nombre_fois_3_sup_6(nombres: number[]): number {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x > 6) valeurs.push(x * 3);\n  }\n  return valeurs.length;\n}\n```",
+      "expected": "```typescript\nfunction nombre_fois_3_sup_6(nombres: number[]): number {\n  const valeurs: number[] = [];\n  for (const x of nombres) {\n    if (x > 6) valeurs.push(x * 3);\n  }\n  return valeurs.length;\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_java": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write a Java function `static List<Long> liste_carres_negatifs(long[] nombres)` in the class `Solution` that returns the list of the values obtained by squaring each strictly negative number in the list nombres.",
+      "answer": "```java\nimport java.util.*;\n\nclass Solution {\n    static List<Long> liste_carres_negatifs(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            if (x < 0) valeurs.add(x * x);\n        }\n        return valeurs;\n    }\n}\n```",
+      "expected": "```java\nimport java.util.*;\n\nclass Solution {\n    static List<Long> liste_carres_negatifs(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            if (x < 0) valeurs.add(x * x);\n        }\n        return valeurs;\n    }\n}\n```"
+     },
+     {
+      "question": "Écris en Java `static long produit_plus_7_negatifs(long[] nombres)` de la classe `Solution` : elle renvoie le produit des valeurs obtenues en ajoutant 7 à chaque nombre strictement négatif de la liste nombres (1 s'il n'y en a aucune).",
+      "answer": "```java\nimport java.util.*;\n\nclass Solution {\n    static long produit_plus_7_negatifs(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            if (x < 0) valeurs.add(x + 7);\n        }\n        return valeurs.stream().mapToLong(Long::longValue).reduce(1L, (a, b) -> a * b);\n    }\n}\n```",
+      "expected": "```java\nimport java.util.*;\n\nclass Solution {\n    static long produit_plus_7_negatifs(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            if (x < 0) valeurs.add(x + 7);\n        }\n        return valeurs.stream().mapToLong(Long::longValue).red"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_java_heldout": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Écris une fonction Java `static long max_moins_6_tous(long[] nombres)` de la classe `Solution` qui renvoie la plus grande des valeurs obtenues en retirant 6 à chaque nombre de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```java\nimport java.util.*;\n\nclass Solution {\n    static long max_moins_6_tous(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            valeurs.add(x - 6);\n        }\n        return valeurs.stream().mapToLong(Long::longValue).max().orElse(0L);\n    }\n}\n```",
+      "expected": "```java\nimport java.util.*;\n\nclass Solution {\n    static long max_moins_6_tous(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            valeurs.add(x - 6);\n        }\n        return valeurs.stream().mapToLong(Long::longValue).max().orElse(0L);\n   "
+     },
+     {
+      "question": "Write a Java function `static long max_fois_5_impairs(long[] nombres)` in the class `Solution` that returns the largest of the values obtained by multiplying by 5 each odd number in the list nombres (0 if there are none).",
+      "answer": "```java\nimport java.util.*;\n\nclass Solution {\n    static long max_fois_5_impairs(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            if (x % 2 != 0) valeurs.add(x * 5);\n        }\n        return valeurs.stream().mapToLong(Long::longValue).max().orElse(0L);\n    }\n}\n```",
+      "expected": "```java\nimport java.util.*;\n\nclass Solution {\n    static long max_fois_5_impairs(long[] nombres) {\n        List<Long> valeurs = new ArrayList<>();\n        for (long x : nombres) {\n            if (x % 2 != 0) valeurs.add(x * 5);\n        }\n        return valeurs.stream().mapToLong(Long::longValue).max"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_rust": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write in Rust `fn somme_valeurs_positifs(nombres: &[i64]) -> i64`: it returns the sum of the numbers in the list nombres that are strictly positive.",
+      "answer": "```rust\nfn somme_valeurs_positifs(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x > 0 {\n            valeurs.push(x);\n        }\n    }\n    valeurs.iter().sum()\n}\n```",
+      "expected": "```rust\nfn somme_valeurs_positifs(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x > 0 {\n            valeurs.push(x);\n        }\n    }\n    valeurs.iter().sum()\n}\n```"
+     },
+     {
+      "question": "Write in Rust `fn nombre_absolus_inf_5(nombres: &[i64]) -> i64`: it returns the count of the values obtained by taking the absolute value of each number less than 5 in the list nombres.",
+      "answer": "```rust\nfn nombre_absolus_inf_5(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x < 5 {\n            valeurs.push(x.abs());\n        }\n    }\n    valeurs.len() as i64\n}\n```",
+      "expected": "```rust\nfn nombre_absolus_inf_5(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x < 5 {\n            valeurs.push(x.abs());\n        }\n    }\n    valeurs.len() as i64\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_rust_heldout": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Écris une fonction Rust `fn produit_carres_impairs(nombres: &[i64]) -> i64` qui renvoie le produit des valeurs obtenues en élevant au carré chaque nombre impair de la liste nombres (1 s'il n'y en a aucune).",
+      "answer": "```rust\nfn produit_carres_impairs(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x % 2 != 0 {\n            valeurs.push(x * x);\n        }\n    }\n    valeurs.iter().product()\n}\n```",
+      "expected": "```rust\nfn produit_carres_impairs(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x % 2 != 0 {\n            valeurs.push(x * x);\n        }\n    }\n    valeurs.iter().product()\n}\n```"
+     },
+     {
+      "question": "Write in Rust `fn min_moins_3_inf_2(nombres: &[i64]) -> i64`: it returns the smallest of the values obtained by subtracting 3 from each number less than 2 in the list nombres (0 if there are none).",
+      "answer": "```rust\nfn min_moins_3_inf_2(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x < 2 {\n            valeurs.push(x - 3);\n        }\n    }\n    valeurs.iter().copied().min().unwrap_or(0)\n}\n```",
+      "expected": "```rust\nfn min_moins_3_inf_2(nombres: &[i64]) -> i64 {\n    let mut valeurs: Vec<i64> = Vec::new();\n    for &x in nombres {\n        if x < 2 {\n            valeurs.push(x - 3);\n        }\n    }\n    valeurs.iter().copied().min().unwrap_or(0)\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_go": {
+    "passed": 18,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Écris une fonction Go `func max_plus_4_tous(nombres []int64) int64` qui renvoie la plus grande des valeurs obtenues en ajoutant 4 à chaque nombre de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```go\nfunc max_plus_4_tous(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tvaleurs = append(valeurs, x + 4)\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v < best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```",
+      "expected": "```go\nfunc max_plus_4_tous(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tvaleurs = append(valeurs, x + 4)\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v > best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```"
+     },
+     {
+      "question": "Écris en Go `func max_moins_9_positifs(nombres []int64) int64` : elle renvoie la plus grande des valeurs obtenues en retirant 9 à chaque nombre strictement positif de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```go\nfunc max_moins_9_positifs(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x > 0 {\n\t\t\tvaleurs = append(valeurs, x - 9)\n\t\t}\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v < best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```",
+      "expected": "```go\nfunc max_moins_9_positifs(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x > 0 {\n\t\t\tvaleurs = append(valeurs, x - 9)\n\t\t}\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v > best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Write a Go function `func liste_moins_7_pairs(nombres []int64) []int64` that returns the list of the values obtained by subtracting 7 from each even number in the list nombres.",
+      "answer": "```go\nfunc liste_moins_7_pairs(nombres []int64) []int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x % 2 == 0 {\n\t\t\tvaleurs = append(valeurs, x - 7)\n\t\t}\n\t}\n\treturn valeurs\n}\n```",
+      "expected": "```go\nfunc liste_moins_7_pairs(nombres []int64) []int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x % 2 == 0 {\n\t\t\tvaleurs = append(valeurs, x - 7)\n\t\t}\n\t}\n\treturn valeurs\n}\n```"
+     },
+     {
+      "question": "Écris une fonction Go `func liste_absolus_positifs(nombres []int64) []int64` qui renvoie la liste des valeurs obtenues en prenant la valeur absolue de chaque nombre strictement positif de la liste nombres.",
+      "answer": "```go\nfunc abs(x int64) int64 {\n\tif x < 0 {\n\t\treturn -x\n\t}\n\treturn x\n}\n\nfunc liste_absolus_positifs(nombres []int64) []int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x > 0 {\n\t\t\tvaleurs = append(valeurs, abs(x))\n\t\t}\n\t}\n\treturn valeurs\n}\n```",
+      "expected": "```go\nfunc abs(x int64) int64 {\n\tif x < 0 {\n\t\treturn -x\n\t}\n\treturn x\n}\n\nfunc liste_absolus_positifs(nombres []int64) []int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x > 0 {\n\t\t\tvaleurs = append(valeurs, abs(x))\n\t\t}\n\t}\n\treturn valeurs\n}\n```"
+     }
+    ],
+    "rate": 0.9
+   },
+   "code_go_heldout": {
+    "passed": 13,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Write a Go function `func max_moins_6_inf_5(nombres []int64) int64` that returns the largest of the values obtained by subtracting 6 from each number less than 5 in the list nombres (0 if there are none).",
+      "answer": "```go\nfunc max_moins_6_inf_5(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x < 5 {\n\t\t\tvaleurs = append(valeurs, x - 6)\n\t\t}\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v < best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```",
+      "expected": "```go\nfunc max_moins_6_inf_5(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x < 5 {\n\t\t\tvaleurs = append(valeurs, x - 6)\n\t\t}\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v > best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n``"
+     },
+     {
+      "question": "Écris une fonction Go `func max_moins_7_inf_4(nombres []int64) int64` qui renvoie la plus grande des valeurs obtenues en retirant 7 à chaque nombre inférieur à 4 de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```go\nfunc max_moins_7_inf_4(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x < 4 {\n\t\t\tvaleurs = append(valeurs, x - 7)\n\t\t}\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v < best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```",
+      "expected": "```go\nfunc max_moins_7_inf_4(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x < 4 {\n\t\t\tvaleurs = append(valeurs, x - 7)\n\t\t}\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v > best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n``"
+     },
+     {
+      "question": "Write in Go `func max_moins_7_tous(nombres []int64) int64`: it returns the largest of the values obtained by subtracting 7 from each number in the list nombres (0 if there are none).",
+      "answer": "```go\nfunc max_moins_7_tous(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tvaleurs = append(valeurs, x - 7)\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v < best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```",
+      "expected": "```go\nfunc max_moins_7_tous(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tvaleurs = append(valeurs, x - 7)\n\t}\n\tif len(valeurs) == 0 {\n\t\treturn 0\n\t}\n\tbest := valeurs[0]\n\tfor _, v := range valeurs {\n\t\tif v > best {\n\t\t\tbest = v\n\t\t}\n\t}\n\treturn best\n}\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Write a Go function `func produit_absolus_positifs(nombres []int64) int64` that returns the product of the values obtained by taking the absolute value of each strictly positive number in the list nombres (1 if there are none).",
+      "answer": "```go\nfunc abs(x int64) int64 {\n\tif x < 0 {\n\t\treturn -x\n\t}\n\treturn x\n}\n\nfunc produit_absolus_positifs(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x > 0 {\n\t\t\tvaleurs = append(valeurs, abs(x))\n\t\t}\n\t}\n\tvar produit int64 = 1\n\tfor _, v := range valeurs {\n\t\tproduit *= v\n\t}\n\treturn produit\n}\n```",
+      "expected": "```go\nfunc abs(x int64) int64 {\n\tif x < 0 {\n\t\treturn -x\n\t}\n\treturn x\n}\n\nfunc produit_absolus_positifs(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x > 0 {\n\t\t\tvaleurs = append(valeurs, abs(x))\n\t\t}\n\t}\n\tvar produit int64 = 1\n\tfor _, v := range valeurs {\n\t\tproduit *= "
+     },
+     {
+      "question": "Écris en Go `func somme_carres_inf_6(nombres []int64) int64` : elle renvoie la somme des valeurs obtenues en élevant au carré chaque nombre inférieur à 6 de la liste nombres.",
+      "answer": "```go\nfunc somme_carres_inf_6(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x < 6 {\n\t\t\tvaleurs = append(valeurs, x * x)\n\t\t}\n\t}\n\tvar total int64\n\tfor _, v := range valeurs {\n\t\ttotal += v\n\t}\n\treturn total\n}\n```",
+      "expected": "```go\nfunc somme_carres_inf_6(nombres []int64) int64 {\n\tvaleurs := []int64{}\n\tfor _, x := range nombres {\n\t\tif x < 6 {\n\t\t\tvaleurs = append(valeurs, x * x)\n\t\t}\n\t}\n\tvar total int64\n\tfor _, v := range valeurs {\n\t\ttotal += v\n\t}\n\treturn total\n}\n```"
+     }
+    ],
+    "rate": 0.65
+   },
+   "code_php": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Écris en PHP `function max_valeurs_inf_2(array $nombres): int` : elle renvoie le plus grand des nombres de la liste nombres qui sont inférieurs à 2 (0 s'il n'y en a aucun).",
+      "answer": "```php\n<?php\nfunction max_valeurs_inf_2(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x < 2) {\n            $valeurs[] = $x;\n        }\n    }\n    return $valeurs ? max($valeurs) : 0;\n}\n```",
+      "expected": "```php\n<?php\nfunction max_valeurs_inf_2(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x < 2) {\n            $valeurs[] = $x;\n        }\n    }\n    return $valeurs ? max($valeurs) : 0;\n}\n```"
+     },
+     {
+      "question": "Écris une fonction PHP `function max_fois_4_multiples_3(array $nombres): int` qui renvoie la plus grande des valeurs obtenues en multipliant par 4 chaque nombre multiple de 3 de la liste nombres (0 s'il n'y en a aucune).",
+      "answer": "```php\n<?php\nfunction max_fois_4_multiples_3(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x % 3 == 0) {\n            $valeurs[] = $x * 4;\n        }\n    }\n    return $valeurs ? max($valeurs) : 0;\n}\n```",
+      "expected": "```php\n<?php\nfunction max_fois_4_multiples_3(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x % 3 == 0) {\n            $valeurs[] = $x * 4;\n        }\n    }\n    return $valeurs ? max($valeurs) : 0;\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_php_heldout": {
+    "passed": 20,
+    "total": 20,
+    "failures": [],
+    "examples": [
+     {
+      "question": "Write a PHP function `function produit_carres_impairs(array $nombres): int` that returns the product of the values obtained by squaring each odd number in the list nombres (1 if there are none).",
+      "answer": "```php\n<?php\nfunction produit_carres_impairs(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x % 2 != 0) {\n            $valeurs[] = $x * $x;\n        }\n    }\n    return array_product($valeurs);\n}\n```",
+      "expected": "```php\n<?php\nfunction produit_carres_impairs(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x % 2 != 0) {\n            $valeurs[] = $x * $x;\n        }\n    }\n    return array_product($valeurs);\n}\n```"
+     },
+     {
+      "question": "Write in PHP `function min_fois_2_negatifs(array $nombres): int`: it returns the smallest of the values obtained by multiplying by 2 each strictly negative number in the list nombres (0 if there are none).",
+      "answer": "```php\n<?php\nfunction min_fois_2_negatifs(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x < 0) {\n            $valeurs[] = $x * 2;\n        }\n    }\n    return $valeurs ? min($valeurs) : 0;\n}\n```",
+      "expected": "```php\n<?php\nfunction min_fois_2_negatifs(array $nombres): int\n{\n    $valeurs = [];\n    foreach ($nombres as $x) {\n        if ($x < 0) {\n            $valeurs[] = $x * 2;\n        }\n    }\n    return $valeurs ? min($valeurs) : 0;\n}\n```"
+     }
+    ],
+    "rate": 1.0
+   },
+   "code_ruby": {
+    "passed": 17,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Write in Ruby `def min_absolus_tous(nombres)`: it returns the smallest of the values obtained by taking the absolute value of each number in the list nombres (0 if there are none).",
+      "answer": "```ruby\ndef min_absolus_tous(nombres)\n  valeurs = nombres.select { |x| x % 2 != 0 }.map { |x| x.abs }\n  valeurs.min || 0\nend\n```",
+      "expected": "```ruby\ndef min_absolus_tous(nombres)\n  valeurs = nombres.map { |x| x.abs }\n  valeurs.min || 0\nend\n```"
+     },
+     {
+      "question": "Write a Ruby function `def nombre_doubles_tous(nombres)` that returns the count of the values obtained by doubling each number in the list nombres.",
+      "answer": "```ruby\ndef nombre_doubles_tous(nombres)\n  valeurs = nombres.select { |x| x % 2 != 0 }.map { |x| 2 * x }\n  valeurs.length\nend\n```",
+      "expected": "```ruby\ndef nombre_doubles_tous(nombres)\n  valeurs = nombres.map { |x| 2 * x }\n  valeurs.length\nend\n```"
+     },
+     {
+      "question": "Write in Ruby `def produit_valeurs_tous(nombres)`: it returns the product of the numbers in the list nombres (1 if there are none).",
+      "answer": "```ruby\ndef produit_valeurs_tous(nombres)\n  valeurs = nombres.map { |x| x % 2 != 0 }\n  valeurs.reduce(1, :*)\nend\n```",
+      "expected": "```ruby\ndef produit_valeurs_tous(nombres)\n  valeurs = nombres\n  valeurs.reduce(1, :*)\nend\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Write a Ruby function `def min_opposes_inf_2(nombres)` that returns the smallest of the values obtained by negating each number less than 2 in the list nombres (0 if there are none).",
+      "answer": "```ruby\ndef min_opposes_inf_2(nombres)\n  valeurs = nombres.select { |x| x < 2 }.map { |x| -x }\n  valeurs.min || 0\nend\n```",
+      "expected": "```ruby\ndef min_opposes_inf_2(nombres)\n  valeurs = nombres.select { |x| x < 2 }.map { |x| -x }\n  valeurs.min || 0\nend\n```"
+     },
+     {
+      "question": "Write in Ruby `def nombre_absolus_pairs(nombres)`: it returns the count of the values obtained by taking the absolute value of each even number in the list nombres.",
+      "answer": "```ruby\ndef nombre_absolus_pairs(nombres)\n  valeurs = nombres.select { |x| x % 2 == 0 }.map { |x| x.abs }\n  valeurs.length\nend\n```",
+      "expected": "```ruby\ndef nombre_absolus_pairs(nombres)\n  valeurs = nombres.select { |x| x % 2 == 0 }.map { |x| x.abs }\n  valeurs.length\nend\n```"
+     }
+    ],
+    "rate": 0.85
+   },
+   "code_ruby_heldout": {
+    "passed": 18,
+    "total": 20,
+    "failures": [
+     {
+      "question": "Write in Ruby `def nombre_absolus_tous(nombres)`: it returns the count of the values obtained by taking the absolute value of each number in the list nombres.",
+      "answer": "```ruby\ndef nombre_absolus_tous(nombres)\n  valeurs = nombres.select { |x| x % 2 != 0 }.map { |x| x.abs }\n  valeurs.length\nend\n```",
+      "expected": "```ruby\ndef nombre_absolus_tous(nombres)\n  valeurs = nombres.map { |x| x.abs }\n  valeurs.length\nend\n```"
+     },
+     {
+      "question": "Écris en Ruby `def somme_moins_4_tous(nombres)` : elle renvoie la somme des valeurs obtenues en retirant 4 à chaque nombre de la liste nombres.",
+      "answer": "```ruby\ndef somme_moins_4_tous(nombres)\n  valeurs = nombres.select { |x| x % 2 != 0 }.map { |x| x - 4 }\n  valeurs.sum\nend\n```",
+      "expected": "```ruby\ndef somme_moins_4_tous(nombres)\n  valeurs = nombres.map { |x| x - 4 }\n  valeurs.sum\nend\n```"
+     }
+    ],
+    "examples": [
+     {
+      "question": "Écris en Ruby `def produit_valeurs_sup_8(nombres)` : elle renvoie le produit des nombres de la liste nombres qui sont supérieurs à 8 (1 s'il n'y en a aucun).",
+      "answer": "```ruby\ndef produit_valeurs_sup_8(nombres)\n  valeurs = nombres.select { |x| x > 8 }\n  valeurs.reduce(1, :*)\nend\n```",
+      "expected": "```ruby\ndef produit_valeurs_sup_8(nombres)\n  valeurs = nombres.select { |x| x > 8 }\n  valeurs.reduce(1, :*)\nend\n```"
+     },
+     {
+      "question": "Write in Ruby `def somme_carres_inf_4(nombres)`: it returns the sum of the values obtained by squaring each number less than 4 in the list nombres.",
+      "answer": "```ruby\ndef somme_carres_inf_4(nombres)\n  valeurs = nombres.select { |x| x < 4 }.map { |x| x * x }\n  valeurs.sum\nend\n```",
+      "expected": "```ruby\ndef somme_carres_inf_4(nombres)\n  valeurs = nombres.select { |x| x < 4 }.map { |x| x * x }\n  valeurs.sum\nend\n```"
+     }
+    ],
+    "rate": 0.9
+   },
+   "model3d_heldout": {
+    "passed": 35,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Design a lorry for Unreal Engine.",
+      "answer": "personnage 1,8 m, costaud — 16 pièces, 628 triangles, squelette de 20 os\nModèle 3D construit (low-poly, prêt à détailler).",
+      "expected": "camion 7,5 × 2,5 × 3,2 m, 6 roues — 18 pièces, 840 triangles\n3D model built (low-poly base, ready to refine)."
+     },
+     {
+      "question": "Could you model a sword in black 1.3 meters long?",
+      "answer": "It is a bug-fix release, so 1.3 meters long?",
+      "expected": "épée 1,3 m — 5 pièces, 176 triangles, noir\n3D model built (low-poly base, ready to refine)."
+     },
+     {
+      "question": "Could you model a rifle in sand?",
+      "answer": "No, I did not: I have not performed any action outside this conversation.",
+      "expected": "fusil 1 m — 7 pièces, 156 triangles, sable\n3D model built (low-poly base, ready to refine)."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Dessine-moi en 3D une épée de 1,5 m de long.",
+      "answer": "épée 1,5 m — 5 pièces, 176 triangles\nModèle 3D construit (low-poly, prêt à détailler).",
+      "expected": "épée 1,5 m — 5 pièces, 176 triangles\nModèle 3D construit (low-poly, prêt à détailler)."
+     },
+     {
+      "question": "Prépare une auto de 3,5 m de long de couleur gris, prêt pour un moteur de jeu.",
+      "answer": "voiture 3,5 × 1,8 × 1,45 m, 4 roues — 12 pièces, 560 triangles, gris\nModèle 3D construit (low-poly, prêt à détailler).",
+      "expected": "voiture 3,5 × 1,8 × 1,45 m, 4 roues — 12 pièces, 560 triangles, gris\nModèle 3D construit (low-poly, prêt à détailler)."
+     }
+    ],
+    "rate": 0.875
+   },
+   "model3d": {
+    "passed": 38,
+    "total": 40,
+    "failures": [
+     {
+      "question": "Create a 3D model of a truck 7.8 meters long and 3 m high in green.",
+      "answer": "camion 7,8 × 2,5 × 3 m, 6 roues — 18 pièces, 840 triangles, gris\n3D model built (low-poly base, ready to refine).",
+      "expected": "camion 7,8 × 2,5 × 3 m, 6 roues — 18 pièces, 840 triangles, vert\n3D model built (low-poly base, ready to refine)."
+     },
+     {
+      "question": "Create a 3D model of a humanoid strong, 2.01 m tall in grey.",
+      "answer": "personnage 2,01 m, costaud — 16 pièces, 628 triangles, squelette de 20 os\n3D model built (low-poly base, ready to refine).",
+      "expected": "personnage 2,01 m, costaud — 16 pièces, 628 triangles, squelette de 20 os, gris\n3D model built (low-poly base, ready to refine)."
+     }
+    ],
+    "examples": [
+     {
+      "question": "Je veux un tank de 9,3 mètres et large de 3,3 m jaune pour mon jeu.",
+      "answer": "char 9,3 × 3,3 × 2,4 m, 10 galets — 16 pièces, 816 triangles, jaune\nModèle 3D construit (low-poly, prêt à détailler).",
+      "expected": "char 9,3 × 3,3 × 2,4 m, 10 galets — 16 pièces, 816 triangles, jaune\nModèle 3D construit (low-poly, prêt à détailler)."
+     },
+     {
+      "question": "Peux-tu modéliser une moto de 2,2 mètres rouge ?",
+      "answer": "moto 2,2 × 0,8 × 1,15 m, 2 roues — 8 pièces, 336 triangles, rouge\nModèle 3D construit (low-poly, prêt à détailler).",
+      "expected": "moto 2,2 × 0,8 × 1,15 m, 2 roues — 8 pièces, 336 triangles, rouge\nModèle 3D construit (low-poly, prêt à détailler)."
+     }
+    ],
+    "rate": 0.95
+   }
+  },
+  "passed": 1016,
+  "total": 1220,
+  "rate": 0.8328,
+  "over_refusal_rate": 0.0008,
+  "skipped_without_compiler": {},
+  "elapsed_s": 712.4
+ },
+ "baselines": {
+  "empty": {
+   "arithmetic": 0.0,
+   "logic": 0.0,
+   "text_ops": 0.0,
+   "code_fix": 0.0,
+   "json": 0.0,
+   "list_ops": 0.0,
+   "dates": 0.0,
+   "honesty": 0.0,
+   "code_write": 0.0,
+   "program_output": 0.0,
+   "conversation_memory": 0.0,
+   "word_problem": 0.0,
+   "conversion": 0.0,
+   "code_write_heldout": 0.0,
+   "knowledge_command": 0.0,
+   "knowledge_python": 0.0,
+   "translation": 0.0,
+   "code_compose": 0.0,
+   "code_compose_heldout": 0.0,
+   "code_python": 0.0,
+   "code_python_heldout": 0.0,
+   "code_csharp": 0.0,
+   "code_csharp_heldout": 0.0,
+   "code_cpp": 0.0,
+   "code_cpp_heldout": 0.0,
+   "code_javascript": 0.0,
+   "code_javascript_heldout": 0.0,
+   "code_typescript": 0.0,
+   "code_typescript_heldout": 0.0,
+   "code_java": 0.0,
+   "code_java_heldout": 0.0,
+   "code_rust": 0.0,
+   "code_rust_heldout": 0.0,
+   "code_go": 0.0,
+   "code_go_heldout": 0.0,
+   "code_php": 0.0,
+   "code_php_heldout": 0.0,
+   "code_ruby": 0.0,
+   "code_ruby_heldout": 0.0,
+   "model3d_heldout": 0.0,
+   "model3d": 0.0
+  },
+  "echo": {
+   "arithmetic": 0.0,
+   "logic": 0.0,
+   "text_ops": 0.0,
+   "code_fix": 0.0,
+   "json": 0.0,
+   "list_ops": 0.0,
+   "dates": 0.0,
+   "honesty": 0.0,
+   "code_write": 0.0,
+   "program_output": 0.0,
+   "conversation_memory": 0.0,
+   "word_problem": 0.0,
+   "conversion": 0.0,
+   "code_write_heldout": 0.0,
+   "knowledge_command": 0.0,
+   "knowledge_python": 0.0,
+   "translation": 0.025,
+   "code_compose": 0.0,
+   "code_compose_heldout": 0.0,
+   "code_python": 0.0,
+   "code_python_heldout": 0.0,
+   "code_csharp": 0.0,
+   "code_csharp_heldout": 0.0,
+   "code_cpp": 0.0,
+   "code_cpp_heldout": 0.0,
+   "code_javascript": 0.0,
+   "code_javascript_heldout": 0.0,
+   "code_typescript": 0.0,
+   "code_typescript_heldout": 0.0,
+   "code_java": 0.0,
+   "code_java_heldout": 0.0,
+   "code_rust": 0.0,
+   "code_rust_heldout": 0.0,
+   "code_go": 0.0,
+   "code_go_heldout": 0.0,
+   "code_php": 0.0,
+   "code_php_heldout": 0.0,
+   "code_ruby": 0.0,
+   "code_ruby_heldout": 0.0,
+   "model3d_heldout": 0.0,
+   "model3d": 0.0
+  }
+ },
+ "speed": {
+  "device": "cpu",
+  "weights_mode": "dequantized",
+  "threads": 4,
+  "weights_bytes": 63206912,
+  "load_s": 0.741,
+  "runs": [
+   {
+    "prompt_tokens": 32,
+    "new_tokens": 128,
+    "time_to_first_token_s": 0.0173,
+    "decode_tokens_per_s": 136.68,
+    "prefill_tokens_per_s": 1893.5,
+    "kv_cache_bytes": 1310720
+   },
+   {
+    "prompt_tokens": 256,
+    "new_tokens": 128,
+    "time_to_first_token_s": 0.042,
+    "decode_tokens_per_s": 138.32,
+    "prefill_tokens_per_s": 6183.6,
+    "kv_cache_bytes": 3145728
+   },
+   {
+    "prompt_tokens": 768,
+    "new_tokens": 128,
+    "time_to_first_token_s": 0.1014,
+    "decode_tokens_per_s": 127.53,
+    "prefill_tokens_per_s": 7626.6,
+    "kv_cache_bytes": 7340032
+   }
+  ]
+ },
+ "long_conversation": {
+  "turns": 83,
+  "dropped_messages": 9,
+  "prompt_tokens": 971,
+  "context_length": 1024,
+  "fact_still_in_context": false,
+  "answer": "combiner avec ce queu.",
+  "invented_name": false,
+  "admits_not_knowing": false,
+  "time_to_first_token_s": 0.18,
+  "dropped_check": 9
+ },
+ "stability": {
+  "generations": 100,
+  "errors": 0,
+  "error_samples": [],
+  "rss_before_bytes": 719609856,
+  "rss_after_bytes": 721149952,
+  "rss_samples_bytes": [
+   721149952,
+   721149952,
+   721149952,
+   721149952
+  ],
+  "elapsed_s": 16.8
+ },
+ "layer_streaming": {
+  "technique": "chargement couche par couche (principe d'AirLLM), mesuré sur ApexLM",
+  "same_tokens": true,
+  "new_tokens": 48,
+  "resident_tokens_per_s": 122.43,
+  "streaming_tokens_per_s": 18.78,
+  "slowdown": 6.52,
+  "resident_block_bytes": 50360320,
+  "verdict": "plus lent, sans gain de mémoire utile : le Cerveau tient déjà entièrement en mémoire"
+ },
+ "memory": {
+  "rss_baseline_bytes": 705732608,
+  "rss_loaded_bytes": 706248704,
+  "rss_after_generation_bytes": 706248704,
+  "rss_unloaded_bytes": 624803840,
+  "rss_after_each_cycle_bytes": [
+   626384896,
+   626790400,
+   626806784,
+   626802688,
+   626810880
+  ],
+  "weights_bytes": 516096
+ },
+ "speed_cuda": null,
+ "speed_q5_resident": {
+  "device": "cpu",
+  "weights_mode": "q5_resident",
+  "threads": 4,
+  "weights_bytes": 22312448,
+  "load_s": 0.632,
+  "runs": [
+   {
+    "prompt_tokens": 256,
+    "new_tokens": 128,
+    "time_to_first_token_s": 0.1134,
+    "decode_tokens_per_s": 23.79,
+    "prefill_tokens_per_s": 2271.5,
+    "kv_cache_bytes": 3145728
+   }
+  ]
+ },
+ "bpb_served": {
+  "code": {
+   "loss": 2.49879,
+   "bpb": 1.01315,
+   "tokens": 199680
+  },
+  "en": {
+   "loss": 2.9559,
+   "bpb": 1.18493,
+   "tokens": 199680
+  },
+  "fr": {
+   "loss": 1.43939,
+   "bpb": 0.63405,
+   "tokens": 173056
+  },
+  "translation": {
+   "loss": 2.42792,
+   "bpb": 1.05029,
+   "tokens": 199680
+  },
+  "all": {
+   "loss": 2.36123,
+   "bpb": 0.9881,
+   "tokens": 772096
+  }
+ },
+ "bpb_float32": {
+  "code": {
+   "loss": 2.49388,
+   "bpb": 1.01116,
+   "tokens": 199680
+  },
+  "en": {
+   "loss": 2.95129,
+   "bpb": 1.18309,
+   "tokens": 199680
+  },
+  "fr": {
+   "loss": 1.43592,
+   "bpb": 0.63252,
+   "tokens": 173056
+  },
+  "translation": {
+   "loss": 2.42394,
+   "bpb": 1.04856,
+   "tokens": 199680
+  },
+  "all": {
+   "loss": 2.35696,
+   "bpb": 0.98631,
+   "tokens": 772096
+  }
+ }
+}

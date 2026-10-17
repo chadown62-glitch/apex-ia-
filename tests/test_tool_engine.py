@@ -71,7 +71,8 @@ def test_permissions_are_never_implicit(ctx) -> None:
     assert result.error.code is ErrorCode.PERMISSION_DENIED and "workspace.write" in result.error.message
     assert not (ctx.workspace.root / "a.txt").exists()
     assert call(ctx, "code.run", path="a.py").error.code is ErrorCode.PERMISSION_DENIED
-    assert {s.name for s in ENGINE.registry.available_to(ctx.granted)} == {"fs.read", "fs.list", "project.inspect"}
+    assert {s.name for s in ENGINE.registry.available_to(ctx.granted)} == {"fs.read", "fs.list", "fs.search",
+                                                                          "project.inspect"}
 
 
 def test_every_call_is_logged_with_its_provenance(ctx) -> None:
@@ -118,6 +119,42 @@ def test_write_read_list_and_inspect(ctx) -> None:
     assert missing.code is ErrorCode.NOT_FOUND
     # L'observation nomme ce qui existe (mesuré : un vrai modèle relisait 10 fois un chemin absent).
     assert "pkg/calc.py" in missing.message and "tests/test_calc.py" in missing.message
+
+
+def test_search_finds_literal_text_with_lines_and_stays_bounded(ctx) -> None:
+    call(ctx, "fs.write", path="src/jeu/Vehicule.cs", content="class Vehicule {\n  void Rouler() {}\n}\n")
+    call(ctx, "fs.write", path="src/jeu/Arme.cs", content="class Arme {\n  void Tirer() { Rouler(); }\n}\n")
+    call(ctx, "fs.write", path="docs/notes.md", content="Rouler vite.\n")
+    found = call(ctx, "fs.search", query="Rouler(", glob="*.cs").output
+    assert [(m["path"], m["line"]) for m in found["matches"]] == [("src/jeu/Arme.cs", 2), ("src/jeu/Vehicule.cs", 2)]
+    assert found["files_scanned"] == 2 and not found["truncated"]
+    assert call(ctx, "fs.search", query="rouler", ignore_case=True, path="docs").output["match_count"] == 1
+    assert call(ctx, "fs.search", query="rouler").output["match_count"] == 0  # casse respectée par défaut
+    # Littéral : un motif d'expression régulière est cherché tel quel, jamais interprété.
+    assert call(ctx, "fs.search", query="(a+)+$").output["match_count"] == 0
+    capped = call(ctx, "fs.search", query="o", max_results=2).output
+    assert capped["match_count"] == 2 and capped["truncated"]
+    ctx.workspace.write_bytes("image.bin", bytes(range(256)) * 4)
+    assert call(ctx, "fs.search", query="x").output["files_skipped"] == 1  # binaire : compté, pas lu
+
+
+def test_edit_replaces_one_exact_passage_or_refuses(ctx) -> None:
+    call(ctx, "fs.write", path="main.py", content="x = 1\ny = 1\nprint(x + y)\n")
+    done = call(ctx, "fs.edit", path="main.py", old="y = 1", new="y = 41")
+    assert done.ok and done.output["replacements"] == 1
+    assert ctx.workspace.read_bytes("main.py") == b"x = 1\ny = 41\nprint(x + y)\n"
+    ambiguous = call(ctx, "fs.edit", path="main.py", old=" = ", new=" == ")
+    assert ambiguous.error.code is ErrorCode.INVALID_INPUT and "2 fois" in ambiguous.error.message
+    assert ctx.workspace.read_bytes("main.py") == b"x = 1\ny = 41\nprint(x + y)\n"  # rien de touché
+    assert call(ctx, "fs.edit", path="main.py", old="z = 3", new="").error.code is ErrorCode.NOT_FOUND
+    assert call(ctx, "fs.edit", path="absent.py", old="a", new="b").error.code is ErrorCode.NOT_FOUND
+    assert call(ctx, "fs.edit", path="../dehors.py", old="a", new="b").error.code is ErrorCode.PATH_REFUSED
+    every = call(ctx, "fs.edit", path="main.py", old="1", new="2", replace_all=True)
+    assert every.output["replacements"] == 2
+    assert ctx.workspace.read_bytes("main.py") == b"x = 2\ny = 42\nprint(x + y)\n"
+    read_only = ToolContext(workspace=ctx.workspace, granted=frozenset({Permission.READ_WORKSPACE}))
+    assert call(read_only, "fs.edit", path="main.py", old="x", new="z").error.code is ErrorCode.PERMISSION_DENIED
+    assert call(read_only, "fs.search", query="x").ok
 
 
 @pytest.mark.parametrize(

@@ -9,6 +9,9 @@
   effet et si le pid est bien le Python d'APEX — arrêt forcé.
 `python -m apex.standalone status` : ce qui est enregistré et si l'API répond (JSON).
 `python -m apex.standalone model install` : poids du modèle natif par défaut (Hugging Face, révision figée).
+`python -m apex.standalone gpu status|install|verify|disable|enable|remove` : accélération GPU FACULTATIVE
+  (PyTorch CUDA en surcouche du runtime, `apex.standalone.gpu`) ; activée par `serve` seulement si elle est
+  installée, activée et vérifiée à nouveau sur ce PC — sinon calcul sur le processeur, raison écrite.
 """
 
 from __future__ import annotations
@@ -99,6 +102,11 @@ def serve(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT, log: bool = Fals
             write_discovery(host, port, Path.cwd(), phase="starting")
         except OSError as exc:
             _log(f"annonce au Panel impossible ({exc}) — il dira « non démarré » jusqu'à l'écoute de l'API")
+
+        # Avant tout import de torch : surcouche CUDA seulement si installée, activée et vérifiée ici.
+        from apex.standalone import gpu
+
+        _log(f"accélération GPU : {gpu.describe(gpu.activate(p.home))}")
 
         _log("schéma de la base embarquée (apex db upgrade)…")
         from apex.cli.main import main as apex_main
@@ -249,6 +257,32 @@ def model_install(*, repo: str | None = None, name: str | None = None, revision:
     return 0
 
 
+def gpu_command(command: str, *, variant: str | None = None) -> int:
+    """`gpu …` : chaque geste rend un compte rendu JSON ; rien n'est installé ni retiré sans lui."""
+    from apex.standalone import gpu
+
+    apply_environment()
+    p = paths()
+    p.ensure()
+    if command == "status":
+        print(json.dumps(gpu.status(p.home), indent=2, ensure_ascii=False, default=str))
+        return 0
+    if command in ("disable", "enable"):
+        gpu.set_enabled(command == "enable", p.home)
+        state = "activée" if command == "enable" else "désactivée (calcul sur le processeur)"
+        print(json.dumps({"ok": True, "reason": f"accélération GPU {state} au prochain démarrage d'APEX"},
+                         ensure_ascii=False))
+        return 0
+    if command == "install":
+        code, report = gpu.install(p.home, requested=variant)
+    elif command == "verify":
+        code, report = gpu.verify(p.home)
+    else:
+        code, report = gpu.remove(p.home)
+    print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
+    return code
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m apex.standalone", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -267,6 +301,12 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--name")
     install.add_argument("--revision")
     install.add_argument("--log", action="store_true", help="sortie dans APEX_HOME/.apex/runtime/model-install.log")
+    gpu_cmd = sub.add_parser("gpu", help="accélération GPU facultative (PyTorch CUDA)")
+    gpu_cmd.add_argument("gpu_command",
+                         choices=("status", "install", "verify", "disable", "enable", "remove"))
+    gpu_cmd.add_argument("--variant", help="variante imposée (ex. cu128) ; défaut : d'après le pilote")
+    gpu_cmd.add_argument("--log", action="store_true",
+                         help="sortie dans APEX_HOME/.apex/runtime/gpu-install.log")
     args = parser.parse_args(argv)
     if args.command == "serve":
         return serve(host=args.host, port=args.port, log=args.log)
@@ -274,6 +314,11 @@ def main(argv: list[str] | None = None) -> int:
         return stop(timeout_s=args.timeout)
     if args.command == "status":
         return status()
+    if args.command == "gpu":
+        if args.log:
+            apply_environment()
+            _redirect_output(paths().runtime_dir / "gpu-install.log")
+        return gpu_command(args.gpu_command, variant=args.variant)
     if args.log:
         apply_environment()
         _redirect_output(paths().runtime_dir / "model-install.log")

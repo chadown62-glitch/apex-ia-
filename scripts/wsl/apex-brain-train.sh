@@ -98,7 +98,7 @@ if ! is_done tasks; then
   rm -rf "$WORK/sft"
   window=$("$PY" -c "import sys; sys.path.insert(0, '$REPO'); from scripts.apex_brain_build import PRESETS; print(PRESETS['$PRESET']['sft']['window'])" 2>/dev/null || echo 2048)
   "${BUILD[@]}" tasks --tokenizer "$WORK/tokenizer.json" --out "$WORK/sft" --train "$TASKS" --window "$window" \
-    || fail "exercices"
+    --corpus "$WORK/corpus" || fail "exercices"
   done_mark tasks
 fi
 
@@ -156,3 +156,4 @@ if [[ "${APEX_BRAIN_SKIP_INSTALL:-0}" != "1" ]]; then
   fi
 fi
 say "Rapport d'évaluation : $BRAIN/evaluation.json"
+say "Converser avec lui dans ce terminal : $PY $REPO/scripts/apex_brain_build.py chat --brain $BRAIN"

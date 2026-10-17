@@ -5,7 +5,7 @@ import { resetAppearanceFromCache } from "../theme/appearance";
 import { AssistantSidebar } from "./AssistantSidebar";
 import { ConversationView } from "./ConversationView";
 import { HomeView } from "./HomeView";
-import { FinancePanel, DesignPanel } from "./ModePanels";
+import { FinancePanel, DesignPanel, Studio3DPanel } from "./ModePanels";
 import { ProjectView } from "./ProjectView";
 import { SettingsView } from "./SettingsView";
 import { MODES, SETTINGS, conversation, engines, installFakeApi, message, real, renderAt, turn, type FakeApi } from "./testing";
@@ -129,6 +129,31 @@ describe("ConversationView", () => {
     expect(screen.getAllByText("1 159,92 €").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: /arrêter/i }));
     await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path === "/assistant/turns/t1/cancel")).toBe(true));
+  });
+
+  it("shows the 3D workshop: real files of each model, the tool's summary and the preview", async () => {
+    api.on("GET", "/assistant/conversations/c1", conversation({ mode: "3d" }));
+    const step = {
+      step: 1, tool: "model3d.create", arguments: { generator: "vehicle", kind: "tank" }, ok: true, duration_s: 0.2,
+      observation: { ok: true, output: { name: "char", summary: "char 7 × 3,4 × 2,4 m, 10 galets — 16 pièces, 816 triangles",
+        files: [{ path: "modeles3d/char.glb", size: 67384 }, { path: "modeles3d/ApexCharController.cs", size: 4148 }] } },
+    };
+    api.on("GET", "/assistant/conversations/c1/messages", [
+      message(), message({ id: "m2", role: "assistant", content: "Voici le char.", meta: { mode: "3d", steps: [step] } }),
+    ]);
+    api.on("GET", "/assistant/conversations/c1/turns", []);
+    api.on("GET", "/assistant/conversations/c1/workspace", {
+      scope: "conversation", root: "C:\\Users\\moi\\APEX\\conversation-c1",
+      files: [{ path: "modeles3d/char.glb", size: 67384 }, { path: "modeles3d/char.png", size: 3576 },
+        { path: "modeles3d/ApexCharController.cs", size: 4148 }, { path: "notes.txt", size: 5 }],
+    });
+    api.on("GET", "/assistant/conversations/c1/workspace/file", { path: "modeles3d/char.png", size: 3, content_base64: "iVBO" });
+    renderAt("/c/c1", [{ path: "/c/:conversationId", element: <ConversationView /> }]);
+    expect(await screen.findByText("ApexCharController.cs")).toBeInTheDocument();
+    expect(screen.getByText("char 7 × 3,4 × 2,4 m, 10 galets — 16 pièces, 816 triangles", { selector: "p" })).toBeInTheDocument();
+    expect(screen.queryByText("notes.txt")).not.toBeInTheDocument();
+    expect(screen.getByText("C:\\Users\\moi\\APEX\\conversation-c1\\modeles3d")).toBeInTheDocument();
+    expect(await screen.findByRole("img", { name: "Aperçu de char" })).toHaveAttribute("src", "data:image/png;base64,iVBO");
   });
 
   it("renders a failed answer as an explicit error with a retry that resends the user's message", async () => {
@@ -297,6 +322,132 @@ describe("mode panels", () => {
     renderAt("/", [{ path: "/", element: <FinancePanel messages={messages as never} liveSteps={[]} /> }]);
     expect(screen.getByText("1500*12")).toBeInTheDocument();
     expect(screen.getByText("18 000")).toBeInTheDocument();
+  });
+});
+
+describe("Game Studio in the 3D workshop", () => {
+  const PROJECT = "6f1c2a8e-0000-4000-8000-000000000001";
+  const created = (ok: boolean, output: Record<string, unknown> | null, error: { code: string; message: string } | null) =>
+    message({
+      id: "g",
+      role: "assistant",
+      content: "…",
+      meta: { steps: [{ step: 1, tool: "game_studio.create", arguments: { description: "Une scène de forêt." }, ok, duration_s: 0.1, observation: { ok, output, error } }] },
+    });
+
+  it("follows a mission the brain handed to Game Studio, through the conversation's route", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: { status: "review", mission_id: "m1", steps: [{ key: "scene", kind: "graphics", status: "done", job_id: "j1" }], delivery_status: "delivered", last_event: null },
+      results: { status: "review", ready: true, artifacts: [{ name: "scene.glb", hash: "h", role: "exchange", source: "assembly" }], artifact_count: 1, truncated: false, blocked: [] },
+    });
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued", poll_tool: "game_studio.status" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText("Mission 6f1c2a8e")).toBeInTheDocument();
+    expect(await screen.findByText(/1 fichier\(s\) produit\(s\) : scene\.glb \(exchange\)/)).toBeInTheDocument();
+    expect(screen.getByText(/scene \(graphics\) : done/)).toBeInTheDocument();
+    expect(screen.getByText("terminée, à revoir")).toBeInTheDocument();
+    // Mission terminée : plus rien à annuler.
+    expect(screen.queryByRole("button", { name: "Annuler la mission" })).not.toBeInTheDocument();
+  });
+
+  it("shows the rendered previews and lets the user cancel a running mission", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: { status: "running", mission_id: "m1", steps: [], delivery_status: null, last_event: null },
+      results: { status: "running", ready: true, artifacts: [{ name: "scene.png", hash: "hv", role: "view", source: "assembly" }], artifact_count: 1, truncated: false, blocked: [] },
+    });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}/preview/hv`, { content_type: "image/png", size: 4, content_base64: "iVBORw==" });
+    api.on("POST", `/assistant/conversations/c1/game-studio/${PROJECT}/cancel`, { project_id: PROJECT, status: "cancelled" });
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByAltText("Rendu scene.png")).toHaveAttribute("src", "data:image/png;base64,iVBORw==");
+    fireEvent.click(screen.getByRole("button", { name: "Annuler la mission" }));
+    await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path.endsWith("/cancel"))).toBe(true));
+  });
+
+  it("asks before launching: the user launches a proposed mission once, with its missing dependencies shown", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", "/assistant/game-studio/availability", {
+      installed: true, ready: false, missing: ["Aucun GPU CUDA : choisissez « Processeur »."], notes: [], launch: "human", compute: "auto",
+    });
+    api.on("POST", "/assistant/conversations/c1/game-studio/launch", (body) => real({ message_id: "l1", content: "Mission lancée.", meta: { echo: body } }));
+    const messages = [
+      message({ id: "u1", role: "user", content: "Crée une scène de forêt avec une rivière." }),
+      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1", reason: "à lancer par vous : une mission n'est jamais lancée sans votre clic" } } }),
+    ];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Le Cerveau propose de confier à Game Studio : « Crée une scène de forêt avec une rivière\. »/)).toBeInTheDocument();
+    expect(await screen.findByText("Aucun GPU CUDA : choisissez « Processeur ».")).toBeInTheDocument();
+    expect(screen.getByText(/Le Cerveau propose les missions ; vous seul les lancez ou les annulez\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Lancer la mission" }));
+    await waitFor(() => expect(api.calls.find((c) => c.path === "/assistant/conversations/c1/game-studio/launch")?.body).toEqual({ message_id: "a1" }));
+  });
+
+  it("never offers a proposal that was already launched", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    const messages = [
+      message({ id: "u1", role: "user", content: "Crée une scène." }),
+      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1" } } }),
+      message({ id: "l1", role: "assistant", content: "Mission lancée.", meta: { game_studio: { trigger: "utilisateur", state: "refused", launched: false, proposal_of: "a1", error: { code: "unavailable", message: "local_planner_model_missing" } }, steps: [{ step: 1, tool: "game_studio.create", arguments: {}, ok: false, duration_s: 0, observation: { ok: false, output: {}, error: { code: "unavailable", message: "local_planner_model_missing" } } }] } }),
+    ];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Game Studio a refusé la mission : le modèle planificateur local/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Lancer la mission" })).not.toBeInTheDocument();
+  });
+
+  it("shows Game Studio's refusal as it is, explained, never as a mission", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    const messages = [created(false, null, { code: "unavailable", message: "cuda_unavailable_choose_cpu_explicitly" })];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Game Studio a refusé la mission : aucun GPU CUDA sur ce PC.*\(cuda_unavailable_choose_cpu_explicitly\)/)).toBeInTheDocument();
+    expect(api.calls.some((c) => c.path.includes("/conversations/c1/game-studio/"))).toBe(false);
+  });
+});
+
+describe("gameStudioLine", () => {
+  it("says whether the brain handed the creation to Game Studio, and why not", async () => {
+    const { gameStudioLine } = await import("./MessageItem");
+    expect(gameStudioLine({ trigger: "cerveau", launched: true, project_id: "6f1c2a8e-0000", status: "queued" }))
+      .toBe("confié à Game Studio par le Cerveau APEX : mission 6f1c2a8e (queued)");
+    expect(gameStudioLine({ trigger: "cerveau", launched: false, error: { code: "unavailable", message: "local_planner_model_missing" } }))
+      .toBe("Game Studio a refusé la mission : le modèle planificateur local de Game Studio n'est pas installé (local_planner_model_missing)");
+    expect(gameStudioLine({ trigger: "cerveau", launched: false, reason: "Game Studio ne fait pas partie de cette installation d'APEX" }))
+      .toBe("non confié à Game Studio : Game Studio ne fait pas partie de cette installation d'APEX");
+    expect(gameStudioLine({ trigger: "cerveau", state: "proposed", launched: false, reason: "demande à confirmer (question générale)" }))
+      .toBe("mission Game Studio proposée, à confirmer dans l'Atelier 3D : demande à confirmer (question générale)");
+    expect(gameStudioLine({ trigger: "utilisateur", state: "launched", launched: true, project_id: "abcdef12-0000", status: "queued" }))
+      .toBe("confié à Game Studio à votre demande : mission abcdef12 (queued)");
+    expect(gameStudioLine({ trigger: "cerveau", state: "refused", launched: false, error: { code: "unavailable", message: "x" }, explanation: "le GPU est occupé." }))
+      .toBe("Game Studio a refusé la mission : le GPU est occupé.");
+  });
+});
+
+describe("MessageItem", () => {
+  it("says when the APEX Brain handed an answer over, or kept it for lack of another engine", async () => {
+    const { MessageItem } = await import("./MessageItem");
+    const delegated = message({ id: "d", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.623, threshold: 0.97, to: "qwen", status: "delegated" } } });
+    const kept = message({ id: "k", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", confidence: 0.5, threshold: 0.97, to: null, status: "kept" } } });
+    const unknown = message({ id: "u", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", reason: "cannot_know", confidence: 0.99, threshold: 0.97, to: "qwen", status: "delegated" } } });
+    const current = message({ id: "c", role: "assistant", content: "…", meta: { delegation: { from: "apex-brain", reason: "current_info_no_tool", confidence: 0.99, threshold: 0.97, to: null, status: "kept" } } });
+    renderAt("/", [{ path: "/", element: <><MessageItem message={delegated as never} /><MessageItem message={kept as never} /><MessageItem message={unknown as never} /><MessageItem message={current as never} /></> }]);
+    expect(screen.getByText(/question d'actualité : aucun outil connecté, réponse du Cerveau APEX gardée/)).toBeInTheDocument();
+    expect(screen.getByText(/confié par le Cerveau APEX \(confiance 0\.62\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Cerveau APEX peu sûr \(confiance 0\.50\), aucun autre moteur disponible/)).toBeInTheDocument();
+    expect(screen.getByText(/confié par le Cerveau APEX \(il dit ne pas pouvoir le savoir\)/)).toBeInTheDocument();
+  });
+});
+
+describe("crosscheckLine", () => {
+  it("says what the cross-check found, never more", async () => {
+    const { crosscheckLine } = await import("./MessageItem");
+    expect(crosscheckLine({ language: "go", status: "agree", detail: "", example: null })).toBe("code vérifié : même résultat que sa version Python");
+    expect(crosscheckLine({ language: "go", status: "disagree", detail: "", example: { input: [1, 2], answer: 1, python: 2 } }))
+      .toBe("code douteux : pour [1,2], il rend 1, sa version Python 2");
+    expect(crosscheckLine({ language: "go", status: "unverifiable", detail: "la sandbox de ce PC n'exécute pas go", example: null }))
+      .toBe("code non vérifié : la sandbox de ce PC n'exécute pas go");
   });
 });
 
