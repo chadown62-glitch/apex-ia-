@@ -113,11 +113,15 @@ def _assemble_common(src_root: Path, out_dir: Path) -> None:
         if worker_source.is_dir():
             shutil.copytree(worker_source, out_dir / "scripts" / worker,
                             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    benchmark = src_root / "docs/game_graphics/studio/benchmark-v1.json"
-    if benchmark.is_file():
-        target = out_dir / "docs/game_graphics/studio/benchmark-v1.json"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(benchmark, target)
+    for relative in (
+        "docs/game_graphics/studio/benchmark-v1.json",
+        "docs/game_graphics/vehicle-asset-v1.schema.json",
+    ):
+        contract = src_root / relative
+        if contract.is_file():
+            target = out_dir / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(contract, target)
 
     # Chaîne Alembic officielle COMPLÈTE, jamais un sous-ensemble — voir
     # runtime_build/README.md, décision explicite : une seule chaîne de
