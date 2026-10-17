@@ -124,6 +124,16 @@ export function explainRefusal(message: string | undefined | null, explanation?:
   return known ? `${known} (${message})` : message;
 }
 
+/** Pourquoi une mission s'est arrêtée (raison du dernier événement de Game Studio) : en clair quand elle est connue, le
+ *  texte exact toujours à côté. */
+export function explainFailure(reason: string): string {
+  if (/BlockingIOError|Resource deadlock|Errno 36/.test(reason)) {
+    return `les ressources partagées d'APEX étaient tenues par un autre travail (bail model-session.lock) ; reprenez la mission quand il est terminé (${reason})`;
+  }
+  const known = GAME_STUDIO_REFUSALS[reason.split(":")[0].trim()];
+  return known ? `${known} (${reason})` : reason;
+}
+
 /** Une ligne sur la délégation d'une création 3D à Game Studio par le Cerveau APEX. */
 export function gameStudioLine(delegation: NonNullable<NonNullable<Message["meta"]>["game_studio"]>): string {
   const who = delegation.trigger === "utilisateur" ? "à votre demande" : "par le Cerveau APEX";

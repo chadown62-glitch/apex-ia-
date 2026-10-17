@@ -18,6 +18,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+import time
 import types
 from uuid import uuid4
 
@@ -45,6 +46,40 @@ from tests.test_conversations_service import BASE_CONFIG
 SCENE = "Crée une scène de forêt avec une cabane et une rivière."
 #: Ce que le Cerveau fait réellement d'une demande de scène (mesuré) : un appel 3D de son répertoire.
 _SCENE_CALL = {"tool": "3d", "expression": 'vehicle("car", color="vert")', "result": "voiture 4,3 m"}
+
+
+@pytest.fixture(autouse=True)
+def gpu(monkeypatch):
+    """Un partage du GPU neuf par test (sans CUDA sauf demande), suivi des prêts rapide, et tout prêt
+    rendu à la fin du test."""
+    from apex.models import gpu_handoff
+
+    governor = gpu_handoff.GpuGovernor(cuda_available=lambda: False, cuda_memory=lambda: None)
+    monkeypatch.setattr(gpu_handoff, "_GOVERNOR", governor)
+    monkeypatch.setattr(game_studio, "LOAN_POLL_S", 0.02)
+    yield governor
+    game_studio._reset_loans_for_tests()
+
+
+def _brain_on_cuda(governor):
+    """Le Cerveau chargé sur un « CUDA » simulé : il tient le bail partagé, comme sur le PC de
+    l'utilisateur (aucune mesure CUDA réelle ici)."""
+    from tests.test_gpu_handoff import _FakeCuda
+
+    governor.cuda_available = lambda: True
+    brain = _FakeCuda()
+    governor.register("apex_brain", brain.residents)
+    assert governor.place("auto")[0] == "cuda" and governor.status()["lease_held"]
+    return brain
+
+
+def _until(predicate, timeout: float = 5.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if predicate():
+            return True
+        time.sleep(0.01)
+    return predicate()
 
 
 @pytest.fixture
@@ -203,6 +238,48 @@ def test_game_studio_refusals_are_explained_in_plain_words() -> None:
     assert "planificateur" in game_studio.explain("local_planner_model_missing")
     assert "bibliothèque" in game_studio.explain("ModuleNotFoundError: No module named 'jsonschema'")
     assert game_studio.explain("code_inconnu") == "code_inconnu"  # jamais une explication inventée
+
+
+# -- partage du GPU pendant une mission ------------------------------------------------------------------
+
+
+def test_the_gpu_is_lent_while_the_mission_runs_then_given_back_to_the_brain(env, gpu) -> None:
+    """Chaque étape d'une mission prend le bail partagé, même sur le processeur : le Cerveau sur CUDA le
+    rend au lancement, répond sur le processeur pendant la mission, et le reprend après."""
+    brain = _brain_on_cuda(gpu)
+    statuses = iter(["queued", "running", "running", "review"])
+    game_studio._borrow_gpu("game_studio:launch-test")
+    assert brain.unloads == 1 and not gpu.status()["lease_held"]
+    game_studio._keep_lent("game_studio:launch-test", lambda: next(statuses))
+    assert gpu.place("auto") == ("cpu", "GPU prêté à un spécialiste (game_studio:launch-test)")
+    assert _until(lambda: gpu.status()["admissions_open"])
+    assert gpu.place("auto")[0] == "cuda"  # mission livrée : le Cerveau reprend le GPU
+
+
+def test_an_unreadable_mission_never_keeps_the_gpu(env, gpu) -> None:
+    _brain_on_cuda(gpu)
+    reads = []
+
+    def unreadable():
+        reads.append(1)
+        raise OSError("disque de Game Studio illisible")
+
+    game_studio._borrow_gpu("game_studio:launch-test")
+    game_studio._keep_lent("game_studio:launch-test", unreadable)
+    assert _until(lambda: gpu.status()["admissions_open"])
+    assert len(reads) == game_studio.LOAN_READ_FAILURES
+
+
+def test_a_brain_that_cannot_free_the_gpu_in_time_launches_nothing(env, gpu, monkeypatch) -> None:
+    brain = _brain_on_cuda(gpu)
+    monkeypatch.setattr(game_studio, "GPU_HANDOFF_TIMEOUT_S", 0.1)
+    brain.lock.acquire()  # le Cerveau est occupé au-delà du délai
+    try:
+        with pytest.raises(game_studio.GpuBusy, match="rien n'a été lancé"):
+            game_studio._borrow_gpu("game_studio:launch-test")
+    finally:
+        brain.lock.release()
+    assert brain.unloads == 0 and gpu.status()["lease_held"] and gpu.status()["admissions_open"]
 
 
 # -- sans Game Studio --------------------------------------------------------------------------------------
@@ -678,3 +755,74 @@ def test_the_requested_blockout_is_still_written(env, without_game_studio) -> No
     assert [s["tool"] for s in turn.steps] == ["model3d.create"] and turn.steps[0]["source"] == "cerveau"
     assert "delegation" not in answer.meta
     assert "modeles3d/char.glb" in {p for p, _ in conversation_workspace(conversation.id, None).files()}
+
+
+def test_launching_lends_the_gpu_to_the_missions_real_lease_until_it_stops(env, studio_tools, gpu) -> None:
+    """Le parcours de l'utilisateur sur son PC : Cerveau sur CUDA, mission sur le processeur. Sans le prêt,
+    le vrai bail de Game Studio est refusé (BlockingIOError, mission en échec) ; après le clic, il est
+    obtenu, et le GPU revient au Cerveau quand la mission est livrée."""
+    resources = pytest.importorskip("apex.game_graphics.resources", reason="Game Studio absent")
+    _brain_on_cuda(gpu)
+    lock = standalone.paths().runtime_dir / "mission" / "resource.lock"
+    with pytest.raises(OSError), resources.resource_lease(lock):
+        pass
+    studio = _Studio()
+    _settings(env)
+    launched, _, _ = _proposed_then_launched(env, studio, compute="cpu")
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    status = gpu.status()
+    assert status["lent_to"].startswith("game_studio:launch-") and not status["lease_held"]
+    with resources.resource_lease(lock):  # ce que fait chaque étape de la mission
+        assert gpu.place("auto")[0] == "cpu"
+    studio.finish(project_id, [])
+    assert _until(lambda: gpu.status()["admissions_open"])
+    assert gpu.place("auto")[0] == "cuda"
+
+
+def test_a_refused_launch_or_resume_gives_the_gpu_back_at_once(env, studio_tools, gpu) -> None:
+    _brain_on_cuda(gpu)
+    studio = _Studio(refuse=RuntimeError("local_planner_model_missing"))
+    _settings(env)
+    launched, _, _ = _proposed_then_launched(env, studio, compute="cpu")
+    assert launched["meta"]["game_studio"]["state"] == "refused"
+    assert gpu.status()["admissions_open"] and gpu.status()["lent_to"] is None
+    studio = _Studio(refuse_resume=ValueError("project_already_delivered_for_review"))
+    launched, _, conversation = _proposed_then_launched(env, studio, compute="cpu")
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    studio.finish(project_id, [])
+    assert _until(lambda: gpu.status()["admissions_open"])
+    with pytest.raises(ValueError, match="déjà livrée"):
+        game_studio.resume(env, conversation.id, project_id, service=studio)
+    assert gpu.status()["admissions_open"] and gpu.status()["lent_to"] is None
+
+
+def test_a_busy_brain_leaves_the_proposal_to_launch_again(env, studio_tools, gpu, monkeypatch) -> None:
+    brain = _brain_on_cuda(gpu)
+    monkeypatch.setattr(game_studio, "GPU_HANDOFF_TIMEOUT_S", 0.1)
+    studio = _Studio()
+    _settings(env)
+    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), SCENE, studio=studio)
+    count = len(_messages(env, conversation.id))
+    brain.lock.acquire()
+    try:
+        with pytest.raises(game_studio.GpuBusy):
+            game_studio.launch_proposed(env, conversation.id, answer.id, compute="cpu", service=studio)
+    finally:
+        brain.lock.release()
+    assert studio.created == [] and len(_messages(env, conversation.id)) == count  # rien d'enregistré
+    launched = game_studio.launch_proposed(env, conversation.id, answer.id, compute="cpu", service=studio)
+    assert launched["meta"]["game_studio"]["state"] == "launched" and len(studio.created) == 1
+
+
+def test_a_resumed_mission_holds_the_gpu_until_it_stops_again(env, studio_tools, gpu) -> None:
+    _brain_on_cuda(gpu)
+    studio = _Studio()
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio, compute="cpu")
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    studio.progress(project_id, "interrupted", [])
+    assert _until(lambda: gpu.status()["admissions_open"])
+    game_studio.resume(env, conversation.id, project_id, service=studio)
+    assert gpu.status()["lent_to"].startswith(f"game_studio:{project_id[:8]}-")
+    studio.progress(project_id, "failed", [])
+    assert _until(lambda: gpu.status()["admissions_open"])

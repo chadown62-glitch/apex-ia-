@@ -21,7 +21,7 @@ import {
   type ToolStep,
 } from "./api";
 import { keys } from "./hooks";
-import { explainRefusal } from "./MessageItem";
+import { explainFailure, explainRefusal } from "./MessageItem";
 import { IconFile, IconRefresh } from "./Icons";
 
 const euro = (value: unknown) =>
@@ -528,6 +528,9 @@ function GameStudioMissionCard({ conversationId, projectId }: { conversationId: 
                 ))}
               </ul>
             )}
+            {GAME_STUDIO_RESUMABLE.has(data.status.status) && typeof data.status.last_event?.reason === "string" && (
+              <p className="ax-inline-error">Raison : {explainFailure(data.status.last_event.reason)}</p>
+            )}
             {data.results.blocked && data.results.blocked.length > 0 && (
               <ul className="ax-panel__notes">
                 {data.results.blocked.map((b) => (
@@ -587,6 +590,11 @@ function GameStudioProposal({ conversationId, message, request, reason, availabi
           Une mission dure plusieurs minutes et utilise {cpu ? "le processeur (choix explicite)" : "le GPU"}. Le calcul se règle dans
           Paramètres &gt; Outils.
         </p>
+        {availability?.gpu?.lease_held && (
+          <p className="ax-muted">
+            Le Cerveau APEX occupe le GPU : il le libère au lancement et répond sur le processeur jusqu'à la fin de la mission.
+          </p>
+        )}
         {availability && availability.installed && !availability.ready && (
           <ul className="ax-panel__notes">
             {availability.missing.map((m) => (

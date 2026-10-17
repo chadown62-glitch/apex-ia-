@@ -205,20 +205,34 @@ jobs:
               print("server", importlib.util.find_spec("llama_cpp.server") is not None)
           except BaseException as exc:
               print("FAIL llama_cpp", type(exc).__name__, exc)
+          try:  # ce que lance le planificateur : fastapi, sse-starlette, starlette-context, pydantic-settings
+              import llama_cpp.server.app
+              print("OK llama_cpp.server.app")
+          except BaseException as exc:
+              print("FAIL llama_cpp.server.app", type(exc).__name__, exc)
           '@
             $engineCheck | Out-File -Encoding utf8 "$evidence\engine_check.py"
             $out = & $py.FullName -P -X utf8 "$evidence\engine_check.py" 2>&1 | ForEach-Object { "$_" }
             Note notice 'Moteur du planificateur dans APEX installé' ($out -join "`n")
           }
           Panel '--stop' 300 | Out-Null
+          # Partage du GPU (Cerveau sur CUDA simulé, verrous Windows réels) : le vrai bail des étapes de Game Studio
+          # n'est obtenu qu'après le prêt fait au clic, et le GPU revient au Cerveau. APEX arrêté, profil jetable.
+          $leaseCheck = 1
+          if ($py) {
+            $lines = & $py.FullName -P -X utf8 "$tree/setup/packaging/windows/ci/lease_check.py" 2>&1 | ForEach-Object { "$_" }
+            $leaseCheck = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Partage du GPU avec Game Studio (code $leaseCheck)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|VERDICT)' }) -join "`n")
+          }
           Copy-Item "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" "$evidence\launch.log" -ErrorAction SilentlyContinue
           $u = Start-Process "$env:LOCALAPPDATA\Programs\APEX\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
           Start-Sleep -Seconds 5
           $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
           Note notice 'Désinstallation' "code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
-          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio"
+          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio ; partage du GPU $leaseCheck"
           if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
-          if ($assistant -eq 1 -or $studio -eq 1 -or $gpuCheck -ne 0) { exit 1 }
+          if ($assistant -eq 1 -or $studio -eq 1 -or $gpuCheck -ne 0 -or $leaseCheck -eq 1) { exit 1 }
           if ($assistant -eq 3 -or $studio -eq 3 -or $model -ne 0) { exit 3 }
       # L'installateur de QUALIFICATION, pour l'essayer sur le PC de l'utilisateur : un artefact de ce run (connexion
       # GitHub requise), jamais une release. Il s'annonce « 0.6.0 » ; son contenu exact est dans manifest.json.

@@ -472,6 +472,23 @@ describe("Game Studio in the 3D workshop", () => {
     await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path.endsWith("/resume"))).toBe(true));
   });
 
+  it("says why a mission stopped, from Game Studio's last event", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: {
+        status: "failed", mission_id: "m1", steps: [], delivery_status: null,
+        last_event: { kind: "project_failed", reason: "BlockingIOError: [Errno 11] Resource temporarily unavailable" },
+      },
+      results: { status: "failed", ready: false },
+    });
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText(/Raison : les ressources partagées d'APEX étaient tenues par un autre travail.*\(BlockingIOError: \[Errno 11\]/))
+      .toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reprendre la mission" })).toBeInTheDocument();
+  });
+
   it("shows Game Studio's refusal as it is, explained, never as a mission", async () => {
     api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
     const messages = [created(false, null, { code: "unavailable", message: "cuda_unavailable_choose_cpu_explicitly" })];

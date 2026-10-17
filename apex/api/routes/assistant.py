@@ -398,12 +398,12 @@ def cancel_turn(turn_id: str) -> DataEnvelope[dict[str, Any]]:
 
 
 def _game_studio_error(exc: Exception) -> HTTPException:
-    from apex.assistant.game_studio import AlreadyLaunched, GameStudioUnavailable
+    from apex.assistant.game_studio import AlreadyLaunched, GameStudioUnavailable, GpuBusy
     from apex.errors import PolicyDenied
 
     if isinstance(exc, (PermissionError, PolicyDenied)):
         return HTTPException(status_code=403, detail=str(exc))
-    if isinstance(exc, AlreadyLaunched):
+    if isinstance(exc, (AlreadyLaunched, GpuBusy)):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, GameStudioUnavailable):
         return HTTPException(status_code=503, detail=str(exc))

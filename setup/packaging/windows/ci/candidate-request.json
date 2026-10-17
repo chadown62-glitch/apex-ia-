@@ -11,7 +11,7 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 6,
-  "why": "pile Game Studio de Codex à d15fa02 (jsonschema déclaré, contrats dependencies / install-planner, liste du moteur CPU) : jsonschema importé, moteur du planificateur installé par le bouton et importé sous Windows, parcours 3D jusqu'au refus suivant ; poids de 5,4 Go jamais téléchargés",
+  "attempt": 7,
+  "why": "pile Game Studio de Codex à d15fa02 ; côté Claude, le GPU prêté par le Cerveau pendant toute la mission (sinon le bail model-session.lock tenu par le Cerveau sur CUDA fait échouer les étapes, même sur le processeur) : partage du GPU vérifié avec les verrous Windows réels, moteur du planificateur installé et son serveur importé, parcours 3D jusqu'au refus suivant ; poids de 5,4 Go jamais téléchargés",
   "studio_engine": true
 }
