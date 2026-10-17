@@ -153,6 +153,20 @@ jobs:
           & setup/packaging/windows/Test-ApexWindows.ps1 -Installer $new.FullName -OlderInstaller $old.FullName `
             -AllowBackendControl -AllowWslShutdown -AuditProcessCreation -Repeat 1 -Label 'ci-windows-server-hosted' `
             -OutDir "$env:RUNNER_TEMP\validation"
+      # Le journal du runner n'est pas lisible par l'API : les contrôles FAIL et BLOCKED de results.json le sont, en
+      # annotations (check-runs/<id>/annotations). Exécuté même si le script a échoué.
+      - name: Publish the validation checks (annotations)
+        if: always()
+        shell: pwsh
+        run: |
+          $f = Get-ChildItem "$env:RUNNER_TEMP\validation" -Filter 'results*.json' -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $f) { Write-Host "::warning title=Validation::results.json absent"; exit 0 }
+          $r = Get-Content $f.FullName -Raw -Encoding utf8 | ConvertFrom-Json
+          $lines = @("PASS $($r.summary.PASS) ; FAIL $($r.summary.FAIL) ; BLOCKED $($r.summary.BLOCKED) ; NOT_APPLICABLE $($r.summary.NOT_APPLICABLE)")
+          $lines += $r.checks | Where-Object { $_.status -in 'FAIL', 'BLOCKED' } | ForEach-Object { "$($_.status) $($_.id) $($_.title) : $($_.detail)" }
+          $t = ($lines -join "`n") -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A'
+          if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
+          Write-Host "::notice title=Validation Windows (WSL2)::$t"
       # Contrat de démarrage (5736ec9) prouvé sur le vrai WSL2 par le vrai launch.sh, sans aucune dérogation :
       # décision et codes de sortie imprimés dans CE journal (le journal de launch.sh de l'étape précédente
       # n'est lisible que dans l'artefact). Les cas d'échec sont des fautes réelles injectées dans des copies.
