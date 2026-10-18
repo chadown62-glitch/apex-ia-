@@ -6,12 +6,16 @@
     "agent/codex/20-game-studio-multi-agent",
     "agent/codex/23-game-studio-planning",
     "agent/codex/25-game-studio-candidate",
+    "agent/codex/28-first-windows-creation",
+    "agent/codex/30-qwen-first-creation",
     "agent/codex/4-inference-diagnostics",
     "agent/codex/8-project-orchestrator",
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 7,
-  "why": "pile Game Studio de Codex à d15fa02 ; côté Claude, le GPU prêté par le Cerveau pendant toute la mission (sinon le bail model-session.lock tenu par le Cerveau sur CUDA fait échouer les étapes, même sur le processeur) : partage du GPU vérifié avec les verrous Windows réels, moteur du planificateur installé et son serveur importé, parcours 3D jusqu'au refus suivant ; poids de 5,4 Go jamais téléchargés",
-  "studio_engine": true
+  "attempt": 8,
+  "why": "dernier état publié de Codex (#29 à 8fc1df9, #31 à 550b347 : étapes sur processeur sans bail du Cerveau, protocole GPU 2) avec la tête de Claude (étape processeur vérifiée pendant que le Cerveau garde CUDA, raisons d'arrêt de Game Studio traduites) ; premier parcours complet dans l'APEX.exe installé : moteur et poids du planificateur installés par leurs boutons, Blender 4.3.2 portable officiel, conversation 3D, clic, mission réelle Qwen puis Blender, aperçus, .blend et .glb téléchargés et vérifiés. Poids et Blender sur ce runner jetable seulement, jamais sur le PC de l'utilisateur",
+  "studio_engine": true,
+  "studio_planner": true,
+  "studio_blender": true
 }
