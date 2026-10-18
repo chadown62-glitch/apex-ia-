@@ -151,8 +151,10 @@ processus vivant).
 - **Fait par Codex** (#31, runtime empaqueté et API sur Windows Server, run 39114782698) : serveur du
   planificateur possédé, démarré puis arrêté et vérifié ; plan Qwen réel ; Blender ; juges ; correction ; fichiers
   et vues téléchargés ; annulation pendant le chargement puis reprise.
-- **Reste** : le même parcours par l'installateur, le Panel et l'assistant (tentative 8 de Claude sur le runner,
-  §8), puis sur le PC de l'utilisateur.
+- **Fait par Claude** (tentative 8, §8) : le même parcours par l'installateur, le Panel et l'assistant, sur le
+  runner. Mission livrée, `.blend` et `.glb` vérifiés.
+- **Reste** : le PC de l'utilisateur (Windows 11, vrais clics, Cerveau sur la RTX pendant la mission), et
+  l'annulation puis la reprise dans l'APEX installé.
 - **Risque traité par Codex** (#31) : le port 8082 est protégé par la sérialisation des travaux, et seul le
   serveur possédé est arrêté.
 
@@ -259,14 +261,35 @@ Un nouveau code non traduit s'affiche tel quel, jamais remplacé par une explica
       `request_gpu`. Le Cerveau passe sur le processeur pendant le prêt et reprend le GPU après ;
     - installateur `APEX-Setup-x64-v0.6.0-candidate-991388a4860d.exe`, SHA-256 `e0ced6225aca7628…` : celui à
       essayer sur le PC de l'utilisateur.
-- **PC de l'utilisateur** (manuel) : la première création réelle, étapes dans
-  `docs/QUALIFICATION_APEX_EXE.md`. C'est la seule preuve d'une génération Blender, du planificateur et des
-  fichiers livrés.
+  - tentative 8 (`8fc89a3` + `550b347`, #29 et #31,
+    [run 39140125328](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39140125328)) : **job vert, parcours
+    3D PASS dans l'APEX.exe installé** :
+    - moteur, puis poids du planificateur, installés par l'API des boutons et vérifiés par votre
+      `install-planner` (poids téléchargés sur ce runner seulement) ;
+    - Blender 4.3.2 portable officiel, même empreinte que votre qualification, par `APEX_BLENDER_EXECUTABLE` ;
+    - proposition par le Cerveau, lancement par l'appel du bouton, mission `running` 13 min, puis `review`,
+      livraison `technical_review` ;
+    - 13 fichiers annoncés par `game_studio.results`. `asset.blend` (3 767 004 octets) et `asset.glb`
+      (1 108 632 octets) sont téléchargés par vos routes `…/artifacts/{digest}`, identiques à leur empreinte ;
+      4 aperçus ;
+    - `lease_check.py`, 7 contrôles PASS avec les verrous Windows réels, dont l'étape processeur par votre
+      adaptateur pendant que le Cerveau tient CUDA (simulé) : obtenue, sans prêt ;
+    - assistant PASS, accélération GPU sans GPU PASS, base conservée à la désinstallation ;
+    - installateur `APEX-Setup-x64-v0.6.0-candidate-e8d79fcb7aeb.exe`, 51 981 009 octets, SHA-256
+      `bbdfb6ccf849fb8a6a379c3c541801729e0f544e01f901d3df39213a001bd6fe` : celui à essayer sur le PC de
+      l'utilisateur. Preuves : artefact `windows-candidate-evidence` (`studio-candidate.json`, aperçus,
+      `studio-files/`).
+    - **Pas couvert ici** : l'annulation et la reprise dans l'APEX installé (couvertes par votre sonde dans le
+      runtime empaqueté), Windows 11, les vrais clics dans la fenêtre, la RTX.
+- **PC de l'utilisateur** (manuel) : la première création réelle chez lui, étapes dans
+  `docs/QUALIFICATION_APEX_EXE.md`. C'est la seule preuve sur son matériel.
 
 ## Vérifier après chaque correction
 
 1. Modifier `setup/packaging/windows/ci/candidate-request.json` (champ `attempt`) sur la branche de Claude, ou
-   lancer `windows-candidate` manuellement une fois le workflow sur la branche par défaut.
-2. Lire les annotations du run : imports, composants (`DEPENDENCY`), moteur, partage du GPU, proposition, clic,
-   refus ou mission.
-3. Le verdict PASS exige des fichiers produits par une mission : seulement sur le PC de l'utilisateur.
+   lancer `windows-candidate` manuellement une fois le workflow sur la branche par défaut. `studio_planner` et
+   `studio_blender` fournissent les poids et Blender au runner jetable.
+2. Lire les annotations du run : imports, composants (`DEPENDENCY`), moteur, poids, partage du GPU, proposition,
+   clic, mission, téléchargements (`CHECK download`).
+3. Le verdict PASS exige une mission livrée (`review`), `.blend` et `.glb` vérifiés et un aperçu. Avec tous les
+   prérequis fournis, une mission non livrée est FAIL.
