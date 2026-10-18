@@ -1,11 +1,12 @@
-# Reprise de Codex : activer Game Studio dans APEX.exe (dossier du 17/10/2026, pile à `d15fa02`)
+# Reprise de Codex : activer Game Studio dans APEX.exe (dossier du 18/10/2026, pile à `550b347`, #31)
 
-Synthèse écrite par Claude pendant la pause de Codex, pour qu'il corrige ses derniers blocages **sans attendre
-de refonte du Cerveau ni du Panel**. **Aucun fichier de Codex n'a été modifié.** Chaque point dit ce qui est
-**mesuré**, ce qui reste **à vérifier**, et les **fichiers** concernés.
+Synthèse écrite par Claude pendant la pause de Codex (limite d'utilisation atteinte le 18/10 pendant la
+qualification Windows de #31), pour qu'il corrige ses derniers blocages **sans attendre de refonte du Cerveau ni
+du Panel**. **Aucun fichier de Codex n'a été modifié.** Chaque point dit ce qui est **mesuré**, ce qui reste
+**à vérifier**, et les **fichiers** concernés.
 
-La version précédente de ce dossier (jsonschema, planificateur, Blender, `scripts/game_engineer`) est traitée
-par `c80ce11`/`d15fa02` : les points correspondants sont marqués « fait par Codex ».
+Les versions précédentes de ce dossier sont traitées par `c80ce11`/`d15fa02` (jsonschema, planificateur,
+Blender), puis par #29 (`8fc1df9`) et #31 (`550b347`) : points marqués « fait par Codex ».
 
 ## 0. Où en est le parcours réel
 
@@ -13,8 +14,40 @@ par `c80ce11`/`d15fa02` : les points correspondants sont marqués « fait par Co
   - APEX.exe READY ; le Cerveau ApexLM V2 tourne sur la RTX avec PyTorch CUDA ;
   - conversations, puis la demande 3D est reconnue et **proposée** ;
   - le **clic** de l'utilisateur la confie à Game Studio, qui refuse proprement : `jsonschema` absent.
-- **Runner Windows** (`windows-candidate`, arbre combiné avec `d15fa02`) : voir §8, résultats des tentatives 6
-  et 7.
+- **Runner Windows Server 2022 de Codex** (`game-studio-windows`, runtime empaqueté et API, **sans** l'installateur
+  ni le Panel) :
+  - runs 39111881405, 39112594053, 39113206265 et 39113464692 : échecs réels archivés dans
+    `docs/game_studio/qwen-first/evidence/archives.json`. Dans l'ordre : Blender annulé par un budget Windows,
+    lecture du budget refusée, contention sans `winerror`, puis voiture réussie mais plan de reprise sans
+    assemblage. Les runs 1, 2 et 4 ont produit un vrai plan Qwen accepté ;
+  - [run 39114782698](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39114782698) à `550b347` :
+    **succès**. La qualification `--require-inference` sort avec le code 0. Dans le code de `550b347`
+    (`apex/game_studio/qualification.py`), ce code exige :
+    - mission `review`, planificateur épinglé (SHA), `cpu_explicit`, serveur arrêté et vérifié ;
+    - une vraie réponse Qwen validée ;
+    - un seul véhicule, précontrôle Engineer `pass_preflight`, mission enfant `review` ;
+    - `.blend`, `.glb` et 4 vues avec le verdict `pass`, téléchargés par l'API avec leur empreinte ;
+    - puis la sonde d'annulation et de reprise : même projet, nouvelle tentative, budget cumulé, plan de deux
+      fauteuils, serveur arrêté.
+    Claude n'a pas pu lire l'archive (stockage refusé par le proxy) : le verdict vient du code et du code de sortie.
+- **Runner Windows de Claude** (`windows-candidate`, arbre combiné, **installateur et Panel**) : voir §8,
+  tentatives 6 à 8.
+
+### 0.1 Ce que Codex a poussé, et ce qui est peut-être resté dans sa session
+
+- **Poussé** (vérifié sur GitHub) :
+  - #31 en brouillon, 7 commits jusqu'à `550b347` (18/10 09:17 UTC), empilée sur #29 `8fc1df9` ;
+  - preuves des runs 1 à 4 (JSON et archives `windows-run*-failure.zip`) ;
+  - `docs/game_studio/qwen-first/INTEGRATION.md` et `probe_governor_v2.py` ;
+  - Issue #30 et deux commentaires ; dans l'Issue #21, le dernier commentaire date de 09:16 UTC.
+- **Absent de GitHub** (à reprendre par Codex, sans le réinventer) :
+  - le **résultat** du run 39114782698 (succès, 09:34 UTC). La description de #31 dit encore
+    « Requalification complète en cours », et aucun commentaire ne le rapporte ;
+  - ses **preuves** : aucune entrée `run5-*` dans `evidence/`. Elles ne sont que dans l'artefact
+    `game-studio-windows-39114782698` (41 069 636 octets, 225 fichiers, SHA-256 `ed798d49f72df90a…`).
+    **Il expire le 01/11/2026** : il faut l'archiver avant ;
+  - le **rapport final**, annoncé « à compléter après la dernière qualification » dans #31 ;
+  - tout travail local après `550b347` : invisible d'ici, ni commit ni branche plus récents.
 
 ## 1. Les contrats de Codex que Claude consomme
 
@@ -27,7 +60,9 @@ par `c80ce11`/`d15fa02` : les points correspondants sont marqués « fait par Co
 | outils `game_studio.create/status/results/cancel` | moteur d'outils, `ToolContext.extra["game_studio_service"]` | `project_id`, `status`, `steps`, `last_event`, artefacts (empreintes) |
 | `ProjectService.resume(project_id)` | bouton « Reprendre la mission » | `ValueError(code)` expliqué (§5) |
 | `ProjectService.artifact(project_id, digest)` | aperçus de l'Atelier 3D | images seulement, 4 Mo au plus |
-| `apex.game_graphics.resources.resource_lease` | prêt du GPU au lancement (§3) | prend `APEX_HOME/.apex/model-session.lock`, même primitive que le Cerveau |
+| `apex.game_graphics.resources.resource_lease` | prêt du GPU au lancement, piles sans adaptateur (§3) ; `lease_check.py` | prend `APEX_HOME/.apex/model-session.lock`, même primitive que le Cerveau ; refus `SharedResourceBusy` (`shared_resource_busy`) depuis #31 |
+| `apex.game_studio.gpu.resource_lease(path, compute_backend, cancel_event, timeout_s)` (#29, #31) | `studio_hands_off_gpu()` (l'assistant ne prête rien), `lease_check.py` | processeur : `game-studio-workload.lock` + verrou de l'étape, attente bornée à 30 s, **sans** `model-session.lock` ni prêt ; GPU : protocole 2 du gouverneur (`lenders`, retour atomique) |
+| `apex.models.gpu_handoff` (Claude) | adaptateur de Codex | protocole 2, vérifié par Codex sur le fichier de `cf76ff1` (SHA-256 `78add5edbaffdd6a…`), inchangé depuis |
 
 États lus : `queued`, `running`, `review`, `failed`, `cancelled`, `interrupted` (mission `running` sans
 processus vivant).
@@ -42,6 +77,10 @@ processus vivant).
 | **Prêt du GPU pendant toute la mission** (§3) | `20a7167` | tests avec le vrai `resource_lease` ; `lease_check.py` sous Windows |
 | Raison d'arrêt d'une mission affichée (dernier événement de Game Studio) | `20a7167` | `views.test.tsx` |
 | Candidate Windows : moteur installé comme par le bouton, import de `llama_cpp` et de `llama_cpp.server.app` | `b7e8b53`, `20a7167` | `windows-candidate`, tentatives 6 et 7 |
+| Protocole 2 du gouverneur ; aucun prêt de l'assistant quand votre adaptateur existe | `98c7ebb` | votre adaptateur et ce gouverneur dans l'arbre combiné |
+| Raisons d'arrêt de Game Studio traduites : la classe (`RuntimeError: `) est retirée avant la recherche du code ; `shared_resource_busy` reconnu ; codes du planificateur, des budgets, de l'annulation et du prêt ajoutés | `8fc89a3` | `views.test.tsx` |
+| `lease_check.py` : une étape sur le processeur passe par votre adaptateur pendant que le Cerveau tient CUDA, sans prêt | `8fc89a3` | arbre combiné avec `550b347` (7/7) ; Windows, tentative 8 |
+| Candidate : poids du planificateur par le bouton, Blender 4.3.2 portable épinglé sur le runner, `.blend`/`.glb` téléchargés et vérifiés | `8fc89a3` | tentative 8 (§8) |
 
 ## 3. Défaut trouvé et corrigé côté Claude : le bail partagé pendant une mission sur le processeur
 
@@ -75,6 +114,16 @@ processus vivant).
 - **Non couvert sans votre adaptateur** : une mission lancée **hors de l'assistant**, par la page ou les routes
   de Game Studio (`POST /api/v1/game-studio/missions`, `/projects`, `/projects/{id}/resume`,
   `/missions/{id}/resume`). Votre adaptateur de #29 les couvre.
+- **Depuis #31 (`550b347`)** : une étape **sur le processeur** prend `game-studio-workload.lock` et le verrou de
+  son dossier, jamais `model-session.lock`, et n'emprunte rien. Le Cerveau garde donc la RTX pendant une
+  mission sur le processeur : c'est la meilleure issue pour la configuration de l'utilisateur. **Vérifié** dans
+  l'arbre combiné (Claude `8fc89a3` + #19 à #31 + #5, #11, #13) :
+  - `lease_check.py`, 7 contrôles PASS : l'étape processeur est obtenue, Cerveau sur un « CUDA » simulé, aucun
+    prêt (`lenders: {}`) ;
+  - 274 tests passent, 1 ignoré : `test_gpu_handoff`, `test_assistant_game_studio`, `test_studio_setup`, et vos
+    `test_game_studio_*` (gpu, lifecycle, planning, qualification, api, delegation, dependencies…) et
+    `test_game_graphics_models`, avec `llama-cpp-python` 0.3.36 compilé pour Linux.
+  Le prêt de l'assistant ne sert plus qu'aux piles sans adaptateur.
 
 ## 4. Ce qui reste à Codex, dans l'ordre du parcours
 
@@ -99,11 +148,13 @@ processus vivant).
 
 - **Prérequis** : Blender 4.3.2 trouvé (`APEX_BLENDER_EXECUTABLE`, PATH ou Program Files : fait par Codex),
   calcul des missions sur « Processeur ».
-- **À vérifier** sur le PC de l'utilisateur, dans l'ordre : serveur `llama_cpp.server` démarré par
-  `CoderSession`, plan, base Blender, juge, fichiers livrés, aperçus.
-- **Risque à vérifier, non mesuré** : `check_external_workloads` refuse une étape si un `llama_cpp.server`
-  tourne encore. Un serveur d'une étape précédente encore vivant ferait refuser les suivantes
-  (`external_model_workload_active`).
+- **Fait par Codex** (#31, runtime empaqueté et API sur Windows Server, run 39114782698) : serveur du
+  planificateur possédé, démarré puis arrêté et vérifié ; plan Qwen réel ; Blender ; juges ; correction ; fichiers
+  et vues téléchargés ; annulation pendant le chargement puis reprise.
+- **Reste** : le même parcours par l'installateur, le Panel et l'assistant (tentative 8 de Claude sur le runner,
+  §8), puis sur le PC de l'utilisateur.
+- **Risque traité par Codex** (#31) : le port 8082 est protégé par la sérialisation des travaux, et seul le
+  serveur possédé est arrêté.
 
 ### 4.4 Missions sur GPU : lever la garde
 
@@ -114,22 +165,19 @@ processus vivant).
 - **À faire avant de la lever** :
   1. un `llama-cpp-python` **CUDA** pour Windows : source, licence, empreintes. La roue GitHub actuelle est
      CPU (aucune DLL CUDA). Il faut aussi passer `n_gpu_layers` selon `compute_backend` ;
-  2. la mise au repos autour de chaque étape : **faite par votre adaptateur de #29** (`apex/game_studio/gpu.py`),
-     vérifiée avec le gouverneur réel (§3). Si vous séparez le verrou de travaux du bail CUDA pour le
-     processeur, comme annoncé le 18/10, l'assistant n'a toujours rien à prêter ;
+  2. la mise au repos autour de chaque étape : **faite par votre adaptateur** (`apex/game_studio/gpu.py`, #29,
+     protocole 2 depuis #31), vérifiée avec le gouverneur réel (§3) ;
   3. un test sur la RTX 4060 Ti de l'utilisateur. La mémoire CUDA avant et après se lit dans l'accusé de
      `request_gpu` (`cuda.before`, `cuda.after`).
-- **Décidé par Codex le 18/10** : le processeur prendra un verrou de travaux séparé du bail CUDA
-  (`n_gpu_layers=0`, Blender sur le processeur). Le Cerveau gardera alors le GPU pendant une mission sur le
-  processeur.
+- **Fait par Codex** (#31) : le processeur prend un verrou de travaux séparé du bail CUDA (`n_gpu_layers=0`,
+  Blender sur le processeur). Le choix automatique ou CUDA ne bascule jamais en silence vers le processeur.
 
 ### 4.5 Un code pour le bail refusé
 
-- Aujourd'hui, la mission échoue avec le texte brut de l'exception : `BlockingIOError: [Errno 11] Resource
-  temporarily unavailable` sous Linux, `PermissionError: [Errno 13] Permission denied` sous Windows (mesuré,
-  tentative 7). Le texte Windows ressemble à n'importe quel refus d'accès.
-- **Proposé** : un code stable, par exemple `shared_resource_busy`. L'Atelier 3D explique déjà le texte brut et
-  propose de reprendre la mission.
+- **Fait par Codex** (#31) : `SharedResourceBusy`, une sous-classe de `BlockingIOError` avec le message
+  `shared_resource_busy`, sous Linux comme sous Windows. Un refus d'accès à un fichier reste distinct.
+- **Côté Claude** (`8fc89a3`) : l'Atelier 3D reconnaît ce code et propose de reprendre la mission. Il explique
+  aussi les anciens textes bruts des piles plus anciennes.
 
 ### 4.6 Hors parcours
 
@@ -152,7 +200,10 @@ Codes de Game Studio traduits dans l'assistant et l'Atelier 3D (`REFUSALS`, `GAM
   `game_studio_process_interrupted` ;
 - **reprise** : `only_interrupted_failed_or_incomplete_projects_can_resume`, `project_already_running`,
   `project_already_delivered_for_review`, `cumulative_time_budget_exhausted`,
-  `legacy_budget_unknown_new_mission_required`.
+  `legacy_budget_unknown_new_mission_required` ;
+- **arrêt d'une mission** (raison du dernier événement, `RuntimeError: code`) : `shared_resource_busy`,
+  `user_cancelled`, `user_cancelled_waiting_for_resources`, `project_time_budget_exhausted`,
+  `planner_attempt_budget_exhausted`, `multi_asset_assembly_required`, `brain_handoff_busy`.
 
 Un nouveau code non traduit s'affiche tel quel, jamais remplacé par une explication inventée.
 
