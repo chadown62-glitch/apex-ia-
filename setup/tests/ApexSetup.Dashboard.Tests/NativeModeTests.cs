@@ -124,6 +124,44 @@ public sealed class NativeModeTests : IDisposable
         Assert.True(runtime.InspectModel(spec).Installed);
     }
 
+    // -- accélération GPU facultative : décrite par le disque, installée par le lanceur, jamais supposée -----------
+
+    [Fact]
+    public void The_gpu_component_is_described_from_disk_and_never_claimed_without_a_measured_start()
+    {
+        var runtime = Install();
+        var gpu = runtime.InspectGpu();
+        Assert.False(gpu.Installed);
+        Assert.Contains("non installée", gpu.Detail);
+
+        Touch(runtime.GpuMarker, """{"variant": "cu128"}""");
+        File.SetLastWriteTimeUtc(runtime.GpuMarker, DateTime.UtcNow.AddMinutes(-5));
+        Assert.Contains("prochain « Démarrer APEX »", runtime.InspectGpu().Detail);
+
+        Touch(runtime.GpuActivation, """{"state": "inactive", "reason": "pilote NVIDIA insuffisant : CUDA 12.6 accepté"}""");
+        var inactive = runtime.InspectGpu();
+        Assert.True(inactive.Installed);
+        Assert.Equal("Accélération GPU : inactive (calcul sur le processeur) — pilote NVIDIA insuffisant : CUDA 12.6 accepté", inactive.Detail);
+
+        Touch(runtime.GpuActivation, """{"state": "active", "reason": "surcouche GPU active : GPU de test (torch 2.14.0+cu128)"}""");
+        Assert.Equal("Accélération GPU : active — surcouche GPU active : GPU de test (torch 2.14.0+cu128)", runtime.InspectGpu().Detail);
+
+        Touch(runtime.GpuLastInstall, """{"ok": false, "reason": "espace disque insuffisant"}""");
+        Assert.Equal("espace disque insuffisant", runtime.LastGpuInstallReason());
+    }
+
+    [Fact]
+    public async Task The_gpu_component_is_installed_only_by_the_official_launcher_command()
+    {
+        var runtime = Install();
+        var runner = new FakeProcessRunner().WithRunResponse("gpu install", FakeProcessRunner.Exit(2, ""));
+        var result = await new RuntimePreparer(runtime, new HttpClient(), runner).InstallGpuAsync();
+        Assert.Equal(2, result.ExitCode);
+        var (executable, arguments) = Assert.Single(runner.RunInvocations);
+        Assert.Equal(runtime.PythonExecutable(runtime.TryReadSpec(out _)), executable);
+        Assert.Equal(["-P", "-m", "apex.standalone", "gpu", "install", "--log"], arguments);
+    }
+
     // -- préparation : téléchargement vérifié, extraction confinée, pip à empreintes, vérification réelle ----------
 
     [Fact]
@@ -191,7 +229,7 @@ public sealed class NativeModeTests : IDisposable
         Assert.True(result.Ok, result.Message);
         var pip = runner.RunInvocations[0];
         Assert.Equal(runtime.PythonExecutable(spec), pip.Executable);
-        Assert.Equal(["-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location",
+        Assert.Equal(["-P", "-m", "pip", "install", "--disable-pip-version-check", "--no-input", "--no-warn-script-location",
             "--require-hashes", "--only-binary=:all:", "--no-deps", "-r", runtime.RequirementsFile(spec)], pip.Arguments);
         Assert.Equal(runtime.AppRoot, File.ReadAllText(runtime.PthFile(spec)).Trim());
         Assert.Equal(RuntimeState.Ready, runtime.Inspect().State);
@@ -220,6 +258,60 @@ public sealed class NativeModeTests : IDisposable
         Assert.NotEqual(RuntimeState.Ready, runtime.Inspect().State);
     }
 
+    [Fact]
+    public async Task Preparing_again_after_an_update_keeps_the_gpu_overlay_the_models_and_the_data()
+    {
+        // PC de l'utilisateur (17/10/2026) : surcouche CUDA validée sur sa RTX 4060 Ti. Une mise à jour d'APEX qui
+        // ajoute une bibliothèque redemande « Préparer APEX » : rien de ce qui vit à côté du Python de base n'est retiré.
+        var runtime = Install();
+        var spec = runtime.TryReadSpec(out _)!;
+        Touch(runtime.PythonExecutable(spec));
+        var overlay = Path.Combine(runtime.Home, "python", "gpu", "torch-2.14.0-cu130", "torch", "__init__.py");
+        Touch(overlay);
+        Touch(runtime.GpuMarker, """{"variant": "cu130"}""");
+        var weights = Path.Combine(runtime.ModelsDirectory, spec.ModelName, "model.safetensors");
+        Touch(weights, "poids");
+        var database = Path.Combine(runtime.Home, "data", "apex.db");
+        Touch(database, "conversations");
+        File.AppendAllText(runtime.RequirementsFile(spec), "jsonschema==4.26.0 --hash=sha256:22\n");
+        Assert.Equal(RuntimeState.Outdated, runtime.Inspect().State);
+        var runner = new FakeProcessRunner()
+            .WithRunResponse("pip install", FakeProcessRunner.Ok("Successfully installed jsonschema-4.26.0"))
+            .WithRunResponse("import apex.standalone", FakeProcessRunner.Ok("apex 0.1.2 torch 2.14.0"));
+        Assert.True((await new RuntimePreparer(runtime, new HttpClient(), runner).PrepareAsync(null)).Ok);
+        foreach (var kept in new[] { overlay, runtime.GpuMarker, weights, database })
+        {
+            Assert.True(File.Exists(kept), kept);
+        }
+        Assert.Equal("conversations", File.ReadAllText(database));
+        Assert.True(runtime.InspectGpu().Installed);
+        Assert.Equal(RuntimeState.Ready, runtime.Inspect().State);
+    }
+
+    [Fact]
+    public async Task Every_python_the_panel_starts_ignores_its_working_directory()
+    {
+        // Sans « -P », Python met le dossier courant en tête de sys.path : lancé depuis un dossier qui contient un
+        // apex\ (le checkout de la CI, un clone du dépôt), le backend exécutait CE code et non l'application installée.
+        var runtime = Install();
+        var spec = runtime.TryReadSpec(out _)!;
+        Touch(runtime.PythonExecutable(spec));
+        var runner = new FakeProcessRunner()
+            .WithRunResponse("pip install", FakeProcessRunner.Ok(""))
+            .WithRunResponse("import apex.standalone", FakeProcessRunner.Ok("apex 0.1.2 torch 2.14.0"));
+        var preparer = new RuntimePreparer(runtime, new HttpClient(), runner);
+        Assert.True((await preparer.PrepareAsync(null)).Ok);
+        await preparer.InstallModelAsync();
+        await preparer.InstallGpuAsync();
+        var launcher = new BackendLauncher(new RealProcessRunner(), new FakeProcessRunner(), wsl: false, native: runtime);
+        var all = runner.RunInvocations.Select(i => i.Arguments)
+            .Append(launcher.Command(null, "x", BackendLauncher.StartCommand)!.Value.Arguments)
+            .Append(launcher.Command(null, "x", BackendLauncher.StopCommand)!.Value.Arguments)
+            .ToList();
+        Assert.Equal(6, all.Count); // pip, vérification, modèle, GPU, démarrage, arrêt
+        Assert.All(all, arguments => Assert.Equal("-P", arguments[0]));
+    }
+
     private sealed class Collect(List<string> steps) : IProgress<string>
     {
         public void Report(string value) => steps.Add(value);
@@ -234,8 +326,8 @@ public sealed class NativeModeTests : IDisposable
         var python = runtime.PythonExecutable(runtime.TryReadSpec(out _));
         var launcher = new BackendLauncher(new RealProcessRunner(), new FakeProcessRunner(), wsl: false, native: runtime);
         Assert.Equal(python, launcher.Command(null, "/ignored", BackendLauncher.StartCommand)!.Value.Executable);
-        Assert.Equal(["-m", "apex.standalone", "serve", "--log"], launcher.Command(null, "; rm -rf /", BackendLauncher.StartCommand)!.Value.Arguments);
-        Assert.Equal(["-m", "apex.standalone", "stop"], launcher.Command("Ubuntu", "x", BackendLauncher.StopCommand)!.Value.Arguments);
+        Assert.Equal(["-P", "-m", "apex.standalone", "serve", "--log"], launcher.Command(null, "; rm -rf /", BackendLauncher.StartCommand)!.Value.Arguments);
+        Assert.Equal(["-P", "-m", "apex.standalone", "stop"], launcher.Command("Ubuntu", "x", BackendLauncher.StopCommand)!.Value.Arguments);
     }
 
     // -- chemins : Windows accepté pour le mode natif, jamais transmis à WSL ---------------------------------------
@@ -393,6 +485,8 @@ public sealed class NativeModeTests : IDisposable
         Assert.True(vm.CanPrepare);
         Assert.False(vm.CanStart); // rien ne peut démarrer sans runtime
         Assert.False(vm.CanInstallModel);
+        Assert.False(vm.CanInstallGpu); // runtime non préparé : rien à accélérer
+        Assert.Contains("non installée", vm.GpuDetail);
         Assert.False(vm.InterceptClose()); // APEX ne tourne pas : la fenêtre se ferme normalement
     }
 }

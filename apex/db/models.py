@@ -1251,7 +1251,7 @@ class ConversationRow(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False
     )
-    #: Mode de travail (`normal` | `code` | `design` | `finance`, `apex.assistant.modes`) — migration
+    #: Mode de travail (`normal` | `code` | `design` | `finance` | `3d`, `apex.assistant.modes`) — migration
     #: c2e4a6b8d0f1 ; NULL : conversation antérieure, relue comme `normal`.
     mode: Mapped[str | None] = mapped_column(String(16), nullable=True)
 

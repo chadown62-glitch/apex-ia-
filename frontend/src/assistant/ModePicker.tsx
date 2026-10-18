@@ -7,6 +7,8 @@ export const TOOL_LABELS: Record<string, string> = {
   "fs.list": "lister les fichiers",
   "fs.read": "lire un fichier",
   "fs.write": "écrire un fichier",
+  "fs.search": "chercher dans le projet",
+  "fs.edit": "modifier un passage",
   "project.inspect": "inspecter le projet",
   "code.run": "exécuter du Python (sandbox)",
   "tests.run": "lancer les tests (sandbox)",
@@ -14,9 +16,12 @@ export const TOOL_LABELS: Record<string, string> = {
   "calc.evaluate": "calculatrice exacte",
   "finance.projection": "projection d'épargne",
   "finance.loan": "mensualités de prêt",
+  "model3d.create": "modèles 3D (Blender, Unity, Unreal)",
+  "game_studio.status": "suivre une mission Game Studio",
+  "game_studio.results": "résultats Game Studio",
 };
 
-const GLYPHS: Record<ModeId, string> = { normal: "◌", code: "</>", design: "◐", finance: "∑" };
+const GLYPHS: Record<ModeId, string> = { normal: "◌", code: "</>", design: "◐", finance: "∑", "3d": "◇" };
 
 export function ModePicker({
   modes,

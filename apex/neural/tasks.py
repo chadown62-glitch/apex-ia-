@@ -33,6 +33,9 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any
 
+from apex.brain.chat import CANNOT_KNOW_MISSING, CANNOT_KNOW_REALTIME
+from apex.brain.chat import calc_markup as _c
+
 SYSTEM_FR = (
     "Tu es le Cerveau APEX, un modèle de langage construit et entraîné de zéro par APEX, exécuté en local. "
     "Réponds avec exactitude et concision. Si une information te manque ou si tu ne sais pas, dis-le."
@@ -140,13 +143,13 @@ def arithmetic(rng: random.Random, lang: str) -> TaskExample:
                     f"{a} {symbol} {b} = ?",
                 ),
             )
-        steps = _multiplication_steps(a, b, "×") if op == "*" and b >= 10 and a >= 10 else ""
+        # Calcul exact délégué à la calculatrice du Cerveau (`apex.brain.calc`) : le modèle écrit l'opération.
         if op == "//":
-            answer = f"{a} ÷ {b} = {result} (reste {a % b})."
+            answer = f"{a} ÷ {b} = {_c(f'{a}//{b}')} (reste {_c(f'{a}%{b}')})."
         elif op == "%":
-            answer = f"{a} = {b} × {a // b} + {result}, donc le reste est {result}."
+            answer = f"{a} mod {b} = {_c(f'{a}%{b}')}."
         else:
-            answer = f"{steps}{a} {symbol} {b} = {result}."
+            answer = f"{a} {symbol} {b} = {_c(f'{a}{op}{b}')}."
     else:
         symbol = {"+": "+", "-": "-", "*": "×", "//": "÷", "%": "mod"}[op]
         if op == "//":
@@ -169,27 +172,13 @@ def arithmetic(rng: random.Random, lang: str) -> TaskExample:
                     f"{a} {symbol} {b} = ?",
                 ),
             )
-        steps = _multiplication_steps(a, b, "×") if op == "*" and b >= 10 and a >= 10 else ""
         if op == "//":
-            answer = f"{a} ÷ {b} = {result} (remainder {a % b})."
+            answer = f"{a} ÷ {b} = {_c(f'{a}//{b}')} (remainder {_c(f'{a}%{b}')})."
         elif op == "%":
-            answer = f"{a} = {b} × {a // b} + {result}, so the remainder is {result}."
+            answer = f"{a} mod {b} = {_c(f'{a}%{b}')}."
         else:
-            answer = f"{steps}{a} {symbol} {b} = {result}."
+            answer = f"{a} {symbol} {b} = {_c(f'{a}{op}{b}')}."
     return TaskExample("arithmetic", lang, user, answer, {"type": "exact", "answer": str(result)})
-
-
-def _multiplication_steps(a: int, b: int, symbol: str) -> str:
-    parts = []
-    for position, digit in enumerate(reversed(str(b))):
-        if digit != "0":
-            parts.append(int(digit) * 10**position)
-    if len(parts) < 2:
-        return ""
-    parts.reverse()
-    decomposition = " + ".join(f"{a} {symbol} {p}" for p in parts)
-    partials = " + ".join(str(a * p) for p in parts)
-    return f"{a} {symbol} {b} = {decomposition} = {partials}\n"
 
 
 def word_problem(rng: random.Random, lang: str) -> TaskExample:
@@ -219,26 +208,26 @@ def word_problem(rng: random.Random, lang: str) -> TaskExample:
         if kind == "give_buy":
             user = f"{name} a {a} {plural}. Elle en donne {b}, puis en achète {c}. Combien de {plural} a-t-elle maintenant ?"
             result = a - b + c
-            answer = f"Elle commence avec {a}, en donne {b} : {a} - {b} = {a - b}. Elle en achète {c} : {a - b} + {c} = {result}. Elle a maintenant {result} {plural}."
+            answer = f"Elle commence avec {a}, en donne {b} : {a} - {b} = {_c(f'{a}-{b}')}. Elle en achète {c} : {a - b} + {c} = {_c(f'{a - b}+{c}')}. Elle a maintenant {result} {plural}."
         elif kind == "groups":
             groups = rng.randint(2, 9)
             each = rng.randint(2, 12)
             result = groups * each
             user = f"{name} range des {plural} dans {groups} boîtes de {each}. Combien de {plural} y a-t-il en tout ?"
-            answer = f"{groups} boîtes × {each} {plural} = {result}. Il y a {result} {plural} en tout."
+            answer = f"{groups} boîtes × {each} {plural} = {_c(f'{groups}*{each}')}. Il y a {result} {plural} en tout."
         else:
             price = rng.randint(2, 15)
             count = rng.randint(2, 9)
             result = price * count
             user = f"Un article coûte {price} euros. Combien coûtent {count} articles ?"
-            answer = f"{count} × {price} = {result}. Les {count} articles coûtent {result} euros."
+            answer = f"{count} × {price} = {_c(f'{count}*{price}')}. Les {count} articles coûtent {result} euros."
     else:
         name = _pick(rng, names_en)
         plural, _ = items_en[rng.randrange(len(items_en))]
         if kind == "give_buy":
             user = f"{name} has {a} {plural}, gives away {b}, then buys {c} more. How many {plural} does {name} have now?"
             result = a - b + c
-            answer = f"Start with {a}, give away {b}: {a} - {b} = {a - b}. Buy {c}: {a - b} + {c} = {result}. {name} now has {result} {plural}."
+            answer = f"Start with {a}, give away {b}: {a} - {b} = {_c(f'{a}-{b}')}. Buy {c}: {a - b} + {c} = {_c(f'{a - b}+{c}')}. {name} now has {result} {plural}."
         elif kind == "groups":
             groups = rng.randint(2, 9)
             each = rng.randint(2, 12)
@@ -246,13 +235,15 @@ def word_problem(rng: random.Random, lang: str) -> TaskExample:
             user = (
                 f"{name} puts {plural} into {groups} boxes of {each}. How many {plural} are there in total?"
             )
-            answer = f"{groups} boxes × {each} {plural} = {result}. There are {result} {plural} in total."
+            answer = f"{groups} boxes × {each} {plural} = {_c(f'{groups}*{each}')}. There are {result} {plural} in total."
         else:
             price = rng.randint(2, 15)
             count = rng.randint(2, 9)
             result = price * count
             user = f"One item costs {price} dollars. How much do {count} items cost?"
-            answer = f"{count} × {price} = {result}. The {count} items cost {result} dollars."
+            answer = (
+                f"{count} × {price} = {_c(f'{count}*{price}')}. The {count} items cost {result} dollars."
+            )
     return TaskExample("word_problem", lang, user, answer, {"type": "exact", "answer": str(result)})
 
 
@@ -393,6 +384,7 @@ WORDS_EN = (
 def list_ops(rng: random.Random, lang: str) -> TaskExample:
     numbers = [rng.randint(-20, 99) for _ in range(rng.randint(3, 8))]
     shown = ", ".join(map(str, numbers))
+    listed = f"[{shown}]"  # la liste telle que le modèle l'écrit pour la calculatrice
     kind = rng.choice(("sort", "sort_desc", "max", "min", "sum", "count", "even"))
     if kind == "sort":
         result = ", ".join(map(str, sorted(numbers)))
@@ -401,7 +393,7 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Sort these numbers in ascending order: {shown}"
         )
-        answer = result
+        answer = _c(f"sorted({listed})")
     elif kind == "sort_desc":
         result = ", ".join(map(str, sorted(numbers, reverse=True)))
         user = (
@@ -409,7 +401,7 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Sort these numbers in descending order: {shown}"
         )
-        answer = result
+        answer = _c(f"sorted_desc({listed})")
     elif kind == "max":
         result = str(max(numbers))
         user = (
@@ -417,7 +409,8 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What is the largest number among: {shown}?"
         )
-        answer = f"Le plus grand est {result}." if lang == "fr" else f"The largest is {result}."
+        found = _c(f"max({listed})")
+        answer = f"Le plus grand est {found}." if lang == "fr" else f"The largest is {found}."
     elif kind == "min":
         result = str(min(numbers))
         user = (
@@ -425,19 +418,13 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What is the smallest number among: {shown}?"
         )
-        answer = f"Le plus petit est {result}." if lang == "fr" else f"The smallest is {result}."
+        found = _c(f"min({listed})")
+        answer = f"Le plus petit est {found}." if lang == "fr" else f"The smallest is {found}."
     elif kind == "sum":
         result = str(sum(numbers))
-        running, steps = 0, []
-        for n in numbers:
-            running += n
-            steps.append(str(running))
         user = f"Additionne ces nombres : {shown}" if lang == "fr" else f"Add up these numbers: {shown}"
-        answer = (
-            f"Sommes successives : {', '.join(steps)}. Le total est {result}."
-            if lang == "fr"
-            else f"Running totals: {', '.join(steps)}. The total is {result}."
-        )
+        total = _c(f"sum({listed})")
+        answer = f"Le total est {total}." if lang == "fr" else f"The total is {total}."
     elif kind == "count":
         result = str(len(numbers))
         user = (
@@ -445,7 +432,8 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"How many numbers are in this list: {shown}?"
         )
-        answer = f"Il y a {result} nombres." if lang == "fr" else f"There are {result} numbers."
+        count = _c(f"len({listed})")
+        answer = f"Il y a {count} nombres." if lang == "fr" else f"There are {count} numbers."
     else:
         evens = [n for n in numbers if n % 2 == 0]
         result = ", ".join(map(str, evens)) if evens else ("aucun" if lang == "fr" else "no even numbers")
@@ -454,11 +442,8 @@ def list_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Which numbers are even in: {shown}?"
         )
-        answer = (
-            (f"Les nombres pairs sont : {result}." if lang == "fr" else f"The even numbers are: {result}.")
-            if evens
-            else ("Il n'y a aucun nombre pair." if lang == "fr" else "There are no even numbers.")
-        )
+        found = _c(f'evens({listed}, "{lang}")')
+        answer = f"Nombres pairs : {found}." if lang == "fr" else f"Even numbers: {found}."
     return TaskExample("list_ops", lang, user, answer, {"type": "exact", "answer": result})
 
 
@@ -472,11 +457,8 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'Write the word "{word}" backwards.'
         )
-        answer = (
-            f"{' '.join(word)} → à l'envers : {result}"
-            if lang == "fr"
-            else f"{' '.join(word)} → backwards: {result}"
-        )
+        found = _c(f'reverse("{word}")')
+        answer = f"« {word} » à l'envers : {found}" if lang == "fr" else f'"{word}" backwards: {found}'
     elif kind == "length":
         result = str(len(word))
         user = (
@@ -484,10 +466,11 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'How many letters are in the word "{word}"?'
         )
+        found = _c(f'len("{word}")')
         answer = (
-            f"{' '.join(word)} : le mot « {word} » contient {result} lettres."
+            f"Le mot « {word} » contient {found} lettres."
             if lang == "fr"
-            else f'{" ".join(word)}: the word "{word}" has {result} letters.'
+            else f'The word "{word}" has {found} letters.'
         )
     elif kind == "upper":
         result = word.upper()
@@ -496,7 +479,7 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"Convert this word to uppercase: {word}"
         )
-        answer = result
+        answer = _c(f'upper("{word}")')
     elif kind == "first":
         result = word[0]
         user = (
@@ -504,8 +487,9 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'What is the first letter of "{word}"?'
         )
+        found = _c(f'first("{word}")')
         answer = (
-            f"La première lettre est « {result} »." if lang == "fr" else f'The first letter is "{result}".'
+            f"La première lettre est « {found} »." if lang == "fr" else f'The first letter is "{found}".'
         )
     elif kind == "last":
         result = word[-1]
@@ -514,8 +498,9 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'What is the last letter of "{word}"?'
         )
+        found = _c(f'last("{word}")')
         answer = (
-            f"La dernière lettre est « {result} »." if lang == "fr" else f'The last letter is "{result}".'
+            f"La dernière lettre est « {found} »." if lang == "fr" else f'The last letter is "{found}".'
         )
     else:
         result = "-".join(word)
@@ -524,7 +509,7 @@ def text_ops(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f'Spell "{word}" with dashes between letters.'
         )
-        answer = result
+        answer = _c(f'spell("{word}")')
     return TaskExample("text_ops", lang, user, answer, {"type": "exact", "answer": result})
 
 
@@ -552,9 +537,9 @@ def conversions(rng: random.Random, lang: str) -> TaskExample:
             else f"How many {small_en} are in {value} {big_en}?"
         )
         answer = (
-            f"1 {big} = {factor} {small}, donc {value} {big} = {value} × {factor} = {result} {small}."
+            f"1 {big} = {factor} {small}, donc {value} {big} = {value} × {factor} = {_c(f'{value}*{factor}')} {small}."
             if lang == "fr"
-            else f"1 {big} = {factor} {small}, so {value} {big} = {value} × {factor} = {result} {small}."
+            else f"1 {big} = {factor} {small}, so {value} {big} = {value} × {factor} = {_c(f'{value}*{factor}')} {small}."
         )
     else:
         result = value
@@ -565,9 +550,9 @@ def conversions(rng: random.Random, lang: str) -> TaskExample:
             else f"Convert {total} {small_en} to {big_en}."
         )
         answer = (
-            f"{total} ÷ {factor} = {result}, donc {total} {small} = {result} {big}."
+            f"{total} ÷ {factor} = {_c(f'{total}/{factor}')}, donc {total} {small} = {result} {big}."
             if lang == "fr"
-            else f"{total} ÷ {factor} = {result}, so {total} {small} = {result} {big}."
+            else f"{total} ÷ {factor} = {_c(f'{total}/{factor}')}, so {total} {small} = {result} {big}."
         )
     return TaskExample("conversion", lang, user, answer, {"type": "exact", "answer": str(result)})
 
@@ -622,9 +607,8 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What day of the week was {show(start)}?"
         )
-        answer = (
-            f"Le {show(start)} était un {result}." if lang == "fr" else f"{show(start)} was a {result}."
-        )
+        found = _c(f'weekday("{show(start)}")')
+        answer = f"Le {show(start)} était un {found}." if lang == "fr" else f"{show(start)} was a {found}."
     elif kind == "add_days":
         days = rng.randint(1, 120)
         end = start + dt.timedelta(days=days)
@@ -634,10 +618,11 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"What date is {days} days after {show(start)}?"
         )
+        found = _c(f'add_days("{show(start)}", {days})')
         answer = (
-            f"{days} jours après le {show(start)}, nous serons le {result}."
+            f"{days} jours après le {show(start)}, nous serons le {found}."
             if lang == "fr"
-            else f"{days} days after {show(start)} is {result}."
+            else f"{days} days after {show(start)} is {found}."
         )
     elif kind == "between":
         end = start + dt.timedelta(days=rng.randint(1, 400))
@@ -647,7 +632,8 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             if lang == "fr"
             else f"How many days are there between {show(start)} and {show(end)}?"
         )
-        answer = f"Il y a {result} jours." if lang == "fr" else f"There are {result} days."
+        found = _c(f'days_between("{show(start)}", "{show(end)}")')
+        answer = f"Il y a {found} jours." if lang == "fr" else f"There are {found} days."
     else:
         year = rng.randint(1890, 2100)
         leap = year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
@@ -658,11 +644,13 @@ def dates(rng: random.Random, lang: str) -> TaskExample:
             else "divisible by 4, and not by 100 unless divisible by 400"
         )
         user = f"L'année {year} est-elle bissextile ?" if lang == "fr" else f"Is {year} a leap year?"
+        found = _c(f'is_leap({year}, "{lang}")')
+        # Le résultat d'abord : la suite de la réponse en dépend (le modèle ne le devine pas).
         answer = (
-            f"{'Oui' if leap else 'Non'} : une année est bissextile si elle est {rule}. {year} "
+            f"{year} bissextile : {found}. Une année est bissextile si elle est {rule} ; {year} "
             f"{'remplit' if leap else 'ne remplit pas'} cette règle."
             if lang == "fr"
-            else f"{'Yes' if leap else 'No'}: a year is a leap year if it is {rule}. {year} "
+            else f"{year} leap year: {found}. A year is a leap year if it is {rule}; {year} "
             f"{'meets' if leap else 'does not meet'} this rule."
         )
     return TaskExample("dates", lang, user, answer, {"type": "exact", "answer": result})
@@ -1603,14 +1591,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
     if lang == "fr":
         if kind == "realtime":
             user = _pick(rng, _REALTIME_FR).format(**fill)
-            answer = _pick(
-                rng,
-                (
-                    "Je n'ai pas accès à Internet ni à des informations en temps réel : je ne peux pas le savoir. "
-                    "Je fonctionne uniquement en local avec ce que j'ai appris pendant mon entraînement.",
-                    "Je ne peux pas le savoir : je n'ai aucun accès à des données en temps réel ni à Internet.",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_REALTIME["fr"])
         elif kind == "action":
             user = _pick(rng, _ACTIONS_FR).format(**fill)
             answer = _pick(
@@ -1623,15 +1604,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
             )
         elif kind == "missing":
             user = _pick(rng, _MISSING_FR)
-            answer = _pick(
-                rng,
-                (
-                    "Il me manque une information pour répondre : peux-tu me donner le contenu concerné "
-                    "(le code, le texte ou le message d'erreur) ?",
-                    "Je n'ai pas assez d'informations. Peux-tu me montrer le code ou le texte en question, et "
-                    "ce que tu attends ?",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_MISSING["fr"])
         else:
             user = _pick(rng, _PRIVATE_FR).format(**fill)
             answer = _pick(
@@ -1644,14 +1617,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
     else:
         if kind == "realtime":
             user = _pick(rng, _REALTIME_EN).format(**fill)
-            answer = _pick(
-                rng,
-                (
-                    "I have no access to the Internet or to real-time information, so I cannot know that. "
-                    "I run locally with only what I learned during training.",
-                    "I cannot know that: I have no access to real-time data or to the Internet.",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_REALTIME["en"])
         elif kind == "action":
             user = _pick(rng, _ACTIONS_EN).format(**fill)
             answer = _pick(
@@ -1664,15 +1630,7 @@ def honesty(rng: random.Random, lang: str) -> TaskExample:
             )
         elif kind == "missing":
             user = _pick(rng, _MISSING_EN)
-            answer = _pick(
-                rng,
-                (
-                    "I am missing information to answer: can you share the content involved (the code, "
-                    "the text or the error message)?",
-                    "I do not have enough information. Can you show me the code or text in question, and "
-                    "what you expect?",
-                ),
-            )
+            answer = _pick(rng, CANNOT_KNOW_MISSING["en"])
         else:
             user = _pick(rng, _PRIVATE_EN).format(**fill)
             answer = _pick(
@@ -1933,6 +1891,26 @@ _CODE_FAMILIES = {"code_write": 2.5, "code_fix": 1.5, "code_explain": 0.8}
 _SCORED_FAMILIES = frozenset(_FAMILIES) - {"identity", "howto"} | {"code_write", "code_fix"}
 
 
+def with_system(example: TaskExample, rng: random.Random) -> TaskExample:
+    """Consignes système vues à l'usage (60 % des exemples) : celles du Cerveau, et celles du mode « Normal »
+    de l'assistant d'APEX (en français, y compris pour une question en anglais : « réponds dans la langue de
+    l'utilisateur »)."""
+    roll = rng.random()
+    if roll >= 0.6:
+        return example
+    system = (SYSTEM_FR if example.lang == "fr" else SYSTEM_EN) if roll < 0.3 else _assistant_instructions()
+    return TaskExample(
+        example.family,
+        example.lang,
+        example.user,
+        example.assistant,
+        example.check,
+        example.history,
+        system,
+        example.meta,
+    )
+
+
 def generate(
     count: int, *, seed: int, split: str = "train", exclude: frozenset[str] = frozenset()
 ) -> Iterator[TaskExample]:
@@ -1957,22 +1935,7 @@ def generate(
             example = _FAMILIES[family][0](rng, lang)
         if example is None:
             continue
-        roll = rng.random()
-        if roll < 0.6:
-            # Consignes système vues à l'usage : celles du Cerveau, et celles du mode « Normal » de
-            # l'assistant d'APEX (en français, y compris pour une question en anglais : « réponds dans la
-            # langue de l'utilisateur »).
-            system = (SYSTEM_FR if lang == "fr" else SYSTEM_EN) if roll < 0.3 else _assistant_instructions()
-            example = TaskExample(
-                example.family,
-                example.lang,
-                example.user,
-                example.assistant,
-                example.check,
-                example.history,
-                system,
-                example.meta,
-            )
+        example = with_system(example, rng)
         key = example.key()
         if key in exclude or (split == "eval" and key in seen):
             continue
@@ -2090,23 +2053,69 @@ def run_function_tests(
     return ok == total, "; ".join(out[:-1])[:300] or f"{ok}/{total} tests"
 
 
-def score(check: dict[str, Any], answer: str) -> bool:
-    """La réponse du modèle satisfait-elle la vérification de l'exemple ?"""
-    kind = check["type"]
-    if kind == "exact":
-        import re
+_POLARITY = {
+    "true": True,
+    "vrai": True,
+    "yes": True,
+    "oui": True,
+    "false": False,
+    "faux": False,
+    "no": False,
+    "non": False,
+}
+_NUMBER = r"(?<![\w.])-?\d+(?:[.,]\d+)?(?![\w])"
 
+
+def _without_question(answer: str, question: str | None) -> str:
+    """La réponse sans la question recopiée mot pour mot (espaces et retours à la ligne libres) : répéter
+    l'énoncé (qui contient souvent la bonne réponse parmi d'autres : « oui ou non ? », la liste dont on
+    cherche le maximum) ne rapporte rien."""
+    import re
+
+    words = question.split() if question else []
+    if len(" ".join(words)) <= 3:
+        return answer
+    return re.sub(r"\s+".join(re.escape(word) for word in words), " ", answer)
+
+
+def score(check: dict[str, Any], answer: str, question: str | None = None) -> bool:
+    """La réponse du modèle satisfait-elle la vérification de l'exemple ? `question` (le dernier message de
+    l'utilisateur) : retirée de la réponse si elle y est recopiée. Réponse exacte : un nombre attendu doit
+    être le DERNIER nombre de la réponse, un vrai/faux ou oui/non le DERNIER mot de ce type, et la casse
+    compte quand la réponse attendue en porte (« CAT »)."""
+    import re
+
+    kind = check["type"]
+    if kind in ("exact", "refusal") and question:
+        answer = _without_question(answer, question)
+    if kind == "exact":
         expected = str(check["answer"]).strip()
         if "\n" in expected:
             return expected in answer
+        if re.fullmatch(_NUMBER, expected):
+            # Les apartés entre parenthèses ne sont pas la réponse : « 1138 ÷ 8 = 142 (reste 2) ».
+            numbers = re.findall(_NUMBER, re.sub(r"\([^()]*\)", " ", answer))
+            return bool(numbers) and numbers[-1].replace(",", ".") == expected.replace(",", ".")
+        polarity = _POLARITY.get(expected.lower())
+        if polarity is not None:
+            words = re.findall(r"\b(?:" + "|".join(_POLARITY) + r")\b", answer, re.IGNORECASE)
+            return bool(words) and _POLARITY[words[-1].lower()] is polarity
         pattern = r"(?<![\w.-])" + re.escape(expected) + r"(?![\w])"
-        return re.search(pattern, answer, re.IGNORECASE if expected.isalpha() else 0) is not None
+        flags = re.IGNORECASE if expected == expected.lower() else 0
+        return re.search(pattern, answer, flags) is not None
     if kind == "code":
         passed, _ = run_function_tests(extract_code(answer), check["function"], check["tests"])
         return passed
-    if kind == "json":
-        import re
+    if kind == "polyglot":
+        # Compilé et exécuté par le vrai compilateur du langage (`apex.neural.polyglot`) ; un langage dont le
+        # compilateur manque n'est pas notable ici (voir `brain_eval`, qui l'écarte au lieu de le compter faux).
+        from apex.neural.polyglot import run_tests
 
+        match = re.search(r"```[\w+#-]*\n(.*?)```", answer, re.S)
+        code = match.group(1) if match else answer
+        passed, _ = run_tests(check["language"], code, check["function"], check["tests"])
+        return bool(passed)
+    if kind == "json":
         for candidate in re.findall(r"\{.*?\}", answer, re.S):
             try:
                 if json.loads(candidate) == check["answer"]:
@@ -2117,4 +2126,31 @@ def score(check: dict[str, Any], answer: str) -> bool:
     if kind == "refusal":
         lowered = answer.lower()
         return any(marker in lowered for marker in _REFUSAL_MARKERS)
+    if kind == "overlap":
+        return overlap(check["answer"], answer, question) >= float(check["threshold"])
+    if kind == "model3d":
+        # Résumé rendu par l'atelier 3D pour l'appel attendu (sorte, dimensions, pièces, triangles) : présent
+        # seulement si le modèle a appelé l'atelier avec les bons paramètres (`apex.neural.model3d_tasks`).
+        return str(check["summary"]) in answer
     return False
+
+
+def _content_words(text: str) -> list[str]:
+    import re
+
+    return [word for word in re.findall(r"\w+", text.lower()) if len(word) > 3 or word.isdigit()]
+
+
+def overlap(reference: str, answer: str, question: str | None = None) -> float:
+    """Part des mots porteurs de sens de la référence présents dans la réponse. Seul le début de la réponse
+    compte (trois fois la longueur de la référence) : un long déversement de texte ne « couvre » rien. Avec
+    `question`, seuls comptent les mots de la référence ABSENTS de la question (en traduction, les noms
+    propres et les nombres de la phrase source ne prouvent rien), sauf s'ils y sont tous."""
+    wanted = set(_content_words(reference))
+    if question:
+        wanted = (wanted - set(_content_words(question))) or wanted
+    if not wanted:
+        return 0.0
+    words = _content_words(answer)
+    found = set(words[: 3 * len(wanted) + 20])
+    return len(wanted & found) / len(wanted)

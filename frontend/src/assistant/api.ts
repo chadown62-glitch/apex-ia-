@@ -7,14 +7,14 @@
 
 import { ApiError, fetchEnvelope } from "../api/client";
 
-export type ModeId = "normal" | "code" | "design" | "finance";
+export type ModeId = "normal" | "code" | "design" | "finance" | "3d";
 
 export interface ModeInfo {
   id: ModeId;
   label: string;
   summary: string;
   tools: string[];
-  view: "chat" | "code" | "design" | "finance";
+  view: "chat" | "code" | "design" | "finance" | "studio3d";
   limits: string[];
 }
 
@@ -59,6 +59,172 @@ export interface MessageMeta {
   attachments?: string[];
   tools_offered?: string[];
   tools_notes?: string[];
+  /** Mode automatique : le Cerveau APEX, pas assez sûr de sa réponse, l'a confiée à un autre moteur (ou l'a gardée). */
+  delegation?: { from: string; reason?: "low_confidence" | "cannot_know" | "current_info_tool" | "current_info_no_tool" | "code_mismatch" | "model3d_mismatch"; confidence: number | null; threshold: number; to: string | null; status: "delegated" | "kept" };
+  /** Vérification croisée du code du Cerveau APEX par sa propre version Python, exécutées dans la sandbox. */
+  crosscheck?: { language: string | null; status: "agree" | "disagree" | "answer_fails" | "unverifiable"; detail: string; example: { input: number[]; answer: unknown; python: unknown } | null };
+  /** Mode 3D : demande de création reconnue par le Cerveau APEX et confiée à Game Studio (ou pourquoi pas). */
+  game_studio?: GameStudioDelegation;
+}
+
+export interface GameStudioDelegation {
+  /** Qui a lancé (ou proposé) : le Cerveau pendant le tour, ou l'utilisateur d'un clic. */
+  trigger: "cerveau" | "utilisateur";
+  /** launched/refused : mission demandée à Game Studio ; proposed : à confirmer ; unavailable : Game Studio absent ;
+   *  resumed : mission interrompue reprise d'un clic. */
+  state?: "launched" | "refused" | "proposed" | "unavailable" | "resumed";
+  launched: boolean;
+  intent?: "create" | "ambiguous";
+  intent_reason?: string;
+  brain_3d_call?: boolean;
+  request_message_id?: string;
+  proposal_of?: string;
+  authorization?: string;
+  project_id?: string | null;
+  mission_id?: string | null;
+  status?: string | null;
+  error?: { code: string; message: string } | null;
+  /** Le refus de Game Studio expliqué en clair (le code exact est dans `error`). */
+  explanation?: string;
+  reason?: string;
+  /** Proposition : la demande rangée par aspect, et ce que Game Studio fera de chaque élément. */
+  brief?: CreativeBrief;
+}
+
+/** Ce que Game Studio fera d'un élément du brief : vérifié, possible, pas encore pris en compte, refusé, ou
+ *  inconnu (Game Studio absent). */
+export type BriefStatus = "verified" | "possible" | "not_yet" | "refused" | "unknown";
+
+/** Brief créatif d'une demande 3D (`apex.assistant.creative_brief`). */
+export interface CreativeBrief {
+  version: number;
+  family: string | null;
+  archetype: string | null;
+  styles: string[];
+  finish: string | null;
+  setting: string | null;
+  colors: { color: string; part: string; finish: string | null }[];
+  materials: string[];
+  features: string[];
+  counts: Record<string, number>;
+  reference_images: number;
+  reference_requested: boolean;
+  support: { aspect: string; asked: string; status: BriefStatus; how: string }[];
+}
+
+/** Mesures objectives d'un rendu (`apex.assistant.render_metrics`) : un instrument non calibré. */
+export interface RenderMetrics {
+  view: string;
+  error?: string;
+  kind?: string;
+  resolution?: [number, number];
+  highlights_clipped_pct?: number;
+  shadows_crushed_pct?: number;
+  contrast_l_std?: number;
+  noise_background?: number | null;
+  subject?: {
+    coverage_pct: number;
+    perceived_color: string;
+    perceived_chroma: number;
+    specular_pct: number;
+    detail_edge_pct: number;
+    separation_delta_l: number;
+    requested_color?: string;
+    delta_e76_to_requested?: number;
+  } | null;
+}
+
+/** Qualité d'une mission : versions, ce que le juge a vérifié ou non, mesures, avis humains. */
+export interface GameStudioQuality {
+  project_id: string;
+  status: string;
+  delivery_status: string | null;
+  brief: CreativeBrief | null;
+  steps: {
+    key: string;
+    kind: string | null;
+    status: string;
+    handoff: string | null;
+    versions?: { number: number; verdict: string; selected: boolean; defects: string[]; unavailable: string[] }[];
+    selection_reason?: string | null;
+    judge?: { scope: string | null; criteria: Record<string, unknown> | null; advisory: string[]; unavailable: string[] } | null;
+    limitations?: string[];
+    metrics?: RenderMetrics[];
+  }[];
+  limitations: string[];
+  metrics_available: boolean;
+  criteria: Record<string, string>;
+  ratings: { id: string; at: string; scores: Record<string, number>; comment: string }[];
+}
+
+/** Game Studio sur ce PC, d'après sa propre sonde (`GET /assistant/game-studio/availability`). */
+export interface GameStudioAvailability {
+  installed: boolean;
+  ready: boolean;
+  missing: string[];
+  notes: string[];
+  /** Toujours « human » : une mission n'est lancée que par un clic de l'utilisateur. */
+  launch: "human";
+  compute: "auto" | "cpu";
+  cuda_available?: boolean;
+  /** Partage du GPU avec les modèles principaux : bail tenu, prêté à un spécialiste. */
+  gpu?: { lease_held: boolean; lent_to: string | null; admissions_open: boolean; cuda_available: boolean; cuda_residents: string[] };
+  /** Qui demande le GPU au Cerveau pendant une mission : l'assistant pour toute la mission, ou Game Studio autour de chaque étape. */
+  gpu_loan?: "assistant" | "game_studio";
+}
+
+/** Un composant dont Game Studio a besoin (`GET /assistant/game-studio/dependencies`) : état mesuré sur ce PC, taille
+ *  et provenance connues, et son installation — offerte seulement quand Game Studio en publie le contrat. */
+export interface GameStudioDependency {
+  id: string;
+  name: string;
+  role: string;
+  state: "present" | "missing" | "unknown";
+  detail: string;
+  bytes: number | null;
+  source: string | null;
+  license: string | null;
+  /** Geste à faire soi-même (Blender dans le PATH, « Préparer APEX »), quand APEX ne peut pas le faire. */
+  manual: string | null;
+  install: { available: boolean; reason: string; confirmation?: string };
+}
+
+export interface GameStudioInstallJob {
+  item: string;
+  name: string;
+  state: "running" | "succeeded" | "failed";
+  log: string[];
+  detail: string;
+}
+
+export interface GameStudioDependencies {
+  installed: boolean;
+  items: GameStudioDependency[];
+  /** Contrats d'installation publiés par Game Studio : poids du planificateur, et liste figée de son moteur. */
+  contract: { planner: boolean; engine: boolean; reason: string };
+  job: GameStudioInstallJob | null;
+  problem?: string;
+}
+
+/** Mission Game Studio d'une conversation, lue par ses outils `game_studio.status` et `game_studio.results`. */
+export interface GameStudioMission {
+  project_id: string;
+  status: {
+    status: string;
+    mission_id: string;
+    steps: { key: string; kind: string | null; status: string; job_id: string | null }[];
+    delivery_status: string | null;
+    last_event: Record<string, unknown> | null;
+  };
+  results: {
+    status: string;
+    ready: boolean;
+    artifacts?: { name: string; hash: string; role: string; source: string; job_id?: string }[];
+    artifact_count?: number;
+    truncated?: boolean;
+    blocked?: { key: string; reason: string | null }[];
+    api_path?: string;
+  };
 }
 
 export interface Message {
@@ -102,10 +268,15 @@ export interface Attachment {
 
 export interface AppSettings {
   appearance: { theme: "night" | "dune"; animations: boolean; particles: boolean; reduce_motion: "system" | "always" | "never" };
-  models: { engine: EngineId; preferred_model: string; temperature: number; max_tokens: number };
+  models: { engine: EngineId; preferred_model: string; temperature: number; max_tokens: number; brain_delegate_below: number };
   runtime: { generation_timeout_s: number };
   behavior: { default_mode: ModeId; use_memory: boolean; history_chars: number };
-  tools: { workspace_write: boolean; code_execution: boolean; max_tool_steps: number };
+  tools: {
+    workspace_write: boolean;
+    code_execution: boolean;
+    max_tool_steps: number;
+    game_studio_compute: "auto" | "cpu";
+  };
   privacy: { index_conversations: boolean; attachments_enabled: boolean };
   resources: { model_precision: "auto" | "float32" | "bfloat16"; cpu_threads: number };
   problems: string[];
@@ -136,6 +307,8 @@ export interface EngineInfo {
 
 export interface WorkspaceListing {
   scope: "project" | "conversation";
+  /** Dossier réel de l'espace de travail sur ce PC. */
+  root?: string;
   files: { path: string; size: number }[];
 }
 
@@ -195,6 +368,40 @@ export const assistantApi = {
   workspaceFile: (conversationId: string, path: string) =>
     data<{ path: string; size: number; truncated: boolean; content: string }>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/workspace/file?path=${encodeURIComponent(path)}`),
+  /** Octets exacts d'un fichier (aperçu PNG, modèle .glb à télécharger), en base64. */
+  workspaceFileBase64: (conversationId: string, path: string) =>
+    data<{ path: string; size: number; content_base64: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/workspace/file?path=${encodeURIComponent(path)}&encoding=base64`),
+  gameStudioMission: (conversationId: string, projectId: string) =>
+    data<GameStudioMission>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}`),
+  gameStudioAvailability: () => data<GameStudioAvailability>("/assistant/game-studio/availability"),
+  launchGameStudio: (conversationId: string, messageId: string) =>
+    data<{ message_id: string; content: string; meta: MessageMeta }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/launch`,
+      json("POST", { message_id: messageId })),
+  gameStudioPreview: (conversationId: string, projectId: string, digest: string) =>
+    data<{ content_type: string; size: number; content_base64: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/preview/${encodeURIComponent(digest)}`),
+  cancelGameStudioMission: (conversationId: string, projectId: string) =>
+    data<{ project_id: string; status: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/cancel`,
+      { method: "POST" }),
+  resumeGameStudioMission: (conversationId: string, projectId: string) =>
+    data<{ message_id: string; content: string; meta: MessageMeta }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/resume`,
+      { method: "POST" }),
+  gameStudioQuality: (conversationId: string, projectId: string) =>
+    data<GameStudioQuality>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/quality`),
+  rateGameStudioMission: (conversationId: string, projectId: string, scores: Record<string, number>, comment: string) =>
+    data<{ id: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/ratings`,
+      json("POST", { scores, comment })),
+  gameStudioDependencies: () => data<GameStudioDependencies>("/assistant/game-studio/dependencies"),
+  installGameStudioDependency: (itemId: string) =>
+    data<GameStudioInstallJob>(`/assistant/game-studio/dependencies/${encodeURIComponent(itemId)}/install`,
+      json("POST", { confirm: true })),
 };
 
 /** Fichier local -> base64 (pièces jointes) ; la taille est vérifiée par le backend après décodage. */

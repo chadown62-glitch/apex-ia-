@@ -1,0 +1,4 @@
+# Accélération GPU d'APEX : torch 2.14.0+cu130 (Windows x64, CPython 3.12).
+# Produit par lock_gpu.py le 2026-10-16 ; dépendances vérifiées contre requirements-windows.lock ; empreinte : index.
+torch @ https://download-r2.pytorch.org/whl/cu130/torch-2.14.0%2Bcu130-cp312-cp312-win_amd64.whl \
+    --hash=sha256:6a20371bf5af2af933a6149e5ec13f7ea7ad506276137dae9386f98d236c02ff

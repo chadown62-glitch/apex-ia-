@@ -1,10 +1,11 @@
-"""Les quatre modes de travail de l'assistant. Un mode change RÉELLEMENT le comportement : les consignes
+"""Les cinq modes de travail de l'assistant. Un mode change RÉELLEMENT le comportement : les consignes
 données au modèle (rôle `system`), les outils qui lui sont offerts (et donc les permissions accordées au moteur
 d'outils) et la vue que l'interface ajoute à la conversation. `limits` dit ce que le mode ne fait pas : l'interface
 l'affiche, et rien n'est jamais présenté comme disponible sans l'être."""
 
 from __future__ import annotations
 
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,6 +19,21 @@ _COMMON = (
 )
 
 
+#: Permissions des outils de Game Studio (`apex.tools.model`, ajoutées avec Game Studio) : absentes d'une
+#: installation sans Game Studio, et alors rien n'est demandé.
+def _permissions(*names: str) -> frozenset[Permission]:
+    return frozenset(p for name in names if (p := getattr(Permission, name, None)) is not None)
+
+
+#: Lancer ou annuler une mission : actes HUMAINS seulement (`PolicyEngine` : CREATE_MISSION et
+#: CANCEL_MISSION, jamais le CORE seul). Jamais accordés à un modèle, dans aucun mode : le Cerveau PROPOSE,
+#: l'utilisateur lance ou annule d'un clic (`apex.assistant.game_studio`).
+GAME_STUDIO_HUMAN_ONLY = _permissions("GAME_STUDIO_CREATE", "GAME_STUDIO_CANCEL")
+#: Suivre une mission et lire ses résultats : permis au modèle du mode 3D.
+GAME_STUDIO_READ = _permissions("GAME_STUDIO_READ")
+GAME_STUDIO_PERMISSIONS = GAME_STUDIO_HUMAN_ONLY | GAME_STUDIO_READ
+
+
 @dataclass(frozen=True)
 class Mode:
     id: str
@@ -29,12 +45,16 @@ class Mode:
     #: Permissions demandées par ce mode ; les paramètres peuvent en retirer, jamais en ajouter.
     permissions: frozenset[Permission] = field(default_factory=frozenset)
     #: Vue ajoutée par l'interface : `chat` (aucune), `code` (explorateur de l'espace de travail),
-    #: `design` (palettes et contrastes de la réponse), `finance` (tableaux de projection des outils).
+    #: `design` (palettes et contrastes de la réponse), `finance` (tableaux de projection des outils),
+    #: `studio3d` (aperçus et fichiers des modèles 3D).
     view: str = "chat"
     limits: tuple[str, ...] = ()
 
-    def describe(self) -> dict[str, Any]:
-        return {"id": self.id, "label": self.label, "summary": self.summary, "tools": list(self.tools),
+    def describe(self, available: Collection[str] | None = None) -> dict[str, Any]:
+        """`available` : outils réellement enregistrés dans cette installation ; les autres ne sont pas
+        annoncés (Game Studio absent : rien n'est présenté comme disponible)."""
+        tools = [t for t in self.tools if available is None or t in available]
+        return {"id": self.id, "label": self.label, "summary": self.summary, "tools": tools,
                 "view": self.view, "limits": list(self.limits)}
 
 
@@ -54,11 +74,13 @@ MODES: dict[str, Mode] = {
         instructions=_COMMON + (
             " Mode Code : tu es un ingénieur logiciel rigoureux. Tu travailles dans l'espace de travail de la "
             "conversation (ou du projet), qui contient les fichiers listés par les outils et les pièces jointes "
-            "du projet (dossier pieces-jointes). Lis un fichier avant de le modifier, écris des fichiers "
-            "complets, exécute ou teste ce que tu écris quand c'est possible (sandbox isolée, sans réseau). "
+            "du projet (dossier pieces-jointes). Lis un fichier avant de le modifier ; dans un gros projet, "
+            "cherche avec fs.search au lieu de tout lire, et modifie un passage avec fs.edit au lieu de "
+            "réécrire le fichier entier (fs.write pour un fichier nouveau ou court). Exécute ou teste ce que tu écris quand c'est possible (sandbox isolée, sans réseau). "
             "N'affirme jamais qu'un code fonctionne sans l'avoir exécuté avec un outil : sinon, dis qu'il n'a pas "
             "été exécuté. Dans ta réponse finale, résume ce que tu as modifié et ce qui a été vérifié."),
-        tools=("fs.list", "fs.read", "project.inspect", "fs.write", "code.run", "tests.run"),
+        tools=("fs.list", "fs.read", "fs.search", "project.inspect", "fs.write", "fs.edit", "code.run", "tests.run",
+               "model3d.create"),
         permissions=frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE, Permission.EXECUTE_SANDBOX}),
         view="code",
         limits=("Exécution limitée à Python, dans la sandbox (réseau coupé, temps et mémoire bornés).",
@@ -93,6 +115,29 @@ MODES: dict[str, Mode] = {
         view="finance",
         limits=("Pas d'accès aux comptes bancaires ni aux cours en temps réel.",
                 "Projections déterministes à taux constant : ce sont des scénarios, pas des prévisions."),
+    ),
+    "3d": Mode(
+        id="3d", label="3D",
+        summary="Modélisation 3D : véhicules, armes, personnages ; fichiers pour Blender, Unity et Unreal.",
+        instructions=_COMMON + (
+            " Mode 3D : tu conçois des modèles 3D pour le jeu vidéo et la visualisation. Pour CHAQUE modèle demandé, "
+            "appelle l'outil model3d.create (generator : vehicle, weapon ou character ; kind : car, truck, tank, "
+            "motorbike, sword, axe, rifle, pistol ou humanoid ; dimensions en mètres ; build : slim, normal ou "
+            "strong ; color : un nom ou #RRGGBB) : il construit une géométrie exacte et écrit les fichiers. Ne décris "
+            "jamais une géométrie que l'outil n'a pas construite. Dans ta réponse, reprends le résumé de l'outil "
+            "(dimensions, pièces, triangles) et cite les fichiers produits : .glb (Blender, Unreal), .obj (Unity), "
+            "script Blender, script Unity C#, classe Unreal C++. Tu peux lire et adapter ces scripts avec fs.read "
+            "et fs.write. Dis clairement que ce sont des modèles low-poly de base, et que les scripts Unity et "
+            "Unreal n'ont été vérifiés que pour la syntaxe."),
+        tools=("model3d.create", "game_studio.status", "game_studio.results",
+               "fs.list", "fs.read", "fs.search", "fs.write", "fs.edit"),
+        permissions=(frozenset({Permission.READ_WORKSPACE, Permission.WRITE_WORKSPACE})
+                     | GAME_STUDIO_READ),
+        view="studio3d",
+        limits=("Modèles paramétriques low-poly (véhicule, arme, personnage), pas de sculpture ni de textures.",
+                "Scripts Unity et Unreal de départ : syntaxe vérifiée, non exécutés dans les moteurs.",
+                "Missions Game Studio (si installé) : proposées, lancées ou annulées par vous seul.",
+                "Accès limité à l'espace de travail de la conversation ou du projet."),
     ),
 }
 

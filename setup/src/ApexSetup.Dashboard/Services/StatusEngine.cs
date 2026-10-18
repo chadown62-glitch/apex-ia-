@@ -68,7 +68,7 @@ public static class StatusEngine
 
         void Services(ComponentStatus status, string detail)
         {
-            foreach (var (key, _) in ComponentKeys.BackendServices.Where(s => !hidden.Contains(s.Key)))
+            foreach (var (key, _) in ComponentKeys.BackendServices.Where(s => !hidden.Contains(s.Key) && !ComponentKeys.IsApplication(s.Key)))
             {
                 rows.Add(new ComponentState(key, status, detail));
             }
@@ -134,7 +134,7 @@ public static class StatusEngine
             foreach (var (key, name) in ComponentKeys.BackendServices)
             {
                 var measured = payload.Components.FirstOrDefault(c => c.Name == name);
-                if (notApplicable.Contains(name) || (measured is null && hidden.Contains(key)))
+                if (notApplicable.Contains(name) || (measured is null && (hidden.Contains(key) || ComponentKeys.IsApplication(key))))
                 {
                     continue; // sans objet dans ce profil (le backend le dit) : aucune ligne, jamais « inconnu »
                 }

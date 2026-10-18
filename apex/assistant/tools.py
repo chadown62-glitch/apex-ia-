@@ -1,7 +1,8 @@
-"""Outils DÉTERMINISTES des modes Finance et Design, enregistrés à côté des outils d'espace de travail
+"""Outils DÉTERMINISTES des modes Finance, Design et 3D, enregistrés à côté des outils d'espace de travail
 (`apex.tools.builtin`) dans le même moteur (`apex.tools.engine` : schéma validé, erreurs structurées, journal).
 Aucun n'exécute de code arbitraire : `calc.evaluate` interprète un arbre syntaxique restreint (nombres,
-opérateurs, quelques fonctions), jamais `eval`."""
+opérateurs, quelques fonctions), jamais `eval` ; `model3d.create` construit un modèle paramétrique
+(`apex.brain.studio3d`) et n'écrit que dans le dossier `modeles3d/` de l'espace de travail."""
 
 from __future__ import annotations
 
@@ -9,11 +10,12 @@ import ast
 import math
 import operator
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from apex.tools.builtin import default_registry
 from apex.tools.engine import ToolContext, ToolRegistry
-from apex.tools.model import ErrorCode, ToolFailure, ToolSpec
+from apex.tools.model import ErrorCode, Permission, ToolFailure, ToolSpec
 
 _MAX_EXPRESSION = 500
 _MAX_MAGNITUDE = 1e18
@@ -166,13 +168,42 @@ def _contrast(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[st
     return contrast(args["foreground"], args["background"])
 
 
+MODELS_DIR = "modeles3d"
+
+
+def _model3d(args: dict[str, Any], ctx: ToolContext, spec: ToolSpec) -> dict[str, Any]:
+    """Construit le modèle demandé et écrit ses fichiers (glTF, OBJ, script Blender, aperçu, scripts Unity et
+    Unreal, notice) dans `modeles3d/` ; un nom libre est choisi (`char`, `char-2`…), rien n'est écrasé."""
+    from apex.brain import studio3d
+
+    generator = args["generator"]
+    options = {k: v for k, v in args.items() if k not in ("generator", "kind")}
+    try:
+        call = studio3d.check_options(generator, args.get("kind") or studio3d.DEFAULT_KIND[generator], options)
+        model = studio3d.build(call)
+    except studio3d.Error3D as exc:
+        raise ToolFailure(ErrorCode.INVALID_INPUT, str(exc)) from exc
+    taken = {Path(path).stem for path, _size in ctx.workspace.files() if path.startswith(MODELS_DIR + "/")
+             and path.endswith(".glb")}
+    stem = studio3d.stem_for(model, taken)
+    files = []
+    for name, content in studio3d.model_files(model, stem):
+        ctx.workspace.write_bytes(f"{MODELS_DIR}/{name}", content)
+        files.append({"path": f"{MODELS_DIR}/{name}", "size": len(content)})
+    preview = f"{MODELS_DIR}/{stem}.png"
+    return {"summary": studio3d.summary(model, call), "call": call.expression(), "name": stem,
+            "files": files, "preview": preview if any(f["path"] == preview for f in files) else None,
+            "stats": model.stats()}
+
+
 _COLOR = {"type": "string", "maxLength": 9}
 _AMOUNT = {"type": "number", "minimum": 0, "maximum": 1e12}
 
 
-def assistant_registry() -> ToolRegistry:
+def assistant_registry(*, problems: list[str] | None = None) -> ToolRegistry:
     """Outils d'espace de travail d'APEX + outils des modes Design et Finance (aucune permission requise :
-    calcul pur, sans fichier ni exécution)."""
+    calcul pur, sans fichier ni exécution) + modèles 3D + délégation à Game Studio s'il est installé (sinon
+    sa raison est ajoutée à `problems`)."""
     registry = default_registry()
     registry.register(ToolSpec(
         name="calc.evaluate",
@@ -208,4 +239,54 @@ def assistant_registry() -> ToolRegistry:
                       "properties": {"foreground": _COLOR, "background": _COLOR}},
         output_schema={"type": "object", "additionalProperties": True}, permissions=frozenset(),
     ), _contrast)
+    registry.register(ToolSpec(
+        name="model3d.create",
+        description=("Construire un modèle 3D paramétrique (véhicule, arme, personnage) et écrire ses fichiers pour "
+                     "Blender, Unity et Unreal dans modeles3d/ : .glb, .obj, script Blender, aperçu PNG, script "
+                     "Unity C#, classe Unreal C++. Dimensions en mètres."),
+        input_schema={"type": "object", "required": ["generator"], "properties": {
+            "generator": {"type": "string", "enum": ["vehicle", "weapon", "character"]},
+            "kind": {"type": "string", "enum": ["car", "truck", "tank", "motorbike", "sword", "axe", "rifle",
+                                                "pistol", "humanoid"]},
+            "length": {"type": "number", "minimum": 0.1, "maximum": 30},
+            "width": {"type": "number", "minimum": 0.4, "maximum": 8},
+            "height": {"type": "number", "minimum": 0.5, "maximum": 8},
+            "wheels": {"type": "integer", "minimum": 2, "maximum": 16},
+            "build": {"type": "string", "enum": ["slim", "normal", "strong"]},
+            "color": {"type": "string", "maxLength": 9}}},
+        output_schema={"type": "object", "additionalProperties": True},
+        permissions=frozenset({Permission.WRITE_WORKSPACE}),
+    ), _model3d)
+    absent = register_game_studio(registry)
+    if absent is not None and problems is not None:
+        problems.append(absent)
     return registry
+
+
+#: Outils de délégation de Game Studio (`apex.game_studio.delegation`, propriété de Codex) : lancer une
+#: mission, suivre son état, lire ses résultats (empreintes, jamais les octets), l'annuler.
+GAME_STUDIO_TOOLS = ("game_studio.create", "game_studio.status", "game_studio.results",
+                     "game_studio.cancel")
+_GAME_STUDIO_MODULES = ("apex.game_studio", "apex.game_studio.delegation")
+GAME_STUDIO_ABSENT = "Game Studio ne fait pas partie de cette installation d'APEX"
+
+
+def register_game_studio(registry: ToolRegistry) -> str | None:
+    """Enregistre les outils de Game Studio quand ce module fait partie de l'installation. Sinon rien n'est
+    offert et la raison est rendue (pour être dite) : module absent, ou présent mais impossible à charger
+    (une dépendance manquante n'empêche jamais les autres outils de l'assistant). Ses outils et leurs
+    contrôles (permissions, appartenance de la mission à l'espace de travail du tour) sont ceux de Game
+    Studio : rien n'est réimplémenté ici."""
+    try:
+        # Module facultatif (absent d'une installation sans Game Studio) : non vérifié ici par mypy.
+        from apex.game_studio.delegation import (  # type: ignore[import-untyped, import-not-found, unused-ignore]
+            register_game_studio_tools,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name in _GAME_STUDIO_MODULES:
+            return GAME_STUDIO_ABSENT
+        return f"Game Studio n'a pas pu être chargé : {exc}"[:300]
+    except ImportError as exc:
+        return f"Game Studio n'a pas pu être chargé : {exc}"[:300]
+    register_game_studio_tools(registry)
+    return None

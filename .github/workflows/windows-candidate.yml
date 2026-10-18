@@ -1,0 +1,311 @@
+# Candidate de QUALIFICATION d'APEX.exe : l'arbre COMBINÉ (ma branche + la pile Game Studio de Codex + #5, #11,
+# #13), reconstruit dans le runner par scripts/integration/rehearse_merge.sh — fusions locales au runner, RIEN
+# n'est poussé, aucune PR n'est fusionnée — puis le parcours d'un utilisateur sur un Windows réel hébergé par
+# GitHub (Windows Server, CPU, sans GPU ni Blender ; ce n'est PAS le PC de l'utilisateur) :
+#   installateur construit depuis l'arbre combiné -> installation silencieuse -> APEX.exe --prepare
+#   -> accélération GPU vérifiée sans GPU (gpu_overlay_check.py : roues figées, variante, installation à part, sonde)
+#   -> --install-model -> --start -> un vrai tour de l'assistant (assistant_e2e.py run)
+#   -> parcours 3D réel (studio_e2e.py : composants installés par leurs boutons, disponibilité, conversation 3D,
+#      proposition, clic, suivi, aperçus, .blend/.glb téléchargés et vérifiés) -> --stop -> désinstallation.
+# Avec studio_ui, le même parcours d'abord par l'INTERFACE (studio_ui_e2e.mjs : vrais clics dans Edge, sur la page que le
+# Panel ouvre), annulation et reprise comprises ; puis le parcours par l'API, sur une seconde mission.
+# Si la demande le dit (studio_planner, studio_blender), le runner JETABLE reçoit les poids du planificateur (5,4 Go,
+# par le bouton « Installer » d'APEX, donc le contrat install-planner de Game Studio) et Blender 4.3.2 portable
+# officiel à empreinte épinglée ; jamais le PC de l'utilisateur.
+# Verdicts : un prérequis absent (bibliothèque, planificateur, Blender…) donne BLOCKED (code 3) avec la raison
+# d'APEX, jamais PASS. Les résultats sont aussi publiés en annotations (lisibles par l'API, sans le journal).
+#
+# Déclenchement manuel : un commit qui modifie setup/packaging/windows/ci/candidate-request.json (ordre des
+# branches), sur la branche de développement de Claude ; ou « Run workflow » une fois sur la branche par défaut.
+name: windows-candidate
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/apex-official-development-4kao8t]
+    paths:
+      - "setup/packaging/windows/ci/candidate-request.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-candidate
+  cancel-in-progress: false
+
+jobs:
+  candidate:
+    runs-on: windows-latest
+    timeout-minutes: 240
+    env:
+      APEX_PANEL_START_TIMEOUT_S: "870"
+      # Pas de PYTHONUTF8 pour tout le job : APEX (lancé par le Panel) en hériterait et ne tournerait plus comme sur
+      # le PC d'un utilisateur. Les scripts de test forcent eux-mêmes leur sortie en UTF-8.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Combined tree (merges local to this runner, nothing pushed)
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        run: |
+          order=$(python -c "import json; print(' '.join(json.load(open('setup/packaging/windows/ci/candidate-request.json', encoding='utf-8'))['order']))")
+          set +e
+          TMPDIR=$(cygpath -u "$RUNNER_TEMP") bash scripts/integration/rehearse_merge.sh --keep --order "$order" \
+            > "$RUNNER_TEMP/rehearsal.md" 2>&1
+          code=$?
+          set -e
+          cat "$RUNNER_TEMP/rehearsal.md"
+          python - "$RUNNER_TEMP/rehearsal.md" "$code" <<'PY'
+          import pathlib, sys
+          text = pathlib.Path(sys.argv[1]).read_text(encoding="utf-8")
+          kind = "notice" if sys.argv[2] == "0" else "error"
+          print(f"::{kind} title=Arbre combine (code {sys.argv[2]})::" + text.replace("%", "%25").replace("\r", "").replace("\n", "%0A"))
+          PY
+          [[ $code -eq 0 ]] || exit 1
+          tree=$(sed -n 's/^worktree gardé : //p' "$RUNNER_TEMP/rehearsal.md" | tail -1)
+          echo "TREE=$(cygpath -m "$tree")" >> "$GITHUB_ENV"
+      - name: Runtime libraries of the combined tree (its exact Windows lock, verified by hashes)
+        shell: bash
+        working-directory: ${{ env.TREE }}
+        run: |
+          python -m pip install --disable-pip-version-check --no-input --require-hashes --only-binary=:all: --no-deps \
+            -r setup/packaging/runtime/requirements-windows.lock
+          echo "APEX_BUILD_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Build the candidate installer from the combined tree (same script as the release)
+        shell: bash
+        env:
+          PYTHONUTF8: "1"
+        working-directory: ${{ env.TREE }}
+        run: |
+          command -v python3 >/dev/null || { mkdir -p "$HOME/shim"; printf '#!/bin/sh\nexec python "$@"\n' > "$HOME/shim/python3"; chmod +x "$HOME/shim/python3"; echo "$HOME/shim" >> "$GITHUB_PATH"; export PATH="$HOME/shim:$PATH"; }
+          ISCC=$(bash setup/packaging/fetch_innosetup.sh "$RUNNER_TEMP/toolchain" | tail -1)
+          set +e
+          ISCC="$ISCC" bash setup/packaging/build_desktop_release.sh "$RUNNER_TEMP/release"
+          code=$?
+          set -e
+          if [[ $code -ne 0 ]]; then
+            tail -n 60 "$RUNNER_TEMP/release/build.log" 2>/dev/null | python -c "import sys; t = sys.stdin.read().replace('%', '%25').replace(chr(13), '').replace(chr(10), '%0A'); print('::error title=build_desktop_release (code $code)::' + t)"
+            exit $code
+          fi
+          python - "$RUNNER_TEMP/release/manifest.json" <<'PY'
+          import json, pathlib, sys
+          m = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          app = m.get("application") or {}
+          summary = {"version": m.get("version"), "installer": m.get("installer"),
+                     "source_commit": (app.get("runtime_artifact") or {}).get("source_commit"),
+                     "requirements_lock_sha256": app.get("requirements_lock_sha256")}
+          print("::notice title=Candidate construite::" + json.dumps(summary, ensure_ascii=False))
+          PY
+      - name: Install, prepare, model, start, a real assistant turn, the real 3D path, stop, uninstall
+        shell: pwsh
+        timeout-minutes: 200
+        run: |
+          $tree = $env:TREE
+          $evidence = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\evidence").FullName
+          function Note([string]$level, [string]$title, [string]$text) {
+            $t = ($text -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A')
+            if ($t.Length -gt 8000) { $t = $t.Substring(0, 8000) }
+            Write-Host "::${level} title=${title}::$t"
+            # GitHub n'affiche que 10 annotations par niveau et par étape : le résumé du run les garde toutes.
+            $fence = '`' * 3
+            "### [$level] $title`n`n$fence`n$text`n$fence`n" | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+          }
+          $setup = Get-ChildItem "$env:RUNNER_TEMP\release" -Filter 'APEX-Setup-x64-v*.exe' | Select-Object -First 1
+          $p = Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$evidence\install.log" -Wait -PassThru
+          $exe = "$env:LOCALAPPDATA\Programs\APEX\APEX.exe"
+          if ($p.ExitCode -ne 0 -or -not (Test-Path $exe)) { Note error 'Installation' "code $($p.ExitCode)"; exit 1 }
+          function Panel([string]$action, [int]$timeoutS = 2400) {
+            $psi = New-Object System.Diagnostics.ProcessStartInfo
+            $psi.FileName = $exe; $psi.Arguments = $action
+            $psi.UseShellExecute = $false; $psi.CreateNoWindow = $true; $psi.RedirectStandardOutput = $true
+            $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+            $proc = [Diagnostics.Process]::Start($psi)
+            $read = $proc.StandardOutput.ReadToEndAsync()
+            if (-not $proc.WaitForExit($timeoutS * 1000)) { try { $proc.Kill() } catch { }; Note error "APEX.exe $action" 'délai dépassé'; return 98 }
+            $out = $null; if ($read.Wait(30000)) { $out = $read.Result }
+            $out | Out-File -Append -Encoding utf8 "$evidence\panel.log"
+            $s = $null; try { $s = $out | ConvertFrom-Json } catch { }
+            Note notice "APEX.exe $action (code $($proc.ExitCode))" "$($s.headline) / $($s.cause)`n$($s.guidance)"
+            return $proc.ExitCode
+          }
+          function RunPy([string]$title, [string[]]$arguments) {
+            $lines = & python @arguments 2>&1 | ForEach-Object { "$_" }
+            $code = $LASTEXITCODE
+            $lines | Out-Host
+            $kept = $lines | Where-Object { $_ -match '^(CHECK|NOTE|COMPONENT|DEPENDENCY|PROPOSAL|LAUNCH|MISSION|VERDICT|BLOCKED|FAIL)' }
+            Note notice "$title (code $code)" ($kept -join "`n")
+            return $code
+          }
+          if ((Panel '--prepare') -ne 0) { Note error 'Préparer APEX' 'échec (voir panel.log)'; exit 3 }
+          $request = Get-Content "$tree/setup/packaging/windows/ci/candidate-request.json" -Raw | ConvertFrom-Json
+          # Blender 4.3.2 portable officiel, empreinte épinglée (celle de la qualification de Codex) : ce que
+          # l'utilisateur installe lui-même. APEX le trouve par APEX_BLENDER_EXECUTABLE, hérité par le Panel.
+          if ($request.studio_blender) {
+            $ProgressPreference = 'SilentlyContinue'
+            $zip = "$env:RUNNER_TEMP\blender-4.3.2-windows-x64.zip"
+            $ok = $false
+            foreach ($url in @('https://download.blender.org/release/Blender4.3/blender-4.3.2-windows-x64.zip',
+                               'https://mirrors.ocf.berkeley.edu/blender/release/Blender4.3/blender-4.3.2-windows-x64.zip')) {
+              try {
+                Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+                $ok = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower() -eq '933a62a770c941e316535f893629ff106ddd2aa5a956f0081ec557439073d4f6'
+              } catch { $ok = $false }
+              if ($ok) { break }
+            }
+            if (-not $ok) { Note error 'Blender' 'téléchargement ou empreinte refusés'; exit 1 }
+            New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\blender" | Out-Null
+            tar -xf $zip -C "$env:RUNNER_TEMP\blender"
+            $env:APEX_BLENDER_EXECUTABLE = "$env:RUNNER_TEMP\blender\blender-4.3.2-windows-x64\blender.exe"
+            Note notice 'Blender fourni au runner' "4.3.2 portable, empreinte vérifiée : $env:APEX_BLENDER_EXECUTABLE"
+          }
+          # Ce que l'APEX INSTALLÉ contient et sait importer (Python préparé par le Panel, application de
+          # l'installateur) : la preuve de l'empaquetage, indépendante de ce que dit l'application.
+          $py = Get-ChildItem "$env:LOCALAPPDATA\APEX\python" -Filter python.exe -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
+          $app = "$env:LOCALAPPDATA\Programs\APEX\app"
+          $gs = (Get-ChildItem "$app\apex\game_studio" -ErrorAction SilentlyContinue | ForEach-Object Name) -join ', '
+          $pth = Get-ChildItem "$env:LOCALAPPDATA\APEX\python" -Filter apex-app.pth -Recurse -Depth 4 -ErrorAction SilentlyContinue | Select-Object -First 1
+          Note notice 'Application installée' "python : $($py.FullName)`npth : $($pth.FullName) -> $(if ($pth) { (Get-Content $pth.FullName -Raw).Trim() })`napex\game_studio : $gs"
+          $diag = @'
+          import importlib, sys, traceback
+          print("python", sys.version.split()[0], sys.executable)
+          import apex
+          print("apex", apex.__file__)
+          for name in ("apex.game_studio", "apex.game_studio.delegation", "jsonschema", "PIL", "psutil", "llama_cpp"):
+              try:
+                  module = importlib.import_module(name)
+                  print("OK", name, getattr(module, "__file__", ""))
+              except BaseException as exc:
+                  print("FAIL", name, type(exc).__name__, getattr(exc, "name", ""), exc)
+                  traceback.print_exc(limit=8, file=sys.stdout)
+          '@
+          $diag | Out-File -Encoding utf8 "$evidence\import_check.py"
+          if ($py) {
+            $out = & $py.FullName -X utf8 "$evidence\import_check.py" 2>&1 | ForEach-Object { "$_" }
+            Note notice 'Imports dans APEX installé' ($out -join "`n")
+          }
+          # Accélération GPU facultative : tout ce qui se vérifie sans GPU, par le Python et le code d'APEX installés
+          # (roues figées, choix de la variante, installation à part par la commande exacte d'APEX, sonde). Dossier
+          # jetable : rien n'est installé chez APEX. Seul le PC de l'utilisateur, avec son GPU, peut aller plus loin.
+          $gpuCheck = 1
+          if ($py) {
+            $lines = & $py.FullName -P "$tree/setup/packaging/windows/ci/gpu_overlay_check.py" --out $evidence --work "$env:RUNNER_TEMP\gpu-check" 2>&1 | ForEach-Object { "$_" }
+            $gpuCheck = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Accélération GPU sans GPU (code $gpuCheck)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|VERDICT)' }) -join "`n")
+          }
+          Remove-Item -Recurse -Force "$env:RUNNER_TEMP\gpu-check" -ErrorAction SilentlyContinue
+          $model = Panel '--install-model' 3600
+          if ((Panel '--start' 900) -gt 1) {
+            Note error 'Démarrage' ((Get-Content "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Tail 60) -join "`n")
+            exit 1
+          }
+          # Le Panel est lancé depuis le checkout (qui contient un apex\) : ce doit être l'application INSTALLÉE qui tourne.
+          $prog = Select-String -Path "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" -Pattern 'programme : ' -ErrorAction SilentlyContinue | Select-Object -Last 1
+          Note notice 'Programme exécuté par APEX' "$($prog.Line)"
+          if ("$($prog.Line)" -notmatch [regex]::Escape("$env:LOCALAPPDATA\Programs\APEX\app")) { Note error 'Programme' "APEX n'exécute pas l'application installée : $($prog.Line)"; exit 1 }
+          $assistant = RunPy 'Assistant' @("$tree/setup/packaging/windows/ci/assistant_e2e.py", 'run', '--out', $evidence, '--timeout', '2400')
+          # Le parcours 3D par l'INTERFACE, avec de vrais clics (Edge, le moteur de WebView2 ; la page que le Panel ouvre) :
+          # composants installés par leurs boutons, lancement, annulation puis reprise, aperçus, téléchargements.
+          $studioUi = 0
+          if ($request.studio_ui) {
+            $pw = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\pw").FullName
+            $env:PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1'
+            npm install --prefix $pw --no-save --no-audit --no-fund playwright@1.56.1 2>&1 | Out-Host
+            Copy-Item "$tree/setup/packaging/windows/ci/studio_ui_e2e.mjs" $pw
+            $lines = & node "$pw\studio_ui_e2e.mjs" --out $evidence --channel msedge --cancel-resume 2>&1 | ForEach-Object { "$_" }
+            $studioUi = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Parcours 3D par l'interface (code $studioUi)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|CLICK|DIALOG|MISSION|BRIEF|QUALITY|VERDICT|FAIL)' }) -join "`n")
+          }
+          $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
+          if ($request.studio_cpu) { $studioArgs += '--cpu' }
+          # Moteur du planificateur (llama-cpp-python, processeur) puis ses poids, installés comme par les boutons
+          # « Installer » de l'Atelier 3D. Les poids (5,4 Go) seulement si la demande le dit : runner jetable.
+          if ($request.studio_engine) { $studioArgs += '--install-engine' }
+          if ($request.studio_planner) { $studioArgs += '--install-planner' }
+          # Tous les prérequis fournis : une mission non livrée est un échec, plus un blocage.
+          if ($request.studio_planner -and $request.studio_blender) { $studioArgs += '--require-delivery' }
+          $studio = RunPy 'Parcours 3D' $studioArgs
+          if ($request.studio_engine -and $py) {
+            $engineCheck = @'
+          import importlib.util, sys
+          print("python", sys.version.split()[0])
+          try:
+              import llama_cpp
+              from llama_cpp import llama_cpp as low
+              print("OK llama_cpp", llama_cpp.__version__, llama_cpp.__file__)
+              print("gpu_offload", bool(low.llama_supports_gpu_offload()))
+              print("server", importlib.util.find_spec("llama_cpp.server") is not None)
+          except BaseException as exc:
+              print("FAIL llama_cpp", type(exc).__name__, exc)
+          try:  # ce que lance le planificateur : fastapi, sse-starlette, starlette-context, pydantic-settings
+              import llama_cpp.server.app
+              print("OK llama_cpp.server.app")
+          except BaseException as exc:
+              print("FAIL llama_cpp.server.app", type(exc).__name__, exc)
+          '@
+            $engineCheck | Out-File -Encoding utf8 "$evidence\engine_check.py"
+            $out = & $py.FullName -P -X utf8 "$evidence\engine_check.py" 2>&1 | ForEach-Object { "$_" }
+            Note notice 'Moteur du planificateur dans APEX installé' ($out -join "`n")
+          }
+          Panel '--stop' 300 | Out-Null
+          # Partage du GPU (Cerveau sur CUDA simulé, verrous Windows réels) : le vrai bail des étapes de Game Studio
+          # n'est obtenu qu'après le prêt fait au clic, et le GPU revient au Cerveau. APEX arrêté, profil jetable.
+          $leaseCheck = 1
+          if ($py) {
+            $lines = & $py.FullName -P -X utf8 "$tree/setup/packaging/windows/ci/lease_check.py" 2>&1 | ForEach-Object { "$_" }
+            $leaseCheck = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Partage du GPU avec Game Studio (code $leaseCheck)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|VERDICT)' }) -join "`n")
+          }
+          Copy-Item "$env:LOCALAPPDATA\APEX\.apex\runtime\launch.log" "$evidence\launch.log" -ErrorAction SilentlyContinue
+          $u = Start-Process "$env:LOCALAPPDATA\Programs\APEX\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          Start-Sleep -Seconds 5
+          $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
+          Note notice 'Désinstallation' "code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
+          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio ; parcours 3D par l'interface $studioUi ; partage du GPU $leaseCheck"
+          if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
+          if ($assistant -eq 1 -or $studio -eq 1 -or $studioUi -eq 1 -or $gpuCheck -ne 0 -or $leaseCheck -eq 1) { exit 1 }
+          if ($assistant -eq 3 -or $studio -eq 3 -or $studioUi -eq 3 -or $model -ne 0) { exit 3 }
+      # L'installateur de QUALIFICATION, pour l'essayer sur le PC de l'utilisateur : un artefact de ce run (connexion
+      # GitHub requise), jamais une release. Il s'annonce « 0.6.0 » ; son contenu exact est dans manifest.json.
+      - name: Name the qualification installer
+        if: always()
+        shell: bash
+        run: |
+          [[ -f "$RUNNER_TEMP/release/manifest.json" ]] || exit 0
+          short=$(git -C "$TREE" rev-parse --short=12 HEAD)
+          mkdir -p "$RUNNER_TEMP/candidate"
+          for f in "$RUNNER_TEMP"/release/APEX-Setup-x64-v*.exe; do
+            name="$(basename "$f" .exe)-candidate-$short.exe"
+            cp "$f" "$RUNNER_TEMP/candidate/$name"
+            (cd "$RUNNER_TEMP/candidate" && sha256sum "$name" > "$name.sha256")
+          done
+          cp "$RUNNER_TEMP/release/manifest.json" "$RUNNER_TEMP/rehearsal.md" "$RUNNER_TEMP/candidate/"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: apex-qualification-installer
+          path: ${{ runner.temp }}/candidate
+          if-no-files-found: ignore
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-candidate-evidence
+          path: |
+            ${{ runner.temp }}/rehearsal.md
+            ${{ runner.temp }}/evidence
+            ${{ runner.temp }}/release/manifest.json
+            ${{ runner.temp }}/release/build.log

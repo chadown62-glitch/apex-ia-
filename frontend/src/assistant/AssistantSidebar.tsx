@@ -21,7 +21,7 @@ import {
 } from "./Icons";
 import { ProjectForm } from "./ProjectForm";
 
-const MODE_LABEL: Record<string, string> = { normal: "Normal", code: "Code", design: "Design", finance: "Finance" };
+const MODE_LABEL: Record<string, string> = { normal: "Normal", code: "Code", design: "Design", finance: "Finance", "3d": "3D" };
 
 function ConversationLink({ conversation, onNavigate }: { conversation: Conversation; onNavigate: () => void }) {
   return (

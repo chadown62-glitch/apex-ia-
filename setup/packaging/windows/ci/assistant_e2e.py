@@ -204,6 +204,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", default=".")
     parser.add_argument("--timeout", type=float, default=1800.0, help="délai maximal d'un tour (s) ; CPU sans GPU : plusieurs minutes")
     args = parser.parse_args(argv)
+    # Sortie UTF-8 quelle que soit la page de codes de la console (cp1252 sous Windows) : le signe moins U+2212 du résultat de
+    # finance.loan faisait planter l'affichage de la vérification A3 (constaté le 17/10/2026, run 38986394260).
+    sys.stdout.reconfigure(encoding="utf-8", errors="backslashreplace")  # type: ignore[union-attr]
     token_file = Path(args.home).expanduser() / ".apex" / "api-token"
     if not token_file.is_file():
         print(f"BLOCKED jeton introuvable : {token_file} (APEX n'a jamais démarré ?)")
@@ -213,9 +216,10 @@ def main(argv: list[str] | None = None) -> int:
     api = Api(args.base, token_file.read_text(encoding="utf-8").strip())
     try:
         return run(api, out, args.timeout) if args.phase == "run" else verify(api, out)
-    except (RuntimeError, TimeoutError, urllib.error.URLError) as exc:
-        print(f"FAIL {exc}")
-        (out / f"assistant-{args.phase}-error.txt").write_text(str(exc), encoding="utf-8")
+    except Exception as exc:  # un défaut du script de test ne se confond jamais avec un verdict sur APEX
+        reason = f"{exc.__class__.__name__}: {exc}"
+        print(f"FAIL {reason}")
+        (out / f"assistant-{args.phase}-error.txt").write_text(reason, encoding="utf-8")
         return FAIL
 
 

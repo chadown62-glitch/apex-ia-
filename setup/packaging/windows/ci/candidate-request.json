@@ -1,0 +1,22 @@
+{
+  "about": "Demande d'exécution du workflow windows-candidate (un commit qui modifie ce fichier la déclenche). L'ordre est celui de docs/REUNION_BRANCHES.md §3 : fusions propres seulement. Rien n'est poussé.",
+  "order": [
+    "claude/apex-official-development-4kao8t",
+    "agent/codex/18-game-studio-integration",
+    "agent/codex/20-game-studio-multi-agent",
+    "agent/codex/23-game-studio-planning",
+    "agent/codex/25-game-studio-candidate",
+    "agent/codex/28-first-windows-creation",
+    "agent/codex/30-qwen-first-creation",
+    "agent/codex/4-inference-diagnostics",
+    "agent/codex/8-project-orchestrator",
+    "agent/codex/10-game-engineer"
+  ],
+  "studio_cpu": true,
+  "attempt": 10,
+  "why": "même pile que la tentative 9 (Codex #31 à 550b347), avec le travail « 3D haut de gamme » de Claude (1ab3f8a) : le brief de la demande doit s'afficher AVANT le clic (« Ce que Game Studio fera de votre demande ») ; après la livraison, « Qualité de cette création » doit montrer les versions, la portée du juge et les mesures des rendus réels, puis un avis d'ESSAI (marqué comme tel, ce runner est jetable) est enregistré par le formulaire et relu par l'API. Le parcours validé (clics, annulation, reprise, aperçus, .blend et .glb vérifiés, seconde mission par l'API) doit rester vert. Poids et Blender sur ce runner jetable seulement, jamais sur le PC de l'utilisateur",
+  "studio_engine": true,
+  "studio_planner": true,
+  "studio_blender": true,
+  "studio_ui": true
+}

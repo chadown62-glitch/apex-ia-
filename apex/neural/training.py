@@ -97,9 +97,51 @@ class StepResult:
     lr: float
 
 
+#: Le bfloat16 n'est gardé sur CPU que s'il est NETTEMENT plus rapide (au moins 10 %) : sous une charge
+#: concurrente, deux mesures proches ne disent rien (le 12/10/2026, 246 ms contre 241 ms sous charge avaient
+#: fait choisir le bfloat16, en réalité 2,4 fois plus lent sur ce processeur).
+CPU_BF16_MIN_GAIN = 0.9
+
+
+def cpu_bf16_timings(
+    width: int = 384, rows: int = 2048, repeats: int = 4, rounds: int = 5
+) -> tuple[float, float]:
+    """(secondes en float32, secondes en bfloat16) pour un même calcul avant/arrière d'une couche linéaire,
+    MESURÉS sur ce processeur. Les deux modes sont mesurés en alternance, plusieurs fois, et le MEILLEUR
+    temps de chacun est gardé (la charge d'autres processus ne fait que ralentir). Sans instructions
+    bfloat16 natives (AVX512-BF16, AMX), le bfloat16 est émulé : mesuré 2,4 à 3,4 fois plus lent que le
+    float32 le 12/10/2026 (Xeon avec AVX-512 sans BF16)."""
+    import time
+
+    layer = nn.Linear(width, width * 2)
+    x = torch.randn(rows, width)
+
+    def context(amp: bool) -> Any:
+        return torch.autocast("cpu", dtype=torch.bfloat16) if amp else nullcontext()
+
+    for amp in (False, True):
+        with context(amp):
+            layer(x).sum().backward()  # préchauffage (choix des noyaux)
+    best = {False: float("inf"), True: float("inf")}
+    for _ in range(rounds):
+        for amp in (False, True):
+            started = time.perf_counter()
+            for _ in range(repeats):
+                with context(amp):
+                    layer(x).sum().backward()
+            best[amp] = min(best[amp], time.perf_counter() - started)
+    return best[False], best[True]
+
+
 class TrainingEngine:
-    def __init__(self, model: ApexLM, config: TrainingConfig, *, pad_id: int | None = None,
-                 compile_model: bool = False) -> None:
+    def __init__(
+        self,
+        model: ApexLM,
+        config: TrainingConfig,
+        *,
+        pad_id: int | None = None,
+        compile_model: bool = False,
+    ) -> None:
         self.model = model
         self.config = config
         self.pad_id = pad_id
@@ -124,6 +166,16 @@ class TrainingEngine:
         amp_dtype = torch.bfloat16 if bf16 else torch.float16
         self._amp = config.mixed_precision
         self._amp_dtype = amp_dtype
+        #: Choix de précision sur CPU, mesuré (jamais supposé) : le bfloat16 n'est gardé que s'il est plus
+        #: rapide.
+        self.precision_note: str | None = None
+        if self._amp and self.device.type == "cpu":
+            fp32_s, bf16_s = cpu_bf16_timings()
+            self._amp = bf16_s < fp32_s * CPU_BF16_MIN_GAIN
+            self.precision_note = (
+                f"{'bfloat16' if self._amp else 'float32'} sur ce processeur (mesuré : float32 "
+                f"{fp32_s * 1000:.0f} ms, bfloat16 {bf16_s * 1000:.0f} ms)"
+            )
         self._scaler = torch.amp.GradScaler(
             self.device.type, enabled=self._amp and amp_dtype is torch.float16
         )
@@ -143,6 +195,10 @@ class TrainingEngine:
         with self._autocast():
             try:
                 _, loss = self._forward_model(inputs, targets)
+            except torch.cuda.OutOfMemoryError:
+                # Mémoire insuffisante, pas un échec de compilation : l'ajustement du lot au GPU
+                # (`Run.fit_memory`) s'en charge, la version compilée est gardée.
+                raise
             except Exception as exc:
                 if self._forward_model is self.model:
                     raise

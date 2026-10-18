@@ -43,8 +43,31 @@ log "dates des fichiers publiés ramenées à SOURCE_DATE_EPOCH=$SOURCE_DATE_EPO
 #     de travail seulement s'il a des modifications non commitées — le manifeste le dit), vérifié : aucune fuite
 #     de l'extension Recherche, aucun module importé absent. Plus l'interface web reconstruite (frontend/dist
 #     n'est pas versionné) et la description figée du runtime (Python par empreinte, bibliothèques par empreintes).
-PY="$REPO_ROOT/.venv/bin/python"; [[ -x "$PY" ]] || PY=python3
+#     Le contrôle anti-fuite IMPORTE chaque module de l'artefact : son Python doit avoir les bibliothèques du
+#     runtime. APEX_BUILD_PYTHON l'impose ; sinon le .venv du dépôt (Linux ou Windows) ; sinon python3.
+PY="${APEX_BUILD_PYTHON:-}"
+if [[ -z "$PY" ]]; then
+  for candidate in "$REPO_ROOT/.venv/bin/python" "$REPO_ROOT/.venv/Scripts/python.exe"; do
+    if [[ -x "$candidate" ]]; then PY="$candidate"; break; fi
+  done
+fi
+PY="${PY:-python3}"
 APP_DIR="$OUT/app"
+# Une version antérieure au mode Windows natif (0.2.x, reconstruite pour le test de mise à jour) n'a ni
+# description du runtime ni runtime_build : son installateur n'embarque pas d'application Python.
+NATIVE_APP=true
+[[ -f "$SCRIPT_DIR/runtime/python-runtime.json" && -d "$REPO_ROOT/runtime_build" ]] || NATIVE_APP=false
+if [[ "$NATIVE_APP" == true ]]; then
+# Échec explicite AVANT de construire : sans ses bibliothèques, la vérification échouait plus loin sur un
+# « No module named … » (constaté le 16/10/2026 : la CI Windows était rouge depuis 2a38110 pour cette raison,
+# son Python ne les avait pas).
+missing=$("$PY" -c "import importlib.util as u; print(' '.join(m for m in ('fastapi', 'pydantic', 'sqlalchemy', 'yaml', 'uvicorn', 'alembic') if u.find_spec(m) is None))")
+if [[ -n "$missing" ]]; then
+  log "ERREUR : le Python du contrôle anti-fuite ($PY) n'a pas les bibliothèques du runtime : $missing"
+  log "  remède (Windows, Python 3.12) : $PY -m pip install --require-hashes --only-binary=:all: --no-deps -r setup/packaging/runtime/requirements-windows.lock"
+  log "  ou APEX_BUILD_PYTHON=<Python d'un environnement complet>"
+  exit 1
+fi
 if [[ "$DIRTY" == "true" ]]; then RT_SOURCE=(--source worktree); else RT_SOURCE=(--source commit --commit "$COMMIT"); fi
 (cd "$REPO_ROOT" && "$PY" -m runtime_build.build "${RT_SOURCE[@]}" --out "$APP_DIR")
 log "interface web : npm ci + npm run build (frontend/)"
@@ -54,10 +77,27 @@ cp -r "$REPO_ROOT/frontend/dist" "$APP_DIR/frontend_dist"
 [[ -f "$APP_DIR/frontend_dist/index.html" ]] || { log "ERREUR : interface web non construite"; exit 1; }
 mkdir -p "$APP_DIR/runtime"
 cp "$SCRIPT_DIR/runtime/python-runtime.json" "$SCRIPT_DIR/runtime/requirements-windows.lock" "$APP_DIR/runtime/"
+# Moteur du planificateur de Game Studio (llama-cpp-python, processeur) : liste figée FACULTATIVE de Game Studio,
+# installée seulement sur un geste de l'utilisateur (apex/assistant/studio_setup.py), jamais par « Préparer APEX ».
+if [[ -f "$SCRIPT_DIR/runtime/requirements-planner-cpu-windows.lock" ]]; then
+  cp "$SCRIPT_DIR/runtime/requirements-planner-cpu-windows.lock" "$APP_DIR/runtime/"
+  log "moteur du planificateur de Game Studio : liste figée facultative embarquée"
+fi
+# Accélération GPU FACULTATIVE : seulement sa description et ses listes figées (quelques Ko) — jamais torch CUDA
+# lui-même (~2,5 Go), installé à part, sur demande, par `python -m apex.standalone gpu install`.
+mkdir -p "$APP_DIR/runtime/gpu"
+cp "$SCRIPT_DIR/runtime/gpu/gpu-runtime.json" "$APP_DIR/runtime/gpu/"
+find "$SCRIPT_DIR/runtime/gpu" -maxdepth 1 -name 'torch-cu*.lock' -exec cp {} "$APP_DIR/runtime/gpu/" \;
+log "accélération GPU facultative : $(find "$APP_DIR/runtime/gpu" -name 'torch-cu*.lock' | wc -l) liste(s) figée(s) PyTorch CUDA"
 (cd "$REPO_ROOT" && "$PY" -m runtime_build.verify "$APP_DIR") || { log "ERREUR : artefact Runtime refusé par runtime_build.verify"; exit 1; }
 find "$APP_DIR" -name __pycache__ -prune -exec rm -rf {} +
 find "$APP_DIR" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 log "application APEX : $(du -sh "$APP_DIR" | cut -f1) ($(find "$APP_DIR" -type f | wc -l) fichiers), artefact $(python3 -c "import json,sys; m=json.load(open(sys.argv[1])); print('release ' + m['source_commit'][:12] if m.get('release') else 'VALIDATION (arbre de travail)')" "$APP_DIR/RUNTIME_BUILD_MANIFEST.json")"
+APP_DEFINE=("/DAppDir=$APP_DIR")
+else
+  log "version antérieure au mode Windows natif (ni runtime/python-runtime.json ni runtime_build) : installateur sans application Python"
+  APP_DEFINE=()
+fi
 
 # 2. Compilateur
 if [[ -n "${ISCC:-}" ]]; then
@@ -81,7 +121,8 @@ fi
 log "compilateur : $COMPILER"
 
 # 3. Installateur
-"${ISCC_CMD[@]}" /Qp "/DApexVersion=$VERSION" "/DPublishDir=$(to_win "$PUBLISH_DIR")" "/DAppDir=$(to_win "$APP_DIR")" \
+if [[ ${#APP_DEFINE[@]} -gt 0 ]]; then APP_DEFINE=("/DAppDir=$(to_win "$APP_DIR")"); fi
+"${ISCC_CMD[@]}" /Qp "/DApexVersion=$VERSION" "/DPublishDir=$(to_win "$PUBLISH_DIR")" "${APP_DEFINE[@]}" \
   "/DIconFile=$(to_win "$SETUP_ROOT/src/ApexSetup.Dashboard/Assets/apex.ico")" \
   "/O$(to_win "$OUT")" "$(to_win "$SCRIPT_DIR/ApexSetup.iss")"
 INSTALLER="$OUT/APEX-Setup-x64-v${VERSION}.exe"
@@ -115,15 +156,18 @@ manifest = {
         "files": len(files),
         "bytes": sum(os.path.getsize(os.path.join(publish, f)) for f in files),
     },
-    "application": {
+    "application": None if not os.path.isdir(app) else {
         "runtime_artifact": {k: json.load(open(os.path.join(app, "RUNTIME_BUILD_MANIFEST.json"))).get(k)
                              for k in ("release", "source", "source_commit", "head_commit", "content_hash_sha256")},
         "python_runtime": json.load(open(os.path.join(app, "runtime", "python-runtime.json")))["python"],
         "requirements_lock_sha256": sha(os.path.join(app, "runtime", "requirements-windows.lock")),
-        # Cerveau APEX servi (0.4.1) : version promue du registre, poids vérifiés à chaque chargement.
-        "brain": {k: json.load(open(os.path.join(app, "brain", "apex-brain-v1", "provenance.json"))).get(k)
-                  for k in ("name", "weights_sha256", "model_fingerprint", "parameters")}
-                 if os.path.isfile(os.path.join(app, "brain", "apex-brain-v1", "provenance.json")) else None,
+        # Cerveaux APEX embarqués (0.4.1 : v1 ; 0.5.0 : v2 conversationnel, servi en priorité) ; poids
+        # vérifiés à chaque chargement.
+        "brains": [{k: json.load(open(os.path.join(app, "brain", name, "provenance.json"))).get(k)
+                    for k in ("name", "weights_file", "quantization", "weights_sha256", "model_fingerprint",
+                              "parameters")}
+                   for name in ("apex-brain-v2", "apex-brain-v1")
+                   if os.path.isfile(os.path.join(app, "brain", name, "provenance.json"))],
         "files": sum(len(ns) for _, _, ns in os.walk(app)),
     },
     "install": {"scope": "utilisateur courant, sans administrateur", "directory": "%LOCALAPPDATA%\\Programs\\APEX",

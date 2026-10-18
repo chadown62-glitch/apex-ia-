@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 
 class _Section(BaseModel):
@@ -24,10 +24,15 @@ class Appearance(_Section):
 
 
 class ModelSettings(_Section):
-    #: Moteur de réponse (`apex.assistant.engines`) : `auto` (Ollama puis moteur intégré, jamais le
-    #: Cerveau), `ollama`, `integrated` (Qwen 1.5B exécuté par APEX) ou `brain` (Cerveau APEX,
-    #: expérimental).
+    #: Moteur de réponse (`apex.assistant.engines`) : `auto` (le Cerveau APEX s'il sait converser, puis
+    #: Ollama et le moteur intégré), `ollama`, `integrated` (Qwen 1.5B exécuté par APEX) ou `brain` (Cerveau
+    #: APEX).
     engine: Literal["auto", "ollama", "integrated", "brain"] = "auto"
+    #: Mode automatique : une réponse du Cerveau dont la confiance MESURÉE (probabilités de ses propres
+    #: jetons) est sous ce seuil est confiée au moteur suivant ; si aucun autre ne répond, la réponse du
+    #: Cerveau est gardée et c'est dit. 0 : jamais. Seuil choisi sur 1 220 exercices jamais vus
+    #: (docs/CERVEAU_APEX_V2.md). Sans effet quand le moteur « Cerveau » est choisi explicitement.
+    brain_delegate_below: float = Field(default=0.97, ge=0.0, le=1.0)
     #: `auto` : le routage d'APEX choisit parmi les modèles du moteur ; sinon l'identifiant d'un modèle.
     preferred_model: str = Field(default="auto", max_length=200)
     temperature: float = Field(default=0.4, ge=0.0, le=1.5)
@@ -41,7 +46,7 @@ class RuntimeSettings(_Section):
 
 
 class Behavior(_Section):
-    default_mode: Literal["normal", "code", "design", "finance"] = "normal"
+    default_mode: Literal["normal", "code", "design", "finance", "3d"] = "normal"
     use_memory: bool = True
     history_chars: int = Field(default=6000, ge=1000, le=24000)
 
@@ -49,7 +54,21 @@ class Behavior(_Section):
 class ToolSettings(_Section):
     workspace_write: bool = True
     code_execution: bool = True
-    max_tool_steps: int = Field(default=6, ge=1, le=12)
+    max_tool_steps: int = Field(default=6, ge=1, le=40)
+    #: OBSOLÈTE, sans effet : gardé pour relire les paramètres déjà enregistrés. Lancer ou annuler une
+    #: mission Game Studio est un acte HUMAIN (`PolicyEngine`, CREATE_MISSION / CANCEL_MISSION) : le Cerveau
+    #: propose, l'utilisateur lance d'un clic. Toujours relu `False`, quoi qu'on enregistre. Une exécution
+    #: autonome viendra avec ses propres autorisations explicites et budgets, jamais par ce champ.
+    game_studio_missions: bool = False
+    #: Calcul des missions lancées d'un clic : `auto` (GPU CUDA, refusé par Game Studio sans GPU) ou
+    #: `cpu` (choisi explicitement, plus lent). Jamais un repli implicite sur le processeur ; le modèle ne
+    #: peut pas le changer.
+    game_studio_compute: Literal["auto", "cpu"] = "auto"
+
+    @field_validator("game_studio_missions")
+    @classmethod
+    def _never_autonomous(cls, _value: bool) -> bool:
+        return False
 
 
 class Privacy(_Section):

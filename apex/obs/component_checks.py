@@ -278,6 +278,247 @@ def check_brain(workdir: str | None = None) -> ComponentStatus:
     return ComponentStatus("brain", ERROR, f"champion NON attesté : {problem}"[:300])
 
 
+# -- Composants de l'application : Cerveau, moteur intégré, GPU, Game Studio ------------------------------
+#
+# Chacun vient d'une vraie sonde (`detect()` du moteur, sonde de Game Studio `capabilities.probe()`,
+# `blender --version`, `nvidia-smi`, activation GPU mesurée au démarrage). Ils sont FACULTATIFS : rapportés,
+# jamais comptés dans le verdict global (APEX répond sans eux), et un composant présent mais jamais qualifié
+# sur ce PC (aucune mission réussie, par exemple) est « degraded », jamais « ready ».
+
+#: Résultats des sondes coûteuses, gardés ce temps-là (la sonde de Game Studio importe torch).
+PROBE_CACHE_S = 60.0
+_cache: dict[str, tuple[float, Any]] = {}
+_cache_lock = threading.Lock()
+
+
+def _cached(key: str, ttl_s: float, compute: Callable[[], Any],
+            now: Callable[[], float] = time.monotonic) -> Any:
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit is not None and now() - hit[0] < ttl_s:
+            return hit[1]
+    value = compute()
+    with _cache_lock:
+        _cache[key] = (now(), value)
+    return value
+
+
+def check_apex_brain() -> ComponentStatus:
+    """Le Cerveau APEX (ApexLM) servi : poids présents et intègres, conversationnel (`detect()`)."""
+    try:
+        from apex.assistant.engines import brain_candidate
+        from apex.models.provider import get_default_provider
+
+        report = get_default_provider(brain_candidate().endpoint).detect()
+    except Exception as exc:
+        return ComponentStatus("apex_brain", ERROR, f"{exc.__class__.__name__}: {exc}"[:300])
+    if not report.is_available:
+        return ComponentStatus("apex_brain", OFFLINE, report.detail[:300])
+    if not report.facts.get("conversational"):
+        return ComponentStatus("apex_brain", DEGRADED, report.detail[:300])
+    return ComponentStatus("apex_brain", READY, report.detail[:300])
+
+
+def check_native_model(config: Any = None) -> ComponentStatus:
+    """Le moteur intégré (backend `transformers`, en processus) : poids du modèle par défaut présents."""
+    try:
+        from apex.config.loader import load_config
+        from apex.models.provider import get_default_provider
+
+        config = config if config is not None else load_config()
+        endpoints = [e for e in config.endpoints if e.runtime == "transformers" and e.enabled]
+        if not endpoints:
+            return ComponentStatus("native_model", OFFLINE, "aucun moteur intégré configuré")
+        reports = [(e, get_default_provider(e).detect()) for e in endpoints]
+    except Exception as exc:
+        return ComponentStatus("native_model", ERROR, f"{exc.__class__.__name__}: {exc}"[:300])
+    ready = [e.served_model for e, r in reports if r.is_available]
+    if ready:
+        return ComponentStatus("native_model", READY, f"poids présents : {', '.join(ready)}"[:300])
+    endpoint, report = reports[0]
+    return ComponentStatus("native_model", OFFLINE, (
+        f"{endpoint.served_model} : {report.detail} — « Installer le modèle » dans le Panel")[:300])
+
+
+def _nvidia() -> dict[str, Any]:
+    from apex.standalone import gpu
+
+    driver: dict[str, Any] = _cached("nvidia", 300.0, gpu.detect_driver)
+    return driver
+
+
+def check_gpu() -> ComponentStatus:
+    """GPU CUDA : ce que le dernier démarrage a MESURÉ (surcouche facultative, `apex.standalone.gpu`), ce
+    que torch voit dans ce processus, et le pilote NVIDIA détecté. Jamais « prêt » sans mesure positive."""
+    import sys
+
+    try:
+        from apex.standalone import gpu
+
+        activation = gpu.last_activation() or {}
+        torch = sys.modules.get("torch")  # jamais importé pour cette sonde : le backend l'a déjà chargé
+        cuda = bool(torch is not None and torch.cuda.is_available())
+        name = torch.cuda.get_device_name(0) if cuda and torch is not None else None
+        state = activation.get("state")
+        if cuda:
+            how = (f"accélération GPU active ({activation.get('variant')})" if state == "active"
+                   else "torch CUDA")
+            return ComponentStatus("gpu", READY, f"{name} — {how}, sondé au démarrage"[:300])
+        if state in ("inactive", "failed"):
+            why = f"calcul sur le processeur : {activation.get('reason')}"
+            return ComponentStatus("gpu", DEGRADED, why[:300])
+        if state == "disabled":
+            return ComponentStatus("gpu", OFFLINE, "accélération GPU désactivée : calcul sur le processeur")
+        driver = _nvidia()
+        if driver.get("found") and driver.get("gpus"):
+            card = driver["gpus"][0]
+            return ComponentStatus("gpu", OFFLINE, (
+                f"GPU détecté : {card['name']} (pilote {card.get('driver_version')}, CUDA "
+                f"{driver.get('cuda_driver') or '?'}) — accélération GPU non installée : « Accélération "
+                "GPU (facultatif) » dans le Panel")[:300])
+        why = f"calcul sur le processeur : {driver.get('reason') or 'aucun GPU'}"
+        return ComponentStatus("gpu", OFFLINE, why[:300])
+    except Exception as exc:
+        return ComponentStatus("gpu", ERROR, f"{exc.__class__.__name__}: {exc}"[:300])
+
+
+def _game_studio() -> tuple[str | None, dict[str, Any]]:
+    """(raison de son absence, rapport de SA sonde) — Game Studio appartient à Codex : lu, jamais
+    réimplémenté."""
+
+    def compute() -> tuple[str | None, dict[str, Any]]:
+        from apex.assistant.game_studio import _probe
+        from apex.assistant.tools import register_game_studio
+        from apex.tools.engine import ToolRegistry
+
+        absent = register_game_studio(ToolRegistry())
+        if absent is not None:
+            return absent, {}
+        try:
+            return None, _probe(None) or {}
+        except Exception as exc:
+            return f"la sonde de Game Studio a échoué : {exc.__class__.__name__}: {exc}"[:300], {}
+
+    result: tuple[str | None, dict[str, Any]] = _cached("game_studio", PROBE_CACHE_S, compute)
+    return result
+
+
+_VALIDATED = "available_validated"
+_UNQUALIFIED = "available_unqualified"
+_FAMILIES = (("vehicle_blender", "véhicule"), ("building_blender", "bâtiment"), ("chair_blender", "objet"))
+
+
+def _validated(report: dict[str, Any]) -> list[str]:
+    return [label for key, label in _FAMILIES if (report.get(key) or {}).get("status") == _VALIDATED]
+
+
+def _missing(report: dict[str, Any]) -> list[str]:
+    from apex.assistant.game_studio import missing_from
+
+    return missing_from(report, "cpu")  # le calcul choisi n'entre pas ici : seulement ce qui manque
+
+
+def check_game_studio() -> ComponentStatus:
+    absent, report = _game_studio()
+    if absent is not None:
+        return ComponentStatus("game_studio", OFFLINE, absent)
+    status = (report.get("environment") or {}).get("status")
+    validated = _validated(report)
+    if validated:
+        return ComponentStatus("game_studio", READY, f"mission réussie sur ce PC ({', '.join(validated)})")
+    missing = _missing(report)
+    if status == _UNQUALIFIED and not missing:
+        return ComponentStatus("game_studio", DEGRADED,
+                               "dépendances présentes ; aucune mission encore réussie sur ce PC (non "
+                               "qualifié)")
+    return ComponentStatus("game_studio", OFFLINE, ("manque : " + " ".join(missing))[:600])
+
+
+def check_planner() -> ComponentStatus:
+    absent, report = _game_studio()
+    if absent is not None:
+        return ComponentStatus("planner", OFFLINE, absent)
+    # Les missions proposées par le Cerveau passent par la planification dynamique de Game Studio, qui exige
+    # le Qwen2.5-Coder-7B épinglé ; le moteur intégré n'y sert pas (seulement aux créations d'une famille).
+    vehicle = report.get("vehicle_blender") or {}
+    pinned = bool(vehicle.get("coder_manifest_present") and vehicle.get("llama_cpp_present"))
+    native = (" ; le moteur intégré, présent, ne sert qu'aux créations d'une famille depuis la page Game "
+              "Studio") if vehicle.get("apex_native_coder_present") else ""
+    if not pinned:
+        parts = []
+        if not vehicle.get("coder_manifest_present"):
+            parts.append("Qwen2.5-Coder-7B épinglé absent (APEX_HOME/.apex/game-studio/coder-model.json)")
+        if not vehicle.get("llama_cpp_present"):
+            parts.append("llama-cpp-python absent")
+        detail = "planificateur des missions absent : " + " ; ".join(parts) + native
+        return ComponentStatus("planner", OFFLINE, detail[:600])
+    if _validated(report):
+        return ComponentStatus("planner", READY, "Qwen2.5-Coder-7B épinglé ; missions réussies sur ce PC")
+    return ComponentStatus("planner", DEGRADED, "Qwen2.5-Coder-7B épinglé présent ; non qualifié (aucune "
+                           "mission réussie sur ce PC)")
+
+
+def _blender_version(path: str) -> str | None:
+    import subprocess
+
+    def compute() -> str | None:
+        try:
+            done = subprocess.run([path, "--background", "--version"],  # noqa: S603 — Blender du PATH
+                                  capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            return None
+        first = next((line.strip() for line in (done.stdout or "").splitlines() if line.strip()), "")
+        return first if done.returncode == 0 and first.lower().startswith("blender") else None
+
+    result: str | None = _cached(f"blender:{path}", 600.0, compute)
+    return result
+
+
+def check_blender() -> ComponentStatus:
+    import shutil
+
+    _, report = _game_studio()
+    vehicle = report.get("vehicle_blender") or {}
+    path = vehicle.get("blender") or shutil.which("blender")
+    if not path:
+        # Découverte de Game Studio (APEX_BLENDER_EXECUTABLE, PATH, Program Files) quand il la publie.
+        where = ("(APEX_BLENDER_EXECUTABLE, PATH, Program Files)" if "blender_discovery" in vehicle
+                 else "dans le PATH")
+        return ComponentStatus("blender", OFFLINE, f"Blender introuvable {where} (requis par Game Studio)")
+    version = _blender_version(str(path))
+    if version is None:
+        return ComponentStatus("blender", ERROR, f"{path} ne répond pas à « --version »")
+    return ComponentStatus("blender", READY, f"{version} ({path})")
+
+
+def check_game_graphics() -> ComponentStatus:
+    absent, report = _game_studio()
+    if absent is not None:
+        return ComponentStatus("game_graphics", OFFLINE, absent)
+    validated = _validated(report)
+    if validated:
+        return ComponentStatus("game_graphics", READY, f"jugé réussi sur ce PC : {', '.join(validated)}")
+    if any((report.get(key) or {}).get("status") == _UNQUALIFIED for key, _ in _FAMILIES):
+        return ComponentStatus("game_graphics", DEGRADED,
+                               "véhicule, bâtiment, objet : prêts à essayer, non qualifiés sur ce PC")
+    return ComponentStatus("game_graphics", OFFLINE, ("manque : " + " ".join(_missing(report)))[:600])
+
+
+def check_game_engineer() -> ComponentStatus:
+    from importlib.util import find_spec
+
+    absent, report = _game_studio()
+    if absent is not None:
+        return ComponentStatus("game_engineer", OFFLINE, absent)
+    if find_spec("jsonschema") is None:
+        return ComponentStatus("game_engineer", OFFLINE,
+                               "bibliothèque jsonschema absente (dépendance de Game Studio non déclarée)")
+    engineer = report.get("game_engineer") or {}
+    state = READY if engineer.get("status") == _VALIDATED else DEGRADED
+    detail = str(engineer.get("reason") or engineer.get("status"))
+    return ComponentStatus("game_engineer", state, detail[:300])
+
+
 CHECKS: dict[str, Callable[[], ComponentStatus]] = {
     "database": check_database,
     "redis": check_redis,
@@ -285,18 +526,31 @@ CHECKS: dict[str, Callable[[], ComponentStatus]] = {
     "models": check_models,
     "sandbox": check_sandbox,
     "brain": check_brain,
+    "apex_brain": check_apex_brain,
+    "native_model": check_native_model,
+    "gpu": check_gpu,
+    "game_studio": check_game_studio,
+    "planner": check_planner,
+    "blender": check_blender,
+    "game_graphics": check_game_graphics,
+    "game_engineer": check_game_engineer,
 }
+
+#: Composants de l'application rapportés hors du verdict : facultatifs (APEX répond sans GPU ni Game
+#: Studio), ou déjà comptés par « models » (Cerveau APEX, moteur intégré).
+APPLICATION = frozenset({"apex_brain", "native_model", "gpu", "game_studio", "planner", "blender",
+                         "game_graphics", "game_engineer"})
 
 #: Composants rapportés mais hors du verdict global : Ollama n'est qu'un backend FACULTATIF parmi d'autres ;
 #: ce qui compte (un modèle exécutable) est mesuré par « models ». Un Ollama absent ne dégrade donc plus un
 #: APEX qui répond avec le backend natif — et un APEX sans aucun modèle reste dégradé via « models ».
-INFORMATIONAL = frozenset({"ollama"})
+INFORMATIONAL = frozenset({"ollama"}) | APPLICATION
 
 #: Profil AUTONOME (`apex.standalone`, APEX.exe) : pas de Redis (aucun service d'infrastructure, base embarquée)
 #: — le composant n'est pas rapporté du tout plutôt qu'« offline » ; le cerveau neuronal relève de la
 #: Recherche, absent de cette distribution : rapporté, hors verdict.
 STANDALONE_EXCLUDED = frozenset({"redis"})
-STANDALONE_INFORMATIONAL = frozenset({"ollama", "brain"})
+STANDALONE_INFORMATIONAL = frozenset({"ollama", "brain"}) | APPLICATION
 
 
 def profile_checks() -> dict[str, Callable[[], ComponentStatus]]:
@@ -364,7 +618,8 @@ def warm_up() -> threading.Thread:
     dépasser le budget (mesuré : 3,8 s à froid pour le cerveau, 0,03 s ensuite). N'influence aucun
     état : le résultat de ce préchauffage n'est jamais renvoyé."""
     thread = threading.Thread(
-        target=lambda: (check_sandbox(), check_brain()), name="apex-status-warmup", daemon=True
+        target=lambda: (check_sandbox(), check_brain(), _game_studio(), check_blender()),
+        name="apex-status-warmup", daemon=True,
     )
     thread.start()
     return thread

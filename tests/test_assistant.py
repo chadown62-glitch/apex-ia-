@@ -1,8 +1,9 @@
 """Assistant APEX 0.4.0 — projets, conversations, modes, paramètres, pièces jointes, tours asynchrones.
 
-Tout passe par les vrais composants (SQLite réelle, moteur d'outils, espaces de travail, routage, génération avec
-repli). Seule la GÉNÉRATION du modèle est un double de test (`_ScriptedProvider`, contrat `ModelProvider`
-respecté) : ces tests prouvent la logique d'APEX autour du modèle, jamais la qualité d'un modèle réel.
+Tout passe par les vrais composants (SQLite réelle, moteur d'outils, espaces de travail, routage, génération
+avec repli). Seule la GÉNÉRATION du modèle est un double de test (`_ScriptedProvider`, contrat
+`ModelProvider` respecté) : ces tests prouvent la logique d'APEX autour du modèle, jamais la qualité d'un
+modèle réel.
 """
 
 from __future__ import annotations
@@ -103,7 +104,8 @@ def _messages(factory, conversation_id):
     return ConversationService(factory).list_messages(conversation_id)
 
 
-# -- projets ---------------------------------------------------------------------------------------------------
+# -- projets
+# ---------------------------------------------------------------------------------------------------
 
 
 def test_projects_are_created_updated_and_deleted_with_everything_they_own(env) -> None:
@@ -146,7 +148,8 @@ def test_a_clone_can_neither_modify_nor_delete_a_project(env) -> None:
         ProjectService(env).delete(project.id, requested_by=Subject.CORE)
 
 
-# -- conversations et modes -----------------------------------------------------------------------------------
+# -- conversations et modes
+# -----------------------------------------------------------------------------------
 
 
 def test_conversations_have_a_mode_and_are_listed_by_project_or_standalone(env) -> None:
@@ -174,10 +177,12 @@ def test_modes_change_instructions_tools_and_view() -> None:
     assert "fs.write" in MODES["code"].tools and MODES["code"].view == "code"
     assert MODES["finance"].tools == ("calc.evaluate", "finance.projection", "finance.loan")
     assert MODES["design"].tools == ("color.contrast",) and "images" in " ".join(MODES["design"].limits)
-    assert len({m.instructions for m in MODES.values()}) == 4
+    assert MODES["3d"].tools[0] == "model3d.create" and MODES["3d"].view == "studio3d"
+    assert len({m.instructions for m in MODES.values()}) == len(MODES) == 5
 
 
-# -- tours ------------------------------------------------------------------------------------------------------
+# -- tours
+# ------------------------------------------------------------------------------------------------------
 
 
 def test_a_turn_sends_mode_and_project_instructions_history_and_stores_a_real_answer(env) -> None:
@@ -317,7 +322,8 @@ def test_tool_calls_are_recognised_only_when_the_reply_is_a_call() -> None:
     assert parse_tool_call('{"tool": "fs.list", "arguments": [1]}') is None
 
 
-# -- outils des modes ------------------------------------------------------------------------------------------
+# -- outils des modes
+# ------------------------------------------------------------------------------------------
 
 
 def test_calculator_tools_are_exact_and_refuse_anything_but_arithmetic() -> None:
@@ -337,7 +343,8 @@ def test_calculator_tools_are_exact_and_refuse_anything_but_arithmetic() -> None
     assert assistant_tools.contrast("#777777", "#FFFFFF")["aa_normal_text"] is False  # 4,48 : refusé AA
 
 
-# -- pièces jointes ----------------------------------------------------------------------------------------------
+# -- pièces jointes
+# ----------------------------------------------------------------------------------------------
 
 
 def test_only_real_text_attachments_are_accepted(env) -> None:
@@ -383,7 +390,8 @@ def test_an_attachment_whose_file_cannot_be_written_is_not_kept(env, monkeypatch
     assert service.list_all(project.id) == []
 
 
-# -- paramètres ------------------------------------------------------------------------------------------------
+# -- paramètres
+# ------------------------------------------------------------------------------------------------
 
 
 def test_settings_are_validated_persisted_and_applied_to_the_model_runtime(env) -> None:
@@ -418,7 +426,8 @@ def updated_at():
     return datetime.now(UTC)
 
 
-# -- runtime du modèle : mémoire et intégrité -------------------------------------------------------------------
+# -- runtime du modèle : mémoire et intégrité
+# -------------------------------------------------------------------
 
 
 def test_precision_is_chosen_from_measured_memory_and_refused_explicitly_when_too_low(tmp_path) -> None:
@@ -455,7 +464,8 @@ def test_downloaded_weights_must_match_the_published_sha256(tmp_path) -> None:
     assert not weights.exists()  # fichier différent : supprimé, jamais chargé
 
 
-# -- API --------------------------------------------------------------------------------------------------------
+# -- API
+# --------------------------------------------------------------------------------------------------------
 
 
 def test_api_full_path_project_conversation_turn_messages(env, monkeypatch, tmp_path) -> None:
@@ -625,3 +635,340 @@ def test_conversational_models_receive_the_conversation_as_structured_turns(env)
     assert second.messages == (("user", "Je m'appelle Léa."), ("assistant", "Enchanté, Léa."),
                                ("user", "Comment je m'appelle ?"))
     assert "Comment je m'appelle ?" in second.prompt and second.system
+
+
+# -- mode 3D
+# ----------------------------------------------------------------------------------------------------
+
+
+def test_3d_mode_builds_the_model_and_writes_its_files_never_overwriting_one(env) -> None:
+    from apex.assistant.workspace import conversation_workspace
+
+    _no_memory(env)
+    conversation = _conversation(env, mode="3d")
+    call = json.dumps({"tool": "model3d.create", "arguments": {"generator": "vehicle", "kind": "tank", "length": 7,
+                                                                "color": "kaki"}})
+    manager, provider = _manager(env, [call, "Char prêt.", call, "Second char prêt."])
+    _, turn = manager.submit(conversation.id, "Un char de 7 m kaki")
+    assert turn.status == "done" and "model3d.create" in provider.requests[0].system
+    output = turn.steps[0]["observation"]["output"]
+    assert output["summary"].startswith("char 7 × 3,4 × 2,4 m, 10 galets") and output["name"] == "char"
+    workspace = conversation_workspace(conversation.id, None)
+    names = {path for path, _ in workspace.files()}
+    assert {"modeles3d/char.glb", "modeles3d/char.obj", "modeles3d/char.mtl", "modeles3d/char_blender.py",
+            "modeles3d/char.png", "modeles3d/ApexCharController.cs", "modeles3d/ApexCharPawn.h",
+            "modeles3d/ApexCharPawn.cpp", "modeles3d/char_LISEZ-MOI.txt"} <= names
+    assert workspace.read_bytes("modeles3d/char.glb")[:4] == b"glTF"
+    _, second = manager.submit(conversation.id, "Encore un")
+    assert second.steps[0]["observation"]["output"]["name"] == "char-2"  # rien n'est écrasé
+    assert "modeles3d/ApexChar2Controller.cs" in {path for path, _ in workspace.files()}
+    refused = json.dumps({"tool": "model3d.create", "arguments": {"generator": "vehicle", "kind": "sword"}})
+    manager, _ = _manager(env, [refused, "Impossible."])
+    _, third = manager.submit(conversation.id, "Une épée-véhicule")
+    assert third.steps[0]["ok"] is False and "véhicule inconnu" in third.steps[0]["observation"]["error"]["message"]
+
+
+class _BrainLikeProvider(_ScriptedProvider):
+    """Comme le Cerveau APEX : sa réponse porte, dans ses mesures, les modèles 3D construits pendant la génération."""
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        result = super().generate(request)
+        calls = [{"tool": "3d", "expression": 'weapon("sword", length=1.2)', "result": "épée 1,2 m — 5 pièces"},
+                 {"tool": "3d", "expression": 'vehicle("sous-marin")', "result": "erreur : véhicule inconnu"},
+                 {"tool": "calc", "expression": "2*3", "result": "6"}]
+        return GenerationResult(text=result.text, model_used=result.model_used, tokens_prompt=result.tokens_prompt,
+                                tokens_completion=result.tokens_completion, finish_reason="stop", elapsed_s=0.01,
+                                facts={"backend": "apex_brain", "tool_calls": calls})
+
+
+@pytest.mark.parametrize("mode", ["3d", "normal"])
+def test_models_built_by_the_brain_are_written_only_when_the_turn_may_write(env, mode) -> None:
+    from apex.assistant.workspace import conversation_workspace
+
+    _no_memory(env)
+    conversation = _conversation(env, mode=mode)
+    provider = _BrainLikeProvider(["Voici l'épée."])
+    manager = TurnManager(env, provider_factory=lambda _candidate: provider,
+                          config=parse_config(copy.deepcopy(BASE_CONFIG)),
+                          sandbox_selection=lambda: _Selection(False), synchronous=True)
+    _, turn = manager.submit(conversation.id, "Une épée de 1,2 m")
+    assert turn.status == "done"
+    files = {path for path, _ in conversation_workspace(conversation.id, None).files()}
+    answer = _messages(env, conversation.id)[-1]
+    if mode == "3d":
+        assert [s["tool"] for s in turn.steps] == ["model3d.create"]  # l'erreur et le calcul ne s'écrivent pas
+        assert turn.steps[0]["source"] == "cerveau" and "modeles3d/epee.glb" in files
+    else:
+        assert turn.steps == [] and not files  # mode sans écriture : rien d'écrit…
+        assert any("pas été écrits" in note for note in answer.meta["tools_notes"])  # … et c'est dit
+
+
+class _UnsureBrainProvider(_ScriptedProvider):
+    """Premier appel : une réponse du Cerveau APEX avec sa confiance mesurée ; les appels suivants (le
+    moteur suivant du mode automatique) répondent normalement, ou échouent tous si `offline`."""
+
+    def __init__(self, replies: list[str], *, confidence: float, offline: bool = False,
+                 cannot_know: bool = False, cannot_know_kind: str | None = None) -> None:
+        super().__init__(replies)
+        self.confidence = confidence
+        self.offline = offline
+        self.cannot_know = cannot_know or cannot_know_kind is not None
+        self.cannot_know_kind = cannot_know_kind
+
+    def generate(self, request: GenerationRequest) -> GenerationResult:
+        from apex.errors import ModelProviderError
+
+        first = not self.requests
+        if not first and self.offline:
+            self.requests.append(request)
+            raise ModelProviderError("test", endpoint_url="test", detail="moteur hors ligne")
+        result = super().generate(request)
+        if not first:
+            return result
+        return GenerationResult(text=result.text, model_used=result.model_used,
+                                tokens_prompt=result.tokens_prompt,
+                                tokens_completion=result.tokens_completion,
+                                finish_reason="stop", elapsed_s=0.01,
+                                facts={"backend": "apex_brain", "confidence": self.confidence,
+                                       "cannot_know": self.cannot_know,
+                                       "cannot_know_kind": self.cannot_know_kind})
+
+
+def _brain_turn(env, provider, settings=None, question="Écris une fonction Rust qui inverse une liste.",
+                mode="normal"):
+    from apex.assistant.settings import SettingsService
+
+    _no_memory(env)
+    if settings:
+        SettingsService(env).update({"models": settings})
+    manager = TurnManager(env, provider_factory=lambda _candidate: provider,
+                          config=parse_config(copy.deepcopy(BASE_CONFIG)),
+                          sandbox_selection=lambda: _Selection(False), synchronous=True)
+    conversation = _conversation(env, mode=mode)
+    _, turn = manager.submit(conversation.id, question)
+    return turn, _messages(env, conversation.id)[-1]
+
+
+def test_an_unsure_brain_hands_the_question_to_the_next_engine_and_says_so(env) -> None:
+    provider = _UnsureBrainProvider(["réponse peu sûre", "réponse du moteur suivant"], confidence=0.62)
+    turn, answer = _brain_turn(env, provider)
+    assert turn.status == "done" and len(provider.requests) == 2
+    assert answer.content == "réponse du moteur suivant"
+    delegation = answer.meta["delegation"]
+    assert delegation["status"] == "delegated" and delegation["confidence"] == 0.62
+    assert delegation["reason"] == "low_confidence"
+    assert delegation["threshold"] == 0.97 and delegation["to"] == answer.model_id != delegation["from"]
+
+
+def test_a_brain_that_says_it_cannot_know_hands_the_question_over_even_when_confident(env) -> None:
+    """Sa phrase apprise « je n'ai pas accès à Internet… » à une question de culture générale : confiance
+    0,988 mesurée, réponse inutile ; un autre moteur peut savoir."""
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "Canberra."], confidence=0.988,
+                                    cannot_know=True)
+    _, answer = _brain_turn(env, provider)
+    assert answer.content == "Canberra." and len(provider.requests) == 2
+    assert answer.meta["delegation"]["reason"] == "cannot_know"
+    assert answer.meta["delegation"]["status"] == "delegated"
+
+
+def test_current_information_is_never_handed_to_a_model_that_cannot_know_it_either(env) -> None:
+    """Question d'actualité, et le Cerveau répond qu'il n'a pas accès au temps réel : sans outil connecté,
+    aucun autre modèle ne connaît l'actualité. Sa réponse honnête est gardée, et c'est dit."""
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "jamais demandée"], confidence=0.99,
+                                    cannot_know_kind="realtime")
+    _, answer = _brain_turn(env, provider, question="Quel temps fait-il à Lyon aujourd'hui ?")
+    assert answer.content == "Je ne peux pas le savoir." and len(provider.requests) == 1
+    assert answer.meta["delegation"]["reason"] == "current_info_no_tool"
+    assert answer.meta["delegation"]["status"] == "kept"
+
+
+def test_a_general_question_the_brain_mistook_for_current_news_still_goes_to_the_next_engine(env) -> None:
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "Canberra."], confidence=0.99,
+                                    cannot_know_kind="realtime")
+    _, answer = _brain_turn(env, provider, question="Quelle est la capitale de l'Australie ?")
+    assert answer.content == "Canberra." and answer.meta["delegation"]["reason"] == "cannot_know"
+
+
+def test_current_information_goes_to_the_next_engine_when_a_connected_tool_is_offered(env,
+                                                                                       monkeypatch) -> None:
+    """Contrat proposé (Issue #21) : un outil portant la permission `network.read`. Aucun n'existe encore ;
+    ici, sa présence est simulée dans un mode qui offre des outils (le mode Normal n'en offre aucun)."""
+    from apex.assistant import freshness
+    from apex.assistant.turns import _CURRENT_INFO_NOTE
+
+    monkeypatch.setattr(freshness, "connected_tools", lambda specs: ["web.search"])
+    provider = _UnsureBrainProvider(["Je ne peux pas le savoir.", "Il pleut à Lyon."], confidence=0.99,
+                                    cannot_know_kind="realtime")
+    _, answer = _brain_turn(env, provider, question="Quel temps fait-il à Lyon aujourd'hui ?", mode="code")
+    assert answer.content == "Il pleut à Lyon."
+    assert answer.meta["delegation"]["reason"] == "current_info_tool"
+    assert _CURRENT_INFO_NOTE in provider.requests[1].system  # le moteur suivant sait qu'il doit l'appeler
+
+
+def test_current_information_questions_are_recognized_by_explicit_markers_only() -> None:
+    """Jeu neuf, écrit avant la mesure (docs/CERVEAU_APEX_V2.md). Limites dites : sans mot du temps présent,
+    une question d'actualité n'est pas reconnue ; un mot comme « actuelle » ou « dernier » fait signaler une
+    question générale (sans effet tant que le Cerveau ne répond pas « pas d'accès au temps réel »)."""
+    from apex.assistant.freshness import asks_for_current_information, connected_tools
+
+    for question in ("Quel est le taux de change de l'euro en dollars aujourd'hui ?",
+                     "Quelle est la météo à Brest ?",
+                     "Combien vaut le bitcoin en ce moment ?", "Le site est-il en panne actuellement ?",
+                     "What is the weather like in London today?", "Who won the game last night?",
+                     "Is GitHub down right now?", "What\u2019s trending on social media?"):
+        assert asks_for_current_information(question), question
+    for question in ("Quelle est la capitale de l'Australie ?", "Qui a écrit Les Misérables ?",
+                     "Who painted the Mona Lisa?", "Comment fonctionne un moteur à explosion ?"):
+        assert not asks_for_current_information(question), question
+    assert not asks_for_current_information("Combien coûte l'essence à Lyon ?")  # limite connue
+    assert asks_for_current_information("Qui était le dernier roi de France ?")  # limite connue
+    # Aucun outil d'APEX n'est connecté aujourd'hui.
+    assert connected_tools(assistant_tools.assistant_registry().specs()) == []
+
+
+class _CodingBrainProvider(_UnsureBrainProvider):
+    """Cerveau sûr de lui (0,99) qui répond une fonction Ruby ; sa version Python (vérification croisée) est
+    `twin` (la suite du début imposé « def nom(nombres): »)."""
+
+    def __init__(self, replies: list[str], *, twin: str) -> None:
+        super().__init__(replies, confidence=0.99)
+        self.twin = twin
+        self.twin_requests: list[str] = []
+
+    def python_twin(self, request: GenerationRequest, prefix: str) -> str:
+        self.twin_requests.append(prefix)
+        return self.twin
+
+
+_RUBY_RIGHT = "```ruby\ndef somme_pairs_tous(nombres)\n  nombres.select { |x| x.even? }.sum\nend\n```"
+_RUBY_WRONG = "```ruby\ndef somme_pairs_tous(nombres)\n  nombres.select { |x| x.odd? }.sum\nend\n```"
+_PY_TWIN = "\n    valeurs = [x for x in nombres if x % 2 == 0]\n    return sum(valeurs)\n```"
+
+
+def _real_sandbox_turn(env, provider, *, engine=None, code_execution=True):
+    import shutil as _shutil
+
+    from apex.assistant.settings import SettingsService
+    from apex.sandbox.provider import select_sandbox_provider
+
+    selection = select_sandbox_provider()
+    if not selection.report.is_available or _shutil.which("ruby") is None:
+        pytest.skip("sandbox non vérifiée ou ruby absent sur cette machine")
+    _no_memory(env)
+    updates: dict = {"tools": {"code_execution": code_execution}}
+    if engine:
+        updates["models"] = {"engine": engine}
+    SettingsService(env).update(updates)
+    manager = TurnManager(env, provider_factory=lambda _candidate: provider,
+                          config=parse_config(copy.deepcopy(BASE_CONFIG)),
+                          sandbox_selection=lambda: selection, synchronous=True)
+    conversation = _conversation(env)
+    manager.submit(conversation.id,
+                   "Écris en Ruby `def somme_pairs_tous(nombres)` : la somme des nombres pairs.")
+    return _messages(env, conversation.id)[-1]
+
+
+def test_wrong_brain_code_is_caught_in_the_real_sandbox_and_handed_over(env) -> None:
+    """Chaîne RÉELLE : réponse Ruby fausse du Cerveau (sûr de lui), sa version Python juste, les deux
+    exécutées dans la sandbox de CETTE machine sur les mêmes entrées générées : elles divergent → moteur
+    suivant."""
+    provider = _CodingBrainProvider([_RUBY_WRONG, "réponse du moteur suivant"], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider)
+    assert provider.twin_requests == ["```python\ndef somme_pairs_tous(nombres):"]
+    checked = answer.meta["crosscheck"]
+    assert checked["status"] == "disagree" and checked["language"] == "ruby"
+    assert answer.meta["crosscheck"]["example"]["answer"] != answer.meta["crosscheck"]["example"]["python"]
+    assert answer.meta["delegation"]["reason"] == "code_mismatch"
+    assert answer.content == "réponse du moteur suivant"
+
+
+def test_right_brain_code_agrees_with_its_python_twin_and_is_kept(env) -> None:
+    provider = _CodingBrainProvider([_RUBY_RIGHT, "jamais demandée"], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider)
+    assert answer.meta["crosscheck"]["status"] == "agree" and "delegation" not in answer.meta
+    assert answer.content == _RUBY_RIGHT and len(provider.requests) == 1
+
+
+def test_with_the_brain_chosen_explicitly_a_mismatch_is_reported_not_handed_over(env) -> None:
+    provider = _CodingBrainProvider([_RUBY_WRONG], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider, engine="brain")
+    assert answer.content == _RUBY_WRONG and answer.meta["crosscheck"]["status"] == "disagree"
+    assert "delegation" not in answer.meta
+
+
+def test_no_code_is_ever_run_when_code_execution_is_disabled(env) -> None:
+    provider = _CodingBrainProvider([_RUBY_WRONG, "jamais demandée"], twin=_PY_TWIN)
+    answer = _real_sandbox_turn(env, provider, code_execution=False)
+    assert "crosscheck" not in answer.meta and provider.twin_requests == []
+
+
+def test_a_confident_brain_keeps_the_question(env) -> None:
+    provider = _UnsureBrainProvider(["réponse sûre", "jamais demandée"], confidence=0.99)
+    _, answer = _brain_turn(env, provider)
+    assert answer.content == "réponse sûre" and len(provider.requests) == 1
+    assert "delegation" not in answer.meta
+
+
+def test_an_unsure_brain_answer_is_kept_and_flagged_when_no_other_engine_answers(env) -> None:
+    provider = _UnsureBrainProvider(["réponse peu sûre"], confidence=0.62, offline=True)
+    turn, answer = _brain_turn(env, provider)
+    assert turn.status == "done" and answer.content == "réponse peu sûre"  # jamais perdue faute de mieux
+    assert len(provider.requests) >= 2  # les autres moteurs ont bien été essayés
+    assert answer.meta["delegation"]["status"] == "kept" and answer.meta["delegation"]["to"] is None
+
+
+@pytest.mark.parametrize("settings", [{"brain_delegate_below": 0.0}, {"engine": "brain"}])
+def test_the_brain_never_hands_over_when_disabled_or_chosen_explicitly(env, settings) -> None:
+    provider = _UnsureBrainProvider(["réponse du Cerveau", "jamais demandée"], confidence=0.30)
+    _, answer = _brain_turn(env, provider, settings)
+    assert answer.content == "réponse du Cerveau" and len(provider.requests) == 1
+    assert "delegation" not in answer.meta
+
+
+def test_api_serves_exact_bytes_of_a_3d_preview(env, monkeypatch, tmp_path) -> None:
+    from fastapi.testclient import TestClient
+
+    import apex.api.dependencies as dependencies
+    from apex.api.app import create_app
+    from apex.api.auth import get_or_create_api_token
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(dependencies, "get_session_factory", lambda: env)
+    _no_memory(env)
+    call = json.dumps({"tool": "model3d.create", "arguments": {"generator": "character", "build": "strong"}})
+    manager, _ = _manager(env, [call, "Personnage prêt."])
+    monkeypatch.setattr(dependencies, "_turn_manager", manager)
+    client = TestClient(create_app())
+    h = {"Authorization": f"Bearer {get_or_create_api_token()}"}
+    conversation = client.post("/api/v1/assistant/conversations", headers=h,
+                               json={"title": "Héros", "mode": "3d"}).json()["data"]
+    client.post(f"/api/v1/assistant/conversations/{conversation['id']}/turns", headers=h, json={"content": "Un héros"})
+    listing = client.get(f"/api/v1/assistant/conversations/{conversation['id']}/workspace", headers=h).json()["data"]
+    assert Path(listing["root"]).is_dir()
+    url = f"/api/v1/assistant/conversations/{conversation['id']}/workspace/file"
+    png = client.get(url, params={"path": "modeles3d/personnage.png", "encoding": "base64"}, headers=h).json()["data"]
+    raw = base64.b64decode(png["content_base64"])
+    assert raw.startswith(b"\x89PNG") and len(raw) == png["size"]
+    assert (Path(listing["root"]) / "modeles3d" / "personnage.png").read_bytes() == raw
+    assert client.get(url, params={"path": "modeles3d/personnage.png", "encoding": "hex"}, headers=h).status_code == 422
+
+
+def test_long_turns_keep_every_earlier_step_in_view(env) -> None:
+    """Gros projet : jusqu'à 40 étapes d'outils par réponse (réglage) ; au-delà des 6 résultats détaillés, chaque
+    étape plus ancienne reste résumée pour le modèle (outil, fichier, réussite)."""
+    from apex.assistant.settings import SettingsService
+    from apex.assistant.workspace import conversation_workspace
+
+    _no_memory(env)
+    SettingsService(env).update({"tools": {"max_tool_steps": 40}})
+    conversation = _conversation(env, mode="code")
+    writes = [json.dumps({"tool": "fs.write", "arguments": {"path": f"src/m{i}.py", "content": f"X = {i}\n"}})
+              for i in range(9)]
+    manager, provider = _manager(env, [*writes, "Projet écrit : 9 modules."])
+    _, turn = manager.submit(conversation.id, "Écris les 9 modules du projet")
+    assert turn.status == "done" and len(turn.steps) == 9
+    assert len(conversation_workspace(conversation.id, None).files()) == 9
+    last = provider.requests[-1].prompt
+    assert "Étapes précédentes de ce tour (résumé) :" in last
+    assert "1. fs.write src/m0.py -> réussi" in last and "3. fs.write src/m2.py -> réussi" in last
+    assert last.count("[fs.write]") == 6  # les 6 plus récentes en détail

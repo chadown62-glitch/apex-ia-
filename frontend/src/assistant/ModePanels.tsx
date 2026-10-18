@@ -3,15 +3,28 @@
  * - Code : fichiers de l'espace de travail (API), lus à la demande ;
  * - Design : couleurs citées dans les réponses, contrastes calculés ici avec la formule WCAG (theme/contrast.ts)
  *   et contrastes vérifiés par l'outil `color.contrast` ;
- * - Finance : résultats des outils de calcul exécutés pendant les tours (prêt, projection, calculatrice).
+ * - Finance : résultats des outils de calcul exécutés pendant les tours (prêt, projection, calculatrice) ;
+ * - 3D : modèles de l'espace de travail, et missions confiées à Game Studio (lues par ses outils).
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 
 import { contrast, extractHexColors } from "../theme/contrast";
-import { assistantApi, errorMessage, type Message, type ToolStep } from "./api";
+import {
+  assistantApi,
+  type BriefStatus,
+  type CreativeBrief,
+  errorMessage,
+  type GameStudioAvailability,
+  type GameStudioDependency,
+  type Message,
+  type RenderMetrics,
+  type ToolStep,
+} from "./api";
 import { keys } from "./hooks";
+import { explainFailure, explainRefusal } from "./MessageItem";
 import { IconFile, IconRefresh } from "./Icons";
 
 const euro = (value: unknown) =>
@@ -21,6 +34,11 @@ function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
   return `${(bytes / 1024 / 1024).toFixed(1)} Mo`;
+}
+
+/** Taille d'un téléchargement, comme Game Studio et les guides la donnent (1 Go = 10⁹ octets). */
+function downloadSize(bytes: number): string {
+  return bytes >= 1e9 ? `${(bytes / 1e9).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} Go` : formatSize(bytes);
 }
 
 export function CodePanel({ conversationId, notes }: { conversationId: string; notes: string[] }) {
@@ -354,6 +372,600 @@ export function FinancePanel({ messages, liveSteps }: { messages: Message[]; liv
               </section>
             );
           })
+      )}
+    </div>
+  );
+}
+
+/** Un modèle 3D de l'espace de travail : ses fichiers `modeles3d/<nom>.*` et `modeles3d/Apex*.{cs,h,cpp}`. */
+interface Model3D {
+  name: string;
+  preview: string | null;
+  files: { path: string; size: number }[];
+  summary: string | null;
+}
+
+const MODELS_DIR = "modeles3d/";
+
+function models3d(files: { path: string; size: number }[], steps: ToolStep[]): Model3D[] {
+  const inDir = files.filter((f) => f.path.startsWith(MODELS_DIR));
+  const summaries = new Map<string, { summary: string; files: string[] }>();
+  for (const step of steps) {
+    const output = step.tool === "model3d.create" && step.ok ? step.observation.output : null;
+    if (output && typeof output.name === "string" && typeof output.summary === "string") {
+      const written = Array.isArray(output.files) ? (output.files as { path: string }[]).map((f) => f.path) : [];
+      summaries.set(output.name, { summary: output.summary, files: written });
+    }
+  }
+  return inDir
+    .filter((f) => f.path.endsWith(".glb"))
+    .map((glb) => {
+      const name = glb.path.slice(MODELS_DIR.length, -".glb".length);
+      const known = summaries.get(name);
+      const own = inDir.filter(
+        (f) => f.path.slice(MODELS_DIR.length).startsWith(`${name}.`) || f.path.slice(MODELS_DIR.length).startsWith(`${name}_`) ||
+          (known?.files.includes(f.path) ?? false),
+      );
+      const preview = own.find((f) => f.path === `${MODELS_DIR}${name}.png`)?.path ?? null;
+      return { name, preview, files: own, summary: known?.summary ?? null };
+    });
+}
+
+function PreviewImage({ conversationId, path, alt }: { conversationId: string; path: string; alt: string }) {
+  const image = useQuery({
+    queryKey: ["assistant", "workspace", conversationId, "base64", path],
+    queryFn: () => assistantApi.workspaceFileBase64(conversationId, path),
+    staleTime: Infinity,
+  });
+  if (image.isLoading) return <div className="ax-model3d__preview ax-model3d__preview--loading" aria-label="Chargement de l'aperçu" />;
+  if (image.isError || !image.data) return <p className="ax-inline-error">{errorMessage(image.error)}</p>;
+  return <img className="ax-model3d__preview" src={`data:image/png;base64,${image.data.content_base64}`} alt={alt} />;
+}
+
+async function download(conversationId: string, path: string): Promise<void> {
+  const file = await assistantApi.workspaceFileBase64(conversationId, path);
+  const bytes = Uint8Array.from(atob(file.content_base64), (c) => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes]));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = path.slice(path.lastIndexOf("/") + 1);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** États après lesquels une mission Game Studio n'évolue plus (ses résultats sont alors lisibles). */
+/** États où la mission n'avance plus d'elle-même : le suivi s'arrête (il reprend après une reprise). */
+const GAME_STUDIO_FINISHED = new Set(["review", "failed", "cancelled", "interrupted"]);
+/** États où Game Studio peut reprendre la mission (il décide en dernier, et dit pourquoi s'il refuse). */
+const GAME_STUDIO_RESUMABLE = new Set(["interrupted", "failed", "cancelled"]);
+const GAME_STUDIO_STATES: Record<string, string> = {
+  queued: "en file d'attente",
+  running: "en cours",
+  interrupted: "interrompue (APEX a été arrêté pendant la mission)",
+  review: "terminée, à revoir",
+  technical_review: "revue technique",
+  failed: "échouée",
+  cancelled: "annulée",
+  blocked: "bloquée",
+};
+const stateLabel = (state: string) => GAME_STUDIO_STATES[state] ?? state;
+
+/** Missions lancées dans cette conversation : chaque appel de `game_studio.create`, réussi ou refusé. */
+function gameStudioLaunches(steps: ToolStep[]): { key: string; projectId: string | null; refusal: string | null }[] {
+  return steps
+    .filter((s) => s.tool === "game_studio.create")
+    .map((s, i) => {
+      const id = s.ok ? s.observation.output?.project_id : null;
+      const refusal = s.ok ? null : explainRefusal(s.observation.error?.message);
+      return { key: typeof id === "string" ? id : `refus-${i}`, projectId: typeof id === "string" ? id : null, refusal };
+    });
+}
+
+/** Missions que le Cerveau a PROPOSÉES et qui n'ont pas encore été lancées (une seule fois chacune). */
+function gameStudioProposals(messages: Message[]): { message: Message; request: string; reason: string }[] {
+  const launched = new Set(messages.map((m) => m.meta?.game_studio?.proposal_of).filter((id): id is string => !!id));
+  return messages
+    .filter((m) => m.meta?.game_studio?.state === "proposed" && !launched.has(m.id))
+    .map((m) => ({
+      message: m,
+      request: messages.find((u) => u.id === m.meta?.game_studio?.request_message_id)?.content ?? "",
+      reason: m.meta?.game_studio?.reason ?? "",
+    }));
+}
+
+function GameStudioPreview({ conversationId, projectId, digest, name }: { conversationId: string; projectId: string; digest: string; name: string }) {
+  const image = useQuery({
+    queryKey: ["assistant", "game-studio", conversationId, projectId, "preview", digest],
+    queryFn: () => assistantApi.gameStudioPreview(conversationId, projectId, digest),
+    staleTime: Infinity,
+  });
+  if (image.isLoading) return <div className="ax-model3d__preview ax-model3d__preview--loading" aria-label="Chargement du rendu" />;
+  if (image.isError || !image.data) return <p className="ax-inline-error">{errorMessage(image.error)}</p>;
+  return <img className="ax-model3d__preview" src={`data:${image.data.content_type};base64,${image.data.content_base64}`} alt={`Rendu ${name}`} />;
+}
+
+function GameStudioMissionCard({ conversationId, projectId }: { conversationId: string; projectId: string }) {
+  const client = useQueryClient();
+  const key = ["assistant", "game-studio", conversationId, projectId];
+  const mission = useQuery({
+    queryKey: key,
+    queryFn: () => assistantApi.gameStudioMission(conversationId, projectId),
+    refetchInterval: (query) => (query.state.data && GAME_STUDIO_FINISHED.has(query.state.data.status.status) ? false : 5000),
+  });
+  const cancel = useMutation({
+    mutationFn: () => assistantApi.cancelGameStudioMission(conversationId, projectId),
+    onSettled: () => client.invalidateQueries({ queryKey: key }),
+  });
+  const resume = useMutation({
+    mutationFn: () => assistantApi.resumeGameStudioMission(conversationId, projectId),
+    onSettled: () => {
+      client.invalidateQueries({ queryKey: key });
+      client.invalidateQueries({ queryKey: keys.messages(conversationId) });
+    },
+  });
+  const data = mission.data;
+  const views = (data?.results.artifacts ?? []).filter((a) => a.role === "view").slice(0, 4);
+  return (
+    <li className="ax-model3d ax-gs-mission">
+      <div className="ax-model3d__body">
+        <h3>Mission {projectId.slice(0, 8)}</h3>
+        {mission.isLoading ? (
+          <p className="ax-muted">Lecture de la mission…</p>
+        ) : mission.isError || !data ? (
+          <p className="ax-inline-error" role="alert">{errorMessage(mission.error)}</p>
+        ) : (
+          <>
+            <p className="ax-model3d__summary">
+              État : <strong>{stateLabel(data.status.status)}</strong>
+              {data.status.delivery_status ? ` · livraison : ${data.status.delivery_status}` : ""}
+            </p>
+            {data.status.steps.length > 0 && (
+              <ul className="ax-gs-steps">
+                {data.status.steps.map((step) => (
+                  <li key={step.key}>
+                    {step.key}
+                    {step.kind ? ` (${step.kind})` : ""} : {stateLabel(step.status)}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {GAME_STUDIO_RESUMABLE.has(data.status.status) && typeof data.status.last_event?.reason === "string" && (
+              <p className="ax-inline-error">Raison : {explainFailure(data.status.last_event.reason)}</p>
+            )}
+            {data.results.blocked && data.results.blocked.length > 0 && (
+              <ul className="ax-panel__notes">
+                {data.results.blocked.map((b) => (
+                  <li key={b.key}>{`${b.key} bloquée${b.reason ? ` : ${b.reason}` : ""}`}</li>
+                ))}
+              </ul>
+            )}
+            {views.map((v) => (
+              <GameStudioPreview key={v.hash} conversationId={conversationId} projectId={projectId} digest={v.hash} name={v.name} />
+            ))}
+            {data.results.ready ? (
+              <p className="ax-muted">
+                {data.results.artifact_count} fichier(s) produit(s){data.results.truncated ? " (liste tronquée)" : ""} :{" "}
+                {(data.results.artifacts ?? []).map((a) => `${a.name} (${a.role})`).join(", ")}.{" "}
+                <Link to="/game-studio">Ouvrir dans Game Studio</Link> pour les télécharger.
+              </p>
+            ) : (
+              GAME_STUDIO_FINISHED.has(data.status.status) && <p className="ax-muted">Aucun fichier produit.</p>
+            )}
+            {!GAME_STUDIO_FINISHED.has(data.status.status) && (
+              <button type="button" className="ax-chip-btn" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+                Annuler la mission
+              </button>
+            )}
+            {GAME_STUDIO_RESUMABLE.has(data.status.status) && (
+              <button type="button" className="ax-chip-btn" disabled={resume.isPending} onClick={() => resume.mutate()}>
+                Reprendre la mission
+              </button>
+            )}
+            {cancel.isError && <p className="ax-inline-error" role="alert">{errorMessage(cancel.error)}</p>}
+            {resume.isError && <p className="ax-inline-error" role="alert">{errorMessage(resume.error)}</p>}
+            {GAME_STUDIO_FINISHED.has(data.status.status) && data.results.ready && (
+              <GameStudioQualityPanel conversationId={conversationId} projectId={projectId} />
+            )}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+const BRIEF_STATUS: Record<BriefStatus, string> = {
+  verified: "vérifié par Game Studio",
+  possible: "possible, sans garantie",
+  not_yet: "pas encore pris en compte",
+  refused: "refusé par Game Studio",
+  unknown: "Game Studio absent",
+};
+
+/** Ce que Game Studio fera de chaque élément de la demande, AVANT le clic : rien n'est promis au-delà de ce
+ *  qu'il vérifie lui-même. */
+export function BriefSupport({ brief }: { brief: CreativeBrief }) {
+  const refused = brief.support.filter((item) => item.status === "refused");
+  return (
+    <details className="ax-gs-brief" open={refused.length > 0}>
+      <summary>Ce que Game Studio fera de votre demande</summary>
+      {refused.map((item) => (
+        <p key={`r-${item.aspect}-${item.asked}`} className="ax-inline-error" role="alert">
+          {item.asked} : {item.how}
+        </p>
+      ))}
+      <ul className="ax-panel__notes">
+        {brief.support.map((item) => (
+          <li key={`${item.aspect}-${item.asked}`} data-status={item.status}>
+            <strong>{BRIEF_STATUS[item.status]}</strong> — {item.aspect} : {item.asked}. <span className="ax-muted">{item.how}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** Une ligne de mesures d'un rendu : ce que l'on voit, chiffré, sans jugement. */
+export function metricsLine(m: RenderMetrics): string {
+  if (m.error) return `${m.view} : mesure impossible (${m.error})`;
+  const parts: string[] = [];
+  const s = m.subject;
+  if (s) {
+    let color = `couleur perçue ${s.perceived_color}`;
+    if (s.requested_color && s.delta_e76_to_requested !== undefined) {
+      color += ` (écart au ${s.requested_color} demandé : ΔE ${s.delta_e76_to_requested})`;
+    }
+    parts.push(color, `écart de clarté avec le fond ${s.separation_delta_l}`, `part de l'image ${s.coverage_pct} %`,
+      `reflets ${s.specular_pct} %`, `arêtes et détails ${s.detail_edge_pct} %`);
+  }
+  if (m.highlights_clipped_pct !== undefined) parts.push(`hautes lumières brûlées ${m.highlights_clipped_pct} %`);
+  return `${m.view} : ${parts.join(" · ")}`;
+}
+
+/** Qualité d'une mission livrée : versions, ce que le juge a vérifié et ce qu'il ne vérifie pas, mesures des
+ *  rendus (instrument non calibré), et l'avis de l'utilisateur, qui calibrera les futurs juges. */
+function GameStudioQualityPanel({ conversationId, projectId }: { conversationId: string; projectId: string }) {
+  const [open, setOpen] = useState(false);
+  const client = useQueryClient();
+  const key = ["assistant", "game-studio", conversationId, projectId, "quality"];
+  const quality = useQuery({
+    queryKey: key,
+    queryFn: () => assistantApi.gameStudioQuality(conversationId, projectId),
+    enabled: open,
+    staleTime: Infinity,
+  });
+  const [scores, setScores] = useState<Record<string, number>>({});
+  const [comment, setComment] = useState("");
+  const rate = useMutation({
+    mutationFn: () => assistantApi.rateGameStudioMission(conversationId, projectId, scores, comment),
+    onSuccess: () => {
+      setScores({});
+      setComment("");
+      client.invalidateQueries({ queryKey: key });
+    },
+  });
+  const data = quality.data;
+  return (
+    <details className="ax-gs-quality" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>Qualité de cette création</summary>
+      {quality.isLoading && <p className="ax-muted">Lecture des versions et des mesures…</p>}
+      {quality.isError && <p className="ax-inline-error" role="alert">{errorMessage(quality.error)}</p>}
+      {data && (
+        <>
+          {data.steps.map((step) => (
+            <div key={step.key}>
+              {step.versions && step.versions.length > 0 && (
+                <ul className="ax-panel__notes">
+                  {step.versions.map((v) => (
+                    <li key={v.number}>
+                      Version {v.number} : verdict technique {v.verdict}
+                      {v.defects.length > 0 ? ` (défauts : ${v.defects.join(", ")})` : ""}
+                      {v.selected ? " · retenue" : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {step.judge && (
+                <p className="ax-muted">
+                  Le juge de Game Studio vérifie : {step.judge.scope ?? "?"}. Il ne mesure ni la beauté, ni le style, ni
+                  la couleur perçue.
+                  {step.judge.advisory.length > 0 && ` Ses réserves : ${step.judge.advisory.join(" ")}`}
+                </p>
+              )}
+              {step.metrics && step.metrics.length > 0 && (
+                <>
+                  <p className="ax-muted">Mesures des rendus (instrument d'APEX, non calibré, n'est pas un verdict) :</p>
+                  <ul className="ax-panel__notes">
+                    {step.metrics.map((m) => <li key={m.view}>{metricsLine(m)}</li>)}
+                  </ul>
+                </>
+              )}
+            </div>
+          ))}
+          {!data.metrics_available && <p className="ax-muted">Mesures des rendus indisponibles sur ce PC (Pillow absent).</p>}
+          <form
+            className="ax-gs-rating"
+            onSubmit={(e) => {
+              e.preventDefault();
+              rate.mutate();
+            }}
+          >
+            <p className="ax-muted">
+              Votre avis, de 1 à 5 : il ne change pas la mission, il servira à calibrer les futurs juges artistiques.
+              {data.ratings.length > 0 && ` Avis déjà donnés : ${data.ratings.length}.`}
+            </p>
+            {Object.entries(data.criteria).map(([id, label]) => (
+              <label key={id}>
+                {label}{" "}
+                <select
+                  aria-label={label}
+                  value={scores[id] ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setScores((current) => {
+                      const next = { ...current };
+                      if (value) next[id] = Number(value);
+                      else delete next[id];
+                      return next;
+                    });
+                  }}
+                >
+                  <option value="">—</option>
+                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+            ))}
+            <textarea aria-label="Commentaire" maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} />
+            <button type="submit" className="ax-chip-btn" disabled={rate.isPending || Object.keys(scores).length === 0}>
+              Enregistrer mon avis
+            </button>
+            {rate.isSuccess && <p className="ax-muted" role="status">Avis enregistré.</p>}
+            {rate.isError && <p className="ax-inline-error" role="alert">{errorMessage(rate.error)}</p>}
+          </form>
+        </>
+      )}
+    </details>
+  );
+}
+
+function GameStudioProposal({ conversationId, message, request, reason, availability }: {
+  conversationId: string; message: Message; request: string; reason: string; availability: GameStudioAvailability | undefined;
+}) {
+  const client = useQueryClient();
+  const launch = useMutation({
+    mutationFn: () => assistantApi.launchGameStudio(conversationId, message.id),
+    onSettled: () => client.invalidateQueries({ queryKey: keys.messages(conversationId) }),
+  });
+  const cpu = availability?.compute === "cpu";
+  return (
+    <li className="ax-model3d ax-gs-mission">
+      <div className="ax-model3d__body">
+        <h3>Mission proposée</h3>
+        <p className="ax-model3d__summary">
+          Le Cerveau propose de confier à Game Studio : « {request.length > 160 ? `${request.slice(0, 160)}…` : request} »
+        </p>
+        {reason && <p className="ax-muted">{reason}</p>}
+        {message.meta?.game_studio?.brief && <BriefSupport brief={message.meta.game_studio.brief} />}
+        <p className="ax-muted">
+          Une mission dure plusieurs minutes et utilise {cpu ? "le processeur (choix explicite)" : "le GPU"}. Le calcul se règle dans
+          Paramètres &gt; Outils.
+        </p>
+        {availability?.gpu?.lease_held && availability.gpu_loan !== "game_studio" && (
+          <p className="ax-muted">
+            Le Cerveau APEX occupe le GPU : il le libère au lancement et répond sur le processeur jusqu'à la fin de la mission.
+          </p>
+        )}
+        {availability && availability.installed && !availability.ready && (
+          <ul className="ax-panel__notes">
+            {availability.missing.map((m) => (
+              <li key={m}>{m}</li>
+            ))}
+          </ul>
+        )}
+        <button type="button" className="ax-chip-btn" disabled={launch.isPending} onClick={() => launch.mutate()}>
+          Lancer la mission
+        </button>
+        {launch.isError && <p className="ax-inline-error" role="alert">{errorMessage(launch.error)}</p>}
+      </div>
+    </li>
+  );
+}
+
+const DEPENDENCY_STATES: Record<GameStudioDependency["state"], string> = { present: "présent", missing: "absent", unknown: "inconnu" };
+
+/** Un composant de Game Studio : ce qu'il fait, son état mesuré, sa taille et sa provenance si elles sont connues, et
+ *  son installation — un bouton seulement quand Game Studio publie un contrat d'installation qui le couvre. */
+function StudioDependency({ item, busy }: { item: GameStudioDependency; busy: boolean }) {
+  const client = useQueryClient();
+  const install = useMutation({
+    mutationFn: () => assistantApi.installGameStudioDependency(item.id),
+    onSettled: () => client.invalidateQueries({ queryKey: ["assistant", "game-studio", "dependencies"] }),
+  });
+  const size = item.bytes ? downloadSize(item.bytes) : null;
+  const confirmAndInstall = () => {
+    const question = item.install.confirmation || `Installer ${item.name}${size ? ` (${size})` : ""} ?`;
+    if (window.confirm(question)) install.mutate();
+  };
+  return (
+    <li className="ax-gs-dependency" data-state={item.state}>
+      <strong>{item.name}</strong> — {DEPENDENCY_STATES[item.state]}
+      <span className="ax-muted"> · {item.role}</span>
+      {(size || item.source || item.license) && (
+        <p className="ax-muted">{[size, item.source, item.license && `licence ${item.license}`].filter(Boolean).join(" · ")}</p>
+      )}
+      {item.detail && <p className="ax-muted">{item.detail}</p>}
+      {item.state !== "present" && item.install.reason && <p className="ax-muted">{item.install.reason}</p>}
+      {item.state !== "present" && item.manual && <p className="ax-muted">{item.manual}</p>}
+      {item.install.available && (
+        <button type="button" className="ax-chip-btn" disabled={busy || install.isPending} onClick={confirmAndInstall}>
+          Installer
+        </button>
+      )}
+      {install.isError && <p className="ax-inline-error" role="alert">{errorMessage(install.error)}</p>}
+    </li>
+  );
+}
+
+function StudioDependencies() {
+  const listing = useQuery({
+    queryKey: ["assistant", "game-studio", "dependencies"],
+    queryFn: assistantApi.gameStudioDependencies,
+    staleTime: 30_000,
+    refetchInterval: (query) => (query.state.data?.job?.state === "running" ? 3000 : false),
+  });
+  const data = listing.data;
+  if (!data?.installed) return null;
+  const missing = data.items.filter((i) => i.state !== "present").length;
+  const job = data.job;
+  return (
+    <details className="ax-gs-dependencies">
+      <summary>
+        Composants de Game Studio : {missing === 0 ? "tous présents" : `${missing} à installer`}
+      </summary>
+      {data.problem && <p className="ax-inline-error">{data.problem}</p>}
+      {data.contract.reason && <p className="ax-muted">{data.contract.reason}.</p>}
+      {job && (
+        <p className={job.state === "failed" ? "ax-inline-error" : "ax-muted"} role="status">
+          {job.state === "running" ? `Installation de ${job.name} en cours…` : job.state === "succeeded"
+            ? `${job.name} installé${job.detail ? ` : ${job.detail}` : ""}.` : `Installation de ${job.name} échouée : ${job.detail}`}
+          {job.log.length > 0 && ` (${job.log[job.log.length - 1]})`}
+        </p>
+      )}
+      <ul className="ax-gs-dependency-list">
+        {data.items.map((item) => (
+          <StudioDependency key={item.id} item={item} busy={job?.state === "running"} />
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+function GameStudioMissions({ conversationId, messages, steps }: { conversationId: string; messages: Message[]; steps: ToolStep[] }) {
+  const launches = useMemo(() => gameStudioLaunches(steps), [steps]);
+  const proposals = useMemo(() => gameStudioProposals(messages), [messages]);
+  const availability = useQuery({ queryKey: ["assistant", "game-studio", "availability"], queryFn: assistantApi.gameStudioAvailability, staleTime: 30_000 });
+  const report = availability.data;
+  if (launches.length === 0 && proposals.length === 0 && !report?.installed) return null;
+  return (
+    <section aria-label="Missions Game Studio">
+      <h3 className="ax-gs-title">Game Studio</h3>
+      {report && (
+        <p className="ax-muted">
+          {report.ready ? "Prêt sur ce PC." : "Pas encore prêt sur ce PC."}{" "}
+          Le Cerveau propose les missions ; vous seul les lancez ou les annulez.
+        </p>
+      )}
+      {report?.installed && <StudioDependencies />}
+      {report && !report.ready && proposals.length === 0 && report.missing.length > 0 && (
+        <ul className="ax-panel__notes">
+          {report.missing.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      )}
+      <ul className="ax-model3d-list">
+        {proposals.map((p) => (
+          <GameStudioProposal key={p.message.id} conversationId={conversationId} message={p.message} request={p.request} reason={p.reason}
+            availability={report} />
+        ))}
+        {launches.map((launch) =>
+          launch.projectId ? (
+            <GameStudioMissionCard key={launch.key} conversationId={conversationId} projectId={launch.projectId} />
+          ) : (
+            <li key={launch.key} className="ax-model3d ax-gs-mission">
+              <p className="ax-inline-error">Game Studio a refusé la mission : {launch.refusal}</p>
+            </li>
+          ),
+        )}
+      </ul>
+    </section>
+  );
+}
+
+export function Studio3DPanel({ conversationId, messages, liveSteps, notes }: {
+  conversationId: string; messages: Message[]; liveSteps: ToolStep[]; notes: string[];
+}) {
+  const workspace = useQuery({ queryKey: keys.workspace(conversationId), queryFn: () => assistantApi.workspace(conversationId) });
+  const steps = useMemo(() => stepsOf(messages, liveSteps), [messages, liveSteps]);
+  const models = useMemo(() => models3d(workspace.data?.files ?? [], steps), [workspace.data, steps]);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="ax-panel">
+      <div className="ax-panel__head">
+        <h2>Atelier 3D</h2>
+        <button type="button" className="ax-icon-btn ax-icon-btn--sm" onClick={() => workspace.refetch()} aria-label="Actualiser les modèles" title="Actualiser">
+          <IconRefresh size={15} />
+        </button>
+      </div>
+      {notes.length > 0 && (
+        <ul className="ax-panel__notes">
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {error && (
+        <p className="ax-inline-error" role="alert">
+          {error}
+        </p>
+      )}
+      <GameStudioMissions conversationId={conversationId} messages={messages} steps={steps} />
+      {workspace.isLoading ? (
+        <p className="ax-muted">Lecture de l'espace de travail…</p>
+      ) : workspace.isError ? (
+        <p className="ax-inline-error" role="alert">
+          {errorMessage(workspace.error)}
+        </p>
+      ) : models.length === 0 ? (
+        <p className="ax-muted">
+          Aucun modèle pour l'instant. Demandez par exemple « un char de 7 m kaki » ou « une épée de 1,2 m » : APEX construit le
+          modèle et écrit ses fichiers pour Blender, Unity et Unreal.
+        </p>
+      ) : (
+        <>
+          {workspace.data?.root && (
+            <p className="ax-muted ax-model3d__root">
+              Dossier sur ce PC :{" "}
+              <code>{`${workspace.data.root}${workspace.data.root.includes("\\") ? "\\" : "/"}${MODELS_DIR.slice(0, -1)}`}</code>
+            </p>
+          )}
+          <ul className="ax-model3d-list">
+            {models.map((model) => (
+              <li key={model.name} className="ax-model3d">
+                {model.preview && <PreviewImage conversationId={conversationId} path={model.preview} alt={`Aperçu de ${model.name}`} />}
+                <div className="ax-model3d__body">
+                  <h3>{model.name}</h3>
+                  {model.summary && <p className="ax-model3d__summary">{model.summary}</p>}
+                  <ul className="ax-files">
+                    {model.files.map((f) => (
+                      <li key={f.path}>
+                        <button
+                          type="button"
+                          className="ax-file"
+                          title="Télécharger"
+                          onClick={() => {
+                            setError(null);
+                            download(conversationId, f.path).catch((e) => setError(errorMessage(e)));
+                          }}
+                        >
+                          <IconFile size={14} />
+                          <span className="ax-file__path">{f.path.slice(MODELS_DIR.length)}</span>
+                          <span className="ax-file__size">{formatSize(f.size)}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="ax-muted">
+            .glb : Blender, Unreal (et Unity avec glTFast) · .obj : Unity · _blender.py : reconstruit le modèle dans Blender · .cs : Unity ·
+            .h/.cpp : Unreal. Scripts Unity et Unreal vérifiés pour la syntaxe seulement.
+          </p>
+        </>
       )}
     </div>
   );

@@ -503,13 +503,18 @@ def gate_10_cuda_driver(ctx: GateContext) -> GateCheckResult:
                         reason="not_applicable",
                         facts={"driver_version": None, "cuda_version": None,
                                **detect_gpu_vendor(ctx)})
+    from apex.standalone.gpu import smi_header_cuda
+
     out = ctx.probe.run(["nvidia-smi"], timeout_s=ctx.timeout_s)
     driver = cuda = None
     if out.ok:
+        # Version du pilote : d'abord la sortie structurée (`--query-gpu`), puis l'en-tête. Version CUDA
+        # du pilote : « CUDA Version » ou « CUDA UMD Version » (pilote 610.62), jamais la version du pilote.
+        query = _nvidia_smi(ctx)
+        gpus = _parse_gpus(query.stdout) if query.ok else []
         driver_match = re.search(r"Driver Version:\s*([\d.]+)", out.stdout)
-        cuda_match = re.search(r"CUDA Version:\s*([\d.]+)", out.stdout)
-        driver = driver_match.group(1) if driver_match else None
-        cuda = cuda_match.group(1) if cuda_match else None
+        driver = gpus[0]["driver_version"] if gpus else (driver_match.group(1) if driver_match else None)
+        cuda = smi_header_cuda(out.stdout)
     facts = {"driver_version": driver, "cuda_version": cuda,
              "wsl_cuda_libs": ctx.probe.exists("/usr/lib/wsl/lib")}
     if not driver:

@@ -20,7 +20,9 @@ public class StatusEngineTests
         Assert.Equal("APEX READY", s.Headline);
         Assert.All(s.Components, c => Assert.Equal(ComponentStatus.Ready, c.Status));
         Assert.Equal(
-            [ComponentKey.Wsl, ComponentKey.Backend, ComponentKey.Api, ComponentKey.Database, ComponentKey.Redis, ComponentKey.Ollama, ComponentKey.Models, ComponentKey.Sandbox, ComponentKey.Brain, ComponentKey.Ui],
+            [ComponentKey.Wsl, ComponentKey.Backend, ComponentKey.Api, ComponentKey.Database, ComponentKey.Redis, ComponentKey.Ollama, ComponentKey.Models, ComponentKey.Sandbox,
+             ComponentKey.ApexBrain, ComponentKey.NativeModel, ComponentKey.Gpu, ComponentKey.GameStudio, ComponentKey.Planner, ComponentKey.Blender,
+             ComponentKey.GameGraphics, ComponentKey.GameEngineer, ComponentKey.Brain, ComponentKey.Ui],
             s.Components.Select(c => c.Key));
         Assert.Equal("0.1.2", s.Versions.BackendApexVersion);
     }
@@ -180,7 +182,36 @@ public class StatusEngineTests
         Assert.Equal(PanelVerdict.VersionMismatch, s.Verdict);
         Assert.Equal(NotReadyCause.PanelTooOld, s.Cause);
         Assert.Equal("VERSION_MISMATCH", s.Headline);
-        Assert.All(ComponentKeys.BackendServices, svc => Assert.Equal(ComponentStatus.Unknown, Of(s, svc.Key)));
+        Assert.All(ComponentKeys.BackendServices.Where(svc => !ComponentKeys.IsApplication(svc.Key)),
+            svc => Assert.Equal(ComponentStatus.Unknown, Of(s, svc.Key)));
+        // Composants facultatifs de l'application : aucune ligne tant que rien n'est mesuré (jamais « inconnu » en série).
+        Assert.DoesNotContain(s.Components, c => ComponentKeys.IsApplication(c.Key));
+    }
+
+    [Fact]
+    public void Application_components_are_shown_but_never_decide_the_verdict()
+    {
+        var states = ComponentKeys.BackendServices.ToDictionary(svc => svc.BackendName, _ => "ready");
+        states["gpu"] = "offline";
+        states["game_studio"] = "degraded";
+        states["planner"] = "offline";
+        var s = Decide(WslRunning(), Discovery(), Fetch(StatusJson(states: states)), GoodToken(), alive: true);
+
+        Assert.Equal(PanelVerdict.Ready, s.Verdict);
+        Assert.Equal(ComponentStatus.Offline, Of(s, ComponentKey.Gpu));
+        Assert.Equal(ComponentStatus.Degraded, Of(s, ComponentKey.GameStudio));
+        Assert.Equal("Cerveau APEX", s.Components.Single(c => c.Key == ComponentKey.ApexBrain).Label);
+    }
+
+    [Fact]
+    public void An_older_backend_without_application_components_shows_no_unknown_rows_for_them()
+    {
+        var states = ComponentKeys.BackendServices.Where(svc => !ComponentKeys.IsApplication(svc.Key))
+            .ToDictionary(svc => svc.BackendName, _ => "ready");
+        var s = Decide(WslRunning(), Discovery(), Fetch(StatusJson(states: states)), GoodToken(), alive: true);
+
+        Assert.Equal(PanelVerdict.Ready, s.Verdict);
+        Assert.DoesNotContain(s.Components, c => ComponentKeys.IsApplication(c.Key));
     }
 
     [Fact]

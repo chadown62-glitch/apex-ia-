@@ -20,6 +20,7 @@ génération entre deux tokens ; une graine (`seed`) rend l'échantillonnage rep
 
 from __future__ import annotations
 
+import functools
 import json
 import os
 import struct
@@ -195,13 +196,55 @@ _CACHE_LOCK = threading.Lock()
 
 
 def unload_all() -> None:
-    """Libère les modèles chargés (tests, changement de configuration)."""
+    """Libère les modèles chargés (tests, changement de configuration). Jamais appelé par un spécialiste :
+    pour obtenir le GPU, il passe par `apex.models.gpu_handoff.request_gpu`."""
+    from apex.models import gpu_handoff
+
     with _CACHE_LOCK:
         _CACHE.clear()
+    gpu_handoff.governor().unloaded()
+
+
+def _drop(key: str) -> None:
+    import torch
+
+    with _CACHE_LOCK:
+        _CACHE.pop(key, None)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+
+def _cuda_residents() -> list[Any]:
+    """Les modèles intégrés chargés sur CUDA, pour le partage du GPU (`apex.models.gpu_handoff`)."""
+    from apex.models.gpu_handoff import Resident
+
+    with _CACHE_LOCK:
+        return [Resident(f"native:{Path(key).name}", loaded.lock, functools.partial(_drop, key))
+                for key, loaded in _CACHE.items() if loaded.device == "cuda"]
+
+
+_REGISTERED = False
 
 
 def _load(path: Path) -> tuple[_Loaded, bool]:
+    global _REGISTERED
+    from apex.models import gpu_handoff
+
     key = str(path.resolve())
+    governor = gpu_handoff.governor()
+    if not _REGISTERED:
+        governor.register(BACKEND, _cuda_residents)
+        _REGISTERED = True
+    with _CACHE_LOCK:
+        cached = _CACHE.get(key)
+    if cached is not None and cached.device == "cpu" and cached.lock.acquire(blocking=False):
+        # Resté sur le processeur pendant un prêt du GPU : rechargé sur CUDA dès que le bail est repris.
+        try:
+            if governor.place("auto")[0] == "cuda":
+                with _CACHE_LOCK:
+                    _CACHE.pop(key, None)
+        finally:
+            cached.lock.release()
     with _CACHE_LOCK:
         if key in _CACHE:
             return _CACHE[key], False
@@ -209,7 +252,7 @@ def _load(path: Path) -> tuple[_Loaded, bool]:
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         started = time.perf_counter()
-        cuda = torch.cuda.is_available()
+        cuda = governor.place("auto")[0] == "cuda"
         precision = choose_precision(parameter_count(path), available_memory_bytes(), _SETTINGS["precision"], cuda)
         dtype = torch.bfloat16 if precision == "bfloat16" else torch.float32
         if _SETTINGS["threads"]:
@@ -270,6 +313,19 @@ class NativeTransformersProvider(ModelProvider):
         )
 
     def generate(self, request: GenerationRequest) -> GenerationResult:
+        """Une génération, comptée par le partage du GPU (`apex.models.gpu_handoff`) : pendant une
+        transition vers un spécialiste, elle attend sa fin (dans son délai)."""
+        from apex.errors import TimeoutExceeded
+        from apex.models import gpu_handoff
+
+        try:
+            with gpu_handoff.governor().generation(deadline=time.monotonic() + request.timeout_s):
+                return self._generate(request)
+        except gpu_handoff.TransitionTimeout as exc:
+            raise TimeoutExceeded("NativeTransformersProvider.generate (transition du GPU)",
+                                  request.timeout_s) from exc
+
+    def _generate(self, request: GenerationRequest) -> GenerationResult:
         from apex.errors import ModelErrorCategory, ModelProviderError, TimeoutExceeded
         from apex.obs.status import Measurement
 
