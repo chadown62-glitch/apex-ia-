@@ -9,7 +9,9 @@ writes receipts; other processes request cancellation via a marker.
 from __future__ import annotations
 
 import json
+import logging
 import os
+import tempfile
 import threading
 import time
 from contextlib import contextmanager, suppress
@@ -18,15 +20,32 @@ from typing import Any
 
 from apex.game_graphics.resources import _locked
 
+LOG = logging.getLogger(__name__)
+
 
 def atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    with temporary.open("w") as handle:
-        json.dump(value, handle, indent=2, ensure_ascii=False, default=str)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(temporary, path)
+    # Windows readers/antivirus can momentarily deny rename/delete sharing.
+    # Retry only that OS-specific condition, without truncating the last ledger
+    # or resetting budgets. A persistent denial remains a hard error.
+    descriptor, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(value, handle, indent=2, ensure_ascii=False, default=str)
+            handle.flush()
+            os.fsync(handle.fileno())
+        deadline = time.monotonic() + 1.0
+        while True:
+            try:
+                os.replace(temporary, path)
+                break
+            except OSError as exc:
+                if getattr(exc, "winerror", None) not in (5, 32, 33) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.01)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def busy(folder: Path) -> bool:
@@ -93,7 +112,11 @@ class RunBudget:
             while not self.stop.wait(0.25):
                 try:
                     self.checkpoint()
-                except OSError:
+                except OSError as exc:
+                    with self.lock:
+                        self.data["stop_reason"] = "budget_persistence_failed"
+                        self.data["persistence_error"] = f"{type(exc).__name__}: {exc}"[:500]
+                    LOG.exception("Game Studio budget persistence failed; stopping owned work")
                     self.cancel.set()
                     return
 

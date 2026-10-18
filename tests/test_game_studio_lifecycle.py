@@ -166,3 +166,43 @@ def test_cancelled_parent_keeps_missionservice_cancelled_state(tmp_path):
     cancel.set()
     service._run_dynamic(project, cancel, time.monotonic())
     assert service.missions.get(mission.id).state.value == "cancelled"
+
+
+def test_transient_windows_reader_keeps_previous_ledger_until_replace(tmp_path, monkeypatch):
+    from apex.game_studio import lifecycle
+
+    target = tmp_path / "budget.json"
+    lifecycle.atomic_json(target, {"charged_s": 42})
+    replace = lifecycle.os.replace
+    calls = []
+
+    def windows_reader(source, destination):
+        calls.append(1)
+        if len(calls) <= 2:
+            assert json.loads(target.read_text())["charged_s"] == 42
+            error = PermissionError("reader denies delete sharing")
+            error.winerror = 32
+            raise error
+        replace(source, destination)
+
+    monkeypatch.setattr(lifecycle.os, "replace", windows_reader)
+    lifecycle.atomic_json(target, {"charged_s": 43, "label": "création"})
+    assert json.loads(target.read_text())["charged_s"] == 43
+    assert len(calls) == 3 and not list(tmp_path.glob("*.tmp"))
+
+
+def test_persistent_io_failure_preserves_old_budget_and_reports_stop(tmp_path, monkeypatch):
+    from apex.game_studio import lifecycle
+
+    cancel = threading.Event()
+    with RunBudget(tmp_path, 30, cancel) as budget:
+        before = snapshot(tmp_path)["charged_s"]
+        with monkeypatch.context() as scoped:
+            scoped.setattr(
+                lifecycle.os, "replace", lambda *_: (_ for _ in ()).throw(OSError("disk failure"))
+            )
+            assert cancel.wait(2)
+            assert snapshot(tmp_path)["charged_s"] == before
+            assert budget.data["stop_reason"] == "budget_persistence_failed"
+        assert not list(tmp_path.glob("*.tmp"))
+    assert snapshot(tmp_path)["stop_reason"] == "budget_persistence_failed"

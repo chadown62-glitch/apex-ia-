@@ -15,6 +15,7 @@ import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -46,6 +47,55 @@ def save(path, value):
 def sha(path):
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def budget_windows_contention(output):
+    """Real Windows reader/writer contention, not an injected I/O exception."""
+    if os.name != "nt":
+        return {"status": "not_applicable", "reason": "native_Windows_required"}
+    from apex.game_studio.lifecycle import RunBudget, atomic_json
+
+    folder = output / "budget-contention"
+    folder.mkdir()
+    target, replacement = folder / "record.json", folder / "replacement.json"
+    atomic_json(target, {"version": 1})
+    atomic_json(replacement, {"version": 2})
+    observed = None
+    with target.open("rb"):
+        try:
+            os.replace(replacement, target)
+        except OSError as exc:
+            observed = {
+                "error": type(exc).__name__,
+                "winerror": getattr(exc, "winerror", None),
+                "errno": exc.errno,
+            }
+    reader = target.open("rb")
+    release = threading.Timer(0.2, reader.close)
+    release.start()
+    started = time.monotonic()
+    try:
+        atomic_json(target, {"version": 3})
+    finally:
+        release.join()
+        reader.close()
+    elapsed = time.monotonic() - started
+    cancel = threading.Event()
+    with RunBudget(folder, 10, cancel) as budget:
+        with (folder / "budget.json").open("rb"):
+            time.sleep(0.4)
+        budget.checkpoint()
+        if cancel.is_set():
+            raise RuntimeError("transient_reader_cancelled_budget")
+    report = {
+        "original_replace_error": observed,
+        "bounded_replace_elapsed_s": elapsed,
+        "final_value": json.loads(target.read_bytes()),
+        "budget_cancelled": cancel.is_set(),
+        "status": "pass",
+    }
+    save(output / "budget-contention.json", report)
+    return report
 
 
 def collect_api_artifacts(client, project, downloads):
@@ -494,7 +544,12 @@ def main(argv=None):
         version.check_returncode()
         report["blender"] = {**blender, "version": version.stdout}
         report["lease"] = lease_fixture(output)
-        report["fixture"] = blender_fixture(output)
+        report["budget_contention"] = budget_windows_contention(output)
+        report["fixture"] = (
+            {"status": "not_run", "reason": "real_API_mission_required_instead; fixture_qualified_in_PR29"}
+            if args.require_inference
+            else blender_fixture(output)
+        )
         report["mission"] = api_mission(output)
         report["status"] = (
             "COMPONENTS_TESTED" if report["mission"]["status"] == "BLOCKED" else report["mission"]["status"]
