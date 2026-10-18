@@ -1,0 +1,20 @@
+{
+  "original_replace_error": {
+    "error": "PermissionError",
+    "winerror": 5,
+    "errno": 13
+  },
+  "bounded_replace_elapsed_s": 0.2340000000000373,
+  "original_read_error": {
+    "winerror": null,
+    "errno": 13
+  },
+  "read_after_transient_denial": {
+    "version": 3
+  },
+  "final_value": {
+    "version": 3
+  },
+  "budget_cancelled": false,
+  "status": "pass"
+}

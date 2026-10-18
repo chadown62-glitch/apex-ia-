@@ -1,0 +1,95 @@
+{
+  "prompt": "Return ONLY JSON: {\"steps\":[{\"key\":\"x\",\"kind\":\"vehicle|building|chair|assemble|unreal_handoff|unsupported\",\"description\":\"specific work\",\"depends_on\":[]}],\"unmet_requirements\":[]}. These are the EXACT fields; unmet_requirements is an array of short strings. Create one independent vehicle, building or chair step per distinct requested asset. Buildings include facades, garages and shops. Chairs include other seating. Every asset step already includes materials and four renders; no separate view, render, material or lighting steps. If 2+ assets, add one assemble step depending on all assets. Assets have no dependencies. At most 5 assets and 8 steps; order by dependencies. Unknown requested components use unsupported with no dependencies. Never invent missing reference images. No file paths or code. Do not include unreal_handoff or mention Unreal. User request: Cr\u00e9e une voiture sportive rouge avec quatre roues ind\u00e9pendantes et pr\u00e9pare son export Blender.. Tool: blender. Preserve explicit counts, context, colors and materials. Requirements checked independently: [{\"id\": \"vehicle\", \"kind\": \"vehicle\", \"count\": 1, \"source_terms\": [\"voiture\"], \"mandatory\": true}, {\"id\": \"red\", \"kind\": \"feature\", \"quote\": \"rouge\", \"pattern\": \"rouges?|red\", \"mandatory\": true}]",
+  "attempts": [
+    {
+      "number": 1,
+      "generation": {
+        "text": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"vehicle\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a red sports car with four independent wheels and prepare for export in Blender.\",\n      \"depends_on\": []\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```",
+        "model_used": "qwen2.5-coder-7b-instruct-q5",
+        "tokens_prompt": {
+          "value": 310,
+          "status": "real"
+        },
+        "tokens_completion": {
+          "value": 65,
+          "status": "real"
+        },
+        "finish_reason": "stop",
+        "elapsed_s": 36.404,
+        "facts": {
+          "id": "chatcmpl-efd4144b-55cc-408e-af0f-bd130b63dbad",
+          "created": 1792312835
+        }
+      },
+      "raw_response": "```json\n{\n  \"steps\": [\n    {\n      \"key\": \"vehicle\",\n      \"kind\": \"vehicle\",\n      \"description\": \"Create a red sports car with four independent wheels and prepare for export in Blender.\",\n      \"depends_on\": []\n    }\n  ],\n  \"unmet_requirements\": []\n}\n```"
+    }
+  ],
+  "accepted": true,
+  "status": "validated",
+  "plan": {
+    "requirements": {
+      "schema_version": 1,
+      "source": "Cr\u00e9e une voiture sportive rouge avec quatre roues ind\u00e9pendantes et pr\u00e9pare son export Blender.",
+      "requirements": [
+        {
+          "id": "vehicle",
+          "kind": "vehicle",
+          "count": 1,
+          "source_terms": [
+            "voiture"
+          ],
+          "mandatory": true
+        },
+        {
+          "id": "red",
+          "kind": "feature",
+          "quote": "rouge",
+          "pattern": "rouges?|red",
+          "mandatory": true
+        }
+      ],
+      "scope": "French/English explicit entity nouns, counts, listed contexts and features",
+      "unverified": [
+        "unlisted semantics",
+        "artistic fidelity",
+        "reference pixels",
+        "implicit preferences"
+      ],
+      "reference_count": 0
+    },
+    "coverage": {
+      "verdict": "pass_in_declared_scope",
+      "defects": [],
+      "covered": [
+        "vehicle",
+        "red"
+      ],
+      "unavailable": [],
+      "unverified": [
+        "unlisted semantics",
+        "artistic fidelity",
+        "reference pixels",
+        "implicit preferences"
+      ],
+      "method": "independent_source_anchored_rules_v1",
+      "artistic_fidelity_certified": false
+    },
+    "schema_version": 1,
+    "feasibility_scope": "DAG, resource budget and known specialist capability; source-grounded count/context coverage in declared scope; artistic fidelity unverified",
+    "steps": [
+      {
+        "key": "vehicle",
+        "kind": "vehicle",
+        "description": "Create a red sports car with four independent wheels and prepare for export in Blender.",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      }
+    ],
+    "unmet_requirements": [],
+    "estimated_minimum_s": 660,
+    "feasible_steps": 1,
+    "blocked_steps": 0,
+    "fully_feasible": true
+  }
+}

@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import signal
+import socket
 import subprocess
 import sys
 import time
@@ -66,17 +67,20 @@ def fetch_coder(runtime: Path) -> Path:
     return descriptor
 
 
-def file_sha256(path: Path) -> str:
+def file_sha256(path: Path, *, cancel_event=None) -> str:
     h = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            if cancel_event is not None and cancel_event.is_set():
+                raise InterruptedError("user_cancelled_verifying_weights")
             h.update(chunk)
     return h.hexdigest()
 
 
 class CoderSession:
-    def __init__(self, manifest: Path, log_dir: Path, *, port: int = 8082,
-                 compute_backend: str = "cpu") -> None:
+    def __init__(
+        self, manifest: Path, log_dir: Path, *, port: int = 8082, compute_backend: str = "cpu"
+    ) -> None:
         self.manifest, self.log_dir, self.port = manifest, log_dir, port
         if compute_backend not in ("auto", "cuda", "cpu"):
             raise ValueError("unknown_coder_compute_backend")
@@ -84,6 +88,8 @@ class CoderSession:
         self.process: subprocess.Popen[bytes] | None = None
         self.log: Any = None
         self.facts: dict[str, Any] = {}
+        self.cancel_event = None
+        self._owned_children: list[psutil.Process] = []
         self.endpoint = ModelEndpoint(
             pool_id="local",
             runtime="openai_compatible",
@@ -114,52 +120,77 @@ class CoderSession:
             or model["sha256"] != CODER_SHA256
             or model["license"] != "Apache-2.0"
             or model.get("license_reviewed_before_download") is not True
-            or file_sha256(path) != CODER_SHA256
+            or file_sha256(path, cancel_event=self.cancel_event) != CODER_SHA256
         ):
             raise RuntimeError("coder_artifact_unverified")
-        if get_default_provider(self.endpoint).detect().is_available:
-            raise RuntimeError("model_port_already_owned")
+        # Reject ANY listener, including a non-LLM service or a server presenting
+        # a different model. Never shut it down or reuse it as our Qwen process.
+        with socket.socket() as port_check:
+            try:
+                if os.name == "nt":
+                    port_check.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                port_check.bind(("127.0.0.1", self.port))
+            except OSError as exc:
+                raise RuntimeError("model_port_already_owned") from exc
+        if self.cancel_event is not None and self.cancel_event.is_set():
+            raise InterruptedError("user_cancelled_before_model_start")
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.log = (self.log_dir / "llama-server.log").open("w")
         started = time.monotonic()
-        self.process = subprocess.Popen(  # noqa: S603 - verified local weights and fixed localhost server
-            [
-                sys.executable,
-                "-m",
-                "llama_cpp.server",
-                "--model",
-                str(path),
-                "--model_alias",
-                self.endpoint.served_model,
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(self.port),
-                "--n_ctx",
-                "8192",
-                "--n_threads",
-                "4",
-                "--n_gpu_layers",
-                layers,
-            ],
-            stdout=self.log,
-            stderr=subprocess.STDOUT,
-            start_new_session=(os.name != "nt"),
-        )
+        self.facts = {
+            "repo": CODER_REPO,
+            "commit": CODER_COMMIT,
+            "sha256": CODER_SHA256,
+            "quantization": "Q5_K_M",
+            "device": device,
+            "llama_gpu_offload_supported": gpu_supported,
+            "server_ready": False,
+        }
+        try:
+            self.process = subprocess.Popen(  # noqa: S603 - verified local weights and fixed localhost server
+                [
+                    sys.executable,
+                    "-m",
+                    "llama_cpp.server",
+                    "--model",
+                    str(path),
+                    "--model_alias",
+                    self.endpoint.served_model,
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(self.port),
+                    "--n_ctx",
+                    "8192",
+                    "--n_threads",
+                    "4",
+                    "--n_gpu_layers",
+                    layers,
+                ],
+                stdout=self.log,
+                stderr=subprocess.STDOUT,
+                env={**os.environ, "PYTHONUTF8": "1"},
+                start_new_session=(os.name != "nt"),
+            )
+        except BaseException:
+            self.log.close()
+            raise
         try:
             provider = get_default_provider(self.endpoint)
-            while not provider.detect().is_available:
+            while True:
+                if self.cancel_event is not None and self.cancel_event.is_set():
+                    raise InterruptedError("user_cancelled_loading_model")
                 if self.process.poll() is not None or time.monotonic() - started > 120:
                     raise RuntimeError("local_coder_start_failed")
+                if provider.detect().is_available:
+                    if self.process.poll() is not None:
+                        raise RuntimeError("local_coder_exited_during_start")
+                    break
                 time.sleep(0.2)
             self.facts = {
-                "repo": CODER_REPO,
-                "commit": CODER_COMMIT,
-                "sha256": CODER_SHA256,
-                "quantization": "Q5_K_M",
-                "device": device,
-                "llama_gpu_offload_supported": gpu_supported,
+                **self.facts,
                 "load_s": time.monotonic() - started,
+                "server_ready": True,
                 "pid": self.process.pid,
                 "rss_after_load_bytes": psutil.Process(self.process.pid).memory_info().rss,
             }
@@ -172,33 +203,53 @@ class CoderSession:
         if self.process and self.process.poll() is None:
             self.facts["rss_after_generation_bytes"] = psutil.Process(self.process.pid).memory_info().rss
 
+    def request_stop(self, *, force: bool = False) -> None:
+        """Snapshot owned descendants before terminating their parent on Windows.
+
+        The cancellation watcher and __exit__ use the same process identities;
+        no process search by name and no foreign server termination.
+        """
+        if self.process is None or self.process.poll() is not None:
+            return
+        with suppress(psutil.NoSuchProcess):
+            children = psutil.Process(self.process.pid).children(recursive=True)
+            known = {p.pid for p in self._owned_children}
+            self._owned_children.extend(p for p in children if p.pid not in known)
+        if os.name == "nt":
+            for child in self._owned_children:
+                with suppress(psutil.NoSuchProcess):
+                    child.kill() if force else child.terminate()
+            self.process.kill() if force else self.process.terminate()
+        else:
+            with suppress(ProcessLookupError):
+                os.killpg(self.process.pid, signal.SIGKILL if force else signal.SIGTERM)
+
     def __exit__(self, kind: Any, value: Any, tb: Any) -> None:
+        stopped_at = time.monotonic()
         if self.process and self.process.poll() is None:
-            if os.name == "nt":
-                owned = psutil.Process(self.process.pid)
-                tree = [*owned.children(recursive=True), owned]
-                for item in tree:
-                    with suppress(psutil.NoSuchProcess):
-                        item.terminate()
-                _, survivors = psutil.wait_procs(tree, timeout=10)
-                for item in survivors:
-                    with suppress(psutil.NoSuchProcess):
-                        item.kill()
-            else:
-                os.killpg(self.process.pid, signal.SIGTERM)
+            self.request_stop()
             try:
                 self.process.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                if os.name == "nt":
-                    self.process.kill()
-                else:
-                    os.killpg(self.process.pid, signal.SIGKILL)
+                self.request_stop(force=True)
                 self.process.wait(timeout=10)
+        if self._owned_children:
+            _, survivors = psutil.wait_procs(self._owned_children, timeout=2)
+            for child in survivors:
+                with suppress(psutil.NoSuchProcess):
+                    child.kill()
+            _, survivors = psutil.wait_procs(survivors, timeout=2)
+            self.facts["owned_children_stopped_verified"] = not survivors
         if self.process:
             self.facts["process_stopped_verified"] = self.process.poll() is not None
             self.facts["returncode"] = self.process.returncode
+            self.facts["shutdown_s"] = time.monotonic() - stopped_at
         if self.log:
             self.log.close()
+        if self.log_dir.is_dir():
+            from apex.game_studio.lifecycle import atomic_json
+
+            atomic_json(self.log_dir / "model-lifecycle.json", self.facts)
 
 
 def triposr_readiness() -> dict[str, Any]:

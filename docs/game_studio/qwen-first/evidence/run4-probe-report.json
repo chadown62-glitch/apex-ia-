@@ -1,0 +1,27 @@
+{
+  "request": {
+    "creation_type": "objet_3d",
+    "style": "realiste",
+    "quality": "prototype",
+    "tool": "blender",
+    "compute_backend": "cpu",
+    "controller_model": "auto",
+    "description": "Crée deux fauteuils verts pour un coin lecture.",
+    "judges_all_tasks": true,
+    "automatic_corrections": true,
+    "max_time_s": 1800,
+    "max_rss_mib": 12000,
+    "max_attempts": 3,
+    "plan_only": true
+  },
+  "checks": {
+    "same_project": true,
+    "new_mission_attempt": true,
+    "cumulative_budget": true,
+    "plan_only_review": false,
+    "two_chairs": false,
+    "resumed_server_stopped": false
+  },
+  "passed": false,
+  "scope": "real API cancellation during Qwen loading, resume and held-out plan; no chair meshes"
+}

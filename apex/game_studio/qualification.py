@@ -11,9 +11,11 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import socket
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -25,7 +27,7 @@ REQUEST = {
     "quality": "prototype",
     "tool": "blender",
     "compute_backend": "cpu",
-    "controller_model": "pinned_7b",
+    "controller_model": "auto",
     "description": (
         "Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender."
     ),
@@ -47,8 +49,251 @@ def sha(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def budget_windows_contention(output):
+    """Real Windows reader/writer contention, not an injected I/O exception."""
+    if os.name != "nt":
+        return {"status": "not_applicable", "reason": "native_Windows_required"}
+    from apex.game_studio.lifecycle import RunBudget, atomic_json, read_json
+
+    folder = output / "budget-contention"
+    folder.mkdir()
+    target, replacement = folder / "record.json", folder / "replacement.json"
+    atomic_json(target, {"version": 1})
+    atomic_json(replacement, {"version": 2})
+    observed = None
+    with target.open("rb"):
+        try:
+            os.replace(replacement, target)
+        except OSError as exc:
+            observed = {
+                "error": type(exc).__name__,
+                "winerror": getattr(exc, "winerror", None),
+                "errno": exc.errno,
+            }
+    reader = target.open("rb")
+    release = threading.Timer(0.2, reader.close)
+    release.start()
+    started = time.monotonic()
+    try:
+        atomic_json(target, {"version": 3})
+    finally:
+        release.join()
+        reader.close()
+    elapsed = time.monotonic() - started
+    # Reproduce the inverse sharing failure: a brief exclusive opener (e.g. a
+    # file scanner) blocks readers as well. Only this disposable test file.
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.CreateFileW(str(target), 0x80000000, 0, None, 3, 128, None)
+    if handle == wintypes.HANDLE(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    read_error = None
+    try:
+        target.read_bytes()
+    except OSError as exc:
+        read_error = {"winerror": getattr(exc, "winerror", None), "errno": exc.errno}
+    release_reader = threading.Timer(0.2, kernel.CloseHandle, args=(handle,))
+    release_reader.start()
+    try:
+        read_back = read_json(target)
+    finally:
+        release_reader.join()
+    cancel = threading.Event()
+    with RunBudget(folder, 10, cancel) as budget:
+        with (folder / "budget.json").open("rb"):
+            time.sleep(0.4)
+        budget.checkpoint()
+        if cancel.is_set():
+            raise RuntimeError("transient_reader_cancelled_budget")
+    report = {
+        "original_replace_error": observed,
+        "bounded_replace_elapsed_s": elapsed,
+        "original_read_error": read_error,
+        "read_after_transient_denial": read_back,
+        "final_value": json.loads(target.read_bytes()),
+        "budget_cancelled": cancel.is_set(),
+        "status": "pass",
+    }
+    save(output / "budget-contention.json", report)
+    return report
+
+
+def collect_api_artifacts(client, project, downloads):
+    """Download through the SAME ownership-checked endpoints used by the UI."""
+    downloads.mkdir(exist_ok=True)
+    sources = []
+    base = f"/api/v1/game-studio/projects/{project['id']}/artifacts/"
+    if project.get("planning_artifact"):
+        sources.append((base, project["planning_artifact"]))
+    for assembly in [project.get("assembly"), *project.get("assembly_history", [])]:
+        sources.extend((base, a) for a in (assembly or {}).get("artifacts", []))
+    for step in project.get("steps", []):
+        sources.extend((base, a) for a in (step.get("handoff") or {}).get("artifacts", []))
+        child = step.get("mission")
+        if child:
+            child_base = f"/api/v1/game-studio/missions/{child['id']}/artifacts/"
+            for revision in child.get("revisions", []):
+                sources.extend((child_base, a) for a in revision.get("artifacts", []))
+            sources.extend((child_base, a) for a in child.get("controller_attempts", []))
+    collected = []
+    for base, artifact in sources:
+        digest = artifact["hash"]
+        result = client.get(base + digest)
+        result.raise_for_status()
+        if "sha256:" + hashlib.sha256(result.content).hexdigest() != digest:
+            raise RuntimeError("api_artifact_hash_mismatch")
+        # Never trust an artifact's filename as a local path.
+        (downloads / digest.removeprefix("sha256:")).write_bytes(result.content)
+        collected.append({**artifact, "api_path": base + digest})
+    save(downloads / "index.json", collected)
+    return collected
+
+
+def verify_real_mission(project, downloads):
+    """Fail closed: a review state or a Blender fixture alone proves no inference."""
+    from apex.game_graphics.models import CODER_SHA256
+
+    planner = project.get("planner_model") or {}
+    planning = project.get("planning_artifact")
+    checks = {
+        "project_review": project.get("status") == "review",
+        "pinned_planner": planner.get("sha256") == CODER_SHA256,
+        "explicit_cpu": planner.get("device") == "cpu_explicit",
+        "planner_stopped": planner.get("process_stopped_verified") is True,
+    }
+    trace = {}
+    if planning:
+        trace = json.loads((downloads / planning["hash"].removeprefix("sha256:")).read_bytes())
+    checks["real_validated_response"] = bool(
+        trace.get("accepted") is True
+        and trace.get("status") == "validated"
+        and trace.get("attempts")
+        and trace["attempts"][-1].get("raw_response")
+        and trace["attempts"][-1].get("generation", {}).get("model_used")
+    )
+    vehicles = [s for s in project.get("steps", []) if s.get("kind") == "vehicle"]
+    checks["one_vehicle"] = len(vehicles) == 1
+    checks["vehicle_preflight"] = bool(vehicles) and all(
+        s.get("handoff", {}).get("status") == "pass_preflight" for s in vehicles
+    )
+    for step in vehicles:
+        child = step.get("mission") or {}
+        checks["child_review"] = child.get("status") == "review"
+        revisions = child.get("revisions", [])
+        checks["blender_files_and_four_views"] = any(
+            {"asset.blend", "asset.glb"} <= {a["name"] for a in r.get("artifacts", [])}
+            and sum(a["name"].endswith(".png") for a in r.get("artifacts", [])) >= 4
+            and r.get("verdict") == "pass"
+            for r in revisions
+        )
+    return {"passed": all(checks.values()), "checks": checks}
+
+
+def api_lifecycle_probe(client, home, output):
+    """Cancel a real Qwen load, resume the same project and plan a held-out request.
+
+    Only called after a successful real vehicle mission. No injected diagnostic,
+    model replacement or new provisioning path. No Blender generation in this probe.
+    """
+    from apex.game_studio.lifecycle import busy
+
+    request = {
+        **REQUEST,
+        "description": "Crée deux fauteuils verts pour un coin lecture.",
+        "creation_type": "objet_3d",
+        "plan_only": True,
+        "max_time_s": 1800,
+    }
+    response = client.post("/api/v1/game-studio/projects", json=request)
+    response.raise_for_status()
+    project = response.json()["data"]
+    base = f"/api/v1/game-studio/projects/{project['id']}"
+    folder = home / ".apex/game-studio/missions/projects" / project["id"]
+    owner_file = folder / "planner-model/model.owner.json"
+    deadline = time.monotonic() + 180
+    while not owner_file.exists() and time.monotonic() < deadline:
+        response = client.get(base)
+        response.raise_for_status()
+        project = response.json()["data"]
+        if project["status"] not in ("queued", "running"):
+            raise RuntimeError("planner_probe_failed_before_owned_server")
+        time.sleep(0.1)
+    if not owner_file.exists():
+        client.post(base + "/cancel").raise_for_status()
+        raise RuntimeError("planner_probe_no_owned_server")
+    owner = json.loads(owner_file.read_bytes())
+    client.post(base + "/cancel").raise_for_status()
+    deadline = time.monotonic() + 30
+    while busy(folder) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    if busy(folder):
+        raise RuntimeError("cancelled_planner_worker_still_owned")
+    cancelled = client.get(base)
+    cancelled.raise_for_status()
+    cancelled = cancelled.json()["data"]
+    save(output / "probe-cancelled.json", cancelled)
+    save(output / "probe-cancelled-owner.json", json.loads(owner_file.read_bytes()))
+    lifecycle = folder / "planner-model/model-lifecycle.json"
+    if lifecycle.exists():
+        shutil.copyfile(lifecycle, output / "probe-cancelled-lifecycle.json")
+    if cancelled["status"] != "cancelled":
+        raise RuntimeError("planner_probe_not_cancelled")
+    try:
+        process = psutil.Process(owner["pid"])
+        if process.create_time() == owner["create_time"] and process.is_running():
+            raise RuntimeError("cancelled_planner_orphan_present")
+    except psutil.NoSuchProcess:
+        pass
+    response = client.post(base + "/resume")
+    response.raise_for_status()
+    resumed = response.json()["data"]
+    deadline = time.monotonic() + request["max_time_s"] + 30
+    while resumed["status"] in ("queued", "running") and time.monotonic() < deadline:
+        time.sleep(2)
+        response = client.get(base)
+        response.raise_for_status()
+        resumed = response.json()["data"]
+        save(output / "probe-resumed.json", resumed)
+    if resumed["status"] in ("queued", "running"):
+        client.post(base + "/cancel").raise_for_status()
+        raise RuntimeError("planner_probe_resume_timeout")
+    collect_api_artifacts(client, resumed, output / "probe-artifacts")
+    checks = {
+        "same_project": resumed["id"] == cancelled["id"],
+        "new_mission_attempt": resumed["mission_id"] != cancelled["mission_id"],
+        "cumulative_budget": resumed["budget"]["charged_s"] >= cancelled["budget"]["charged_s"] > 0,
+        "plan_only_review": resumed["status"] == "review" and resumed.get("delivery_status") == "plan_only",
+        "two_chairs": sum(s["kind"] == "chair" for s in resumed.get("steps", [])) == 2,
+        "resumed_server_stopped": (resumed.get("planner_model") or {}).get("process_stopped_verified")
+        is True,
+    }
+    report = {
+        "request": request,
+        "checks": checks,
+        "passed": all(checks.values()),
+        "scope": "real API cancellation during Qwen loading, resume and held-out plan; no chair meshes",
+    }
+    save(output / "probe-report.json", report)
+    return report
+
+
 def lease_fixture(output):
     """Exercise OS exclusion with a separate interpreter, never fake GPU memory."""
+    from apex.game_graphics.resources import _locked
     from apex.game_studio.gpu import resource_lease
 
     shared = str(Path(os.environ["APEX_HOME"]) / ".apex/model-session.lock")
@@ -61,15 +306,29 @@ def lease_fixture(output):
     with resource_lease(output / "lease-proof/resource.lock"):
         blocked = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
     available = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
+    with _locked(Path(shared)), resource_lease(output / "cpu-proof/resource.lock", compute_backend="cpu"):
+        gpu_still_held = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
+        workload_command = [*command[:-1], str(Path(shared).with_name("game-studio-workload.lock"))]
+        cpu_excluded = subprocess.run(  # noqa: S603
+            workload_command, capture_output=True, text=True, timeout=30
+        )
     report = {
         "contender_while_held": blocked.returncode,
         "contender_after_release": available.returncode,
+        "cpu_entered_while_gpu_lease_held": True,
+        "cpu_did_not_release_gpu": gpu_still_held.returncode == 73,
+        "cpu_workload_exclusion": cpu_excluded.returncode == 73,
         "stderr": [blocked.stderr, available.stderr],
         "cuda_qualified": False,
         "scope": "real separate-process OS lease exclusion, no GPU resident",
     }
     save(output / "lease-report.json", report)
-    if blocked.returncode != 73 or available.returncode != 0:
+    if (blocked.returncode, available.returncode, gpu_still_held.returncode, cpu_excluded.returncode) != (
+        73,
+        0,
+        73,
+        73,
+    ):
         raise RuntimeError("native_shared_lease_exclusion_failed")
     return report
 
@@ -211,6 +470,7 @@ def api_mission(output):
                 response.raise_for_status()
                 project = response.json()["data"]
                 project_id = project["id"]
+                save(output / "api-project.json", project)
                 deadline = time.monotonic() + REQUEST["max_time_s"] + 120
                 while project["status"] in ("queued", "running") and time.monotonic() < deadline:
                     time.sleep(2)
@@ -218,30 +478,30 @@ def api_mission(output):
                     response.raise_for_status()
                     project = response.json()["data"]
                     save(output / "api-project.json", project)
+                    with (output / "api-progress.jsonl").open("a", encoding="utf-8") as progress:
+                        progress.write(
+                            json.dumps(
+                                {
+                                    "observed_at": time.time(),
+                                    "status": project["status"],
+                                    "events": project.get("events", []),
+                                }
+                            )
+                            + "\n"
+                        )
                 if project["status"] in ("queued", "running"):
                     client.post(f"/api/v1/game-studio/projects/{project_id}/cancel").raise_for_status()
                     raise RuntimeError("api_mission_qualification_timeout")
                 downloads = output / "api-artifacts"
-                downloads.mkdir()
-                collected = []
-                for step in project["steps"]:
-                    child = step.get("mission")
-                    if not child:
-                        continue
-                    for artifact in [
-                        a for revision in child.get("revisions", []) for a in revision.get("artifacts", [])
-                    ]:
-                        digest = artifact["hash"]
-                        result = client.get(
-                            f"/api/v1/game-studio/missions/{child['id']}/artifacts/{digest}"
-                        )
-                        result.raise_for_status()
-                        if "sha256:" + hashlib.sha256(result.content).hexdigest() != digest:
-                            raise RuntimeError("api_artifact_hash_mismatch")
-                        (downloads / digest.removeprefix("sha256:")).write_bytes(result.content)
-                        collected.append(artifact)
+                collected = collect_api_artifacts(client, project, downloads)
+                validation = verify_real_mission(project, downloads)
+                save(output / "api-validation.json", validation)
+                lifecycle = api_lifecycle_probe(client, home, output) if validation["passed"] else None
                 return {
-                    "status": project["status"],
+                    "status": "review" if validation["passed"] and lifecycle["passed"] else "FAILED",
+                    "mission_status": project["status"],
+                    "validation": validation,
+                    "lifecycle_probe": lifecycle,
                     "project_id": project_id,
                     "artifacts": collected,
                     "cpu_explicit": True,
@@ -262,11 +522,20 @@ def api_mission(output):
                 except subprocess.TimeoutExpired:
                     process.terminate()
                     process.wait(timeout=10)
+            # Only logs/receipts from this fresh profile, never credentials or weights.
+            studio = home / ".apex/game-studio"
+            for section in ("missions", "projects"):
+                for source in (studio / section).rglob("*"):
+                    if source.is_file() and source.suffix in (".log", ".json", ".blend", ".glb", ".png"):
+                        target = output / "runtime-evidence" / source.relative_to(studio)
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(source, target)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--require-inference", action="store_true")
     args = parser.parse_args(argv)
     output = args.output.resolve()
     from apex.game_graphics.studio.execution import refuse_personal_project
@@ -309,11 +578,19 @@ def main(argv=None):
         version.check_returncode()
         report["blender"] = {**blender, "version": version.stdout}
         report["lease"] = lease_fixture(output)
-        report["fixture"] = blender_fixture(output)
+        report["budget_contention"] = budget_windows_contention(output)
+        report["fixture"] = (
+            {"status": "not_run", "reason": "real_API_mission_required_instead; fixture_qualified_in_PR29"}
+            if args.require_inference
+            else blender_fixture(output)
+        )
         report["mission"] = api_mission(output)
         report["status"] = (
             "COMPONENTS_TESTED" if report["mission"]["status"] == "BLOCKED" else report["mission"]["status"]
         )
+        if args.require_inference and report["mission"]["status"] == "BLOCKED":
+            report["status"] = "BLOCKED"
+            return 2
         return 0 if report["mission"]["status"] in ("BLOCKED", "review") else 1
     except Exception as exc:
         report["status"] = "FAILED"

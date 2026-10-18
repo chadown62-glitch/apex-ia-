@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import errno
 import json
 import os
 from collections.abc import Iterator
@@ -9,6 +10,13 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 import psutil
+
+
+class SharedResourceBusy(BlockingIOError):
+    """A lock was occupied, distinct from a filesystem permission failure."""
+
+    def __init__(self):
+        super().__init__(errno.EAGAIN, "shared_resource_busy")
 
 
 def check_external_workloads() -> None:
@@ -33,8 +41,11 @@ def check_external_workloads() -> None:
             # The API may itself be the caller of Game Studio.  This is a
             # verified same-process handoff, not permission to ignore a
             # different running backend or a resident model process below.
-            if (record.get("phase") in ("starting", "serving")
-                    and alive(record["pid"]) and record["pid"] != os.getpid()):
+            if (
+                record.get("phase") in ("starting", "serving")
+                and alive(record["pid"])
+                and record["pid"] != os.getpid()
+            ):
                 raise RuntimeError("core_active_handoff_required")
     for process in psutil.process_iter(["pid", "name", "cmdline"]):
         name = (process.info["name"] or "").lower()
@@ -60,11 +71,19 @@ def _locked(path: Path) -> Iterator[None]:
                 handle.write(b"0")
                 handle.flush()
             handle.seek(0)
-            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
+            try:
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
+            except OSError as exc:
+                if exc.errno in (errno.EACCES, errno.EAGAIN, errno.EDEADLK):
+                    raise SharedResourceBusy() from exc
+                raise
         else:
             import fcntl
 
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise SharedResourceBusy() from exc
         yield
 
 

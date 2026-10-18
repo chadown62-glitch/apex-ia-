@@ -8,8 +8,11 @@ writes receipts; other processes request cancellation via a marker.
 
 from __future__ import annotations
 
+import errno
 import json
+import logging
 import os
+import tempfile
 import threading
 import time
 from contextlib import contextmanager, suppress
@@ -18,15 +21,50 @@ from typing import Any
 
 from apex.game_graphics.resources import _locked
 
+LOG = logging.getLogger(__name__)
+
+
+def read_json(path: Path) -> Any:
+    """Read a complete version; retry a transient Windows replacement denial."""
+    deadline = time.monotonic() + 1.0
+    while True:
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
+        except OSError as exc:
+            retryable = getattr(exc, "winerror", None) in (5, 32, 33) or (
+                os.name == "nt" and exc.errno in (errno.EACCES, errno.EPERM)
+            )
+            # Python's Windows CRT io.open drops winerror and keeps errno=13.
+            # Retry is still bounded; a genuine ACL denial is never accepted.
+            if not retryable or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.01)
+
 
 def atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".tmp")
-    with temporary.open("w") as handle:
-        json.dump(value, handle, indent=2, ensure_ascii=False, default=str)
-        handle.flush()
-        os.fsync(handle.fileno())
-    os.replace(temporary, path)
+    # Windows readers/antivirus can momentarily deny rename/delete sharing.
+    # Retry only that OS-specific condition, without truncating the last ledger
+    # or resetting budgets. A persistent denial remains a hard error.
+    descriptor, name = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(value, handle, indent=2, ensure_ascii=False, default=str)
+            handle.flush()
+            os.fsync(handle.fileno())
+        deadline = time.monotonic() + 1.0
+        while True:
+            try:
+                os.replace(temporary, path)
+                break
+            except OSError as exc:
+                if getattr(exc, "winerror", None) not in (5, 32, 33) or time.monotonic() >= deadline:
+                    raise
+                time.sleep(0.01)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def busy(folder: Path) -> bool:
@@ -39,7 +77,10 @@ def busy(folder: Path) -> bool:
 
 def snapshot(folder: Path) -> dict[str, Any]:
     path = folder / "budget.json"
-    return json.loads(path.read_text()) if path.exists() else {}
+    try:
+        return read_json(path)
+    except FileNotFoundError:
+        return {}
 
 
 class RunBudget:
@@ -93,7 +134,11 @@ class RunBudget:
             while not self.stop.wait(0.25):
                 try:
                     self.checkpoint()
-                except OSError:
+                except OSError as exc:
+                    with self.lock:
+                        self.data["stop_reason"] = "budget_persistence_failed"
+                        self.data["persistence_error"] = f"{type(exc).__name__}: {exc}"[:500]
+                    LOG.exception("Game Studio budget persistence failed; stopping owned work")
                     self.cancel.set()
                     return
 
@@ -129,9 +174,9 @@ def request_cancel(folder: Path) -> None:
 @contextmanager
 def cancellable_session(session, cancel, *, max_rss_mib=12000):
     """Stop only this CoderSession's subprocess, including during model loading."""
-    import signal
 
     stop = threading.Event()
+    session.cancel_event = cancel
     measured = {"sampled_tree_rss_peak_bytes": 0, "rss_limit_mib": max_rss_mib}
 
     def watch():
@@ -172,10 +217,10 @@ def cancellable_session(session, cancel, *, max_rss_mib=12000):
             if cancel.is_set() and process is not None and process.poll() is None:
                 try:
                     if signalled is None:
-                        process.terminate() if os.name == "nt" else os.killpg(process.pid, signal.SIGTERM)
+                        session.request_stop()
                         signalled = time.monotonic()
                     elif time.monotonic() - signalled > 2:
-                        process.kill() if os.name == "nt" else os.killpg(process.pid, signal.SIGKILL)
+                        session.request_stop(force=True)
                 except ProcessLookupError:
                     pass
 
@@ -190,6 +235,8 @@ def cancellable_session(session, cancel, *, max_rss_mib=12000):
         watcher.join()
         session.__exit__(None, None, None)
         session.facts.update(measured)
+        if session.log_dir.is_dir():
+            atomic_json(session.log_dir / "model-lifecycle.json", session.facts)
         owner_path = session.log_dir / "model.owner.json"
         if owner_path.is_file():
             record = json.loads(owner_path.read_text())

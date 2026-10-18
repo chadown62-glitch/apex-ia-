@@ -49,6 +49,7 @@ from .lifecycle import (
     cancellable_session,
     claim,
     cleanup_owned,
+    read_json,
     remaining,
     request_cancel,
     snapshot,
@@ -113,7 +114,7 @@ class GameStudioService:
             except ValueError:
                 continue
             try:
-                stale = json.loads(path.read_text())
+                stale = read_json(path)
                 if stale.get("status") in ("running", "queued"):
                     stale["status"] = "interrupted"
                     stale["current_task"] = "interrupted_on_restart"
@@ -133,9 +134,10 @@ class GameStudioService:
 
     def _read(self, job_id: str) -> dict[str, Any]:
         path = self._folder(job_id) / "receipt.json"
-        if not path.is_file():
-            raise LookupError("game_studio_mission_missing")
-        return json.loads(path.read_text())
+        try:
+            return read_json(path)
+        except FileNotFoundError as exc:
+            raise LookupError("game_studio_mission_missing") from exc
 
     def _save(self, record: dict[str, Any]) -> None:
         folder = self._folder(record["id"])
@@ -201,20 +203,18 @@ class GameStudioService:
         native = native_coder_endpoint()
         pinned = coder_manifest().is_file() and find_spec("llama_cpp") is not None
         if desired == "auto":
+            # Respect the explicit backend even on a CUDA host. An available
+            # brain endpoint does not provide a per-call CPU-placement contract.
             desired = (
-                "apex_native"
-                if capabilities["cuda"]["available"] and native
-                else ("pinned_7b" if pinned else "apex_native")
+                "pinned_7b"
+                if request.get("compute_backend") == "cpu"
+                else ("apex_native" if capabilities["cuda"]["available"] and native else "pinned_7b")
             )
         if desired == "pinned_7b" and not pinned:
             raise RuntimeError("pinned_7b_model_missing_no_download_performed")
         if desired == "apex_native" and native is None:
             raise RuntimeError("apex_native_coder_missing_no_download_performed")
-        if (
-            desired == "apex_native"
-            and request.get("compute_backend") == "cpu"
-            and capabilities["cuda"]["available"]
-        ):
+        if desired == "apex_native" and request.get("compute_backend") == "cpu":
             raise RuntimeError("native_cpu_override_not_supported_choose_pinned_7b_or_cuda")
         request = {**request, "resolved_controller_model": desired}
         overrides = request.get("criteria") or {}
@@ -467,7 +467,9 @@ class GameStudioService:
             recovery_policy = RecoveryPolicy(max_attempts=budget, resource_exhausted_max_retries=1)
             benchmark = json.loads(BENCHMARK.read_text())
             folder = self._folder(job_id)
-            with resource_lease(folder / "resource.lock"):
+            with resource_lease(
+                folder / "resource.lock", compute_backend=request["compute_backend"], cancel_event=cancel
+            ):
                 if cancel.is_set():
                     raise InterruptedError("user_cancelled")
                 calibration = None

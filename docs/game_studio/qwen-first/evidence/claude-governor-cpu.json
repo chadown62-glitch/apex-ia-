@@ -1,0 +1,98 @@
+{
+  "claude_commit": "8a4e2defb9f133298aebcb241942adb793eb73e7",
+  "source_sha256": "fb0b243df44ae2b631b611cc34441ec9c0cd59e45afea72bbf58af93fe8ad41b",
+  "scope": "real governor source and OS locks on Linux CPU; no CUDA resident",
+  "ack": {
+    "released": true,
+    "requester": "assistant:test-owned-loan",
+    "reason": "aucun mod\u00e8le principal sur CUDA",
+    "unloaded": [],
+    "waited_s": 0.888,
+    "admissions_open": false,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+    "cuda": {
+      "measured": false,
+      "reason": "aucun GPU CUDA dans ce processus"
+    }
+  },
+  "before": {
+    "admissions_open": false,
+    "transition": false,
+    "active_generations": 0,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+    "lent_to": "assistant:test-owned-loan",
+    "cuda_residents": [],
+    "cuda_available": false,
+    "last_ack": {
+      "released": true,
+      "requester": "assistant:test-owned-loan",
+      "reason": "aucun mod\u00e8le principal sur CUDA",
+      "unloaded": [],
+      "waited_s": 0.888,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    }
+  },
+  "during": {
+    "admissions_open": false,
+    "transition": false,
+    "active_generations": 0,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+    "lent_to": "assistant:test-owned-loan",
+    "cuda_residents": [],
+    "cuda_available": false,
+    "last_ack": {
+      "released": true,
+      "requester": "assistant:test-owned-loan",
+      "reason": "aucun mod\u00e8le principal sur CUDA",
+      "unloaded": [],
+      "waited_s": 0.888,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    }
+  },
+  "after": {
+    "admissions_open": false,
+    "transition": false,
+    "active_generations": 0,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+    "lent_to": "assistant:test-owned-loan",
+    "cuda_residents": [],
+    "cuda_available": false,
+    "last_ack": {
+      "released": true,
+      "requester": "assistant:test-owned-loan",
+      "reason": "aucun mod\u00e8le principal sur CUDA",
+      "unloaded": [],
+      "waited_s": 0.888,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-governor/.apex/model-session.lock",
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    }
+  },
+  "return": {
+    "resumed": true,
+    "requester": "assistant:test-owned-loan",
+    "lent_to": "assistant:test-owned-loan"
+  },
+  "cpu_did_not_touch_assistant_loan": true,
+  "cuda_qualified": false
+}

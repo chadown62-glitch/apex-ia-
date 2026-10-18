@@ -149,8 +149,19 @@ def main():
             timeout=2400,
         )
     (output / "provenance.json").write_text(json.dumps(provenance, indent=2))
+    qualification = [
+        str(python),
+        "-m",
+        "apex.game_studio.qualification",
+        "--output",
+        str(output / "evidence"),
+    ]
+    if args.download_pinned_qwen:
+        # An explicitly requested inference qualification must fail when weights
+        # are absent; COMPONENTS_TESTED is insufficient for this mode.
+        qualification.append("--require-inference")
     run(
-        [str(python), "-m", "apex.game_studio.qualification", "--output", str(output / "evidence")],
+        qualification,
         output / "qualification.log",
         env=env,
         cwd=output / "runtime",
