@@ -5,8 +5,11 @@
 #   installateur construit depuis l'arbre combiné -> installation silencieuse -> APEX.exe --prepare
 #   -> accélération GPU vérifiée sans GPU (gpu_overlay_check.py : roues figées, variante, installation à part, sonde)
 #   -> --install-model -> --start -> un vrai tour de l'assistant (assistant_e2e.py run)
-#   -> parcours 3D réel (studio_e2e.py : composants, disponibilité, conversation 3D, proposition, clic,
-#      suivi) -> --stop -> désinstallation.
+#   -> parcours 3D réel (studio_e2e.py : composants installés par leurs boutons, disponibilité, conversation 3D,
+#      proposition, clic, suivi, aperçus, .blend/.glb téléchargés et vérifiés) -> --stop -> désinstallation.
+# Si la demande le dit (studio_planner, studio_blender), le runner JETABLE reçoit les poids du planificateur (5,4 Go,
+# par le bouton « Installer » d'APEX, donc le contrat install-planner de Game Studio) et Blender 4.3.2 portable
+# officiel à empreinte épinglée ; jamais le PC de l'utilisateur.
 # Verdicts : un prérequis absent (bibliothèque, planificateur, Blender…) donne BLOCKED (code 3) avec la raison
 # d'APEX, jamais PASS. Les résultats sont aussi publiés en annotations (lisibles par l'API, sans le journal).
 #
@@ -143,6 +146,27 @@ jobs:
             return $code
           }
           if ((Panel '--prepare') -ne 0) { Note error 'Préparer APEX' 'échec (voir panel.log)'; exit 3 }
+          $request = Get-Content "$tree/setup/packaging/windows/ci/candidate-request.json" -Raw | ConvertFrom-Json
+          # Blender 4.3.2 portable officiel, empreinte épinglée (celle de la qualification de Codex) : ce que
+          # l'utilisateur installe lui-même. APEX le trouve par APEX_BLENDER_EXECUTABLE, hérité par le Panel.
+          if ($request.studio_blender) {
+            $ProgressPreference = 'SilentlyContinue'
+            $zip = "$env:RUNNER_TEMP\blender-4.3.2-windows-x64.zip"
+            $ok = $false
+            foreach ($url in @('https://download.blender.org/release/Blender4.3/blender-4.3.2-windows-x64.zip',
+                               'https://mirrors.ocf.berkeley.edu/blender/release/Blender4.3/blender-4.3.2-windows-x64.zip')) {
+              try {
+                Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+                $ok = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower() -eq '933a62a770c941e316535f893629ff106ddd2aa5a956f0081ec557439073d4f6'
+              } catch { $ok = $false }
+              if ($ok) { break }
+            }
+            if (-not $ok) { Note error 'Blender' 'téléchargement ou empreinte refusés'; exit 1 }
+            New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\blender" | Out-Null
+            tar -xf $zip -C "$env:RUNNER_TEMP\blender"
+            $env:APEX_BLENDER_EXECUTABLE = "$env:RUNNER_TEMP\blender\blender-4.3.2-windows-x64\blender.exe"
+            Note notice 'Blender fourni au runner' "4.3.2 portable, empreinte vérifiée : $env:APEX_BLENDER_EXECUTABLE"
+          }
           # Ce que l'APEX INSTALLÉ contient et sait importer (Python préparé par le Panel, application de
           # l'installateur) : la preuve de l'empaquetage, indépendante de ce que dit l'application.
           $py = Get-ChildItem "$env:LOCALAPPDATA\APEX\python" -Filter python.exe -Recurse -Depth 2 -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -190,11 +214,13 @@ jobs:
           if ("$($prog.Line)" -notmatch [regex]::Escape("$env:LOCALAPPDATA\Programs\APEX\app")) { Note error 'Programme' "APEX n'exécute pas l'application installée : $($prog.Line)"; exit 1 }
           $assistant = RunPy 'Assistant' @("$tree/setup/packaging/windows/ci/assistant_e2e.py", 'run', '--out', $evidence, '--timeout', '2400')
           $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
-          $request = Get-Content "$tree/setup/packaging/windows/ci/candidate-request.json" -Raw | ConvertFrom-Json
           if ($request.studio_cpu) { $studioArgs += '--cpu' }
-          # Moteur du planificateur (llama-cpp-python, processeur) installé comme par le bouton « Installer » :
-          # qualifie son installation et son import sur un vrai Windows ; ses poids (5,4 Go) ne sont jamais téléchargés.
+          # Moteur du planificateur (llama-cpp-python, processeur) puis ses poids, installés comme par les boutons
+          # « Installer » de l'Atelier 3D. Les poids (5,4 Go) seulement si la demande le dit : runner jetable.
           if ($request.studio_engine) { $studioArgs += '--install-engine' }
+          if ($request.studio_planner) { $studioArgs += '--install-planner' }
+          # Tous les prérequis fournis : une mission non livrée est un échec, plus un blocage.
+          if ($request.studio_planner -and $request.studio_blender) { $studioArgs += '--require-delivery' }
           $studio = RunPy 'Parcours 3D' $studioArgs
           if ($request.studio_engine -and $py) {
             $engineCheck = @'

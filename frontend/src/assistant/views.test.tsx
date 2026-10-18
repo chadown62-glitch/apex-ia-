@@ -508,6 +508,17 @@ describe("explainFailure", () => {
     expect(explainFailure("PermissionError: [Errno 13] Permission denied: 'C:\\\\x.blend'")).toBe("PermissionError: [Errno 13] Permission denied: 'C:\\\\x.blend'");
     expect(explainFailure("local_planner_model_missing")).toMatch(/^le modèle planificateur local/);
   });
+
+  it("explains Game Studio's codes as its last event writes them (class name first)", async () => {
+    const { explainFailure } = await import("./MessageItem");
+    // Code stable du verrou occupé (Codex #31), sous Linux comme sous Windows.
+    expect(explainFailure("SharedResourceBusy: [Errno 11] shared_resource_busy"))
+      .toMatch(/^les ressources partagées d'APEX étaient tenues par un autre travail ; reprenez/);
+    expect(explainFailure("RuntimeError: planner_attempt_budget_exhausted"))
+      .toBe("le planificateur n'a pas produit de plan valide dans le nombre d'essais permis (RuntimeError: planner_attempt_budget_exhausted)");
+    expect(explainFailure("InterruptedError: user_cancelled_waiting_for_resources")).toMatch(/^mission annulée pendant/);
+    expect(explainFailure("RuntimeError: something_new")).toBe("RuntimeError: something_new");
+  });
 });
 
 describe("gameStudioLine", () => {

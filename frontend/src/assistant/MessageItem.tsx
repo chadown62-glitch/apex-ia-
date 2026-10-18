@@ -114,6 +114,15 @@ export const GAME_STUDIO_REFUSALS: Record<string, string> = {
   shared_resource_profile_required: "le profil APEX (APEX_HOME) n'est pas défini pour partager le GPU",
   external_graphics_workload_active: "Blender ou Unreal tourne déjà sur ce PC",
   external_model_workload_active: "un autre serveur de modèle tourne déjà sur ce PC",
+  pinned_7b_model_missing_no_download_performed:
+    "le modèle planificateur Qwen 7B n'est pas installé (rien n'a été téléchargé) ; installez-le dans Composants",
+  user_cancelled: "mission annulée",
+  user_cancelled_waiting_for_resources: "mission annulée pendant qu'elle attendait les ressources partagées d'APEX",
+  project_time_budget_exhausted: "le budget de temps de la mission est épuisé",
+  cumulative_time_budget_exhausted: "le budget de temps de la mission est épuisé (reprises comprises)",
+  planner_attempt_budget_exhausted: "le planificateur n'a pas produit de plan valide dans le nombre d'essais permis",
+  multi_asset_assembly_required: "le plan proposé oubliait l'assemblage des objets ; Game Studio l'a refusé",
+  brain_handoff_busy: "le GPU était déjà prêté à un autre travail",
 };
 
 /** Un refus de Game Studio en clair : l'explication du backend, sinon la table connue, sinon le code. */
@@ -127,12 +136,14 @@ export function explainRefusal(message: string | undefined | null, explanation?:
 /** Pourquoi une mission s'est arrêtée (raison du dernier événement de Game Studio) : en clair quand elle est connue, le
  *  texte exact toujours à côté. */
 export function explainFailure(reason: string): string {
-  // Bail `model-session.lock` tenu ailleurs : texte de `fcntl.flock` (Linux) ou de `msvcrt.locking` (Windows, sans nom de
-  // fichier ; mesuré par lease_check.py sur le runner).
-  if (/BlockingIOError|Resource deadlock|Errno 36|PermissionError: \[Errno 13\] Permission denied$/.test(reason)) {
-    return `les ressources partagées d'APEX étaient tenues par un autre travail (bail model-session.lock) ; reprenez la mission quand il est terminé (${reason})`;
+  // Verrou partagé tenu ailleurs : code stable de Game Studio (Codex #31), sinon texte brut de `fcntl.flock` (Linux) ou de
+  // `msvcrt.locking` (Windows, sans nom de fichier ; mesuré par lease_check.py sur le runner).
+  if (/shared_resource_busy|BlockingIOError|Resource deadlock|Errno 36|PermissionError: \[Errno 13\] Permission denied$/.test(reason)) {
+    return `les ressources partagées d'APEX étaient tenues par un autre travail ; reprenez la mission quand il est terminé (${reason})`;
   }
-  const known = GAME_STUDIO_REFUSALS[reason.split(":")[0].trim()];
+  // Game Studio écrit « RuntimeError: code » ; un refus direct est « code » ou « code: détail ».
+  const code = reason.replace(/^[A-Z][A-Za-z]*(Error|Exception): /, "").split(":")[0].trim();
+  const known = GAME_STUDIO_REFUSALS[code];
   return known ? `${known} (${reason})` : reason;
 }
 
