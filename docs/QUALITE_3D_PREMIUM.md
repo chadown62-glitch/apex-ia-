@@ -43,6 +43,17 @@ silhouette fournie par Game Studio délimite la voiture.
 | 3/4 avant | **finale (« rouge »)** | **saumon clair** (L* 78, C* 31) | **59,3** | **0,6** | 5,8 % | 17,4 % |
 | profil | **finale (« rouge »)** | **saumon clair** (L* 74, C* 33) | **55,5** | **2,3** | 5,8 % | 15,0 % |
 
+**Reproduit dans l'APEX.exe installé** (Windows Server, tentative 10,
+[run 39155790261](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39155790261)), par le volet Qualité, sur
+une nouvelle mission de la même demande : version 1 refusée pour la peinture, version 2 retenue.
+
+| Vue (version retenue) | Couleur perçue | ΔE au rouge demandé | Écart de clarté voiture / fond | Part de l'image |
+|---|---|---|---|---|
+| face | saumon, peu saturé | 56,3 | 38,1 | 5,9 % |
+| 3/4 avant | saumon clair | 59,5 | 0,7 | 17,4 % |
+| 3/4 arrière | saumon clair, peu saturé | 68,0 | 2,2 | 16,8 % |
+| profil | saumon clair | 55,9 | 2,5 | 15,0 % |
+
 Ce que ces chiffres disent :
 - la valeur « rouge » du shader est passée au contrôle du juge ;
 - **le rendu, lui, montre un saumon délavé**, presque de la même clarté que le fond (écart de 0,6 à 2,3) ;
@@ -145,9 +156,17 @@ Résultats des tests (18/10/2026, Linux) :
 - interface : **191 tests réussis** (27 fichiers), `tsc` sans erreur ;
 - `ruff` : aucun nouvel écart sur les fichiers ajoutés ou modifiés.
 
-Ces tests prouvent le comportement du code sur des données construites et sur l'extracteur réel de Codex. Ils ne
-prouvent **rien** sur la qualité visuelle : l'instrument n'est pas calibré, et aucune mission réelle n'a encore été
-notée par un humain.
+Dans l'APEX.exe installé (Windows Server, tentative 10,
+[run 39155790261](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39155790261)), par de vrais clics :
+- le brief s'affiche avant le clic ; les 4 éléments de la demande y sont « vérifiés », avec leurs réserves ;
+- le parcours validé reste vert : annulation, reprise, 4 aperçus, `.blend` et `.glb` vérifiés, seconde mission
+  par l'API ;
+- « Qualité de cette création » affiche les deux versions, la portée du juge et les mesures (§1.2) ;
+- un avis d'**essai** est enregistré par le formulaire et relu par l'API. Le runner est détruit à la fin : ce
+  n'est pas une donnée de calibration.
+
+Ces tests prouvent le comportement du code. Ils ne prouvent **rien** sur la qualité visuelle : l'instrument n'est
+pas calibré, et aucune mission réelle n'a encore été notée par un humain.
 
 ## 5. Juges artistiques : une méthode mesurable
 

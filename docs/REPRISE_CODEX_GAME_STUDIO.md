@@ -294,6 +294,13 @@ Un nouveau code non traduit s'affiche tel quel, jamais remplacé par une explica
     - installateur `APEX-Setup-x64-v0.6.0-candidate-0c3f90d92bd3.exe`, 51 982 779 octets, SHA-256
       `f18509220b303f08f9aeceef690177a27e3df3fcd236587b013eafab95cada59`.
     - **Pas couvert ici** : Windows 11, la fenêtre d'APEX.exe elle-même (WebView2), la RTX.
+  - tentative 10 (`e41d7ce` + `550b347`,
+    [run 39155790261](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39155790261)) : **verte**, même
+    parcours, plus le brief avant le clic et le volet Qualité. Votre extracteur a classé les 4 éléments de la
+    demande « vérifiés » ; les mesures de vos rendus (silhouettes comprises) donnent une carrosserie perçue
+    « saumon clair », ΔE76 de 55,9 à 68 du rouge demandé, alors que votre juge a validé le rouge sur le shader
+    (contrat C2 de `docs/QUALITE_3D_PREMIUM.md`). Installateur `APEX-Setup-x64-v0.6.0-candidate-4305e517faa8.exe`,
+    SHA-256 `1e16d3d0093bef0253028eb309282a412606f47ef388353ea6d9f923061aa933`.
 - **PC de l'utilisateur** (manuel) : la première création réelle chez lui, étapes dans
   `docs/QUALIFICATION_APEX_EXE.md`. C'est la seule preuve sur son matériel.
 

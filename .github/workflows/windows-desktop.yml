@@ -299,8 +299,21 @@ jobs:
             $t = $tail -replace '%', '%25' -replace "`r", '' -replace "`n", '%0A'
             Write-Host "::error title=${title}::$t"
           }
+          # La distribution WSL vit sur C:, qui s'est rempli pendant cette construction (runs 39150876458 et
+          # 39155790253 : « There is not enough space on the disk », SIGBUS de Go, puis getpwnam(root) en échec).
+          # La place est relevée avant et après, et les modèles, qui ne servent plus, sont retirés d'abord.
+          function Space([string]$when) {
+            $free = [math]::Round((Get-PSDrive C).Free / 1GB, 1)
+            # Sans réponse de WSL (distribution tombée), le relevé de C: reste publié.
+            $wsl = try { "$((wsl.exe -d $env:DISTRO -u root --exec df -h --output=avail,size /) | Select-Object -Last 1)".Trim() } catch { '?' }
+            Write-Host "::notice title=Place disque ($when)::C: $free Go libres ; WSL / (libre, taille) : $wsl"
+          }
+          Space 'avant'
+          wsl.exe -d $env:DISTRO -u root --exec bash "$src/setup/packaging/windows/ci/free_wsl_space.sh" | Out-Host
+          Space 'après nettoyage'
           wsl.exe -d $env:DISTRO -u root --exec bash -c "bash '$src/setup/packaging/windows/ci/build_minio_from_source.sh' 2>&1 | tee /tmp/minio-build.log; exit `${PIPESTATUS[0]}"
           $code = $LASTEXITCODE
+          Space 'après construction'
           if ($code -ne 0) { Fail "MinIO : construction (code $code)" /tmp/minio-build.log; exit $code }
           wsl.exe -d $env:DISTRO --cd /home/apex/apex --exec bash -c 'set -o pipefail; (COMPOSE_PROFILES=minio docker compose up -d --wait minio && docker compose ps minio && COMPOSE_PROFILES=minio docker compose stop minio) 2>&1 | tee /tmp/minio-compose.log'
           $code = $LASTEXITCODE
