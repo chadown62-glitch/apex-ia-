@@ -87,6 +87,74 @@ export interface GameStudioDelegation {
   /** Le refus de Game Studio expliqué en clair (le code exact est dans `error`). */
   explanation?: string;
   reason?: string;
+  /** Proposition : la demande rangée par aspect, et ce que Game Studio fera de chaque élément. */
+  brief?: CreativeBrief;
+}
+
+/** Ce que Game Studio fera d'un élément du brief : vérifié, possible, pas encore pris en compte, refusé, ou
+ *  inconnu (Game Studio absent). */
+export type BriefStatus = "verified" | "possible" | "not_yet" | "refused" | "unknown";
+
+/** Brief créatif d'une demande 3D (`apex.assistant.creative_brief`). */
+export interface CreativeBrief {
+  version: number;
+  family: string | null;
+  archetype: string | null;
+  styles: string[];
+  finish: string | null;
+  setting: string | null;
+  colors: { color: string; part: string; finish: string | null }[];
+  materials: string[];
+  features: string[];
+  counts: Record<string, number>;
+  reference_images: number;
+  reference_requested: boolean;
+  support: { aspect: string; asked: string; status: BriefStatus; how: string }[];
+}
+
+/** Mesures objectives d'un rendu (`apex.assistant.render_metrics`) : un instrument non calibré. */
+export interface RenderMetrics {
+  view: string;
+  error?: string;
+  kind?: string;
+  resolution?: [number, number];
+  highlights_clipped_pct?: number;
+  shadows_crushed_pct?: number;
+  contrast_l_std?: number;
+  noise_background?: number | null;
+  subject?: {
+    coverage_pct: number;
+    perceived_color: string;
+    perceived_chroma: number;
+    specular_pct: number;
+    detail_edge_pct: number;
+    separation_delta_l: number;
+    requested_color?: string;
+    delta_e76_to_requested?: number;
+  } | null;
+}
+
+/** Qualité d'une mission : versions, ce que le juge a vérifié ou non, mesures, avis humains. */
+export interface GameStudioQuality {
+  project_id: string;
+  status: string;
+  delivery_status: string | null;
+  brief: CreativeBrief | null;
+  steps: {
+    key: string;
+    kind: string | null;
+    status: string;
+    handoff: string | null;
+    versions?: { number: number; verdict: string; selected: boolean; defects: string[]; unavailable: string[] }[];
+    selection_reason?: string | null;
+    judge?: { scope: string | null; criteria: Record<string, unknown> | null; advisory: string[]; unavailable: string[] } | null;
+    limitations?: string[];
+    metrics?: RenderMetrics[];
+  }[];
+  limitations: string[];
+  metrics_available: boolean;
+  criteria: Record<string, string>;
+  ratings: { id: string; at: string; scores: Record<string, number>; comment: string }[];
 }
 
 /** Game Studio sur ce PC, d'après sa propre sonde (`GET /assistant/game-studio/availability`). */
@@ -323,6 +391,13 @@ export const assistantApi = {
     data<{ message_id: string; content: string; meta: MessageMeta }>(
       `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/resume`,
       { method: "POST" }),
+  gameStudioQuality: (conversationId: string, projectId: string) =>
+    data<GameStudioQuality>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/quality`),
+  rateGameStudioMission: (conversationId: string, projectId: string, scores: Record<string, number>, comment: string) =>
+    data<{ id: string }>(
+      `/assistant/conversations/${encodeURIComponent(conversationId)}/game-studio/${encodeURIComponent(projectId)}/ratings`,
+      json("POST", { scores, comment })),
   gameStudioDependencies: () => data<GameStudioDependencies>("/assistant/game-studio/dependencies"),
   installGameStudioDependency: (itemId: string) =>
     data<GameStudioInstallJob>(`/assistant/game-studio/dependencies/${encodeURIComponent(itemId)}/install`,

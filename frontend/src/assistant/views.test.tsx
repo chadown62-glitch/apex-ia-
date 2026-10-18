@@ -368,6 +368,66 @@ describe("Game Studio in the 3D workshop", () => {
     await waitFor(() => expect(api.calls.some((c) => c.method === "POST" && c.path.endsWith("/cancel"))).toBe(true));
   });
 
+  it("says before the click what Game Studio will do with each part of the request", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", "/assistant/game-studio/availability", { installed: true, ready: true, missing: [], notes: [], launch: "human", compute: "cpu" });
+    const brief = {
+      version: 1, family: "vehicle", archetype: "hypercar", styles: ["agressif"], finish: null, setting: null, colors: [],
+      materials: [], features: [], counts: {}, reference_images: 0, reference_requested: false,
+      support: [
+        { aspect: "objet", asked: "hypercar", status: "refused", how: "Game Studio ne reconnaît pas « hypercar » comme une voiture : son plan serait refusé. Écrivez « une voiture hypercar … »" },
+        { aspect: "style", asked: "agressif", status: "not_yet", how: "transmis ; aucun constructeur ni juge ne mesure encore ce style" },
+      ],
+    };
+    const messages = [
+      message({ id: "u1", role: "user", content: "Crée une hypercar agressive." }),
+      message({ id: "a1", role: "assistant", content: "…", meta: { game_studio: { trigger: "cerveau", state: "proposed", launched: false, request_message_id: "u1", brief } } }),
+    ];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    expect(await screen.findByText("Ce que Game Studio fera de votre demande")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("« une voiture hypercar … »");
+    expect(screen.getByText("pas encore pris en compte").closest("li")).toHaveTextContent("style : agressif");
+  });
+
+  it("shows a delivered mission's quality: versions, what the judge checks, measures, and records the user's rating", async () => {
+    api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}`, {
+      project_id: PROJECT,
+      status: { status: "review", mission_id: "m1", steps: [], delivery_status: "technical_review", last_event: null },
+      results: { status: "review", ready: true, artifacts: [{ name: "asset.glb", hash: "h", role: "exchange", source: "vehicle" }], artifact_count: 1, truncated: false, blocked: [] },
+    });
+    api.on("GET", `/assistant/conversations/c1/game-studio/${PROJECT}/quality`, {
+      project_id: PROJECT, status: "review", delivery_status: "technical_review", brief: null, limitations: [], metrics_available: true,
+      criteria: { materiaux: "réalisme des matériaux", impact: "impact visuel du rendu" }, ratings: [],
+      steps: [{
+        key: "vehicle", kind: "vehicle", status: "review", handoff: "pass_preflight", selection_reason: "first_technical_pass", limitations: [],
+        versions: [{ number: 1, verdict: "fail", selected: false, defects: ["requested_paint_channels"], unavailable: [] },
+                   { number: 2, verdict: "pass", selected: true, defects: [], unavailable: [] }],
+        judge: { scope: "measured_geometry_export_and_render_rules", criteria: null, advisory: [], unavailable: [] },
+        metrics: [{ view: "side.png", highlights_clipped_pct: 0.1, subject: { coverage_pct: 15, perceived_color: "saumon clair", perceived_chroma: 33,
+          specular_pct: 10, detail_edge_pct: 5.8, separation_delta_l: 2.3, requested_color: "rouge", delta_e76_to_requested: 55.5 } }],
+      }],
+    });
+    api.on("POST", `/assistant/conversations/c1/game-studio/${PROJECT}/ratings`, (body) => real({ id: "r1", ...(body as object) }));
+    const messages = [created(true, { project_id: PROJECT, mission_id: "m1", status: "queued" }, null)];
+    renderAt("/", [{ path: "/", element: <Studio3DPanel conversationId="c1" messages={messages as never} liveSteps={[]} notes={[]} /> }]);
+    const summary = await screen.findByText("Qualité de cette création");
+    const details = summary.closest("details")!;
+    details.open = true;
+    fireEvent(details, new Event("toggle"));
+    expect(await screen.findByText(/Version 1 : verdict technique fail \(défauts : requested_paint_channels\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Version 2 : verdict technique pass · retenue/)).toBeInTheDocument();
+    expect(screen.getByText(/Il ne mesure ni la beauté, ni le style, ni la couleur perçue/)).toBeInTheDocument();
+    expect(screen.getByText(/side\.png : couleur perçue saumon clair \(écart au rouge demandé : ΔE 55\.5\)/)).toBeInTheDocument();
+    const save = screen.getByRole("button", { name: "Enregistrer mon avis" });
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByRole("combobox", { name: "réalisme des matériaux" }), { target: { value: "2" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Commentaire" }), { target: { value: "peinture délavée" } });
+    fireEvent.click(save);
+    await waitFor(() => expect(api.calls.find((c) => c.method === "POST" && c.path.endsWith("/ratings"))?.body)
+      .toEqual({ scores: { materiaux: 2 }, comment: "peinture délavée" }));
+  });
+
   it("asks before launching: the user launches a proposed mission once, with its missing dependencies shown", async () => {
     api.on("GET", "/assistant/conversations/c1/workspace", { scope: "conversation", files: [] });
     api.on("GET", "/assistant/game-studio/availability", {

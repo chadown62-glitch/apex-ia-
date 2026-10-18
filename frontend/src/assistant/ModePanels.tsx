@@ -14,10 +14,13 @@ import { Link } from "react-router-dom";
 import { contrast, extractHexColors } from "../theme/contrast";
 import {
   assistantApi,
+  type BriefStatus,
+  type CreativeBrief,
   errorMessage,
   type GameStudioAvailability,
   type GameStudioDependency,
   type Message,
+  type RenderMetrics,
   type ToolStep,
 } from "./api";
 import { keys } from "./hooks";
@@ -562,10 +565,167 @@ function GameStudioMissionCard({ conversationId, projectId }: { conversationId: 
             )}
             {cancel.isError && <p className="ax-inline-error" role="alert">{errorMessage(cancel.error)}</p>}
             {resume.isError && <p className="ax-inline-error" role="alert">{errorMessage(resume.error)}</p>}
+            {GAME_STUDIO_FINISHED.has(data.status.status) && data.results.ready && (
+              <GameStudioQualityPanel conversationId={conversationId} projectId={projectId} />
+            )}
           </>
         )}
       </div>
     </li>
+  );
+}
+
+const BRIEF_STATUS: Record<BriefStatus, string> = {
+  verified: "vérifié par Game Studio",
+  possible: "possible, sans garantie",
+  not_yet: "pas encore pris en compte",
+  refused: "refusé par Game Studio",
+  unknown: "Game Studio absent",
+};
+
+/** Ce que Game Studio fera de chaque élément de la demande, AVANT le clic : rien n'est promis au-delà de ce
+ *  qu'il vérifie lui-même. */
+export function BriefSupport({ brief }: { brief: CreativeBrief }) {
+  const refused = brief.support.filter((item) => item.status === "refused");
+  return (
+    <details className="ax-gs-brief" open={refused.length > 0}>
+      <summary>Ce que Game Studio fera de votre demande</summary>
+      {refused.map((item) => (
+        <p key={`r-${item.aspect}-${item.asked}`} className="ax-inline-error" role="alert">
+          {item.asked} : {item.how}
+        </p>
+      ))}
+      <ul className="ax-panel__notes">
+        {brief.support.map((item) => (
+          <li key={`${item.aspect}-${item.asked}`} data-status={item.status}>
+            <strong>{BRIEF_STATUS[item.status]}</strong> — {item.aspect} : {item.asked}. <span className="ax-muted">{item.how}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
+
+/** Une ligne de mesures d'un rendu : ce que l'on voit, chiffré, sans jugement. */
+export function metricsLine(m: RenderMetrics): string {
+  if (m.error) return `${m.view} : mesure impossible (${m.error})`;
+  const parts: string[] = [];
+  const s = m.subject;
+  if (s) {
+    let color = `couleur perçue ${s.perceived_color}`;
+    if (s.requested_color && s.delta_e76_to_requested !== undefined) {
+      color += ` (écart au ${s.requested_color} demandé : ΔE ${s.delta_e76_to_requested})`;
+    }
+    parts.push(color, `écart de clarté avec le fond ${s.separation_delta_l}`, `part de l'image ${s.coverage_pct} %`,
+      `reflets ${s.specular_pct} %`, `arêtes et détails ${s.detail_edge_pct} %`);
+  }
+  if (m.highlights_clipped_pct !== undefined) parts.push(`hautes lumières brûlées ${m.highlights_clipped_pct} %`);
+  return `${m.view} : ${parts.join(" · ")}`;
+}
+
+/** Qualité d'une mission livrée : versions, ce que le juge a vérifié et ce qu'il ne vérifie pas, mesures des
+ *  rendus (instrument non calibré), et l'avis de l'utilisateur, qui calibrera les futurs juges. */
+function GameStudioQualityPanel({ conversationId, projectId }: { conversationId: string; projectId: string }) {
+  const [open, setOpen] = useState(false);
+  const client = useQueryClient();
+  const key = ["assistant", "game-studio", conversationId, projectId, "quality"];
+  const quality = useQuery({
+    queryKey: key,
+    queryFn: () => assistantApi.gameStudioQuality(conversationId, projectId),
+    enabled: open,
+    staleTime: Infinity,
+  });
+  const [scores, setScores] = useState<Record<string, number>>({});
+  const [comment, setComment] = useState("");
+  const rate = useMutation({
+    mutationFn: () => assistantApi.rateGameStudioMission(conversationId, projectId, scores, comment),
+    onSuccess: () => {
+      setScores({});
+      setComment("");
+      client.invalidateQueries({ queryKey: key });
+    },
+  });
+  const data = quality.data;
+  return (
+    <details className="ax-gs-quality" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+      <summary>Qualité de cette création</summary>
+      {quality.isLoading && <p className="ax-muted">Lecture des versions et des mesures…</p>}
+      {quality.isError && <p className="ax-inline-error" role="alert">{errorMessage(quality.error)}</p>}
+      {data && (
+        <>
+          {data.steps.map((step) => (
+            <div key={step.key}>
+              {step.versions && step.versions.length > 0 && (
+                <ul className="ax-panel__notes">
+                  {step.versions.map((v) => (
+                    <li key={v.number}>
+                      Version {v.number} : verdict technique {v.verdict}
+                      {v.defects.length > 0 ? ` (défauts : ${v.defects.join(", ")})` : ""}
+                      {v.selected ? " · retenue" : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {step.judge && (
+                <p className="ax-muted">
+                  Le juge de Game Studio vérifie : {step.judge.scope ?? "?"}. Il ne mesure ni la beauté, ni le style, ni
+                  la couleur perçue.
+                  {step.judge.advisory.length > 0 && ` Ses réserves : ${step.judge.advisory.join(" ")}`}
+                </p>
+              )}
+              {step.metrics && step.metrics.length > 0 && (
+                <>
+                  <p className="ax-muted">Mesures des rendus (instrument d'APEX, non calibré, n'est pas un verdict) :</p>
+                  <ul className="ax-panel__notes">
+                    {step.metrics.map((m) => <li key={m.view}>{metricsLine(m)}</li>)}
+                  </ul>
+                </>
+              )}
+            </div>
+          ))}
+          {!data.metrics_available && <p className="ax-muted">Mesures des rendus indisponibles sur ce PC (Pillow absent).</p>}
+          <form
+            className="ax-gs-rating"
+            onSubmit={(e) => {
+              e.preventDefault();
+              rate.mutate();
+            }}
+          >
+            <p className="ax-muted">
+              Votre avis, de 1 à 5 : il ne change pas la mission, il servira à calibrer les futurs juges artistiques.
+              {data.ratings.length > 0 && ` Avis déjà donnés : ${data.ratings.length}.`}
+            </p>
+            {Object.entries(data.criteria).map(([id, label]) => (
+              <label key={id}>
+                {label}{" "}
+                <select
+                  aria-label={label}
+                  value={scores[id] ?? ""}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setScores((current) => {
+                      const next = { ...current };
+                      if (value) next[id] = Number(value);
+                      else delete next[id];
+                      return next;
+                    });
+                  }}
+                >
+                  <option value="">—</option>
+                  {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                </select>
+              </label>
+            ))}
+            <textarea aria-label="Commentaire" maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} />
+            <button type="submit" className="ax-chip-btn" disabled={rate.isPending || Object.keys(scores).length === 0}>
+              Enregistrer mon avis
+            </button>
+            {rate.isSuccess && <p className="ax-muted" role="status">Avis enregistré.</p>}
+            {rate.isError && <p className="ax-inline-error" role="alert">{errorMessage(rate.error)}</p>}
+          </form>
+        </>
+      )}
+    </details>
   );
 }
 
@@ -586,6 +746,7 @@ function GameStudioProposal({ conversationId, message, request, reason, availabi
           Le Cerveau propose de confier à Game Studio : « {request.length > 160 ? `${request.slice(0, 160)}…` : request} »
         </p>
         {reason && <p className="ax-muted">{reason}</p>}
+        {message.meta?.game_studio?.brief && <BriefSupport brief={message.meta.game_studio.brief} />}
         <p className="ax-muted">
           Une mission dure plusieurs minutes et utilise {cpu ? "le processeur (choix explicite)" : "le GPU"}. Le calcul se règle dans
           Paramètres &gt; Outils.

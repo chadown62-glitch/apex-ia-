@@ -481,6 +481,43 @@ def game_studio_preview(conversation_id: str, project_id: str, digest: str) -> D
                                              "content_base64": base64.b64encode(data).decode("ascii")})
 
 
+@router.get("/assistant/conversations/{conversation_id}/game-studio/{project_id}/quality",
+            response_model=DataEnvelope[dict[str, Any]])
+def game_studio_quality(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:
+    """Ce que les juges de Game Studio ont vérifié pour cette mission et ce qu'ils ne vérifient pas, ses
+    versions, des mesures objectives de ses rendus (non calibrées) et les avis humains déjà donnés."""
+    from apex.assistant import game_studio
+
+    try:
+        report = game_studio.quality(_factory(), conversation_id, project_id)
+        return DataEnvelope(status="real", data=report)
+    except (LookupError, PermissionError, RuntimeError, ValueError) as exc:
+        raise _game_studio_error(exc) from exc
+
+
+class StudioRatingIn(BaseModel):
+    #: Critère (clé de `game_studio.RATING_CRITERIA`) → note de 1 à 5.
+    scores: dict[str, int]
+    comment: str = ""
+
+
+@router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/ratings",
+             response_model=DataEnvelope[dict[str, Any]])
+def rate_game_studio_mission(conversation_id: str, project_id: str,
+                             payload: StudioRatingIn) -> DataEnvelope[dict[str, Any]]:
+    """L'avis de l'utilisateur sur le rendu livré, critère par critère : une donnée de calibration des
+    futurs juges artistiques, jamais un verdict."""
+    from apex.assistant import game_studio
+
+    try:
+        entry = game_studio.rate(_factory(), conversation_id, project_id, payload.scores, payload.comment)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except (LookupError, PermissionError, RuntimeError) as exc:
+        raise _game_studio_error(exc) from exc
+    return DataEnvelope(status="real", data=entry)
+
+
 @router.post("/assistant/conversations/{conversation_id}/game-studio/{project_id}/resume",
              response_model=DataEnvelope[dict[str, Any]])
 def resume_game_studio_mission(conversation_id: str, project_id: str) -> DataEnvelope[dict[str, Any]]:

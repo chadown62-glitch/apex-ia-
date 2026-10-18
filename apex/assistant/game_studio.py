@@ -476,3 +476,185 @@ def preview(session_factory: Any, conversation_id: str, project_id: str, digest:
     if len(data) > PREVIEW_LIMIT:
         raise ValueError(f"aperçu trop gros pour être affiché ici ({len(data)} octets)")
     return data, mime
+
+
+# -- qualité d'une mission : ce que vérifient les juges, versions, mesures des rendus, avis humains ----
+
+#: Critères d'appréciation humaine (1 à 5), dans l'ordre de l'Atelier 3D. Ces avis calibreront les futurs
+#: juges artistiques : ils ne décident de rien aujourd'hui.
+RATING_CRITERIA: dict[str, str] = {
+    "agressivite": "agressivité du design",
+    "proportions": "cohérence des proportions",
+    "details": "qualité des détails",
+    "materiaux": "réalisme des matériaux",
+    "lumiere": "qualité de la lumière",
+    "fidelite": "fidélité à la demande et aux références",
+    "impact": "impact visuel du rendu",
+}
+RATINGS_FILE = "game-studio-ratings.jsonl"
+_RATINGS_LOCK = threading.Lock()
+#: Mesures déjà calculées, par empreinte du rendu et du masque (un rendu livré ne change jamais).
+_METRICS: dict[tuple[str, str | None, str | None], dict[str, Any]] = {}
+
+
+def _studio_meta(message: Any) -> dict[str, Any]:
+    record = (message.meta or {}).get("game_studio") if message is not None else None
+    return record if isinstance(record, dict) else {}
+
+
+def _brief_of(session_factory: Any, conversation_id: str, project_id: str) -> dict[str, Any] | None:
+    """Le brief de la proposition dont le lancement a créé cette mission (lancement, puis proposition)."""
+    from apex.conversations.repository import MessageRepository
+
+    messages = MessageRepository(session_factory).list_by_conversation(conversation_id)
+    launch = next((m for m in messages if _studio_meta(m).get("project_id") == project_id), None)
+    proposal_id = _studio_meta(launch).get("proposal_of")
+    proposal = next((m for m in messages if m.id == proposal_id), None) if proposal_id else None
+    brief = _studio_meta(proposal).get("brief")
+    return brief if isinstance(brief, dict) else None
+
+
+def _requested_body_color(brief: dict[str, Any] | None) -> str | None:
+    for color in (brief or {}).get("colors") or []:
+        if color.get("part") == "carrosserie":
+            return color.get("color")
+    return None
+
+
+def _measure(graphics: Any, job_id: str, view: dict[str, Any], mask: dict[str, Any] | None,
+             requested: str | None) -> dict[str, Any]:
+    from apex.assistant import render_metrics
+
+    key = (view["hash"], mask["hash"] if mask else None, requested)
+    if key not in _METRICS:
+        image, _ = graphics.artifact(job_id, view["hash"])
+        silhouette = graphics.artifact(job_id, mask["hash"])[0] if mask else None
+        try:
+            _METRICS[key] = render_metrics.measure(image, silhouette, requested=requested)
+        except ValueError as exc:
+            return {"view": view["name"], "error": str(exc)}
+    return {"view": view["name"], **_METRICS[key]}
+
+
+def _revision_quality(graphics: Any, child: dict[str, Any], requested: str | None) -> dict[str, Any]:
+    """Versions d'une mission enfant, ce que son juge a vérifié pour la version retenue, et les mesures de
+    ses rendus (avec la silhouette de la même vue quand Game Studio l'a produite)."""
+    import json as _json
+
+    from apex.assistant import render_metrics
+
+    selected_number = child.get("selected_revision_number")
+    versions = [{"number": r.get("number"), "verdict": r.get("verdict"),
+                 "selected": r.get("number") == selected_number,
+                 "defects": [d.get("id") for d in r.get("defects") or [] if isinstance(d, dict)],
+                 "unavailable": list(r.get("unavailable") or [])} for r in child.get("revisions") or []]
+    selected = next((r for r in child.get("revisions") or [] if r.get("number") == selected_number), None)
+    judge: dict[str, Any] | None = None
+    metrics: list[dict[str, Any]] = []
+    if selected is not None:
+        artifacts = selected.get("artifacts") or []
+        report = next((a for a in artifacts if a.get("name") == "judge-report.json"), None)
+        if report is not None:
+            try:
+                data = _json.loads(graphics.artifact(child["id"], report["hash"])[0])
+                judge = {"scope": data.get("scope"), "criteria": data.get("criteria"),
+                         "advisory": list(data.get("advisory") or []),
+                         "unavailable": list(data.get("unavailable") or [])}
+            except (LookupError, ValueError, TypeError, KeyError):
+                judge = None
+        if render_metrics.available():
+            masks = {a.get("name"): a for a in artifacts if a.get("role") == "silhouette"}
+            for view in [a for a in artifacts if a.get("role") == "view"][:4]:
+                mask = masks.get("silhouette_" + view["name"])
+                metrics.append(_measure(graphics, child["id"], view, mask, requested))
+    return {"versions": versions, "selection_reason": child.get("selection_reason"), "judge": judge,
+            "limitations": list(child.get("limitations") or []), "metrics": metrics}
+
+
+def quality(session_factory: Any, conversation_id: str, project_id: str, *, service: Any = None,
+            graphics: Any = None) -> dict[str, Any]:
+    """La qualité d'une mission de cette conversation, sans rien certifier : le brief de la demande et le
+    sort de chacun de ses éléments, les versions et verdicts de Game Studio, ce que son juge a vérifié et ce
+    qu'il dit ne pas vérifier, des mesures objectives des rendus retenus (instrument non calibré,
+    `apex.assistant.render_metrics`), et les avis humains déjà donnés. Lecture seule ; propriété vérifiée
+    par les outils de Game Studio."""
+    from apex.assistant import render_metrics
+
+    follow(session_factory, conversation_id, project_id, service=service)  # mission de cette conversation
+    if service is None or graphics is None:
+        default_project, default_graphics = _default_services()
+        service, graphics = service or default_project, graphics or default_graphics
+    record = service.get(project_id)
+    brief = _brief_of(session_factory, conversation_id, project_id)
+    requested = _requested_body_color(brief)
+    finished = record.get("status") not in LOAN_ACTIVE
+    steps = []
+    for step in record.get("steps") or []:
+        child = step.get("mission") or {}
+        item = {"key": step.get("key"), "kind": step.get("kind"), "status": step.get("status"),
+                "handoff": (step.get("handoff") or {}).get("status")}
+        if child and finished:
+            item.update(_revision_quality(graphics, child, requested))
+        steps.append(item)
+    return {"project_id": project_id, "status": record.get("status"),
+            "delivery_status": record.get("delivery_status"), "brief": brief, "steps": steps,
+            "limitations": list(record.get("limitations") or []),
+            "metrics_available": render_metrics.available(), "criteria": RATING_CRITERIA,
+            "ratings": ratings(project_id)}
+
+
+def _ratings_path() -> Any:
+    from apex.standalone import paths
+
+    return paths().home / ".apex" / RATINGS_FILE
+
+
+def ratings(project_id: str) -> list[dict[str, Any]]:
+    """Les avis humains déjà donnés sur cette mission (fichier local, une ligne JSON par avis)."""
+    import json as _json
+
+    path = _ratings_path()
+    if not path.is_file():
+        return []
+    out = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            entry = _json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(entry, dict) and entry.get("project_id") == project_id:
+            out.append(entry)
+    return out
+
+
+def rate(session_factory: Any, conversation_id: str, project_id: str, scores: dict[str, Any],
+         comment: str = "", *, service: Any = None) -> dict[str, Any]:
+    """L'avis de l'utilisateur sur le rendu livré, critère par critère (1 à 5), avec ce qu'il a vu
+    (empreintes des aperçus) et le brief : une donnée de calibration pour les futurs juges, jamais un
+    verdict."""
+    import json as _json
+    from datetime import UTC, datetime
+
+    unknown = sorted(set(scores) - set(RATING_CRITERIA))
+    if unknown:
+        raise ValueError(f"critère inconnu : {', '.join(unknown)}")
+    if not scores or any(type(v) is not int or not 1 <= v <= 5 for v in scores.values()):
+        raise ValueError("chaque note est un entier de 1 à 5, et au moins un critère est noté")
+    if len(comment) > 1000:
+        raise ValueError("commentaire limité à 1 000 caractères")
+    followed = follow(session_factory, conversation_id, project_id, service=service)
+    results = followed["results"]
+    if not results.get("ready"):
+        raise ValueError("la mission n'a pas encore livré de rendu à apprécier")
+    views = [a["hash"] for a in results.get("artifacts") or [] if a.get("role") == "view"]
+    brief = _brief_of(session_factory, conversation_id, project_id)
+    entry = {"id": str(uuid.uuid4()), "at": datetime.now(UTC).isoformat(), "project_id": project_id,
+             "conversation_id": conversation_id, "scores": scores, "comment": comment.strip(),
+             "views": views, "delivery_status": results.get("delivery_status"),
+             "brief_version": (brief or {}).get("version"), "rater": "utilisateur"}
+    path = _ratings_path()
+    with _RATINGS_LOCK:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write(_json.dumps(entry, ensure_ascii=False) + "\n")
+    return entry

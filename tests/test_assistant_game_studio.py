@@ -684,6 +684,122 @@ def test_previews_are_served_only_for_this_conversations_rendered_images(env, st
         game_studio.preview(env, other.id, project_id, "h-view", service=studio, graphics=studio)
 
 
+RED_CAR = "Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender."
+
+
+def _png(color, box, background=(150, 152, 155)) -> bytes:
+    """Un rectangle `box` de `color` sur un fond uni, en PNG (80 x 60) ; des octets factices sans Pillow."""
+    try:
+        import io
+
+        from PIL import Image
+    except ImportError:
+        return b"\x89PNG-" + bytes(color)
+    image = Image.new("RGB", (80, 60), background)
+    image.paste(color, box)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _vehicle_delivered(studio, project_id):
+    """Comme Game Studio pour une voiture : étape `vehicle` et sa mission enfant, deux versions (la
+    première refusée pour la peinture, la seconde retenue), rapport du juge, vues et silhouette ; la
+    carrosserie de la version retenue est un rouge délavé (le cas mesuré sur le runner)."""
+    box = (20, 20, 60, 45)
+    advisory = "Shader parameters and material count do not certify convincing PBR appearance."
+    report = {"scope": "measured_geometry_export_and_render_rules", "criteria": {"level": "prototype"},
+              "advisory": [advisory]}
+    studio.blobs.update({
+        "h-v1": (_png((20, 60, 70), box), "image/png"),
+        "h-v2": (_png((236, 160, 150), box), "image/png"),
+        "h-s2": (_png((255, 255, 255), box, background=(0, 0, 0)), "image/png"),
+        "h-report": (json.dumps(report).encode(), "application/json"),
+        "h-blend": (b"BLENDER", "application/x-blender"),
+    })
+
+    def artifact(name, digest, role):
+        return {"name": name, "hash": digest, "role": role}
+
+    child = {"id": "job-1", "selected_revision_number": 2, "selection_reason": "first_technical_pass",
+             "limitations": ["Image references are archived with provenance; the text-only controller does "
+                             "not interpret their pixels."],
+             "revisions": [
+                 {"number": 1, "verdict": "fail", "unavailable": [],
+                  "defects": [{"id": "requested_paint_channels"}],
+                  "artifacts": [artifact("side.png", "h-v1", "view")]},
+                 {"number": 2, "verdict": "pass", "defects": [], "unavailable": [],
+                  "artifacts": [artifact("side.png", "h-v2", "view"),
+                                artifact("silhouette_side.png", "h-s2", "silhouette"),
+                                artifact("judge-report.json", "h-report", "report"),
+                                artifact("asset.blend", "h-blend", "blender_project")]}]}
+    studio.records[project_id].update(status="review", delivery_status="technical_review", steps=[
+        {"key": "vehicle", "kind": "vehicle", "status": "review", "job_id": "job-1", "mission": child,
+         "handoff": {"status": "pass_preflight"}}])
+
+
+def test_the_proposal_carries_the_brief_of_the_request(env, studio_tools) -> None:
+    """Le brief range la demande par aspect et dit ce que Game Studio en fera ; la description transmise au
+    lancement reste la demande telle quelle."""
+    studio = _Studio()
+    _settings(env)
+    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), RED_CAR, studio=studio)
+    brief = answer.meta["game_studio"]["brief"]
+    assert brief["family"] == "vehicle" and brief["colors"][0]["color"] == "rouge"
+    statuses = {(i["aspect"], i["asked"]): i["status"] for i in brief["support"]}
+    assert statuses[("couleur", "rouge (carrosserie)")] == "verified"
+    game_studio.launch_proposed(env, conversation.id, answer.id, compute="cpu", service=studio)
+    assert studio.created[0][0]["description"] == RED_CAR
+
+
+def test_quality_reports_versions_judge_scope_and_measures_without_certifying(env, studio_tools) -> None:
+    studio = _Studio()
+    _settings(env)
+    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), RED_CAR, studio=studio)
+    launched = game_studio.launch_proposed(env, conversation.id, answer.id, compute="cpu", service=studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    _vehicle_delivered(studio, project_id)
+    report = game_studio.quality(env, conversation.id, project_id, service=studio, graphics=studio)
+    assert report["brief"]["colors"][0]["color"] == "rouge"
+    assert report["delivery_status"] == "technical_review"
+    step = report["steps"][0]
+    assert [(v["number"], v["verdict"], v["selected"]) for v in step["versions"]] == [(1, "fail", False),
+                                                                                       (2, "pass", True)]
+    assert step["versions"][0]["defects"] == ["requested_paint_channels"]
+    assert step["judge"]["scope"] == "measured_geometry_export_and_render_rules"
+    assert "do not certify" in step["judge"]["advisory"][0] and step["handoff"] == "pass_preflight"
+    assert step["limitations"] and set(report["criteria"]) >= {"agressivite", "materiaux", "impact"}
+    if report["metrics_available"]:  # Pillow présent : la couleur vraiment perçue de la carrosserie
+        measured = step["metrics"][0]
+        assert measured["view"] == "side.png" and measured["subject"]["perceived_color"] == "saumon clair"
+        assert measured["subject"]["delta_e76_to_requested"] > 40
+    else:
+        assert step["metrics"] == []
+    other = _conversation(env, mode="3d")
+    with pytest.raises(LookupError):
+        game_studio.quality(env, other.id, project_id, service=studio, graphics=studio)
+
+
+def test_ratings_are_calibration_data_kept_per_mission(env, studio_tools) -> None:
+    studio = _Studio()
+    _settings(env)
+    _, answer, conversation = _turn(env, _Brain3D(["…"], [_SCENE_CALL]), RED_CAR, studio=studio)
+    launched = game_studio.launch_proposed(env, conversation.id, answer.id, compute="cpu", service=studio)
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    with pytest.raises(ValueError, match="pas encore livré"):
+        game_studio.rate(env, conversation.id, project_id, {"impact": 3}, service=studio)
+    _vehicle_delivered(studio, project_id)
+    for scores in ({}, {"beaute": 5}, {"impact": 6}, {"impact": "3"}):
+        with pytest.raises(ValueError):
+            game_studio.rate(env, conversation.id, project_id, scores, service=studio)
+    entry = game_studio.rate(env, conversation.id, project_id, {"agressivite": 1, "materiaux": 2},
+                             "  trop simple, peinture délavée ", service=studio)
+    assert entry["comment"] == "trop simple, peinture délavée" and entry["views"] == ["h-v2"]
+    assert entry["delivery_status"] == "technical_review" and entry["brief_version"] == 1
+    assert [r["id"] for r in game_studio.ratings(project_id)] == [entry["id"]]
+    assert game_studio.ratings("autre-mission") == []
+
+
 def test_a_follow_up_failure_is_unavailable_never_a_fake_state(env, studio_tools) -> None:
     studio = _Studio()
     _settings(env)
