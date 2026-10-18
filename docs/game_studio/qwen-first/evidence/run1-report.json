@@ -1,0 +1,546 @@
+{
+  "platform": "Windows-2022Server-10.0.20348-SP0",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "executable": "D:\\a\\_temp\\game-studio-qualification\\python\\tools\\python.exe",
+  "cpu_logical": 4,
+  "ram_bytes": 17174360064,
+  "cuda_qualified": false,
+  "user_windows11_qualified": false,
+  "cuda_available": false,
+  "llama_cpp": {
+    "version": "0.3.36",
+    "library_loaded": true,
+    "system_info": "CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | ",
+    "server_cli_imported": true
+  },
+  "blender": {
+    "path": "D:\\a\\_temp\\game-studio-qualification\\Blender portable\\blender-4.3.2-windows-x64\\blender.exe",
+    "source": "explicit",
+    "reason": null,
+    "version": "Blender 4.3.2\n\tbuild date: 2024-12-17\n\tbuild time: 03:35:23\n\tbuild commit date: 2024-12-16\n\tbuild commit time: 21:10\n\tbuild hash: 32f5fdce0a0a\n\tbuild branch: blender-v4.3-release\n\tbuild platform: Windows\n\tbuild type: Release\n\tbuild c flags: /W3 /w34062 /w34100 /w34115 /w34189 /w35038 /wd4018 /wd4146 /wd4065 /wd4127 /wd4181 /wd4200 /wd4244 /wd4267 /wd4305 /wd4800 /wd4828 /wd4996 /wd4661 /wd4848 /we4013 /we4133 /we4431 /we4033 /DWIN32 /D_WINDOWS /W3 /nologo /J /Gd /MP /bigobj /Zc:inline  -openmp \n\tbuild c++ flags: /W3 /w34062 /w34100 /w34115 /w34189 /w35038 /wd4018 /wd4146 /wd4065 /wd4127 /wd4181 /wd4200 /wd4244 /wd4267 /wd4305 /wd4800 /wd4828 /wd4996 /wd4661 /wd4848 /we4013 /we4133 /we4431 /we4033 /DWIN32 /D_WINDOWS /W3  /EHsc /nologo /J /Gd /MP /EHsc /bigobj /permissive- /Zc:__cplusplus /Zc:inline  -openmp \n\tbuild link flags: /MACHINE:X64  /SUBSYSTEM:CONSOLE /STACK:2097152 /ignore:4049 /ignore:4217 /ignore:4221\n\tbuild system: CMake\n"
+  },
+  "lease": {
+    "contender_while_held": 73,
+    "contender_after_release": 0,
+    "cpu_entered_while_gpu_lease_held": true,
+    "cpu_did_not_release_gpu": true,
+    "cpu_workload_exclusion": true,
+    "stderr": [
+      "",
+      ""
+    ],
+    "cuda_qualified": false,
+    "scope": "real separate-process OS lease exclusion, no GPU resident"
+  },
+  "fixture": {
+    "method": "explicit_fixed_catalog_fixture_not_Qwen",
+    "neural": false,
+    "before": {
+      "verdict": "fail_preflight",
+      "error": "ValueError: independent_root_wheel_required:wheel_front_left",
+      "source_artifact": "sha256:a25e8204028f92a1ec4f4a8c4e3425cc90ecf38db5dd6272ea5a0292a8a106db",
+      "unreal_import_verified": false
+    },
+    "after": {
+      "status": "verified_intake",
+      "manifest": {
+        "schema_version": 1,
+        "contract": "VehicleAssetContract",
+        "producer": "apex.game_studio",
+        "geometry_method": "procedural_blender_with_bounded_contract_repair",
+        "spec": {
+          "length_m": 4.925,
+          "width_m": 2.24,
+          "height_m": 1.2888,
+          "wheelbase_m": 2.8,
+          "wheel_radius_m": 0.355,
+          "wheel_width_m": 0.232,
+          "mass_kg": 1200,
+          "body_color": [
+            0.6499999761581421,
+            0.02500000037252903,
+            0.014999999664723873
+          ],
+          "paint_metallic": 0.7799999713897705,
+          "paint_roughness": 0.23999999463558197
+        },
+        "units": "m",
+        "blender_axes": {
+          "forward": "+X",
+          "up": "+Z",
+          "handedness": "right"
+        },
+        "glb_axes": {
+          "up": "+Y",
+          "handedness": "right",
+          "exporter_converted": true
+        },
+        "unreal_target": {
+          "units": "cm",
+          "up": "+Z",
+          "forward": "+X",
+          "scale_conversion": 100,
+          "import_tested": false
+        },
+        "wheels": [
+          {
+            "object": "wheel_front_left",
+            "center_m": [
+              1.399999976158142,
+              -0.8999999761581421,
+              0.35499998927116394
+            ],
+            "radius_m": 0.355,
+            "spin_axis_local": [
+              0,
+              0,
+              1
+            ],
+            "spin_axis_blender_world": [
+              0,
+              1,
+              0
+            ]
+          },
+          {
+            "object": "wheel_front_right",
+            "center_m": [
+              1.399999976158142,
+              0.8999999761581421,
+              0.35499998927116394
+            ],
+            "radius_m": 0.355,
+            "spin_axis_local": [
+              0,
+              0,
+              1
+            ],
+            "spin_axis_blender_world": [
+              0,
+              1,
+              0
+            ]
+          },
+          {
+            "object": "wheel_rear_left",
+            "center_m": [
+              -1.399999976158142,
+              -0.8999999761581421,
+              0.35499998927116394
+            ],
+            "radius_m": 0.355,
+            "spin_axis_local": [
+              0,
+              0,
+              1
+            ],
+            "spin_axis_blender_world": [
+              0,
+              1,
+              0
+            ]
+          },
+          {
+            "object": "wheel_rear_right",
+            "center_m": [
+              -1.399999976158142,
+              0.8999999761581421,
+              0.35499998927116394
+            ],
+            "radius_m": 0.355,
+            "spin_axis_local": [
+              0,
+              0,
+              1
+            ],
+            "spin_axis_blender_world": [
+              0,
+              1,
+              0
+            ]
+          }
+        ],
+        "files": [
+          {
+            "path": "front.png",
+            "role": "source_or_contract",
+            "sha256": "b21a3f2b262c518ab0a182f88bea19443ecc31f2724d8a3311285f1c9f39f307",
+            "bytes": 727552
+          },
+          {
+            "path": "front_three_quarter.png",
+            "role": "source_or_contract",
+            "sha256": "310734afd4a7d146b4d8a548f1d6bbc4a4fb1bd1395b0904eec1ad9942b06f46",
+            "bytes": 1000594
+          },
+          {
+            "path": "rear_three_quarter.png",
+            "role": "source_or_contract",
+            "sha256": "4403512f2c22b790eeac5c4e0cea1a1373821f546b5b469446e2bd3c937bb8e4",
+            "bytes": 993240
+          },
+          {
+            "path": "side.png",
+            "role": "source_or_contract",
+            "sha256": "33025d8cb39f845ce95b681e08002fe94d2d09b73ae6def505e8f5c3457edc40",
+            "bytes": 942929
+          },
+          {
+            "path": "spec.json",
+            "role": "source_or_contract",
+            "sha256": "bd20c914ca4a3bfac6b802d2ebe22e04910c9b86aac58075182e1be477737218",
+            "bytes": 352
+          },
+          {
+            "path": "vehicle-asset-v1.schema.json",
+            "role": "source_or_contract",
+            "sha256": "1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51",
+            "bytes": 2637
+          },
+          {
+            "path": "vehicle-contract.json",
+            "role": "source_or_contract",
+            "sha256": "3441441bb1be35bc679791ac2c6b4362a07ddde837d185d3840fe549695cdc6b",
+            "bytes": 1916
+          },
+          {
+            "path": "vehicle.blend",
+            "role": "source_or_contract",
+            "sha256": "a092e5f4cab4305b0daaf69102db23840125e88c943a94af4e9755dbd3b82478",
+            "bytes": 3767816
+          },
+          {
+            "path": "vehicle.glb",
+            "role": "source_or_contract",
+            "sha256": "2a09b31fb4ea8552f2ec85183116925266ab6d75f07df9790256a6cc73790d34",
+            "bytes": 1125932
+          }
+        ],
+        "rig": {
+          "kind": "separate_static_meshes",
+          "skeletal_rig": false,
+          "physics_asset": false
+        },
+        "lods": [],
+        "texture_maps": [],
+        "source_artifact": "sha256:2a09b31fb4ea8552f2ec85183116925266ab6d75f07df9790256a6cc73790d34",
+        "measurement_scope": "bounds, wheel centers and material from Blender; mass is a design estimate"
+      },
+      "manifest_sha256": "3cfbbbd8af73f46b7af9b8dc287d461430fb96b6982dcf2c9835b0a7a41b1fcf",
+      "verified_files": 9,
+      "mesh_nodes": 136,
+      "materials": 9,
+      "wheel_nodes": {
+        "wheel_front_left": {
+          "glb_pivot_m": [
+            1.399999976158142,
+            0.35499998927116394,
+            0.8999999761581421
+          ],
+          "blender_pivot_m": [
+            1.399999976158142,
+            -0.8999999761581421,
+            0.35499998927116394
+          ]
+        },
+        "wheel_front_right": {
+          "glb_pivot_m": [
+            1.399999976158142,
+            0.35499998927116394,
+            -0.8999999761581421
+          ],
+          "blender_pivot_m": [
+            1.399999976158142,
+            0.8999999761581421,
+            0.35499998927116394
+          ]
+        },
+        "wheel_rear_left": {
+          "glb_pivot_m": [
+            -1.399999976158142,
+            0.35499998927116394,
+            0.8999999761581421
+          ],
+          "blender_pivot_m": [
+            -1.399999976158142,
+            -0.8999999761581421,
+            0.35499998927116394
+          ]
+        },
+        "wheel_rear_right": {
+          "glb_pivot_m": [
+            -1.399999976158142,
+            0.35499998927116394,
+            -0.8999999761581421
+          ],
+          "blender_pivot_m": [
+            -1.399999976158142,
+            0.8999999761581421,
+            0.35499998927116394
+          ]
+        }
+      },
+      "engine_import_verified": false,
+      "handedness_in_unreal_verified": false,
+      "limits": "GLB byte/pivot checks do not qualify Unreal import, bones, collisions or physics",
+      "wheel_metadata_verified_in_glb": true,
+      "wheel_group_child_nodes": {
+        "wheel_front_left": 12,
+        "wheel_front_right": 12,
+        "wheel_rear_left": 12,
+        "wheel_rear_right": 12
+      },
+      "verdict": "pass_preflight"
+    },
+    "judge": {
+      "family": "vehicle",
+      "case_id": "sports_car",
+      "criteria": {
+        "level": "prototype",
+        "max_triangles": 100000,
+        "dimension_tolerance_m": 0.04,
+        "pivot_tolerance_m": 0.002,
+        "max_distinct_defect_attempts": 3,
+        "minimum_views": 4,
+        "required_lods": 0,
+        "required_texture_size": 0,
+        "require_calibrated_visual_reference": false
+      },
+      "benchmark_version": 1,
+      "scope": "measured_geometry_export_and_render_rules",
+      "defects": [],
+      "unavailable": [],
+      "facts": {
+        "render_settings": {
+          "engine": "CYCLES",
+          "device": "CPU",
+          "samples": 64,
+          "seed": 14,
+          "denoising": false
+        },
+        "distinct_camera_transforms": 4,
+        "blend": {
+          "triangles": 32604,
+          "dimensions": [
+            4.924999952316284,
+            2.2399998903274536,
+            1.288821374480083
+          ],
+          "objects": 136,
+          "materials": 9
+        },
+        "glb": {
+          "triangles": 32604,
+          "dimensions": [
+            4.924999952316284,
+            2.2399998903274536,
+            1.2888214147975106
+          ],
+          "objects": 136,
+          "materials": 9
+        },
+        "images": {
+          "front_three_quarter": {
+            "width": 960,
+            "height": 720,
+            "channel_stddev": 42.97052447832688,
+            "subject_fraction": 0.17352719907407407,
+            "subject_pixels_at_image_boundary": 0
+          },
+          "rear_three_quarter": {
+            "width": 960,
+            "height": 720,
+            "channel_stddev": 40.302571278619325,
+            "subject_fraction": 0.16786458333333334,
+            "subject_pixels_at_image_boundary": 0
+          },
+          "side": {
+            "width": 960,
+            "height": 720,
+            "channel_stddev": 64.07937237719052,
+            "subject_fraction": 0.15002025462962962,
+            "subject_pixels_at_image_boundary": 0
+          },
+          "front": {
+            "width": 960,
+            "height": 720,
+            "channel_stddev": 29.19779982047973,
+            "subject_fraction": 0.058313078703703704,
+            "subject_pixels_at_image_boundary": 0
+          }
+        }
+      },
+      "advisory": [
+        "Shader parameters and material count do not certify convincing PBR appearance."
+      ],
+      "aesthetic_certification": false,
+      "limits": [
+        "Geometry and image statistics do not certify aesthetic quality or reference fidelity.",
+        "Isolated component ID passes measure alignment, not visibility in the beauty render.",
+        "Unreal import and runtime performance have not been measured by this oracle."
+      ],
+      "manifest_sha256": "37b9445379e8aa5a3ff4eeed4b5951950fde6dd0b0198d2f577309911ceeeb32",
+      "verdict": "pass"
+    },
+    "artifacts": [
+      {
+        "name": "asset.blend",
+        "hash": "sha256:a092e5f4cab4305b0daaf69102db23840125e88c943a94af4e9755dbd3b82478",
+        "bytes": 3767816
+      },
+      {
+        "name": "asset.glb",
+        "hash": "sha256:2a09b31fb4ea8552f2ec85183116925266ab6d75f07df9790256a6cc73790d34",
+        "bytes": 1125932
+      },
+      {
+        "name": "blend-inspection.json",
+        "hash": "sha256:c9337b0fd7ff4ad24f9512562231d675410a6013c3f427ddb54f58da9dad0dac",
+        "bytes": 108057
+      },
+      {
+        "name": "blend-inspection.owner.json",
+        "hash": "sha256:f39e6f488140435d625dab445dd5219011ce7c93af6bf838bf9a61a75260fecf",
+        "bytes": 625
+      },
+      {
+        "name": "blend-inspection.resources.json",
+        "hash": "sha256:29e31c7f955530a9ee924432d7cd1caf2e929f3f5bcd50dddf2ac6e7d572ef21",
+        "bytes": 2908
+      },
+      {
+        "name": "execution.json",
+        "hash": "sha256:c5365cb1305343703c8a2a78b3a9b47b4d2c8e68000d66044144a4bb8cbfe0e4",
+        "bytes": 68557
+      },
+      {
+        "name": "front.png",
+        "hash": "sha256:b21a3f2b262c518ab0a182f88bea19443ecc31f2724d8a3311285f1c9f39f307",
+        "bytes": 727552
+      },
+      {
+        "name": "front_three_quarter.png",
+        "hash": "sha256:310734afd4a7d146b4d8a548f1d6bbc4a4fb1bd1395b0904eec1ad9942b06f46",
+        "bytes": 1000594
+      },
+      {
+        "name": "glb-inspection.json",
+        "hash": "sha256:78406b780bc8e642fafbf10af645ad6945ce5fd2e44433e251f59add405be8fc",
+        "bytes": 108204
+      },
+      {
+        "name": "glb-inspection.owner.json",
+        "hash": "sha256:c2ec2e91adc38488d1b1f9b61b00a6cc08bfefc7451d29f6885089f19aefd2c0",
+        "bytes": 620
+      },
+      {
+        "name": "glb-inspection.resources.json",
+        "hash": "sha256:bca0844a61795a0abf7f7d632511b13878856bf4dc693ea0f6fea01e9f3cbd41",
+        "bytes": 10630
+      },
+      {
+        "name": "hierarchy-before.json",
+        "hash": "sha256:bd7ebdb1d65a9a21e89ed5c419c23e89b398daead66ee8b8acf809833216568d",
+        "bytes": 123815
+      },
+      {
+        "name": "hierarchy.json",
+        "hash": "sha256:e5c4290406118b9e030a36ce2e98d3ec62ac8ff14ce4e1d0a43688941449648f",
+        "bytes": 126259
+      },
+      {
+        "name": "judge-report.json",
+        "hash": "sha256:206254297e6bea44fad4436923c4a2bab02bd774d8013ea2ca7ae3e63689f74d",
+        "bytes": 2609
+      },
+      {
+        "name": "manifest.json",
+        "hash": "sha256:37b9445379e8aa5a3ff4eeed4b5951950fde6dd0b0198d2f577309911ceeeb32",
+        "bytes": 5062
+      },
+      {
+        "name": "operation-trace.json",
+        "hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "bytes": 2
+      },
+      {
+        "name": "rear_three_quarter.png",
+        "hash": "sha256:4403512f2c22b790eeac5c4e0cea1a1373821f546b5b469446e2bd3c937bb8e4",
+        "bytes": 993240
+      },
+      {
+        "name": "render-settings.json",
+        "hash": "sha256:9dedecb1f0b86d4749f49e7ce98f4ef0ea2957265ac469329275dc2f9fb9efc0",
+        "bytes": 4804
+      },
+      {
+        "name": "side.png",
+        "hash": "sha256:33025d8cb39f845ce95b681e08002fe94d2d09b73ae6def505e8f5c3457edc40",
+        "bytes": 942929
+      },
+      {
+        "name": "silhouette_front.png",
+        "hash": "sha256:7e8f4193850921b9526d52a270ce72cca029e308e00cf1da7a8c56b07ccca727",
+        "bytes": 327619
+      },
+      {
+        "name": "silhouette_front_three_quarter.png",
+        "hash": "sha256:72de1bfc1ac8119c6116431c5d0d3f8d0da16df2f562c05e933196c7b88a257b",
+        "bytes": 293699
+      },
+      {
+        "name": "silhouette_rear_three_quarter.png",
+        "hash": "sha256:c59c7dc7f62827498835fc0daf8d6c518ca395869f0fa31a8f022c5ce3b88a4b",
+        "bytes": 295021
+      },
+      {
+        "name": "silhouette_side.png",
+        "hash": "sha256:5c6138a8d8e1cd5e6757d496dc1f62611a5d0ee4e8fc3e78ee7da84f3b0750b3",
+        "bytes": 298963
+      },
+      {
+        "name": "vehicle-contract.json",
+        "hash": "sha256:3441441bb1be35bc679791ac2c6b4362a07ddde837d185d3840fe549695cdc6b",
+        "bytes": 1916
+      },
+      {
+        "name": "verdict.json",
+        "hash": "sha256:6728d24358579f11b64aa452baf7d43c9f8e89ee65fcf8301abdb3f722c9a90b",
+        "bytes": 16347
+      }
+    ]
+  },
+  "mission": {
+    "status": "FAILED",
+    "mission_status": "failed",
+    "validation": {
+      "passed": false,
+      "checks": {
+        "project_review": false,
+        "pinned_planner": true,
+        "explicit_cpu": true,
+        "planner_stopped": true,
+        "real_validated_response": true,
+        "one_vehicle": true,
+        "vehicle_preflight": false,
+        "child_review": false,
+        "blender_files_and_four_views": false
+      }
+    },
+    "project_id": "0e42af2a-5308-4533-ac2a-3c13fd120696",
+    "artifacts": [
+      {
+        "name": "planner-trace.json",
+        "hash": "sha256:837da16ff70f3bf4ba8c79ad447c7c02286dfabbfe45e1af516fa92a162e1d60",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 4526,
+        "api_path": "/api/v1/game-studio/projects/0e42af2a-5308-4533-ac2a-3c13fd120696/artifacts/sha256:837da16ff70f3bf4ba8c79ad447c7c02286dfabbfe45e1af516fa92a162e1d60"
+      }
+    ],
+    "cpu_explicit": true,
+    "cuda_qualified": false
+  },
+  "status": "FAILED",
+  "elapsed_s": 341.672
+}

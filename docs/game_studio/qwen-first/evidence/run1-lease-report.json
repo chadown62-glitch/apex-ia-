@@ -1,0 +1,13 @@
+{
+  "contender_while_held": 73,
+  "contender_after_release": 0,
+  "cpu_entered_while_gpu_lease_held": true,
+  "cpu_did_not_release_gpu": true,
+  "cpu_workload_exclusion": true,
+  "stderr": [
+    "",
+    ""
+  ],
+  "cuda_qualified": false,
+  "scope": "real separate-process OS lease exclusion, no GPU resident"
+}
