@@ -247,6 +247,7 @@ Configuration : RTX 4060 Ti 8 Go, i5-14400F, 16 Go, Windows 11. Procédure :
 
 | Domaine | Où | Résultat |
 |---|---|---|
+| Suite Python (18/10) | arbre combiné Claude `8fc89a3` + #19 à #31 (`550b347`) + #5/#11/#13, avec `jsonschema`, Pillow et `llama-cpp-python` 0.3.36 | **3 623 passent, 190 ignorés, 4 échouent** : les 4 du worktree jetable ci-dessous (`test_apex_preflight_script` ×3, `test_evalrunner_generated_solution::…test_g_…`). Les 3 autres échecs du 16/10 (`test_game_graphics_contract` ×2, garde de spécialité) passent désormais. Tests GPU, assistant et Game Studio seuls : 274 passent, 1 ignoré |
 | Suite Python | arbre combiné frais `27a1e8d` (43 min) | **3 497 passent, 189 ignorés, 7 échouent : les 7 déjà identifiés, aucun nouveau.** 4 viennent du worktree jetable (`test_apex_preflight_script` ×3, `test_evalrunner_generated_solution::…test_g_…`) ; 2 sont `test_game_graphics_contract` (`llama_cpp`, psutil : Codex) ; 1 est la garde de spécialité `test_no_second_specialty_task_provider_is_registered` (Codex). Aucun test n'a été modifié pour les faire disparaître |
 | Frontend | arbre combiné : vitest, `tsc --noEmit`, build | 183/183, OK, OK |
 | Panel (`dotnet test`) | arbre combiné ; ma branche | 590 passent, 2 échouent. Ces 2 tests exigent `.venv/bin/python3` à la racine, absent du worktree jetable ; ils passent dans le dépôt (8/8). Sur ma branche après le correctif `-P` : Dashboard 251/251 |
