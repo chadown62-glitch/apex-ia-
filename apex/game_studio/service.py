@@ -201,20 +201,18 @@ class GameStudioService:
         native = native_coder_endpoint()
         pinned = coder_manifest().is_file() and find_spec("llama_cpp") is not None
         if desired == "auto":
+            # Respect the explicit backend even on a CUDA host. An available
+            # brain endpoint does not provide a per-call CPU-placement contract.
             desired = (
-                "apex_native"
-                if capabilities["cuda"]["available"] and native
-                else ("pinned_7b" if pinned else "apex_native")
+                "pinned_7b"
+                if request.get("compute_backend") == "cpu"
+                else ("apex_native" if capabilities["cuda"]["available"] and native else "pinned_7b")
             )
         if desired == "pinned_7b" and not pinned:
             raise RuntimeError("pinned_7b_model_missing_no_download_performed")
         if desired == "apex_native" and native is None:
             raise RuntimeError("apex_native_coder_missing_no_download_performed")
-        if (
-            desired == "apex_native"
-            and request.get("compute_backend") == "cpu"
-            and capabilities["cuda"]["available"]
-        ):
+        if desired == "apex_native" and request.get("compute_backend") == "cpu":
             raise RuntimeError("native_cpu_override_not_supported_choose_pinned_7b_or_cuda")
         request = {**request, "resolved_controller_model": desired}
         overrides = request.get("criteria") or {}

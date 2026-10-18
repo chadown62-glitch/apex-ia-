@@ -89,6 +89,7 @@ class CoderSession:
         self.log: Any = None
         self.facts: dict[str, Any] = {}
         self.cancel_event = None
+        self._owned_children: list[psutil.Process] = []
         self.endpoint = ModelEndpoint(
             pool_id="local",
             runtime="openai_compatible",
@@ -202,31 +203,47 @@ class CoderSession:
         if self.process and self.process.poll() is None:
             self.facts["rss_after_generation_bytes"] = psutil.Process(self.process.pid).memory_info().rss
 
+    def request_stop(self, *, force: bool = False) -> None:
+        """Snapshot owned descendants before terminating their parent on Windows.
+
+        The cancellation watcher and __exit__ use the same process identities;
+        no process search by name and no foreign server termination.
+        """
+        if self.process is None or self.process.poll() is not None:
+            return
+        with suppress(psutil.NoSuchProcess):
+            children = psutil.Process(self.process.pid).children(recursive=True)
+            known = {p.pid for p in self._owned_children}
+            self._owned_children.extend(p for p in children if p.pid not in known)
+        if os.name == "nt":
+            for child in self._owned_children:
+                with suppress(psutil.NoSuchProcess):
+                    child.kill() if force else child.terminate()
+            self.process.kill() if force else self.process.terminate()
+        else:
+            with suppress(ProcessLookupError):
+                os.killpg(self.process.pid, signal.SIGKILL if force else signal.SIGTERM)
+
     def __exit__(self, kind: Any, value: Any, tb: Any) -> None:
+        stopped_at = time.monotonic()
         if self.process and self.process.poll() is None:
-            if os.name == "nt":
-                owned = psutil.Process(self.process.pid)
-                tree = [*owned.children(recursive=True), owned]
-                for item in tree:
-                    with suppress(psutil.NoSuchProcess):
-                        item.terminate()
-                _, survivors = psutil.wait_procs(tree, timeout=10)
-                for item in survivors:
-                    with suppress(psutil.NoSuchProcess):
-                        item.kill()
-            else:
-                os.killpg(self.process.pid, signal.SIGTERM)
+            self.request_stop()
             try:
                 self.process.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                if os.name == "nt":
-                    self.process.kill()
-                else:
-                    os.killpg(self.process.pid, signal.SIGKILL)
+                self.request_stop(force=True)
                 self.process.wait(timeout=10)
+        if self._owned_children:
+            _, survivors = psutil.wait_procs(self._owned_children, timeout=2)
+            for child in survivors:
+                with suppress(psutil.NoSuchProcess):
+                    child.kill()
+            _, survivors = psutil.wait_procs(survivors, timeout=2)
+            self.facts["owned_children_stopped_verified"] = not survivors
         if self.process:
             self.facts["process_stopped_verified"] = self.process.poll() is not None
             self.facts["returncode"] = self.process.returncode
+            self.facts["shutdown_s"] = time.monotonic() - stopped_at
         if self.log:
             self.log.close()
         if self.log_dir.is_dir():

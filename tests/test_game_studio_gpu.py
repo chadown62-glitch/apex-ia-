@@ -268,3 +268,28 @@ def test_busy_cpu_releases_when_first_operation_finishes(contract):
     finally:
         release.set()
         worker.join()
+
+
+def test_cpu_auto_controller_uses_pinned_qwen_even_on_cuda_host(tmp_path):
+    from apex.game_studio.qualification import REQUEST
+    from apex.game_studio.service import GameStudioService
+    from tests.test_taskloop_execution import sqlite_session_factory
+
+    manifest = tmp_path / "coder-model.json"
+    manifest.write_text("{}")  # Admission only; never loaded or called a verified model.
+    service = GameStudioService(sqlite_session_factory(), root=tmp_path / "missions")
+    with (
+        patch(
+            "apex.game_studio.service.probe",
+            return_value={
+                "vehicle_blender": {"status": "available_unqualified"},
+                "cuda": {"available": True},
+            },
+        ),
+        patch("apex.game_studio.service.native_coder_endpoint", return_value=object()),
+        patch("apex.game_studio.service.coder_manifest", return_value=manifest),
+        patch.object(service, "_start"),
+    ):
+        job = service.create({**REQUEST, "controller_model": "auto"}, [])
+    assert job["request"]["resolved_controller_model"] == "pinned_7b"
+    assert job["status"] == "queued"

@@ -129,7 +129,6 @@ def request_cancel(folder: Path) -> None:
 @contextmanager
 def cancellable_session(session, cancel, *, max_rss_mib=12000):
     """Stop only this CoderSession's subprocess, including during model loading."""
-    import signal
 
     stop = threading.Event()
     session.cancel_event = cancel
@@ -173,10 +172,10 @@ def cancellable_session(session, cancel, *, max_rss_mib=12000):
             if cancel.is_set() and process is not None and process.poll() is None:
                 try:
                     if signalled is None:
-                        process.terminate() if os.name == "nt" else os.killpg(process.pid, signal.SIGTERM)
+                        session.request_stop()
                         signalled = time.monotonic()
                     elif time.monotonic() - signalled > 2:
-                        process.kill() if os.name == "nt" else os.killpg(process.pid, signal.SIGKILL)
+                        session.request_stop(force=True)
                 except ProcessLookupError:
                     pass
 

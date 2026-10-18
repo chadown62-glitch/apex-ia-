@@ -103,3 +103,31 @@ def test_spawn_error_closes_log(session):
     ):
         session.__enter__()
     assert session.log.closed
+
+
+def test_owned_descendant_is_stopped_with_its_parent(session, tmp_path):
+    import os
+    import time
+
+    child_pid = tmp_path / "child.pid"
+    code = (
+        "import subprocess,sys,signal; from pathlib import Path; "
+        "child=subprocess.Popen([sys.executable,'-c','import time; time.sleep(60)']); "
+        "signal.signal(signal.SIGTERM,lambda *_: (child.wait(timeout=5),sys.exit(0))); "
+        "Path(sys.argv[1]).write_text(str(child.pid)); child.wait()"
+    )
+    session.log_dir.mkdir()
+    session.process = subprocess.Popen(
+        [sys.executable, "-c", code, str(child_pid)], start_new_session=os.name != "nt"
+    )
+    try:
+        deadline = time.monotonic() + 5
+        while not child_pid.exists() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert child_pid.exists()
+        session.request_stop()
+        session.__exit__(None, None, None)
+        assert session.facts["process_stopped_verified"] is True
+        assert session.facts["owned_children_stopped_verified"] is True
+    finally:
+        session.__exit__(None, None, None)

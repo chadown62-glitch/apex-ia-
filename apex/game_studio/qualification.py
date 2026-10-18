@@ -26,7 +26,7 @@ REQUEST = {
     "quality": "prototype",
     "tool": "blender",
     "compute_backend": "cpu",
-    "controller_model": "pinned_7b",
+    "controller_model": "auto",
     "description": (
         "Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender."
     ),
@@ -117,6 +117,94 @@ def verify_real_mission(project, downloads):
             for r in revisions
         )
     return {"passed": all(checks.values()), "checks": checks}
+
+
+def api_lifecycle_probe(client, home, output):
+    """Cancel a real Qwen load, resume the same project and plan a held-out request.
+
+    Only called after a successful real vehicle mission. No injected diagnostic,
+    model replacement or new provisioning path. No Blender generation in this probe.
+    """
+    from apex.game_studio.lifecycle import busy
+
+    request = {
+        **REQUEST,
+        "description": "Crée deux fauteuils verts pour un coin lecture.",
+        "creation_type": "objet_3d",
+        "plan_only": True,
+        "max_time_s": 1800,
+    }
+    response = client.post("/api/v1/game-studio/projects", json=request)
+    response.raise_for_status()
+    project = response.json()["data"]
+    base = f"/api/v1/game-studio/projects/{project['id']}"
+    folder = home / ".apex/game-studio/missions/projects" / project["id"]
+    owner_file = folder / "planner-model/model.owner.json"
+    deadline = time.monotonic() + 180
+    while not owner_file.exists() and time.monotonic() < deadline:
+        response = client.get(base)
+        response.raise_for_status()
+        project = response.json()["data"]
+        if project["status"] not in ("queued", "running"):
+            raise RuntimeError("planner_probe_failed_before_owned_server")
+        time.sleep(0.1)
+    if not owner_file.exists():
+        client.post(base + "/cancel").raise_for_status()
+        raise RuntimeError("planner_probe_no_owned_server")
+    owner = json.loads(owner_file.read_bytes())
+    client.post(base + "/cancel").raise_for_status()
+    deadline = time.monotonic() + 30
+    while busy(folder) and time.monotonic() < deadline:
+        time.sleep(0.1)
+    if busy(folder):
+        raise RuntimeError("cancelled_planner_worker_still_owned")
+    cancelled = client.get(base)
+    cancelled.raise_for_status()
+    cancelled = cancelled.json()["data"]
+    save(output / "probe-cancelled.json", cancelled)
+    save(output / "probe-cancelled-owner.json", json.loads(owner_file.read_bytes()))
+    lifecycle = folder / "planner-model/model-lifecycle.json"
+    if lifecycle.exists():
+        shutil.copyfile(lifecycle, output / "probe-cancelled-lifecycle.json")
+    if cancelled["status"] != "cancelled":
+        raise RuntimeError("planner_probe_not_cancelled")
+    try:
+        process = psutil.Process(owner["pid"])
+        if process.create_time() == owner["create_time"] and process.is_running():
+            raise RuntimeError("cancelled_planner_orphan_present")
+    except psutil.NoSuchProcess:
+        pass
+    response = client.post(base + "/resume")
+    response.raise_for_status()
+    resumed = response.json()["data"]
+    deadline = time.monotonic() + request["max_time_s"] + 30
+    while resumed["status"] in ("queued", "running") and time.monotonic() < deadline:
+        time.sleep(2)
+        response = client.get(base)
+        response.raise_for_status()
+        resumed = response.json()["data"]
+        save(output / "probe-resumed.json", resumed)
+    if resumed["status"] in ("queued", "running"):
+        client.post(base + "/cancel").raise_for_status()
+        raise RuntimeError("planner_probe_resume_timeout")
+    collect_api_artifacts(client, resumed, output / "probe-artifacts")
+    checks = {
+        "same_project": resumed["id"] == cancelled["id"],
+        "new_mission_attempt": resumed["mission_id"] != cancelled["mission_id"],
+        "cumulative_budget": resumed["budget"]["charged_s"] >= cancelled["budget"]["charged_s"] > 0,
+        "plan_only_review": resumed["status"] == "review" and resumed.get("delivery_status") == "plan_only",
+        "two_chairs": sum(s["kind"] == "chair" for s in resumed.get("steps", [])) == 2,
+        "resumed_server_stopped": (resumed.get("planner_model") or {}).get("process_stopped_verified")
+        is True,
+    }
+    report = {
+        "request": request,
+        "checks": checks,
+        "passed": all(checks.values()),
+        "scope": "real API cancellation during Qwen loading, resume and held-out plan; no chair meshes",
+    }
+    save(output / "probe-report.json", report)
+    return report
 
 
 def lease_fixture(output):
@@ -324,10 +412,12 @@ def api_mission(output):
                 collected = collect_api_artifacts(client, project, downloads)
                 validation = verify_real_mission(project, downloads)
                 save(output / "api-validation.json", validation)
+                lifecycle = api_lifecycle_probe(client, home, output) if validation["passed"] else None
                 return {
-                    "status": "review" if validation["passed"] else "FAILED",
+                    "status": "review" if validation["passed"] and lifecycle["passed"] else "FAILED",
                     "mission_status": project["status"],
                     "validation": validation,
+                    "lifecycle_probe": lifecycle,
                     "project_id": project_id,
                     "artifacts": collected,
                     "cpu_explicit": True,
