@@ -6,5 +6,13 @@
     "sha256": "dadf36b06671016613979cb3e764c9000dc7b4988a176be3e68a8a317111a594",
     "internal_files_verified": 166,
     "result": "real_Qwen_plan_pass_Blender_cancelled_unrequested"
+  },
+  {
+    "run": 39112594053,
+    "commit": "15ab204",
+    "file": "windows-run2-failure.zip",
+    "sha256": "3ccf714d363a948b85a310681f81ec41e35c852de5b7d6daaf3c8dc3baa5157b",
+    "internal_files_verified": 33,
+    "result": "real_Qwen_plan_pass_parent_budget_read_denied"
   }
 ]

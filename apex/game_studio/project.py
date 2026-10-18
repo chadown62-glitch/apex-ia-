@@ -34,6 +34,7 @@ from .lifecycle import (
     cancellable_session,
     claim,
     cleanup_owned,
+    read_json,
     remaining,
     request_cancel,
     snapshot,
@@ -81,9 +82,39 @@ class GameStudioProjectService:
 
     def _read(self, project_id: str) -> dict[str, Any]:
         path = self._path(project_id)
-        if not path.is_file():
-            raise LookupError("game_studio_project_missing")
-        return json.loads(path.read_text())
+        try:
+            return read_json(path)
+        except FileNotFoundError as exc:
+            raise LookupError("game_studio_project_missing") from exc
+
+    def _stop_children(self, receipt: dict[str, Any]) -> list[dict[str, Any]]:
+        """Cancel only children recorded by this project; await their worker leases."""
+        pending = []
+        results = []
+        for step in receipt.get("steps", []):
+            job = step.get("job_id")
+            if not job:
+                continue
+            try:
+                UUID(job)
+                folder = self.graphics.root / job
+                if busy(folder):
+                    request_cancel(folder)
+                    pending.append((job, folder))
+            except (OSError, ValueError) as exc:
+                results.append({"job_id": job, "stopped": False, "error": str(exc)[:300]})
+        deadline = time.monotonic() + 15
+        while pending and time.monotonic() < deadline:
+            for job, folder in list(pending):
+                if not busy(folder):
+                    results.append({"job_id": job, "stopped": True})
+                    pending.remove((job, folder))
+            if pending:
+                time.sleep(0.1)
+        results.extend(
+            {"job_id": job, "stopped": False, "error": "child_stop_timeout"} for job, _ in pending
+        )
+        return results
 
     def _save(self, receipt: dict[str, Any]) -> None:
         path = self._path(receipt["id"])
@@ -126,7 +157,7 @@ class GameStudioProjectService:
     def list(self) -> list[dict[str, Any]]:
         with self._lock:
             return [
-                self._view(json.loads(path.read_text()))
+                self._view(read_json(path))
                 for path in sorted(self.root.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[
                     :50
                 ]
@@ -306,6 +337,7 @@ class GameStudioProjectService:
         if initial["recipe"] == "dynamic-v1":
             self._run_dynamic(project_id, cancel, started)
             return
+        receipt = initial
         try:
             with self._lock:
                 receipt = self._read(project_id)
@@ -389,6 +421,7 @@ class GameStudioProjectService:
                 receipt["events"].append(self._event("completed_for_review"))
                 self._save(receipt)
         except Exception as exc:
+            child_cleanup = self._stop_children(receipt)
             current = self.missions.get(mission_id)
             if current and current.state.value == "running":
                 if cancel.is_set():
@@ -401,10 +434,13 @@ class GameStudioProjectService:
                     self._event(
                         "project_cancelled" if cancel.is_set() else "project_failed",
                         reason=f"{type(exc).__name__}: {exc}"[:500],
+                        child_cleanup=child_cleanup,
                     )
                 )
                 self._save(receipt)
         finally:
+            if cancel.is_set():
+                self._stop_children(receipt)
             with self._lock:
                 self._active.pop(project_id, None)
 
@@ -596,6 +632,7 @@ class GameStudioProjectService:
             with self._lock:
                 self._save(receipt)
         except Exception as exc:
+            child_cleanup = self._stop_children(receipt)
             current = self.missions.get(mission_id)
             if current and current.state.value == "running":
                 if cancel.is_set():
@@ -620,10 +657,13 @@ class GameStudioProjectService:
                     self._event(
                         "project_cancelled" if cancel.is_set() else "project_failed",
                         reason=f"{type(exc).__name__}: {exc}"[:500],
+                        child_cleanup=child_cleanup,
                     )
                 )
                 self._save(receipt)
         finally:
+            if cancel.is_set():
+                self._stop_children(receipt)
             with self._lock:
                 self._active.pop(project_id, None)
 

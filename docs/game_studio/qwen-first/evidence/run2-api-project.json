@@ -1,0 +1,232 @@
+{
+  "id": "a21ccfb6-df18-4856-8a09-fe2758ed5fd4",
+  "mission_id": "9a0fbc49-a7e2-4087-b7b8-665b91f294da",
+  "mission_history": [
+    "9a0fbc49-a7e2-4087-b7b8-665b91f294da"
+  ],
+  "created_at": "2026-10-18T08:47:18.419875+00:00",
+  "recipe": "dynamic-v1",
+  "owner_workspace_id": null,
+  "request": {
+    "creation_type": "vehicule",
+    "creation_other": null,
+    "style": "realiste",
+    "style_other": null,
+    "quality": "prototype",
+    "tool": "blender",
+    "compute_backend": "cpu",
+    "controller_model": "auto",
+    "description": "Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender.",
+    "judges_all_tasks": true,
+    "automatic_corrections": true,
+    "max_time_s": 3600,
+    "max_rss_mib": 12000,
+    "max_attempts": 3,
+    "criteria": {},
+    "plan_only": false
+  },
+  "references": [],
+  "plan": {
+    "requirements": {
+      "schema_version": 1,
+      "source": "Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender.",
+      "requirements": [
+        {
+          "id": "vehicle",
+          "kind": "vehicle",
+          "count": 1,
+          "source_terms": [
+            "voiture"
+          ],
+          "mandatory": true
+        },
+        {
+          "id": "red",
+          "kind": "feature",
+          "quote": "rouge",
+          "pattern": "rouges?|red",
+          "mandatory": true
+        }
+      ],
+      "scope": "French/English explicit entity nouns, counts, listed contexts and features",
+      "unverified": [
+        "unlisted semantics",
+        "artistic fidelity",
+        "reference pixels",
+        "implicit preferences"
+      ],
+      "reference_count": 0
+    },
+    "coverage": {
+      "verdict": "pass_in_declared_scope",
+      "defects": [],
+      "covered": [
+        "vehicle",
+        "red"
+      ],
+      "unavailable": [],
+      "unverified": [
+        "unlisted semantics",
+        "artistic fidelity",
+        "reference pixels",
+        "implicit preferences"
+      ],
+      "method": "independent_source_anchored_rules_v1",
+      "artistic_fidelity_certified": false
+    },
+    "schema_version": 1,
+    "feasibility_scope": "DAG, resource budget and known specialist capability; source-grounded count/context coverage in declared scope; artistic fidelity unverified",
+    "steps": [
+      {
+        "key": "vehicle",
+        "kind": "vehicle",
+        "description": "Create a red sports car with four independent wheels and prepare for export in Blender.",
+        "depends_on": [],
+        "status": "available_unqualified",
+        "reason": null
+      }
+    ],
+    "unmet_requirements": [],
+    "estimated_minimum_s": 660,
+    "feasible_steps": 1,
+    "blocked_steps": 0,
+    "fully_feasible": true
+  },
+  "steps": [
+    {
+      "key": "vehicle",
+      "kind": "vehicle",
+      "description": "Create a red sports car with four independent wheels and prepare for export in Blender.",
+      "depends_on": [],
+      "status": "running",
+      "reason": null,
+      "job_id": "717cdd06-0c59-4999-a90d-fd163aaad988",
+      "specialist": "Game Graphics",
+      "mission": {
+        "id": "717cdd06-0c59-4999-a90d-fd163aaad988",
+        "mission_id": "2bc38743-739f-4a1d-9b76-22d7b598e946",
+        "mission_history": [
+          "2bc38743-739f-4a1d-9b76-22d7b598e946"
+        ],
+        "created_at": "2026-10-18T08:47:59.245988+00:00",
+        "updated_at": "2026-10-18T08:48:00.286788+00:00",
+        "status": "running",
+        "current_task": "blender_baseline",
+        "specialist": "Game Graphics",
+        "model": "Qwen2.5-Coder-7B-Instruct Q5_K_M (pinned local)",
+        "request": {
+          "creation_type": "vehicule",
+          "creation_other": null,
+          "style": "realiste",
+          "style_other": null,
+          "quality": "prototype",
+          "tool": "blender",
+          "compute_backend": "cpu",
+          "controller_model": "auto",
+          "description": "Create a red sports car with four independent wheels and prepare for export in Blender.",
+          "judges_all_tasks": true,
+          "automatic_corrections": true,
+          "max_time_s": 1200,
+          "max_rss_mib": 12000,
+          "max_attempts": 3,
+          "criteria": {},
+          "plan_only": false,
+          "resolved_controller_model": "pinned_7b"
+        },
+        "references": [],
+        "revisions": [],
+        "controller_attempts": [],
+        "events": [
+          {
+            "at": "2026-10-18T08:47:59.245988+00:00",
+            "kind": "dependency_check"
+          },
+          {
+            "at": "2026-10-18T08:48:00.286788+00:00",
+            "kind": "blender_baseline"
+          }
+        ],
+        "error": null,
+        "resource_measurements": [],
+        "limitations": [
+          "Image references are archived with provenance; the text-only controller does not interpret their pixels."
+        ],
+        "mission_state": "running",
+        "budget": {
+          "attempts": {
+            "asset_revision": 1
+          },
+          "charged_s": 76.26600000000002,
+          "observed_s": 66.26600000000002,
+          "limit_s": 1200,
+          "recovery_policy": "unused reservation charged on crash; at most 10 seconds",
+          "active": true
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-10-18T08:47:59.136618+00:00",
+      "kind": "model_plan_validated",
+      "steps": 1,
+      "planner_model": null
+    },
+    {
+      "at": "2026-10-18T08:47:59.245988+00:00",
+      "kind": "child_started",
+      "key": "vehicle",
+      "job_id": "717cdd06-0c59-4999-a90d-fd163aaad988"
+    },
+    {
+      "at": "2026-10-18T08:49:04.356716+00:00",
+      "kind": "project_failed",
+      "reason": "PermissionError: [Errno 13] Permission denied: 'D:\\\\a\\\\_temp\\\\game-studio-qualification\\\\profile\\\\.apex\\\\game-studio\\\\missions\\\\717cdd06-0c59-4999-a90d-fd163aaad988\\\\budget.json'"
+    }
+  ],
+  "assembly": null,
+  "assembly_history": [],
+  "delivery_status": "planning",
+  "limitations": [
+    "Reference files are preserved but their content is not interpreted by this planner.",
+    "Unreal and CUDA remain unqualified on this host."
+  ],
+  "planning_artifact": {
+    "name": "planner-trace.json",
+    "hash": "sha256:f5312f20ada73d590a2d28dba2ae85970dd5feafecae8891af70ce5e7d12e7e7",
+    "content_type": "application/json",
+    "role": "report",
+    "bytes": 4526
+  },
+  "planner_model": {
+    "repo": "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF",
+    "commit": "13fb94bfda8c8cf22497dc57b78f391a9acb426a",
+    "sha256": "586844eac4d6d6321689f0192c8aa8e69cd8625974a5cc2d925b1a03366e4d16",
+    "quantization": "Q5_K_M",
+    "device": "cpu_explicit",
+    "llama_gpu_offload_supported": false,
+    "server_ready": true,
+    "load_s": 3.718999999999994,
+    "pid": 7620,
+    "rss_after_load_bytes": 6041120768,
+    "rss_after_generation_bytes": 6245412864,
+    "process_stopped_verified": true,
+    "returncode": 1,
+    "shutdown_s": 1.5779999999999745,
+    "sampled_tree_rss_peak_bytes": 6331244544,
+    "rss_limit_mib": 12000
+  },
+  "mission_state": "failed",
+  "status": "failed",
+  "budget": {
+    "attempts": {
+      "planner": 1,
+      "child:vehicle": 1
+    },
+    "charged_s": 105.93799999999999,
+    "observed_s": 105.93799999999999,
+    "limit_s": 3600,
+    "recovery_policy": "unused reservation charged on crash; at most 10 seconds",
+    "active": false
+  }
+}

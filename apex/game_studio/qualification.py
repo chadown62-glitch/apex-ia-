@@ -53,7 +53,7 @@ def budget_windows_contention(output):
     """Real Windows reader/writer contention, not an injected I/O exception."""
     if os.name != "nt":
         return {"status": "not_applicable", "reason": "native_Windows_required"}
-    from apex.game_studio.lifecycle import RunBudget, atomic_json
+    from apex.game_studio.lifecycle import RunBudget, atomic_json, read_json
 
     folder = output / "budget-contention"
     folder.mkdir()
@@ -80,6 +80,38 @@ def budget_windows_contention(output):
         release.join()
         reader.close()
     elapsed = time.monotonic() - started
+    # Reproduce the inverse sharing failure: a brief exclusive opener (e.g. a
+    # file scanner) blocks readers as well. Only this disposable test file.
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateFileW.argtypes = [
+        wintypes.LPCWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.LPVOID,
+        wintypes.DWORD,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+    ]
+    kernel.CreateFileW.restype = wintypes.HANDLE
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.CreateFileW(str(target), 0x80000000, 0, None, 3, 128, None)
+    if handle == wintypes.HANDLE(-1).value:
+        raise ctypes.WinError(ctypes.get_last_error())
+    read_error = None
+    try:
+        target.read_bytes()
+    except OSError as exc:
+        read_error = {"winerror": getattr(exc, "winerror", None), "errno": exc.errno}
+    release_reader = threading.Timer(0.2, kernel.CloseHandle, args=(handle,))
+    release_reader.start()
+    try:
+        read_back = read_json(target)
+    finally:
+        release_reader.join()
     cancel = threading.Event()
     with RunBudget(folder, 10, cancel) as budget:
         with (folder / "budget.json").open("rb"):
@@ -90,6 +122,8 @@ def budget_windows_contention(output):
     report = {
         "original_replace_error": observed,
         "bounded_replace_elapsed_s": elapsed,
+        "original_read_error": read_error,
+        "read_after_transient_denial": read_back,
         "final_value": json.loads(target.read_bytes()),
         "budget_cancelled": cancel.is_set(),
         "status": "pass",
@@ -492,7 +526,7 @@ def api_mission(output):
             studio = home / ".apex/game-studio"
             for section in ("missions", "projects"):
                 for source in (studio / section).rglob("*"):
-                    if source.is_file() and source.suffix in (".log", ".json"):
+                    if source.is_file() and source.suffix in (".log", ".json", ".blend", ".glb", ".png"):
                         target = output / "runtime-evidence" / source.relative_to(studio)
                         target.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copyfile(source, target)

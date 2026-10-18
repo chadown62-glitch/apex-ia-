@@ -1,0 +1,13 @@
+{
+  "original_replace_error": {
+    "error": "PermissionError",
+    "winerror": 5,
+    "errno": 13
+  },
+  "bounded_replace_elapsed_s": 0.21800000000001774,
+  "final_value": {
+    "version": 3
+  },
+  "budget_cancelled": false,
+  "status": "pass"
+}

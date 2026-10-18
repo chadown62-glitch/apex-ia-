@@ -49,6 +49,7 @@ from .lifecycle import (
     cancellable_session,
     claim,
     cleanup_owned,
+    read_json,
     remaining,
     request_cancel,
     snapshot,
@@ -113,7 +114,7 @@ class GameStudioService:
             except ValueError:
                 continue
             try:
-                stale = json.loads(path.read_text())
+                stale = read_json(path)
                 if stale.get("status") in ("running", "queued"):
                     stale["status"] = "interrupted"
                     stale["current_task"] = "interrupted_on_restart"
@@ -133,9 +134,10 @@ class GameStudioService:
 
     def _read(self, job_id: str) -> dict[str, Any]:
         path = self._folder(job_id) / "receipt.json"
-        if not path.is_file():
-            raise LookupError("game_studio_mission_missing")
-        return json.loads(path.read_text())
+        try:
+            return read_json(path)
+        except FileNotFoundError as exc:
+            raise LookupError("game_studio_mission_missing") from exc
 
     def _save(self, record: dict[str, Any]) -> None:
         folder = self._folder(record["id"])

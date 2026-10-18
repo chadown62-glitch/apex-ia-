@@ -206,3 +206,57 @@ def test_persistent_io_failure_preserves_old_budget_and_reports_stop(tmp_path, m
             assert budget.data["stop_reason"] == "budget_persistence_failed"
         assert not list(tmp_path.glob("*.tmp"))
     assert snapshot(tmp_path)["stop_reason"] == "budget_persistence_failed"
+
+
+def test_transient_read_denial_does_not_reset_budget(tmp_path, monkeypatch):
+    from apex.game_studio import lifecycle
+
+    lifecycle.atomic_json(tmp_path / "budget.json", {"charged_s": 47, "attempts": {"planner": 1}})
+    original = type(tmp_path).open
+    calls = []
+
+    def windows_read(path, *args, **kwargs):
+        calls.append(1)
+        if len(calls) <= 2:
+            error = PermissionError("replacement sharing violation")
+            error.winerror = 5
+            raise error
+        return original(path, *args, **kwargs)
+
+    monkeypatch.setattr(type(tmp_path), "open", windows_read)
+    assert snapshot(tmp_path) == {"charged_s": 47, "attempts": {"planner": 1}}
+
+
+def test_parent_failure_stops_only_its_live_child(tmp_path):
+    from uuid import uuid4
+
+    from apex.game_studio.project import GameStudioProjectService
+    from apex.game_studio.service import GameStudioService
+    from tests.test_taskloop_execution import sqlite_session_factory
+
+    service = GameStudioProjectService(GameStudioService(sqlite_session_factory(), root=tmp_path))
+    job, foreign = str(uuid4()), str(uuid4())
+    entered = threading.Event()
+    cancelled = threading.Event()
+
+    def child():
+        lease = claim(tmp_path / job)
+        try:
+            with RunBudget(tmp_path / job, 5, cancelled):
+                entered.set()
+                cancelled.wait(3)
+        finally:
+            lease.__exit__(None, None, None)
+
+    worker = threading.Thread(target=child)
+    worker.start()
+    other = claim(tmp_path / foreign)
+    try:
+        assert entered.wait(2)
+        assert service._stop_children({"steps": [{"job_id": job}]}) == [{"job_id": job, "stopped": True}]
+        assert cancelled.is_set()
+        assert busy(tmp_path / foreign) and not (tmp_path / foreign / "cancel.request").exists()
+    finally:
+        cancelled.set()
+        worker.join()
+        other.__exit__(None, None, None)

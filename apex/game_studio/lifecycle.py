@@ -23,6 +23,19 @@ from apex.game_graphics.resources import _locked
 LOG = logging.getLogger(__name__)
 
 
+def read_json(path: Path) -> Any:
+    """Read a complete version; retry a transient Windows replacement denial."""
+    deadline = time.monotonic() + 1.0
+    while True:
+        try:
+            with path.open("r", encoding="utf-8") as handle:
+                return json.load(handle)
+        except OSError as exc:
+            if getattr(exc, "winerror", None) not in (5, 32, 33) or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.01)
+
+
 def atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # Windows readers/antivirus can momentarily deny rename/delete sharing.
@@ -58,7 +71,10 @@ def busy(folder: Path) -> bool:
 
 def snapshot(folder: Path) -> dict[str, Any]:
     path = folder / "budget.json"
-    return json.loads(path.read_text()) if path.exists() else {}
+    try:
+        return read_json(path)
+    except FileNotFoundError:
+        return {}
 
 
 class RunBudget:
