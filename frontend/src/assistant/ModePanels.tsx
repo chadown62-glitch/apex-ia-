@@ -590,7 +590,7 @@ function GameStudioProposal({ conversationId, message, request, reason, availabi
           Une mission dure plusieurs minutes et utilise {cpu ? "le processeur (choix explicite)" : "le GPU"}. Le calcul se règle dans
           Paramètres &gt; Outils.
         </p>
-        {availability?.gpu?.lease_held && (
+        {availability?.gpu?.lease_held && availability.gpu_loan !== "game_studio" && (
           <p className="ax-muted">
             Le Cerveau APEX occupe le GPU : il le libère au lancement et répond sur le processeur jusqu'à la fin de la mission.
           </p>

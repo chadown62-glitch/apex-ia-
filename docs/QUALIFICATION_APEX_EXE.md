@@ -115,8 +115,9 @@ encore les missions sur le GPU : le partage du GPU avec le Cerveau n'y est pas q
 2. Écrivez : « Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender. »
 3. APEX doit **proposer** une mission Game Studio, sans la lancer.
 4. Cliquez sur **Lancer la mission**.
-   - Si le Cerveau tourne sur le GPU, il le libère à ce moment et répond sur le processeur jusqu'à la fin de la
-     mission. La ligne de mesures sous ses réponses le dit (« processeur »).
+   - Si le Cerveau tourne sur le GPU, il le libère pendant la mission et répond sur le processeur. Avec cette
+     candidate, il le libère au clic, jusqu'à la fin de la mission ; avec la version suivante de Game Studio,
+     ce sera autour de chaque étape. La ligne de mesures sous ses réponses le dit (« processeur »).
    - S'il ne peut pas le libérer à temps, rien n'est lancé : le message demande de réessayer.
 5. Suivez la mission dans l'Atelier 3D : état, étapes, puis aperçus et fichiers. Les fichiers se téléchargent
    depuis la page Game Studio (lien « Ouvrir dans Game Studio »).
