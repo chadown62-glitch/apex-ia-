@@ -1,0 +1,57 @@
+{
+  "id": "fa1ff0ed-a523-4fc7-848e-272be266115e",
+  "mission_id": "ed5295af-8464-4b78-acb9-45c9423aa61c",
+  "mission_history": [
+    "ed5295af-8464-4b78-acb9-45c9423aa61c"
+  ],
+  "created_at": "2026-10-18T09:12:24.658042+00:00",
+  "recipe": "dynamic-v1",
+  "owner_workspace_id": null,
+  "request": {
+    "creation_type": "objet_3d",
+    "creation_other": null,
+    "style": "realiste",
+    "style_other": null,
+    "quality": "prototype",
+    "tool": "blender",
+    "compute_backend": "cpu",
+    "controller_model": "auto",
+    "description": "Crée deux fauteuils verts pour un coin lecture.",
+    "judges_all_tasks": true,
+    "automatic_corrections": true,
+    "max_time_s": 1800,
+    "max_rss_mib": 12000,
+    "max_attempts": 3,
+    "criteria": {},
+    "plan_only": true
+  },
+  "references": [],
+  "plan": null,
+  "steps": [],
+  "events": [
+    {
+      "at": "2026-10-18T09:12:32.770662+00:00",
+      "kind": "project_cancelled",
+      "reason": "InterruptedError: user_cancelled_loading_model",
+      "child_cleanup": []
+    }
+  ],
+  "assembly": null,
+  "assembly_history": [],
+  "delivery_status": "planning",
+  "limitations": [
+    "Reference files are preserved but their content is not interpreted by this planner.",
+    "Unreal and CUDA remain unqualified on this host."
+  ],
+  "mission_state": "cancelled",
+  "status": "cancelled",
+  "budget": {
+    "attempts": {},
+    "charged_s": 8.109000000000037,
+    "observed_s": 8.109000000000037,
+    "limit_s": 1800,
+    "recovery_policy": "unused reservation charged on crash; at most 10 seconds",
+    "active": false,
+    "stop_reason": "user_cancelled"
+  }
+}

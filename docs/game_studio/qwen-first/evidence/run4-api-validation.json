@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "checks": {
+    "project_review": true,
+    "pinned_planner": true,
+    "explicit_cpu": true,
+    "planner_stopped": true,
+    "real_validated_response": true,
+    "one_vehicle": true,
+    "vehicle_preflight": true,
+    "child_review": true,
+    "blender_files_and_four_views": true
+  }
+}

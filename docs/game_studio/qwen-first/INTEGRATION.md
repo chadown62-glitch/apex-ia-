@@ -1,7 +1,7 @@
 # Première mission dans APEX.exe — contrat de candidate
 
 La PR #31 est empilée sur #29 (`8fc1df9`), elle-même sur #26 → #24 → #22 → #19.
-Le gouverneur/assistant/Panel de Claude reste dans #27, audité à `8a4e2de`.
+Le gouverneur/assistant/Panel de Claude reste dans #27, audité à `cf76ff1`.
 Ne pas fusionner automatiquement ces lignes ni réinstaller le lock torch CPU par-dessus
 le runtime CUDA déjà validé par l'utilisateur. Les travaux historiques #12/#13/#16/#17
 ont déjà des adaptations dans la pile Studio : ne pas les réimporter aveuglément.
@@ -35,19 +35,19 @@ ont déjà des adaptations dans la pile Studio : ne pas les réimporter aveuglé
 2. Garder les boutons existants : installation du moteur CPU vérifié, puis des poids
    Qwen épinglés après le consentement 5,4 Go/Apache-2.0. Le provisioning passe par
    `dependencies` et `install-planner`, déjà branchés par Claude.
-3. Pour CPU, le prêt englobant pris actuellement par l'assistant n'est plus nécessaire.
-   Il reste compatible : Studio ne le touche pas, le watcher assistant reste seul
-   responsable de sa restitution. Claude peut supprimer ce prêt pour CPU explicitement
-   choisi, sans changer les règles de consentement.
-4. CUDA futur : un retour accepté doit être distingué d'une réouverture des admissions.
-   Sous le même verrou Condition, retour d'un propriétaire inconnu = `returned:false`
-   sans mutation ; propriétaire connu = décrément exact et `returned:true`, avec
-   `resumed` indépendant. Exposer un compteur structuré `lenders` ou un jeton de prêt,
-   pas seulement `lent_to` concaténé. Demande publiée dans l'Issue #21.
-5. Ne lever les gardes qu'après qualification RTX du binaire CUDA, des DLL dépendantes,
-   du prêt, des chargements séquentiels, OOM, consommation VRAM et restitution.
-   Le protocole multi-emprunteur CUDA de #27 n'est pas encore accepté par l'ancien
-   adaptateur exclusif #29 ; le chemin CPU de #31 l'évite explicitement.
+3. Avec #27 `cf76ff1`, l'assistant ne prend plus de prêt englobant lorsque
+   `apex.game_studio.gpu` est présent. C'est compatible avec notre CPU explicite,
+   qui n'emprunte rien. Sur une pile plus ancienne, seul le propriétaire assistant
+   rend son éventuel prêt ; Studio ne le modifie pas.
+4. Claude a livré le protocole 2 demandé (`98c7ebb`, inclus dans `cf76ff1`) :
+   compteurs `lenders`, retour atomique d'un propriétaire connu, ACK `returned`
+   distinct de `resumed`. L'adaptateur Codex utilise désormais ce contrat ; un autre
+   prêt actif n'empêche plus de restituer le nôtre. `lent_to` reste un affichage.
+   Le protocole 1 conserve son chemin exclusif pour les anciennes piles.
+5. Gardes CUDA toujours fermées : qualifier sur RTX le binaire CUDA, ses DLL,
+   les chargements séquentiels, les OOM, la VRAM et la restitution avant activation.
+   Le contrôle du vrai gouverneur v2 avec l'adaptateur et les verrous OS passe sur
+   Linux CPU ; aucun modèle CUDA résident ou déchargement GPU n'a été testé.
 
 ## Recette utilisateur pour la candidate installée
 

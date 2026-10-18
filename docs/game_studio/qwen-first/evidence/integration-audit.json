@@ -1,0 +1,47 @@
+{
+  "refs": {
+    "codex": "f309f46ca30f76cd05e010c3c7a0eae25c41446d",
+    "claude": "cf76ff1af6216d1cf615621bebf00a2bc3f4495c"
+  },
+  "files": {
+    "apex/models/provider.py": {
+      "sha256": {
+        "codex": "58f3549432f6f14c881b52064b278132e378f3619d64791af03863b7ff2877d6",
+        "claude": "58f3549432f6f14c881b52064b278132e378f3619d64791af03863b7ff2877d6"
+      },
+      "identical": true
+    },
+    "apex/models/openai_compatible.py": {
+      "sha256": {
+        "codex": "950f06085abe551847de6c611d9af8fb97038b3edcc97208240c02bb580a5ed5",
+        "claude": "950f06085abe551847de6c611d9af8fb97038b3edcc97208240c02bb580a5ed5"
+      },
+      "identical": true
+    },
+    "apex/config/schema.py": {
+      "sha256": {
+        "codex": "fe41c35cfbd68dcc30df17cb36c3a5a344d3e3d20381c0cf35348a0cfccfb5d6",
+        "claude": "fe41c35cfbd68dcc30df17cb36c3a5a344d3e3d20381c0cf35348a0cfccfb5d6"
+      },
+      "identical": true
+    },
+    "apex/missions/service.py": {
+      "sha256": {
+        "codex": "531eccefa82b734003f22a2e5a4aff37b3ffa9b92738e75329d5da5d11860325",
+        "claude": "531eccefa82b734003f22a2e5a4aff37b3ffa9b92738e75329d5da5d11860325"
+      },
+      "identical": true
+    },
+    "apex/artifacts/local_filesystem.py": {
+      "sha256": {
+        "codex": "571db2d1827067e7bb1166533494f239851f614f0209ae5f1a4e8b713ab26fd9",
+        "claude": "571db2d1827067e7bb1166533494f239851f614f0209ae5f1a4e8b713ab26fd9"
+      },
+      "identical": true
+    }
+  },
+  "governor": {
+    "path": "apex/models/gpu_handoff.py",
+    "sha256": "78add5edbaffdd6a0075f56e504ff7b8b0a539a9d00118228558043e741971e1"
+  }
+}

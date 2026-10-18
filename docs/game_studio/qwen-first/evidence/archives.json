@@ -22,5 +22,13 @@
     "sha256": "da72bbca92d309127613d0efe00744359b8bf2332a35b628b2e3dc12275bd193",
     "internal_files_verified": 8,
     "result": "native_contention_fixture_exposes_CRT_errno_without_winerror"
+  },
+  {
+    "run": 39113464692,
+    "commit": "f309f46ca30f76cd05e010c3c7a0eae25c41446d",
+    "file": "windows-run4-vehicle-pass-probe-failure.zip",
+    "sha256": "e565193eb756f2c26be08daa298bcb2882c380739f31f601058664f1dbe33a06",
+    "internal_files_verified": 220,
+    "result": "real_vehicle_pipeline_pass_cancel_stop_pass_resume_inference_pass_heldout_plan_rejected_missing_assembly"
   }
 ]

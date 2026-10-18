@@ -1,0 +1,759 @@
+{
+  "platform": "Windows-2022Server-10.0.20348-SP0",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "executable": "D:\\a\\_temp\\game-studio-qualification\\python\\tools\\python.exe",
+  "cpu_logical": 4,
+  "ram_bytes": 17174360064,
+  "cuda_qualified": false,
+  "user_windows11_qualified": false,
+  "cuda_available": false,
+  "llama_cpp": {
+    "version": "0.3.36",
+    "library_loaded": true,
+    "system_info": "CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | ",
+    "server_cli_imported": true
+  },
+  "blender": {
+    "path": "D:\\a\\_temp\\game-studio-qualification\\Blender portable\\blender-4.3.2-windows-x64\\blender.exe",
+    "source": "explicit",
+    "reason": null,
+    "version": "Blender 4.3.2\n\tbuild date: 2024-12-17\n\tbuild time: 03:35:23\n\tbuild commit date: 2024-12-16\n\tbuild commit time: 21:10\n\tbuild hash: 32f5fdce0a0a\n\tbuild branch: blender-v4.3-release\n\tbuild platform: Windows\n\tbuild type: Release\n\tbuild c flags: /W3 /w34062 /w34100 /w34115 /w34189 /w35038 /wd4018 /wd4146 /wd4065 /wd4127 /wd4181 /wd4200 /wd4244 /wd4267 /wd4305 /wd4800 /wd4828 /wd4996 /wd4661 /wd4848 /we4013 /we4133 /we4431 /we4033 /DWIN32 /D_WINDOWS /W3 /nologo /J /Gd /MP /bigobj /Zc:inline  -openmp \n\tbuild c++ flags: /W3 /w34062 /w34100 /w34115 /w34189 /w35038 /wd4018 /wd4146 /wd4065 /wd4127 /wd4181 /wd4200 /wd4244 /wd4267 /wd4305 /wd4800 /wd4828 /wd4996 /wd4661 /wd4848 /we4013 /we4133 /we4431 /we4033 /DWIN32 /D_WINDOWS /W3  /EHsc /nologo /J /Gd /MP /EHsc /bigobj /permissive- /Zc:__cplusplus /Zc:inline  -openmp \n\tbuild link flags: /MACHINE:X64  /SUBSYSTEM:CONSOLE /STACK:2097152 /ignore:4049 /ignore:4217 /ignore:4221\n\tbuild system: CMake\n"
+  },
+  "lease": {
+    "contender_while_held": 73,
+    "contender_after_release": 0,
+    "cpu_entered_while_gpu_lease_held": true,
+    "cpu_did_not_release_gpu": true,
+    "cpu_workload_exclusion": true,
+    "stderr": [
+      "",
+      ""
+    ],
+    "cuda_qualified": false,
+    "scope": "real separate-process OS lease exclusion, no GPU resident"
+  },
+  "budget_contention": {
+    "original_replace_error": {
+      "error": "PermissionError",
+      "winerror": 5,
+      "errno": 13
+    },
+    "bounded_replace_elapsed_s": 0.2340000000000373,
+    "original_read_error": {
+      "winerror": null,
+      "errno": 13
+    },
+    "read_after_transient_denial": {
+      "version": 3
+    },
+    "final_value": {
+      "version": 3
+    },
+    "budget_cancelled": false,
+    "status": "pass"
+  },
+  "fixture": {
+    "status": "not_run",
+    "reason": "real_API_mission_required_instead; fixture_qualified_in_PR29"
+  },
+  "mission": {
+    "status": "FAILED",
+    "mission_status": "review",
+    "validation": {
+      "passed": true,
+      "checks": {
+        "project_review": true,
+        "pinned_planner": true,
+        "explicit_cpu": true,
+        "planner_stopped": true,
+        "real_validated_response": true,
+        "one_vehicle": true,
+        "vehicle_preflight": true,
+        "child_review": true,
+        "blender_files_and_four_views": true
+      }
+    },
+    "lifecycle_probe": {
+      "request": {
+        "creation_type": "objet_3d",
+        "style": "realiste",
+        "quality": "prototype",
+        "tool": "blender",
+        "compute_backend": "cpu",
+        "controller_model": "auto",
+        "description": "Crée deux fauteuils verts pour un coin lecture.",
+        "judges_all_tasks": true,
+        "automatic_corrections": true,
+        "max_time_s": 1800,
+        "max_rss_mib": 12000,
+        "max_attempts": 3,
+        "plan_only": true
+      },
+      "checks": {
+        "same_project": true,
+        "new_mission_attempt": true,
+        "cumulative_budget": true,
+        "plan_only_review": false,
+        "two_chairs": false,
+        "resumed_server_stopped": false
+      },
+      "passed": false,
+      "scope": "real API cancellation during Qwen loading, resume and held-out plan; no chair meshes"
+    },
+    "project_id": "60886577-ddee-47ba-9acc-510bbfa90516",
+    "artifacts": [
+      {
+        "name": "planner-trace.json",
+        "hash": "sha256:524462fd094f0b2b2808877d341babea54a0bba8f7e2d016d34f67850ed3219d",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 4526,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:524462fd094f0b2b2808877d341babea54a0bba8f7e2d016d34f67850ed3219d"
+      },
+      {
+        "name": "before/engineer-report.json",
+        "hash": "sha256:44eb442955b96cebb21a01ee7c0550b39c81fd6574bd722c3d435c92bbc86f02",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 244,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:44eb442955b96cebb21a01ee7c0550b39c81fd6574bd722c3d435c92bbc86f02"
+      },
+      {
+        "name": "before/manifest.json",
+        "hash": "sha256:64763fb4cef313385b312b99113766456f2bba56a442fdb0630b91bc24cb555f",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 3996,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:64763fb4cef313385b312b99113766456f2bba56a442fdb0630b91bc24cb555f"
+      },
+      {
+        "name": "before/spec.json",
+        "hash": "sha256:061e222c667c7edaec52060f00476e8e4d03beccbab0dc0ebc7155cd3f3d0349",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 274,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:061e222c667c7edaec52060f00476e8e4d03beccbab0dc0ebc7155cd3f3d0349"
+      },
+      {
+        "name": "before/vehicle-asset-v1.schema.json",
+        "hash": "sha256:1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 2637,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51"
+      },
+      {
+        "name": "before/vehicle.blend",
+        "hash": "sha256:c3a17b48189f9df6249a8c8d3dbb2c984d4cafbbbf60a6da9dfb6a15a112551d",
+        "content_type": "application/octet-stream",
+        "role": "blender_project",
+        "bytes": 3767004,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:c3a17b48189f9df6249a8c8d3dbb2c984d4cafbbbf60a6da9dfb6a15a112551d"
+      },
+      {
+        "name": "before/vehicle.glb",
+        "hash": "sha256:9840f6384b182c07333e5b210ce35b9d5ee5733c6538345143e94517ba26e7ed",
+        "content_type": "model/gltf-binary",
+        "role": "exchange",
+        "bytes": 1108632,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:9840f6384b182c07333e5b210ce35b9d5ee5733c6538345143e94517ba26e7ed"
+      },
+      {
+        "name": "after/engineer-report.json",
+        "hash": "sha256:ae5f5c75c4cc04b1dc27707224959ff8554595a0ded3b009924d8d28384ca9e0",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 6549,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:ae5f5c75c4cc04b1dc27707224959ff8554595a0ded3b009924d8d28384ca9e0"
+      },
+      {
+        "name": "after/manifest.json",
+        "hash": "sha256:149c9de2b091016ef64c9129d51429620852fb03bf78a10d1bc3ac5046fdde20",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 4429,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:149c9de2b091016ef64c9129d51429620852fb03bf78a10d1bc3ac5046fdde20"
+      },
+      {
+        "name": "after/spec.json",
+        "hash": "sha256:eeb72a2b7ca8edaa5fbb8f54ff5cabb54ad03e81a5c8c9ee853172de698ee4bf",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 322,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:eeb72a2b7ca8edaa5fbb8f54ff5cabb54ad03e81a5c8c9ee853172de698ee4bf"
+      },
+      {
+        "name": "after/vehicle-asset-v1.schema.json",
+        "hash": "sha256:1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 2637,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:1ba530565c0869760aac9fa08273f033d449401cb5bb5e880cee8874ba29ae51"
+      },
+      {
+        "name": "after/vehicle-contract.json",
+        "hash": "sha256:ccc6eb346368b682ea6674e0a3fbf114a249dc6382523fbbb48d0c542dcf64ec",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 1886,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:ccc6eb346368b682ea6674e0a3fbf114a249dc6382523fbbb48d0c542dcf64ec"
+      },
+      {
+        "name": "after/vehicle.blend",
+        "hash": "sha256:04bb8b0b8ec622408ddca2483b355f37030902e6f9666a621d2ef6cc3993c6df",
+        "content_type": "application/octet-stream",
+        "role": "blender_project",
+        "bytes": 3767816,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:04bb8b0b8ec622408ddca2483b355f37030902e6f9666a621d2ef6cc3993c6df"
+      },
+      {
+        "name": "after/vehicle.glb",
+        "hash": "sha256:bad6e092fac5bcff503446864ac92285396584f2302f292de5b1dda5c3c3f70a",
+        "content_type": "model/gltf-binary",
+        "role": "exchange",
+        "bytes": 1125900,
+        "api_path": "/api/v1/game-studio/projects/60886577-ddee-47ba-9acc-510bbfa90516/artifacts/sha256:bad6e092fac5bcff503446864ac92285396584f2302f292de5b1dda5c3c3f70a"
+      },
+      {
+        "name": "asset.blend",
+        "hash": "sha256:3bafc26adeb60a3140ab0fc7ba3839aa7bb145f5b7848772f6b82fb2cb23e89d",
+        "content_type": "application/octet-stream",
+        "role": "blender_project",
+        "bytes": 3794364,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:3bafc26adeb60a3140ab0fc7ba3839aa7bb145f5b7848772f6b82fb2cb23e89d"
+      },
+      {
+        "name": "asset.glb",
+        "hash": "sha256:c01fc14b0f015f626b51b0bdb155f127f91476989b1f7760f8c0c5c1ab1a893a",
+        "content_type": "model/gltf-binary",
+        "role": "exchange",
+        "bytes": 1108664,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:c01fc14b0f015f626b51b0bdb155f127f91476989b1f7760f8c0c5c1ab1a893a"
+      },
+      {
+        "name": "blend-inspection.json",
+        "hash": "sha256:a8be2aceca13d7b5808813b576fad059f10c712b0cf225cd60d857976c727cb0",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 104613,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:a8be2aceca13d7b5808813b576fad059f10c712b0cf225cd60d857976c727cb0"
+      },
+      {
+        "name": "blend-inspection.log",
+        "hash": "sha256:7ffd3a0766639200d11e9c01289b1b9dfe0a8352c45961a9da22c2e5c74e5830",
+        "content_type": "text/plain",
+        "role": "evidence",
+        "bytes": 221,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:7ffd3a0766639200d11e9c01289b1b9dfe0a8352c45961a9da22c2e5c74e5830"
+      },
+      {
+        "name": "blend-inspection.owner.json",
+        "hash": "sha256:57215902a2a6a33b98a95e604829630e18450f982678c2042b0a48d7be6de98f",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 747,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:57215902a2a6a33b98a95e604829630e18450f982678c2042b0a48d7be6de98f"
+      },
+      {
+        "name": "blend-inspection.resources.json",
+        "hash": "sha256:e0e6af1b290ba1b81819f825a9e1c5136f6a5e353358b8c374b83810cb7090d3",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 3090,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:e0e6af1b290ba1b81819f825a9e1c5136f6a5e353358b8c374b83810cb7090d3"
+      },
+      {
+        "name": "build.log",
+        "hash": "sha256:7ea576032dddcca1a3b78806d45b12c23c43537e15064444a1eb98d8bff4c672",
+        "content_type": "text/plain",
+        "role": "evidence",
+        "bytes": 160567,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:7ea576032dddcca1a3b78806d45b12c23c43537e15064444a1eb98d8bff4c672"
+      },
+      {
+        "name": "build.owner.json",
+        "hash": "sha256:a6d7012f06b9baf4651a6c1bd2ece80093ef751ec59cab17bed9472192a478cd",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 588,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:a6d7012f06b9baf4651a6c1bd2ece80093ef751ec59cab17bed9472192a478cd"
+      },
+      {
+        "name": "build.resources.json",
+        "hash": "sha256:c2fad72fe8bdb23e1bc0e152bd3d456460cb488679e85d70f7e301f51214f777",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 100447,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:c2fad72fe8bdb23e1bc0e152bd3d456460cb488679e85d70f7e301f51214f777"
+      },
+      {
+        "name": "execution.json",
+        "hash": "sha256:6c38f50acc249b1e6c5d8c7d108fd27dfc74da9970ec952ea55a612bc86061f1",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 68388,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:6c38f50acc249b1e6c5d8c7d108fd27dfc74da9970ec952ea55a612bc86061f1"
+      },
+      {
+        "name": "front.png",
+        "hash": "sha256:c1c219f2157fe8217d3c0c5623868e86dcd06ca955f9e14bf1db4c2feb2de4c7",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 723970,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:c1c219f2157fe8217d3c0c5623868e86dcd06ca955f9e14bf1db4c2feb2de4c7"
+      },
+      {
+        "name": "front_three_quarter.png",
+        "hash": "sha256:76c58918c91950fc3d82276ed4e0ffca4a2396c13a218fc9f83f1c8f115b5d9f",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 965634,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:76c58918c91950fc3d82276ed4e0ffca4a2396c13a218fc9f83f1c8f115b5d9f"
+      },
+      {
+        "name": "glb-inspection.json",
+        "hash": "sha256:affff6051cacdad286992ff9fb96aa6d2adf307257baa6032fd4d2b44a75e775",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 104708,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:affff6051cacdad286992ff9fb96aa6d2adf307257baa6032fd4d2b44a75e775"
+      },
+      {
+        "name": "glb-inspection.log",
+        "hash": "sha256:f1ee45a2a1dc208a95f51d6784aaf2042b036bb0795620c8f156f87d32da19d1",
+        "content_type": "text/plain",
+        "role": "evidence",
+        "bytes": 7833,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:f1ee45a2a1dc208a95f51d6784aaf2042b036bb0795620c8f156f87d32da19d1"
+      },
+      {
+        "name": "glb-inspection.owner.json",
+        "hash": "sha256:85c086579c68568d4109e1a615298a4543ccca57e058aba906356a67b4615cf2",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 742,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:85c086579c68568d4109e1a615298a4543ccca57e058aba906356a67b4615cf2"
+      },
+      {
+        "name": "glb-inspection.resources.json",
+        "hash": "sha256:bf989ca1040ba4449d3a64b285c490476f1999dda7ae99a9cf4298213441084d",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 10750,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:bf989ca1040ba4449d3a64b285c490476f1999dda7ae99a9cf4298213441084d"
+      },
+      {
+        "name": "hierarchy-before.json",
+        "hash": "sha256:e477734fafe30bde470867078acc9d9ffde362b9538399e5bf3fbce61ce9f62f",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 123823,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:e477734fafe30bde470867078acc9d9ffde362b9538399e5bf3fbce61ce9f62f"
+      },
+      {
+        "name": "hierarchy.json",
+        "hash": "sha256:e477734fafe30bde470867078acc9d9ffde362b9538399e5bf3fbce61ce9f62f",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 123823,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:e477734fafe30bde470867078acc9d9ffde362b9538399e5bf3fbce61ce9f62f"
+      },
+      {
+        "name": "operation-trace.json",
+        "hash": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 2,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      {
+        "name": "provenance.json",
+        "hash": "sha256:be37ba3ac93ecb0ab6c18d3e09c7acf8a97fa169fee52f31ab17c141e8730942",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 730,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:be37ba3ac93ecb0ab6c18d3e09c7acf8a97fa169fee52f31ab17c141e8730942"
+      },
+      {
+        "name": "rear_three_quarter.png",
+        "hash": "sha256:7885b12d1bf2075cbcaed9962bec97cff0480c3694b5caf9fd05b3cfd0ac0253",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 965144,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:7885b12d1bf2075cbcaed9962bec97cff0480c3694b5caf9fd05b3cfd0ac0253"
+      },
+      {
+        "name": "render-settings.json",
+        "hash": "sha256:9dedecb1f0b86d4749f49e7ce98f4ef0ea2957265ac469329275dc2f9fb9efc0",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 4804,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9dedecb1f0b86d4749f49e7ce98f4ef0ea2957265ac469329275dc2f9fb9efc0"
+      },
+      {
+        "name": "side.png",
+        "hash": "sha256:8036a904620bd3f804c74767cfa69450cfcf9e9445510c157be4d82bdf040072",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 917069,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:8036a904620bd3f804c74767cfa69450cfcf9e9445510c157be4d82bdf040072"
+      },
+      {
+        "name": "silhouette_front.png",
+        "hash": "sha256:9c9e0604bcdca1c26c279a0ae6d7f657d5562d69c1db8706a52cd683d77ab1e7",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 327501,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9c9e0604bcdca1c26c279a0ae6d7f657d5562d69c1db8706a52cd683d77ab1e7"
+      },
+      {
+        "name": "silhouette_front_three_quarter.png",
+        "hash": "sha256:0674544d36092674cd0db84c93fcc05138a567bdf6283cb57aee94cd275f16f7",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 293637,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:0674544d36092674cd0db84c93fcc05138a567bdf6283cb57aee94cd275f16f7"
+      },
+      {
+        "name": "silhouette_rear_three_quarter.png",
+        "hash": "sha256:07a3e1661592aac6b65a72a3f2645e43788fdbff8bbcc64a129e49f33dc14bb2",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 294959,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:07a3e1661592aac6b65a72a3f2645e43788fdbff8bbcc64a129e49f33dc14bb2"
+      },
+      {
+        "name": "silhouette_side.png",
+        "hash": "sha256:8fe9164a7cd170723ce9188348d709ed4d7c803410e3d5eb03a6937ba934de06",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 298901,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:8fe9164a7cd170723ce9188348d709ed4d7c803410e3d5eb03a6937ba934de06"
+      },
+      {
+        "name": "manifest.json",
+        "hash": "sha256:cda3f34a94bcfb2f0db8a28e970eeb6726df3270e8dc1794d3ca9cd24730ce12",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 5603,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:cda3f34a94bcfb2f0db8a28e970eeb6726df3270e8dc1794d3ca9cd24730ce12"
+      },
+      {
+        "name": "judge-report.json",
+        "hash": "sha256:20696d01e1a2cccab5c2db1744d5b2da2845bed7eb173d0e9e8732f03378a3f7",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 3288,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:20696d01e1a2cccab5c2db1744d5b2da2845bed7eb173d0e9e8732f03378a3f7"
+      },
+      {
+        "name": "technical-judge-report.json",
+        "hash": "sha256:1d89fd25fe8059d65be169d02630a682f99c43cbb96c38719bbc63497d064022",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 2609,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:1d89fd25fe8059d65be169d02630a682f99c43cbb96c38719bbc63497d064022"
+      },
+      {
+        "name": "verdict.json",
+        "hash": "sha256:9fbba546cedc2e1538ba2cf890d5b093fb011fa10aeefea232a74e3ce5556eb8",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 16652,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9fbba546cedc2e1538ba2cf890d5b093fb011fa10aeefea232a74e3ce5556eb8"
+      },
+      {
+        "name": "asset.blend",
+        "hash": "sha256:c3a17b48189f9df6249a8c8d3dbb2c984d4cafbbbf60a6da9dfb6a15a112551d",
+        "content_type": "application/octet-stream",
+        "role": "blender_project",
+        "bytes": 3767004,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:c3a17b48189f9df6249a8c8d3dbb2c984d4cafbbbf60a6da9dfb6a15a112551d"
+      },
+      {
+        "name": "asset.glb",
+        "hash": "sha256:9840f6384b182c07333e5b210ce35b9d5ee5733c6538345143e94517ba26e7ed",
+        "content_type": "model/gltf-binary",
+        "role": "exchange",
+        "bytes": 1108632,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9840f6384b182c07333e5b210ce35b9d5ee5733c6538345143e94517ba26e7ed"
+      },
+      {
+        "name": "blend-inspection.json",
+        "hash": "sha256:575398881ac7e3838506de345c9d85625b24fa5fa87c494e2edd0b809391c119",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 104613,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:575398881ac7e3838506de345c9d85625b24fa5fa87c494e2edd0b809391c119"
+      },
+      {
+        "name": "blend-inspection.log",
+        "hash": "sha256:dd113b4a880d82b3bf0a7e1d915a745f7d9d41656d19ea8593a1a70d3e5d5832",
+        "content_type": "text/plain",
+        "role": "evidence",
+        "bytes": 221,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:dd113b4a880d82b3bf0a7e1d915a745f7d9d41656d19ea8593a1a70d3e5d5832"
+      },
+      {
+        "name": "blend-inspection.owner.json",
+        "hash": "sha256:46f62a78ed64669399cfdf5fd413b95a23fd8ac1b92030203eb913f738cd85ae",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 747,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:46f62a78ed64669399cfdf5fd413b95a23fd8ac1b92030203eb913f738cd85ae"
+      },
+      {
+        "name": "blend-inspection.resources.json",
+        "hash": "sha256:a166112301c79148fa4cc1318cdc9cec8a252178cbba2cf04bf8ab2a2ce72e1a",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 3086,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:a166112301c79148fa4cc1318cdc9cec8a252178cbba2cf04bf8ab2a2ce72e1a"
+      },
+      {
+        "name": "build.log",
+        "hash": "sha256:ac03f5c83262f818982ee367a03b63e85ba4b5e3077974b14454c1064a09b5fb",
+        "content_type": "text/plain",
+        "role": "evidence",
+        "bytes": 161669,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:ac03f5c83262f818982ee367a03b63e85ba4b5e3077974b14454c1064a09b5fb"
+      },
+      {
+        "name": "build.owner.json",
+        "hash": "sha256:62addfb220bb1149c6bbad65b13a7506b9716e495def7af4880732a7bcc69735",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 989,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:62addfb220bb1149c6bbad65b13a7506b9716e495def7af4880732a7bcc69735"
+      },
+      {
+        "name": "build.resources.json",
+        "hash": "sha256:69da7118539b06e983b771989b7ca8d9cb7a69516ef933b964b033ee79293b8c",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 102905,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:69da7118539b06e983b771989b7ca8d9cb7a69516ef933b964b033ee79293b8c"
+      },
+      {
+        "name": "execution.json",
+        "hash": "sha256:07e8b6220f7461f0edcf824a8ff53728a184113a433f36fd59c0e9a145761b2d",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 68842,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:07e8b6220f7461f0edcf824a8ff53728a184113a433f36fd59c0e9a145761b2d"
+      },
+      {
+        "name": "front.png",
+        "hash": "sha256:d549ae052e8afc5b8f93ecf5b2bc08d557850a937a9f2c4069ccf06b61793a4b",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 723453,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:d549ae052e8afc5b8f93ecf5b2bc08d557850a937a9f2c4069ccf06b61793a4b"
+      },
+      {
+        "name": "front_three_quarter.png",
+        "hash": "sha256:e0724766cc22d427bfb0844441a46df8703bc4bc16f5bb5664d350b175421fb9",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 970856,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:e0724766cc22d427bfb0844441a46df8703bc4bc16f5bb5664d350b175421fb9"
+      },
+      {
+        "name": "glb-inspection.json",
+        "hash": "sha256:5fc181027cf1d6e6229b10fcbb09e03973ba4706e3637f04fb5b871fdb9101cc",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 104708,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:5fc181027cf1d6e6229b10fcbb09e03973ba4706e3637f04fb5b871fdb9101cc"
+      },
+      {
+        "name": "glb-inspection.log",
+        "hash": "sha256:9bb4fdfc694853e874a7504c2b969fa6c9bc72b8309c1ed9e9b9380bca56011e",
+        "content_type": "text/plain",
+        "role": "evidence",
+        "bytes": 7833,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9bb4fdfc694853e874a7504c2b969fa6c9bc72b8309c1ed9e9b9380bca56011e"
+      },
+      {
+        "name": "glb-inspection.owner.json",
+        "hash": "sha256:800b7f23409605be85173193f4591213abae94947c3dda1c7f3bb75c3ff6a10e",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 743,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:800b7f23409605be85173193f4591213abae94947c3dda1c7f3bb75c3ff6a10e"
+      },
+      {
+        "name": "glb-inspection.resources.json",
+        "hash": "sha256:5c302b5405e5139d6e2fa9a5199891f114e61e493b3ee1b9ac81f7a9bbf77f28",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 10829,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:5c302b5405e5139d6e2fa9a5199891f114e61e493b3ee1b9ac81f7a9bbf77f28"
+      },
+      {
+        "name": "hierarchy-before.json",
+        "hash": "sha256:e477734fafe30bde470867078acc9d9ffde362b9538399e5bf3fbce61ce9f62f",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 123823,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:e477734fafe30bde470867078acc9d9ffde362b9538399e5bf3fbce61ce9f62f"
+      },
+      {
+        "name": "hierarchy.json",
+        "hash": "sha256:0997cdeb3c740660498da54d490b3065c91c9977f09c0ae1f0039bcf8093368e",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 123575,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:0997cdeb3c740660498da54d490b3065c91c9977f09c0ae1f0039bcf8093368e"
+      },
+      {
+        "name": "operation-trace.json",
+        "hash": "sha256:4bac87ecc0a12ee2548b8d31e921e41be186d21c450c8f2402e7faea41ae7d4d",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 17586,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:4bac87ecc0a12ee2548b8d31e921e41be186d21c450c8f2402e7faea41ae7d4d"
+      },
+      {
+        "name": "plan/plan.json",
+        "hash": "sha256:a39cd81d4643bea7a19013c4fa4ea1d02b44e6a39b61217e3a8d36f8bc051f5a",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 462,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:a39cd81d4643bea7a19013c4fa4ea1d02b44e6a39b61217e3a8d36f8bc051f5a"
+      },
+      {
+        "name": "plan/tool-result.json",
+        "hash": "sha256:3fd43296d366b5882e73dea6ba3e55bcdf85c8c8904ef4b8c9a98bfec547d5ea",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 393,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:3fd43296d366b5882e73dea6ba3e55bcdf85c8c8904ef4b8c9a98bfec547d5ea"
+      },
+      {
+        "name": "provenance.json",
+        "hash": "sha256:63c9d9154a8fb7fc2ca0e6995b1f65aee5ff0894b249b340c3573743c71adf92",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 854,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:63c9d9154a8fb7fc2ca0e6995b1f65aee5ff0894b249b340c3573743c71adf92"
+      },
+      {
+        "name": "rear_three_quarter.png",
+        "hash": "sha256:2772a5f4735b7fbe08631841e3c14e77e7172fbc2d8cdb11b0210cfe28884d4e",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 968741,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:2772a5f4735b7fbe08631841e3c14e77e7172fbc2d8cdb11b0210cfe28884d4e"
+      },
+      {
+        "name": "render-settings.json",
+        "hash": "sha256:9dedecb1f0b86d4749f49e7ce98f4ef0ea2957265ac469329275dc2f9fb9efc0",
+        "content_type": "application/json",
+        "role": "evidence",
+        "bytes": 4804,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9dedecb1f0b86d4749f49e7ce98f4ef0ea2957265ac469329275dc2f9fb9efc0"
+      },
+      {
+        "name": "side.png",
+        "hash": "sha256:838213d6f795b3310cbd54f51fb6bc90d1f364012341f73d3cdbaf700ab72b61",
+        "content_type": "image/png",
+        "role": "view",
+        "bytes": 930397,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:838213d6f795b3310cbd54f51fb6bc90d1f364012341f73d3cdbaf700ab72b61"
+      },
+      {
+        "name": "silhouette_front.png",
+        "hash": "sha256:35e5ea2e728c538b754d9fb9d8b863eed1ff18463cb6194b9ba4668d199b8130",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 327623,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:35e5ea2e728c538b754d9fb9d8b863eed1ff18463cb6194b9ba4668d199b8130"
+      },
+      {
+        "name": "silhouette_front_three_quarter.png",
+        "hash": "sha256:9aeb2cc89ac52319ad8f5a4cf6a06cb93bb295359245b0d121b99c1b5ae7d3d0",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 293759,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9aeb2cc89ac52319ad8f5a4cf6a06cb93bb295359245b0d121b99c1b5ae7d3d0"
+      },
+      {
+        "name": "silhouette_rear_three_quarter.png",
+        "hash": "sha256:245740fcd5afe8c175a7a11e63d6b2d7929969a0cef460c1fd28309dddb4fc72",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 295081,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:245740fcd5afe8c175a7a11e63d6b2d7929969a0cef460c1fd28309dddb4fc72"
+      },
+      {
+        "name": "silhouette_side.png",
+        "hash": "sha256:a20f6dbf147c4a1a83e96e3ca16bc2c478893227910ef49c360a4056f60b550b",
+        "content_type": "image/png",
+        "role": "silhouette",
+        "bytes": 299023,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:a20f6dbf147c4a1a83e96e3ca16bc2c478893227910ef49c360a4056f60b550b"
+      },
+      {
+        "name": "manifest.json",
+        "hash": "sha256:2c81cab841eec5c11d37bf0c2a6f043223655f9a15487341b6138d0b8a6ba686",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 5974,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:2c81cab841eec5c11d37bf0c2a6f043223655f9a15487341b6138d0b8a6ba686"
+      },
+      {
+        "name": "judge-report.json",
+        "hash": "sha256:7c3bff7955ff9941746ad1d96d0b6bf34a0054fcae2a18390743b05ef084ec84",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 2607,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:7c3bff7955ff9941746ad1d96d0b6bf34a0054fcae2a18390743b05ef084ec84"
+      },
+      {
+        "name": "verdict.json",
+        "hash": "sha256:9c5ce638ddb8d9dd09cc0a2510a9d6db8b25c64eab84a693d8530fce1496179c",
+        "content_type": "application/json",
+        "role": "report",
+        "bytes": 16649,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:9c5ce638ddb8d9dd09cc0a2510a9d6db8b25c64eab84a693d8530fce1496179c"
+      },
+      {
+        "name": "controller/lifecycle.json",
+        "hash": "sha256:1746c8ae1d2ec7f8f68e894c3162d5c60539090e630c94ab45e31aa87d87a67e",
+        "content_type": "application/json",
+        "role": "controller",
+        "bytes": 613,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:1746c8ae1d2ec7f8f68e894c3162d5c60539090e630c94ab45e31aa87d87a67e"
+      },
+      {
+        "name": "controller/model-lifecycle.json",
+        "hash": "sha256:1746c8ae1d2ec7f8f68e894c3162d5c60539090e630c94ab45e31aa87d87a67e",
+        "content_type": "application/json",
+        "role": "controller",
+        "bytes": 613,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:1746c8ae1d2ec7f8f68e894c3162d5c60539090e630c94ab45e31aa87d87a67e"
+      },
+      {
+        "name": "controller/model.owner.json",
+        "hash": "sha256:4f3bf2a7f22ec9b07817c28263a699bed0bc1016338b52f7d1c056680dcaac47",
+        "content_type": "application/json",
+        "role": "controller",
+        "bytes": 662,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:4f3bf2a7f22ec9b07817c28263a699bed0bc1016338b52f7d1c056680dcaac47"
+      },
+      {
+        "name": "controller/plan.json",
+        "hash": "sha256:8e7cab8406b88c6d05eef4f418be7ff12f3d7988341346b63c87453232b8865f",
+        "content_type": "application/json",
+        "role": "controller",
+        "bytes": 7083,
+        "api_path": "/api/v1/game-studio/missions/b5aa8816-0be1-428c-8a8b-24bf8dff2979/artifacts/sha256:8e7cab8406b88c6d05eef4f418be7ff12f3d7988341346b63c87453232b8865f"
+      }
+    ],
+    "cpu_explicit": true,
+    "cuda_qualified": false
+  },
+  "status": "FAILED",
+  "elapsed_s": 796.4530000000001
+}

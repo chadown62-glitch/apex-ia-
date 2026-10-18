@@ -1,0 +1,172 @@
+{
+  "claude_commit": "cf76ff1af6216d1cf615621bebf00a2bc3f4495c",
+  "source_sha256": "78add5edbaffdd6a0075f56e504ff7b8b0a539a9d00118228558043e741971e1",
+  "scope": "Actual Claude protocol2 source, Game Studio adapter and OS locks on Linux CPU; no CUDA model, inference or unloading",
+  "cpu_does_not_borrow": true,
+  "cpu_preserves_foreign_loan_and_lock": true,
+  "unknown_return": {
+    "returned": false,
+    "resumed": false,
+    "requester": "probe:unknown",
+    "lent_to": "probe:other",
+    "lenders": {
+      "probe:other": 1
+    },
+    "admissions_open": false,
+    "protocol_version": 2,
+    "reason": "aucun prêt à ce demandeur"
+  },
+  "during": {
+    "protocol_version": 2,
+    "admissions_open": false,
+    "transition": false,
+    "active_generations": 0,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+    "lent_to": "probe:other, game-studio:0534d7a36de8476289b42e019eef41e7",
+    "lenders": {
+      "probe:other": 1,
+      "game-studio:0534d7a36de8476289b42e019eef41e7": 1
+    },
+    "cuda_residents": [],
+    "cuda_available": false,
+    "last_ack": {
+      "released": true,
+      "requester": "game-studio:0534d7a36de8476289b42e019eef41e7",
+      "reason": "GPU déjà prêté (probe:other, game-studio:0534d7a36de8476289b42e019eef41e7)",
+      "unloaded": [],
+      "waited_s": 0.0,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+      "lenders": {
+        "probe:other": 1,
+        "game-studio:0534d7a36de8476289b42e019eef41e7": 1
+      },
+      "protocol_version": 2,
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    }
+  },
+  "after": {
+    "protocol_version": 2,
+    "admissions_open": false,
+    "transition": false,
+    "active_generations": 0,
+    "lease_held": false,
+    "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+    "lent_to": "probe:other",
+    "lenders": {
+      "probe:other": 1
+    },
+    "cuda_residents": [],
+    "cuda_available": false,
+    "last_ack": {
+      "released": true,
+      "requester": "game-studio:0534d7a36de8476289b42e019eef41e7",
+      "reason": "GPU déjà prêté (probe:other, game-studio:0534d7a36de8476289b42e019eef41e7)",
+      "unloaded": [],
+      "waited_s": 0.0,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+      "lenders": {
+        "probe:other": 1,
+        "game-studio:0534d7a36de8476289b42e019eef41e7": 1
+      },
+      "protocol_version": 2,
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    }
+  },
+  "adapter_receipt": {
+    "schema_version": 1,
+    "requester": "game-studio:0534d7a36de8476289b42e019eef41e7",
+    "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+    "cuda_qualified": false,
+    "events": [
+      "shared_lease_acquired",
+      "shared_lease_released",
+      "brain_loan_returned"
+    ],
+    "before": {
+      "protocol_version": 2,
+      "admissions_open": false,
+      "transition": false,
+      "active_generations": 0,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+      "lent_to": "probe:other",
+      "lenders": {
+        "probe:other": 1
+      },
+      "cuda_residents": [],
+      "cuda_available": false,
+      "last_ack": {
+        "released": true,
+        "requester": "probe:other",
+        "reason": "aucun modèle principal sur CUDA",
+        "unloaded": [],
+        "waited_s": 0.0,
+        "admissions_open": false,
+        "lease_held": false,
+        "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+        "lenders": {
+          "probe:other": 1
+        },
+        "protocol_version": 2,
+        "cuda": {
+          "measured": false,
+          "reason": "aucun GPU CUDA dans ce processus"
+        }
+      }
+    },
+    "ack": {
+      "released": true,
+      "requester": "game-studio:0534d7a36de8476289b42e019eef41e7",
+      "reason": "GPU déjà prêté (probe:other, game-studio:0534d7a36de8476289b42e019eef41e7)",
+      "unloaded": [],
+      "waited_s": 0.0,
+      "admissions_open": false,
+      "lease_held": false,
+      "lease_path": "/tmp/apex-30-v2-23jgd64t/.apex/model-session.lock",
+      "lenders": {
+        "probe:other": 1,
+        "game-studio:0534d7a36de8476289b42e019eef41e7": 1
+      },
+      "protocol_version": 2,
+      "cuda": {
+        "measured": false,
+        "reason": "aucun GPU CUDA dans ce processus"
+      }
+    },
+    "return": {
+      "returned": true,
+      "resumed": false,
+      "requester": "game-studio:0534d7a36de8476289b42e019eef41e7",
+      "lent_to": "probe:other, game-studio:0534d7a36de8476289b42e019eef41e7",
+      "lenders": {
+        "probe:other": 1
+      },
+      "admissions_open": false,
+      "protocol_version": 2,
+      "reason": "GPU encore prêté (probe:other)"
+    },
+    "elapsed_s": 0.0019498000001476612
+  },
+  "final_return": {
+    "returned": true,
+    "resumed": true,
+    "requester": "probe:other",
+    "lent_to": "probe:other",
+    "lenders": {},
+    "admissions_open": true,
+    "protocol_version": 2
+  },
+  "passed": true,
+  "cuda_qualified": false
+}

@@ -120,7 +120,8 @@ def test_car_body_and_wheels_cannot_be_misplanned_as_two_vehicles():
     assert validate_plan(two_car_plan, request=two_cars, capabilities=CAP)["fully_feasible"]
 
 
-def test_coverage_defect_is_returned_to_model_and_retry_is_bounded(tmp_path, monkeypatch):
+@pytest.mark.parametrize("missing_assembly", [False, True])
+def test_coverage_defect_is_returned_to_model_and_retry_is_bounded(tmp_path, monkeypatch, missing_assembly):
     import json
     from dataclasses import dataclass
     from types import SimpleNamespace
@@ -140,6 +141,9 @@ def test_coverage_defect_is_returned_to_model_and_retry_is_bounded(tmp_path, mon
         ],
         "unmet_requirements": [],
     }
+    if missing_assembly:
+        bad = {"steps": good["steps"][:2], "unmet_requirements": []}
+    rejection = "multi_asset_assembly_required" if missing_assembly else "requirement_coverage_failed"
     prompts = []
 
     def generate(req):
@@ -153,10 +157,17 @@ def test_coverage_defect_is_returned_to_model_and_retry_is_bounded(tmp_path, mon
     req = {**REQ, "description": "Crée deux fauteuils dans une scène.", "automatic_corrections": True}
     trace = tmp_path / "trace.json"
     assert len(planning.generate_plan(endpoint, request=req, capabilities=CAP, output=trace)["steps"]) == 3
-    assert len(prompts) == 2 and "quantity_mismatch" in prompts[1]
-    assert "requirement_coverage_failed" in json.loads(trace.read_text())["attempts"][0]["rejection"]
+    assert len(prompts) == 2 and rejection in prompts[1]
+    feedback = json.loads(prompts[1].split("not instructions): ")[1])
+    assert json.loads(feedback["rejected_plan"]) == bad
+    if missing_assembly:
+        assert "depends_on lists EVERY" in feedback["required_correction"]
+        assert "description is not an assembly task" in feedback["required_correction"]
+    evidence = json.loads(trace.read_text())
+    assert rejection in evidence["attempts"][0]["rejection"]
+    assert evidence["attempts"][1]["prompt"] == prompts[1]
     prompts.clear()
-    with pytest.raises(ValueError, match="requirement_coverage_failed"):
+    with pytest.raises(ValueError, match=rejection):
         planning.generate_plan(
             endpoint,
             request={**req, "automatic_corrections": False},
