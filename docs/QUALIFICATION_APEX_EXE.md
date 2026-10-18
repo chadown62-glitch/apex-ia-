@@ -1,22 +1,20 @@
 # Essayer la candidate de qualification d'APEX.exe sur votre PC
 
 Cette candidate réunit le Cerveau APEX, l'assistant et APEX.exe (Claude) avec Game Studio (Codex : #19, #22, #24,
-#26) et #5, #11, #13. **Ce n'est pas une release.** Elle sert à mesurer, sur votre PC, ce qui marche et ce qui
-bloque. Rien n'a été fusionné dans `apex/integration`.
+#26, #29, #31) et #5, #11, #13. **Ce n'est pas une release.** Elle sert à mesurer, sur votre PC, ce qui marche et
+ce qui bloque. Rien n'a été fusionné dans `apex/integration`.
 
 Elle est construite sur un Windows réel de GitHub par le workflow `windows-candidate`, à partir de l'arbre combiné
 (`scripts/integration/rehearse_merge.sh`).
 
 ## 1. Télécharger
 
-1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé. Il apparaît « en échec » tant que
-   le parcours 3D est bloqué sur le runner (ni poids du planificateur ni Blender) : c'est attendu, et
-   l'installateur est quand même joint. Le run de référence est
-   [39077478748](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39077478748) du 17/10/2026 (pile de
-   Codex à `d15fa02`, prêt du GPU pendant les missions) : `APEX-Setup-x64-v0.6.0-candidate-991388a4860d.exe`,
-   51 967 814 octets, SHA-256 `e0ced6225aca76285b12dc59b96b1a105d645f02c666b2933e5cf4438e7a8666`. Artefact
-   disponible jusqu'au 16/11/2026. Elle remplace la candidate du run 39068337396, qui n'avait ni ces composants ni
-   le prêt du GPU.
+1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé. Le run de référence est
+   [39140125328](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39140125328) du 18/10/2026 (tentative
+   8 : Claude `8fc89a3`, Game Studio de Codex à `550b347`). Il est **vert**, parcours 3D compris (§7) :
+   `APEX-Setup-x64-v0.6.0-candidate-e8d79fcb7aeb.exe`, 51 981 009 octets, SHA-256
+   `bbdfb6ccf849fb8a6a379c3c541801729e0f544e01f901d3df39213a001bd6fe`. Artefact disponible jusqu'au 17/11/2026.
+   Elle remplace celle du run 39077478748 (`e0ced622…`), dont la pile Game Studio est plus ancienne.
 2. En bas de la page, **Artifacts** → `apex-qualification-installer`. Il faut être connecté à GitHub.
 3. Décompressez le zip. Il contient :
    - `APEX-Setup-x64-v0.6.0-candidate-<commit>.exe` ;
@@ -95,19 +93,22 @@ ligne dit son état mesuré sur votre PC, sa taille et sa provenance quand elles
 confirmation.
 
 1. **Moteur d'inférence du planificateur** (`llama-cpp-python` 0.3.36, processeur, licence MIT) : environ 8 Mo,
-   empreintes vérifiées. Constaté sur le runner Windows : installé par ce bouton, puis importé. Son exécution
-   avec les poids n'a jamais été essayée sous Windows : votre essai sera le premier.
+   empreintes vérifiées. Constaté sur le runner Windows (run 39140125328) : installé par ce bouton, importé, puis
+   exécuté avec les poids pendant la mission.
 2. **Planificateur des missions** (Qwen2.5-Coder-7B Q5_K_M, licence Apache-2.0) : **5,4 Go** à télécharger.
    Son bouton n'apparaît qu'après le moteur. La confirmation indique la taille et l'espace libre nécessaire.
+   Constaté sur le runner : installé par ce bouton, puis vérifié par Game Studio (licence, empreinte).
 3. **Blender** : Game Studio ne l'installe pas. Installez **Blender 4.3.2** depuis blender.org (installateur
    `.msi`, dossier par défaut `C:\Program Files\Blender Foundation\Blender 4.3`). APEX le cherche dans
    `APEX_BLENDER_EXECUTABLE`, puis dans le PATH, puis dans Program Files, où il prend la version la plus récente.
    Si une autre version plus récente est installée, définissez la variable d'environnement Windows
-   `APEX_BLENDER_EXECUTABLE` vers le `blender.exe` de la 4.3, puis redémarrez APEX.
+   `APEX_BLENDER_EXECUTABLE` vers le `blender.exe` de la 4.3, puis redémarrez APEX. Le runner a utilisé la version
+   portable officielle (zip, même empreinte que la qualification de Codex) par cette variable.
 4. **Bibliothèques Python** : installées par « Préparer APEX ». Rien à faire si elles sont « présent ».
 
 Ensuite, dans **Paramètres > Outils > Calcul des missions**, choisissez **Processeur**. Game Studio refuse
-encore les missions sur le GPU : le partage du GPU avec le Cerveau n'y est pas qualifié (garde de Codex).
+encore les missions sur le GPU : le planificateur n'a pas de moteur CUDA, et aucun test n'a eu lieu sur une carte
+NVIDIA (garde de Codex).
 
 ## 7. La première création 3D
 
@@ -115,25 +116,27 @@ encore les missions sur le GPU : le partage du GPU avec le Cerveau n'y est pas q
 2. Écrivez : « Crée une voiture sportive rouge avec quatre roues indépendantes et prépare son export Blender. »
 3. APEX doit **proposer** une mission Game Studio, sans la lancer.
 4. Cliquez sur **Lancer la mission**.
-   - Si le Cerveau tourne sur le GPU, il le libère pendant la mission et répond sur le processeur. Avec cette
-     candidate, il le libère au clic, jusqu'à la fin de la mission ; avec la version suivante de Game Studio,
-     ce sera autour de chaque étape. La ligne de mesures sous ses réponses le dit (« processeur »).
-   - S'il ne peut pas le libérer à temps, rien n'est lancé : le message demande de réessayer.
+   - Avec cette candidate, une mission sur le processeur ne prend plus le verrou du GPU : **le Cerveau reste sur
+     la RTX** pendant la mission. Vérifié sur le runner avec les verrous Windows réels et un « CUDA » simulé
+     (`lease_check.py`, 7 contrôles PASS) ; jamais encore sur une vraie carte.
 5. Suivez la mission dans l'Atelier 3D : état, étapes, puis aperçus et fichiers. Les fichiers se téléchargent
-   depuis la page Game Studio (lien « Ouvrir dans Game Studio »).
+   depuis la page Game Studio (lien « Ouvrir dans Game Studio »). Sur le runner (4 cœurs, sans GPU), la mission
+   a duré environ 13 minutes ; chez vous, la durée reste à mesurer.
 6. Si la mission s'arrête, l'Atelier 3D en donne la raison, et propose **Reprendre la mission** quand c'est
    possible.
-
-Lancez la première mission depuis l'Atelier 3D, pas depuis la page Game Studio. Seul le lancement depuis
-l'Atelier 3D demande le GPU au Cerveau ; depuis la page Game Studio, une mission échouerait tant que le Cerveau
-est sur le GPU (correction prévue côté Codex).
 
 Sans les composants du §6, Game Studio refuse la mission avec la raison, par exemple « le modèle planificateur
 local de Game Studio (Qwen2.5-Coder-7B) n'est pas installé ». **Ce sont les blocages connus, pas des pannes.**
 Si un autre message s'affiche, faites une capture.
 
-Rien de ce parcours n'a encore produit de fichier Blender sous Windows : la première mission réussie sera la
-vôtre.
+**Constaté sur le runner Windows Server** (run 39140125328), dans l'APEX.exe installé par cet installateur :
+- la proposition par le Cerveau, puis le lancement par l'appel du bouton « Lancer la mission » ;
+- le plan du Qwen 7B, la voiture construite par Blender, le précontrôle Engineer réussi (`technical_review`) ;
+- 13 fichiers annoncés, dont `asset.blend` (3 767 004 octets) et `asset.glb` (1 108 632 octets), téléchargés et
+  identiques à leur empreinte, et 4 aperçus.
+
+Ce n'est pas encore votre PC : ni Windows 11, ni de vrais clics dans la fenêtre, ni la RTX. La première mission
+chez vous reste la preuve qui compte.
 
 ## 8. Quoi renvoyer
 

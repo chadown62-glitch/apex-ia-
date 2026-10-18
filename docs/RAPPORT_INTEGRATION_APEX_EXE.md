@@ -1,11 +1,17 @@
-# Intégration réelle dans APEX.exe — résultats et blocages (16/10/2026)
+# Intégration réelle dans APEX.exe — résultats et blocages (mis à jour le 18/10/2026)
 
 **Verdict : aucune release « READY ».**
-- Le parcours de création 3D reste bloqué : le planificateur Qwen2.5-Coder-7B épinglé et `llama-cpp-python` ne
-  sont pas fournis, et la liste Windows de Game Studio n'a pas `jsonschema`. Ces trois points sont à Codex.
-- Sous Windows réel, la candidate combinée s'installe, démarre READY et répond. Le parcours 3D va jusqu'au clic
-  humain, puis Game Studio refuse faute de `jsonschema` (§4). En chemin, trois défauts ont été trouvés et
-  corrigés ; le principal est dans le Panel : il exécutait le code du dossier courant.
+- **Première création 3D complète dans l'APEX.exe installé**, sur un runner Windows Server sans GPU (§4,
+  tentative 8, [run 39140125328](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39140125328)) :
+  - proposition par le Cerveau, lancement par l'appel du bouton, plan du Qwen 7B sur le processeur ;
+  - voiture construite par Blender 4.3.2, précontrôle Engineer réussi ;
+  - `.blend` et `.glb` téléchargés et identiques à leur empreinte, 4 aperçus.
+- Ce n'est **pas** le PC de l'utilisateur : ni Windows 11, ni de vrais clics dans la fenêtre, ni la RTX. Game
+  Studio refuse toujours le GPU. La release attend cet essai et la décision de l'utilisateur.
+- Historique : le 16/10, le parcours s'arrêtait au refus `jsonschema`. Codex a fourni `jsonschema`, le moteur
+  et le planificateur (#26), puis le partage du GPU (#29) et le verrou de travaux séparé (#31). En chemin, des
+  défauts ont été trouvés et corrigés des deux côtés ; le principal côté Claude était dans le Panel, qui
+  exécutait le code du dossier courant.
 - Rien n'a été fusionné dans `apex/integration`. La PR [#27](https://github.com/chadown62-glitch/apex-ia-/pull/27)
   est un **brouillon** ; l'utilisateur est l'intégrateur final.
 - Aucune release n'a été publiée.
@@ -88,6 +94,7 @@ ligne « programme : … » du journal de démarrage d'APEX et échoue si ce n'e
 | Ma branche `cb4bf22` ([run 38987535866](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535866)) | installation silencieuse → « Préparer APEX » → installation du modèle → démarrage → vrais tours de l'assistant → arrêt → redémarrage → persistance → désinstallation | **PASS**. Programme : l'application installée. Démarrage READY deux fois. Tours A1, A2, A4, A6 PASS. Persistance V1 à V3 PASS (messages, réglages, projet). Base conservée à la désinstallation |
 | Candidate combinée `cb4bf22` + pile Codex ([run 38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861)) | installation → « Préparer APEX » → modèle → démarrage → tours de l'assistant → **parcours 3D réel** → arrêt → désinstallation | **job en échec, parcours 3D BLOCKED** (détail ci-dessous). Programme : l'application installée. Démarrage READY. Assistant PASS, dont A3 (`finance.loan` exact : 1 159,92 €). Base conservée |
 | Candidate combinée `20a7167` + pile Codex à `d15fa02` ([run 39077478748](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39077478748)) | même parcours, plus le moteur du planificateur installé par l'API du bouton et le partage du GPU | **job en échec, parcours 3D BLOCKED** au refus attendu `local_planner_model_missing` (poids non téléchargés). `jsonschema` importé. Moteur `llama-cpp-python` 0.3.36 installé (empreintes vérifiées) et importé, avec `llama_cpp.server.app` ; `gpu_offload False` (build CPU). Partage du GPU : 6 contrôles PASS avec les verrous Windows réels. Assistant PASS, base conservée. Codes : modèle 0, GPU 0, assistant 0, parcours 3D 3, partage du GPU 0 |
+| Candidate combinée `8fc89a3` + pile Codex à `550b347` (#29, #31) ([run 39140125328](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39140125328), tentative 8) | même parcours, plus les poids du planificateur installés par le bouton (5,4 Go, sur le runner seulement) et Blender 4.3.2 portable officiel (empreinte épinglée) par `APEX_BLENDER_EXECUTABLE` | **job vert, parcours 3D PASS**. Moteur et poids installés et vérifiés. Proposition, lancement, mission `running` 13 min, puis `review` en livraison `technical_review`. 13 fichiers, dont `asset.blend` (3 767 004 octets) et `asset.glb` (1 108 632 octets) téléchargés par l'API de Game Studio, empreintes vérifiées ; 4 aperçus. Partage du GPU : 7 contrôles PASS, dont l'étape processeur obtenue pendant que le Cerveau tient CUDA (simulé), sans prêt. Assistant PASS, base conservée. Codes : modèle 0, GPU 0, assistant 0, parcours 3D 0, partage du GPU 0. Installateur `APEX-Setup-x64-v0.6.0-candidate-e8d79fcb7aeb.exe`, SHA-256 `bbdfb6ccf849fb8a…` |
 | Ma branche `5a694ec`, `f941d90` (avant le correctif `-P`) | même parcours que la première ligne | PASS, mais **le code Python d'APEX exécuté venait très probablement du checkout**, au même commit, et non des fichiers installés |
 
 **Parcours 3D réel de la candidate sous Windows (run 38987535861)** :
@@ -151,14 +158,22 @@ Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par
     exacte (A3 PASS).
 - **Ici, Linux** : le Cerveau APEX v2 a servi le tour 3D et a produit la proposition (§2). Sous Windows, la
   proposition est venue de la détection d'intention d'APEX (`served_by_brain: false`).
-- **Planificateur Qwen2.5-Coder-7B : jamais exécuté.** Il n'est pas fourni.
+- **Planificateur Qwen2.5-Coder-7B Q5_K_M**, sur le processeur, sous Windows Server :
+  - par Codex, dans le runtime empaqueté : vraies inférences et plans acceptés (runs 39111881405, 39112594053,
+    39113464692 et 39114782698) ;
+  - par Claude, dans l'APEX.exe installé (tentative 8) : poids installés par le bouton, puis plan de la mission.
+    Dans le code de #31, un projet dynamique n'a pas d'autre source de plan que `generate_plan` sur ce modèle.
+    Le contenu du plan reste dans l'artefact `windows-candidate-evidence` (`studio-candidate.json`, preuves du
+    profil), que l'API ne permet pas de lire d'ici.
 
 ## 6. Exécuté avec Blender
 
 - La sonde d'APEX a lancé le vrai Blender 4.0.2 (`blender --background --version`) : il a répondu.
-- **Aucune mission Game Studio n'a tourné dans Blender** : elle s'arrête au planificateur.
-- Codex qualifie Blender 4.3.2, pas 4.0.2.
-- Le runner Windows n'a pas Blender.
+- **Sous Windows Server, Blender 4.3.2 portable officiel** (empreinte épinglée) :
+  - par Codex, runtime empaqueté (run 39114782698) : voiture, juges, correction, `.blend`, `.glb` et 4 vues ;
+  - par Claude, dans l'APEX.exe installé (tentative 8) : `asset.blend` et `asset.glb` livrés, téléchargés et
+    vérifiés, 4 aperçus.
+- Jamais encore sur le PC de l'utilisateur (Blender `.msi` dans Program Files).
 
 ## 7. Exécuté sur CUDA
 
@@ -180,8 +195,10 @@ Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par
   - la sonde charge `torch 2.14.0+cu130` depuis la surcouche, et refuse faute de GPU.
 - **Constaté par l'utilisateur** (17/10/2026, candidate du run 39068337396) : le Cerveau ApexLM V2 tourne sur
   la RTX 4060 Ti avec PyTorch CUDA. C'est sa mesure, sur son PC ; aucun runner n'a de GPU.
-- Conséquence trouvée ensuite (§8) : chargé sur CUDA, le Cerveau tient le bail `model-session.lock`. Il doit
-  donc prêter le GPU pendant une mission Game Studio, même sur le processeur.
+- Conséquence trouvée ensuite (§8) : chargé sur CUDA, le Cerveau tient le bail `model-session.lock`. Jusqu'à
+  #29, chaque étape le prenait aussi, même sur le processeur : le Cerveau devait prêter le GPU. Depuis #31,
+  une étape sur le processeur ne le prend plus, et le Cerveau garde le GPU (vérifié avec les verrous Windows
+  réels et un « CUDA » simulé, tentative 8).
 - `llama-cpp-python` CUDA (planificateur) est un sujet distinct de PyTorch CUDA (Cerveau, Game Studio). Il
   n'est pas traité ici.
 
@@ -202,26 +219,29 @@ consommés, ce qui est fait, et ce qui reste, dans l'ordre du parcours.
   `model-session.lock`, que chaque étape de mission prend aussi, même sur le processeur. Sans correction, la
   mission échoue (`BlockingIOError`, mesuré avec le vrai `resource_lease`). Désormais, l'assistant demande le
   GPU au Cerveau au clic, et le lui rend quand la mission ne tourne plus. Les prêts sont comptés.
+- **Fait par Codex ensuite** (#29 `8fc1df9`, #31 `550b347`) : mise au repos du Cerveau autour de chaque étape
+  (protocole 2 du gouverneur de Claude), verrou de travaux du processeur séparé du bail CUDA, code
+  `shared_resource_busy`, serveur du planificateur possédé et arrêté, budgets Windows robustes, qualification
+  réelle Qwen → Blender sur son runner (run 39114782698).
+- **Ajusté par Claude** (`98c7ebb`, `8fc89a3`) : protocole 2, aucun prêt de l'assistant quand l'adaptateur de
+  Codex existe, raisons d'arrêt de Game Studio traduites, candidate avec le parcours complet.
 - **Reste à Codex** :
-  1. qualifier l'exécution du moteur CPU avec les poids, sur le PC de l'utilisateur ;
-  2. pour les missions lancées hors de l'assistant (page et routes de Game Studio), appeler `request_gpu` /
-     `return_gpu` ;
-  3. un `llama-cpp-python` CUDA, puis un test sur la RTX, avant de lever sa garde GPU ;
-  4. un code stable pour le bail refusé ;
-  5. refaire le benchmark du modèle ;
-  6. hors parcours : #12/#16/#17 avec l'intégrateur, `apex/vision`.
+  1. publier le résultat et les preuves du run 39114782698 (artefact seulement, expire le 01/11/2026) et le
+     rapport final de #31 ;
+  2. un `llama-cpp-python` CUDA, puis un test sur la RTX, avant de lever sa garde GPU ;
+  3. refaire le benchmark du modèle ;
+  4. hors parcours : #12/#16/#17 avec l'intégrateur, `apex/vision`.
 
 ## 9. Laissé à tester sur le PC de l'utilisateur
 
 Configuration : RTX 4060 Ti 8 Go, i5-14400F, 16 Go, Windows 11. Procédure :
 [`docs/QUALIFICATION_APEX_EXE.md`](QUALIFICATION_APEX_EXE.md).
 
-1. Installer la candidate, « Préparer APEX » (installe `jsonschema`), démarrer.
+1. Installer la candidate de la tentative 8, « Préparer APEX » (installe `jsonschema`), démarrer.
 2. Composants de Game Studio : le moteur (8 Mo), puis le planificateur (5,4 Go), puis Blender 4.3.2.
 3. Calcul des missions : « Processeur ».
-4. La première création 3D : proposition, clic, prêt du GPU par le Cerveau, suivi, aperçus, fichiers. Puis
-   annulation et reprise.
-5. Pendant la mission, le Cerveau répond sur le processeur ; il reprend le GPU ensuite.
+4. La première création 3D : proposition, vrai clic, suivi, aperçus, fichiers. Puis annulation et reprise.
+5. Pendant la mission, le Cerveau reste sur la RTX : à confirmer par la ligne de mesures sous ses réponses.
 
 ## 10. Validation complète (P7)
 
