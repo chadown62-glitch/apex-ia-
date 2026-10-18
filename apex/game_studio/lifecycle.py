@@ -132,6 +132,7 @@ def cancellable_session(session, cancel, *, max_rss_mib=12000):
     import signal
 
     stop = threading.Event()
+    session.cancel_event = cancel
     measured = {"sampled_tree_rss_peak_bytes": 0, "rss_limit_mib": max_rss_mib}
 
     def watch():
@@ -190,6 +191,8 @@ def cancellable_session(session, cancel, *, max_rss_mib=12000):
         watcher.join()
         session.__exit__(None, None, None)
         session.facts.update(measured)
+        if session.log_dir.is_dir():
+            atomic_json(session.log_dir / "model-lifecycle.json", session.facts)
         owner_path = session.log_dir / "model.owner.json"
         if owner_path.is_file():
             record = json.loads(owner_path.read_text())

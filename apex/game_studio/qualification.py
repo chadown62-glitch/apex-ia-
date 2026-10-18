@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import platform
+import shutil
 import socket
 import subprocess
 import sys
@@ -47,8 +48,80 @@ def sha(path):
         return hashlib.file_digest(stream, "sha256").hexdigest()
 
 
+def collect_api_artifacts(client, project, downloads):
+    """Download through the SAME ownership-checked endpoints used by the UI."""
+    downloads.mkdir(exist_ok=True)
+    sources = []
+    base = f"/api/v1/game-studio/projects/{project['id']}/artifacts/"
+    if project.get("planning_artifact"):
+        sources.append((base, project["planning_artifact"]))
+    for assembly in [project.get("assembly"), *project.get("assembly_history", [])]:
+        sources.extend((base, a) for a in (assembly or {}).get("artifacts", []))
+    for step in project.get("steps", []):
+        sources.extend((base, a) for a in (step.get("handoff") or {}).get("artifacts", []))
+        child = step.get("mission")
+        if child:
+            child_base = f"/api/v1/game-studio/missions/{child['id']}/artifacts/"
+            for revision in child.get("revisions", []):
+                sources.extend((child_base, a) for a in revision.get("artifacts", []))
+            sources.extend((child_base, a) for a in child.get("controller_attempts", []))
+    collected = []
+    for base, artifact in sources:
+        digest = artifact["hash"]
+        result = client.get(base + digest)
+        result.raise_for_status()
+        if "sha256:" + hashlib.sha256(result.content).hexdigest() != digest:
+            raise RuntimeError("api_artifact_hash_mismatch")
+        # Never trust an artifact's filename as a local path.
+        (downloads / digest.removeprefix("sha256:")).write_bytes(result.content)
+        collected.append({**artifact, "api_path": base + digest})
+    save(downloads / "index.json", collected)
+    return collected
+
+
+def verify_real_mission(project, downloads):
+    """Fail closed: a review state or a Blender fixture alone proves no inference."""
+    from apex.game_graphics.models import CODER_SHA256
+
+    planner = project.get("planner_model") or {}
+    planning = project.get("planning_artifact")
+    checks = {
+        "project_review": project.get("status") == "review",
+        "pinned_planner": planner.get("sha256") == CODER_SHA256,
+        "explicit_cpu": planner.get("device") == "cpu_explicit",
+        "planner_stopped": planner.get("process_stopped_verified") is True,
+    }
+    trace = {}
+    if planning:
+        trace = json.loads((downloads / planning["hash"].removeprefix("sha256:")).read_bytes())
+    checks["real_validated_response"] = bool(
+        trace.get("accepted") is True
+        and trace.get("status") == "validated"
+        and trace.get("attempts")
+        and trace["attempts"][-1].get("raw_response")
+        and trace["attempts"][-1].get("generation", {}).get("model_used")
+    )
+    vehicles = [s for s in project.get("steps", []) if s.get("kind") == "vehicle"]
+    checks["one_vehicle"] = len(vehicles) == 1
+    checks["vehicle_preflight"] = bool(vehicles) and all(
+        s.get("handoff", {}).get("status") == "pass_preflight" for s in vehicles
+    )
+    for step in vehicles:
+        child = step.get("mission") or {}
+        checks["child_review"] = child.get("status") == "review"
+        revisions = child.get("revisions", [])
+        checks["blender_files_and_four_views"] = any(
+            {"asset.blend", "asset.glb"} <= {a["name"] for a in r.get("artifacts", [])}
+            and sum(a["name"].endswith(".png") for a in r.get("artifacts", [])) >= 4
+            and r.get("verdict") == "pass"
+            for r in revisions
+        )
+    return {"passed": all(checks.values()), "checks": checks}
+
+
 def lease_fixture(output):
     """Exercise OS exclusion with a separate interpreter, never fake GPU memory."""
+    from apex.game_graphics.resources import _locked
     from apex.game_studio.gpu import resource_lease
 
     shared = str(Path(os.environ["APEX_HOME"]) / ".apex/model-session.lock")
@@ -61,15 +134,29 @@ def lease_fixture(output):
     with resource_lease(output / "lease-proof/resource.lock"):
         blocked = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
     available = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
+    with _locked(Path(shared)), resource_lease(output / "cpu-proof/resource.lock", compute_backend="cpu"):
+        gpu_still_held = subprocess.run(command, capture_output=True, text=True, timeout=30)  # noqa: S603
+        workload_command = [*command[:-1], str(Path(shared).with_name("game-studio-workload.lock"))]
+        cpu_excluded = subprocess.run(  # noqa: S603
+            workload_command, capture_output=True, text=True, timeout=30
+        )
     report = {
         "contender_while_held": blocked.returncode,
         "contender_after_release": available.returncode,
+        "cpu_entered_while_gpu_lease_held": True,
+        "cpu_did_not_release_gpu": gpu_still_held.returncode == 73,
+        "cpu_workload_exclusion": cpu_excluded.returncode == 73,
         "stderr": [blocked.stderr, available.stderr],
         "cuda_qualified": False,
         "scope": "real separate-process OS lease exclusion, no GPU resident",
     }
     save(output / "lease-report.json", report)
-    if blocked.returncode != 73 or available.returncode != 0:
+    if (blocked.returncode, available.returncode, gpu_still_held.returncode, cpu_excluded.returncode) != (
+        73,
+        0,
+        73,
+        73,
+    ):
         raise RuntimeError("native_shared_lease_exclusion_failed")
     return report
 
@@ -211,6 +298,7 @@ def api_mission(output):
                 response.raise_for_status()
                 project = response.json()["data"]
                 project_id = project["id"]
+                save(output / "api-project.json", project)
                 deadline = time.monotonic() + REQUEST["max_time_s"] + 120
                 while project["status"] in ("queued", "running") and time.monotonic() < deadline:
                     time.sleep(2)
@@ -218,30 +306,28 @@ def api_mission(output):
                     response.raise_for_status()
                     project = response.json()["data"]
                     save(output / "api-project.json", project)
+                    with (output / "api-progress.jsonl").open("a", encoding="utf-8") as progress:
+                        progress.write(
+                            json.dumps(
+                                {
+                                    "observed_at": time.time(),
+                                    "status": project["status"],
+                                    "events": project.get("events", []),
+                                }
+                            )
+                            + "\n"
+                        )
                 if project["status"] in ("queued", "running"):
                     client.post(f"/api/v1/game-studio/projects/{project_id}/cancel").raise_for_status()
                     raise RuntimeError("api_mission_qualification_timeout")
                 downloads = output / "api-artifacts"
-                downloads.mkdir()
-                collected = []
-                for step in project["steps"]:
-                    child = step.get("mission")
-                    if not child:
-                        continue
-                    for artifact in [
-                        a for revision in child.get("revisions", []) for a in revision.get("artifacts", [])
-                    ]:
-                        digest = artifact["hash"]
-                        result = client.get(
-                            f"/api/v1/game-studio/missions/{child['id']}/artifacts/{digest}"
-                        )
-                        result.raise_for_status()
-                        if "sha256:" + hashlib.sha256(result.content).hexdigest() != digest:
-                            raise RuntimeError("api_artifact_hash_mismatch")
-                        (downloads / digest.removeprefix("sha256:")).write_bytes(result.content)
-                        collected.append(artifact)
+                collected = collect_api_artifacts(client, project, downloads)
+                validation = verify_real_mission(project, downloads)
+                save(output / "api-validation.json", validation)
                 return {
-                    "status": project["status"],
+                    "status": "review" if validation["passed"] else "FAILED",
+                    "mission_status": project["status"],
+                    "validation": validation,
                     "project_id": project_id,
                     "artifacts": collected,
                     "cpu_explicit": True,
@@ -262,11 +348,20 @@ def api_mission(output):
                 except subprocess.TimeoutExpired:
                     process.terminate()
                     process.wait(timeout=10)
+            # Only logs/receipts from this fresh profile, never credentials or weights.
+            studio = home / ".apex/game-studio"
+            for section in ("missions", "projects"):
+                for source in (studio / section).rglob("*"):
+                    if source.is_file() and source.suffix in (".log", ".json"):
+                        target = output / "runtime-evidence" / source.relative_to(studio)
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        shutil.copyfile(source, target)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--require-inference", action="store_true")
     args = parser.parse_args(argv)
     output = args.output.resolve()
     from apex.game_graphics.studio.execution import refuse_personal_project
@@ -314,6 +409,9 @@ def main(argv=None):
         report["status"] = (
             "COMPONENTS_TESTED" if report["mission"]["status"] == "BLOCKED" else report["mission"]["status"]
         )
+        if args.require_inference and report["mission"]["status"] == "BLOCKED":
+            report["status"] = "BLOCKED"
+            return 2
         return 0 if report["mission"]["status"] in ("BLOCKED", "review") else 1
     except Exception as exc:
         report["status"] = "FAILED"

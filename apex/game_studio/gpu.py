@@ -1,8 +1,8 @@
 """Game Studio side of Issue #21's in-process quiescence contract.
 
 This adapter does not unload a brain, kill a process, choose a compute backend,
-or qualify CUDA. The existing CUDA entry guard remains mandatory. A CPU task
-also needs the shared exclusive lease when the brain is resident on CUDA.
+or qualify CUDA. The existing CUDA entry guard remains mandatory. Explicit CPU
+tasks serialize their workloads without borrowing or returning the brain's GPU.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
-from apex.game_graphics.resources import _locked, check_external_workloads
+from apex.game_graphics.resources import SharedResourceBusy, _locked, check_external_workloads
 from apex.game_graphics.resources import resource_lease as shared_resource_lease
 from apex.game_studio.lifecycle import atomic_json
 
@@ -36,7 +36,50 @@ def _same_path(value, expected):
 
 
 @contextmanager
-def resource_lease(path: Path):
+def resource_lease(path: Path, *, compute_backend="cuda", cancel_event=None, timeout_s=30):
+    """CPU is opt-in, never a fallback; both backends serialize Studio workloads.
+
+    The workload lock also protects the fixed local Qwen port and host RAM.
+    CPU work must use the pinned CPU controller and trusted CPU Blender scripts.
+    An assistant's enclosing GPU loan is owned and returned by that assistant.
+    """
+    if compute_backend not in ("cpu", "cuda", "auto"):
+        raise ValueError("unknown_coder_compute_backend")
+    home = os.environ.get("APEX_HOME")
+    if not home or not Path(home).is_absolute():
+        raise RuntimeError("shared_resource_profile_required")
+    deadline = time.monotonic() + max(0, timeout_s)
+    lease = None
+    while lease is None:
+        if cancel_event is not None and cancel_event.is_set():
+            raise InterruptedError("user_cancelled_waiting_for_resources")
+        candidate = _locked(Path(home) / ".apex/game-studio-workload.lock")
+        try:
+            candidate.__enter__()
+            lease = candidate
+        except SharedResourceBusy:
+            # Legacy/GPU callers remain fail-fast; CPU mission waits are bounded
+            # and charged by their existing persistent RunBudget.
+            if compute_backend != "cpu" or time.monotonic() >= deadline:
+                raise
+            if cancel_event is not None:
+                cancel_event.wait(0.1)
+            else:
+                time.sleep(0.1)
+    try:
+        if compute_backend == "cpu":
+            with _locked(path):
+                check_external_workloads()
+                yield
+        else:
+            with _gpu_lease(path):
+                yield
+    finally:
+        lease.__exit__(None, None, None)
+
+
+@contextmanager
+def _gpu_lease(path: Path):
     """ACK → shared lease → operation → release → return; serialized borrowers.
 
     The per-profile handoff lock protects Game Studio callers across threads and

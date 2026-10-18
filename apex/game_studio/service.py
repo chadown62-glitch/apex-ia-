@@ -467,7 +467,9 @@ class GameStudioService:
             recovery_policy = RecoveryPolicy(max_attempts=budget, resource_exhausted_max_retries=1)
             benchmark = json.loads(BENCHMARK.read_text())
             folder = self._folder(job_id)
-            with resource_lease(folder / "resource.lock"):
+            with resource_lease(
+                folder / "resource.lock", compute_backend=request["compute_backend"], cancel_event=cancel
+            ):
                 if cancel.is_set():
                     raise InterruptedError("user_cancelled")
                 calibration = None

@@ -185,3 +185,86 @@ def test_packaged_crlf_schema_keeps_agreed_hash(tmp_path):
     with patch.object(Path, "read_bytes", windows_checkout):
         build_runtime_from_worktree(built)
     assert file_sha256(built / "docs/game_graphics/vehicle-asset-v1.schema.json") == CONTRACT_SCHEMA_SHA256
+
+
+def test_explicit_cpu_keeps_foreign_gpu_lease_and_never_calls_brain(contract):
+    brain, path = contract
+    brain.lent_to = "assistant:mission"
+    with (
+        _locked(brain.path),
+        resource_lease(path, compute_backend="cpu"),
+        pytest.raises(OSError),
+        _locked(brain.path),
+    ):
+        pytest.fail("CPU released a foreign GPU lease")
+    assert brain.calls == [] and brain.lent_to == "assistant:mission"
+
+
+def test_cpu_workloads_still_exclude_each_other(contract):
+    brain, path = contract
+    with (
+        resource_lease(path, compute_backend="cpu"),
+        pytest.raises(BlockingIOError, match="shared_resource_busy"),
+        resource_lease(path.parent / "another.lock", compute_backend="cpu", timeout_s=0),
+    ):
+        pytest.fail("concurrent Qwen server allowed")
+    assert brain.calls == []
+
+
+def test_cpu_wait_is_cancelled_without_returning_another_loan(contract):
+    import threading
+
+    brain, path = contract
+    cancel = threading.Event()
+    with resource_lease(path, compute_backend="cpu"):
+        timer = threading.Timer(0.1, cancel.set)
+        timer.start()
+        try:
+            with (
+                pytest.raises(InterruptedError, match="waiting_for_resources"),
+                resource_lease(path.parent / "another.lock", compute_backend="cpu", cancel_event=cancel),
+            ):
+                pytest.fail("cancelled operation started")
+        finally:
+            timer.join()
+    assert brain.calls == []
+
+
+def test_filesystem_access_error_is_not_resource_busy(tmp_path):
+    from apex.game_graphics.resources import SharedResourceBusy
+
+    with (
+        patch.object(Path, "open", side_effect=PermissionError("directory access denied")),
+        pytest.raises(PermissionError) as error,
+        _locked(tmp_path / "lock"),
+    ):
+        pytest.fail("inaccessible path opened")
+    assert not isinstance(error.value, SharedResourceBusy)
+
+
+def test_busy_cpu_releases_when_first_operation_finishes(contract):
+    import threading
+    import time
+
+    _, path = contract
+    entered = threading.Event()
+    release = threading.Event()
+
+    def first():
+        with resource_lease(path, compute_backend="cpu"):
+            entered.set()
+            release.wait(2)
+
+    worker = threading.Thread(target=first)
+    worker.start()
+    try:
+        assert entered.wait(2)
+        timer = threading.Timer(0.1, release.set)
+        timer.start()
+        started = time.monotonic()
+        with resource_lease(path.parent / "second.lock", compute_backend="cpu", timeout_s=2):
+            assert time.monotonic() - started >= 0.08
+        timer.join()
+    finally:
+        release.set()
+        worker.join()

@@ -433,7 +433,11 @@ class GameStudioProjectService:
                 else:
                     if trace_file.exists():
                         trace_file.rename(folder / f"planner-trace-rejected-{uuid4().hex[:8]}.json")
-                    with resource_lease(folder / "planner-resource.lock"):
+                    with resource_lease(
+                        folder / "planner-resource.lock",
+                        compute_backend=request["compute_backend"],
+                        cancel_event=cancel,
+                    ):
                         session = CoderSession(
                             coder_manifest(),
                             folder / "planner-model",
@@ -713,7 +717,7 @@ class GameStudioProjectService:
             return
         repaired = folder / "corrected"
         remaining = self._read(project_id)["request"]["max_time_s"] - (time.monotonic() - started)
-        with resource_lease(folder / "repair-resource.lock"):
+        with resource_lease(folder / "repair-resource.lock", compute_backend="cpu", cancel_event=cancel):
             result = run_blender(
                 "render_asset.py",
                 [
@@ -824,7 +828,7 @@ class GameStudioProjectService:
         remaining = receipt["request"]["max_time_s"] - (time.monotonic() - started)
         if remaining < 120:
             raise TimeoutError("project_time_budget_exhausted_before_assembly")
-        with resource_lease(folder / "assembly-resource.lock"):
+        with resource_lease(folder / "assembly-resource.lock", compute_backend="cpu", cancel_event=cancel):
             arguments = (
                 ["--output", str(output), "--assets-manifest", str(inputs / "assets.json")]
                 if dynamic
