@@ -260,3 +260,25 @@ def test_parent_failure_stops_only_its_live_child(tmp_path):
         cancelled.set()
         worker.join()
         other.__exit__(None, None, None)
+
+
+def test_windows_crt_permission_error_without_winerror_is_retried(tmp_path, monkeypatch):
+    import errno
+
+    from apex.game_studio import lifecycle
+
+    lifecycle.atomic_json(tmp_path / "budget.json", {"charged_s": 61})
+    original = type(tmp_path).open
+    calls = []
+
+    def crt_read(path, *args, **kwargs):
+        calls.append(1)
+        if len(calls) == 1:
+            raise PermissionError(errno.EACCES, "Permission denied")
+        return original(path, *args, **kwargs)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(lifecycle.os, "name", "nt")
+        scoped.setattr(type(tmp_path), "open", crt_read)
+        assert snapshot(tmp_path)["charged_s"] == 61
+    assert len(calls) == 2

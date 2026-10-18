@@ -14,5 +14,13 @@
     "sha256": "3ccf714d363a948b85a310681f81ec41e35c852de5b7d6daaf3c8dc3baa5157b",
     "internal_files_verified": 33,
     "result": "real_Qwen_plan_pass_parent_budget_read_denied"
+  },
+  {
+    "run": 39113206265,
+    "commit": "20f0412",
+    "file": "windows-run3-failure.zip",
+    "sha256": "da72bbca92d309127613d0efe00744359b8bf2332a35b628b2e3dc12275bd193",
+    "internal_files_verified": 8,
+    "result": "native_contention_fixture_exposes_CRT_errno_without_winerror"
   }
 ]

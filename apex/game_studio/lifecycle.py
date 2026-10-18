@@ -8,6 +8,7 @@ writes receipts; other processes request cancellation via a marker.
 
 from __future__ import annotations
 
+import errno
 import json
 import logging
 import os
@@ -31,7 +32,12 @@ def read_json(path: Path) -> Any:
             with path.open("r", encoding="utf-8") as handle:
                 return json.load(handle)
         except OSError as exc:
-            if getattr(exc, "winerror", None) not in (5, 32, 33) or time.monotonic() >= deadline:
+            retryable = getattr(exc, "winerror", None) in (5, 32, 33) or (
+                os.name == "nt" and exc.errno in (errno.EACCES, errno.EPERM)
+            )
+            # Python's Windows CRT io.open drops winerror and keeps errno=13.
+            # Retry is still bounded; a genuine ACL denial is never accepted.
+            if not retryable or time.monotonic() >= deadline:
                 raise
             time.sleep(0.01)
 

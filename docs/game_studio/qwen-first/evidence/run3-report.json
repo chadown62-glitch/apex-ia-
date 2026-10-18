@@ -1,0 +1,38 @@
+{
+  "platform": "Windows-2022Server-10.0.20348-SP0",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "executable": "D:\\a\\_temp\\game-studio-qualification\\python\\tools\\python.exe",
+  "cpu_logical": 4,
+  "ram_bytes": 17174360064,
+  "cuda_qualified": false,
+  "user_windows11_qualified": false,
+  "cuda_available": false,
+  "llama_cpp": {
+    "version": "0.3.36",
+    "library_loaded": true,
+    "system_info": "CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | ",
+    "server_cli_imported": true
+  },
+  "blender": {
+    "path": "D:\\a\\_temp\\game-studio-qualification\\Blender portable\\blender-4.3.2-windows-x64\\blender.exe",
+    "source": "explicit",
+    "reason": null,
+    "version": "Blender 4.3.2\n\tbuild date: 2024-12-17\n\tbuild time: 03:35:23\n\tbuild commit date: 2024-12-16\n\tbuild commit time: 21:10\n\tbuild hash: 32f5fdce0a0a\n\tbuild branch: blender-v4.3-release\n\tbuild platform: Windows\n\tbuild type: Release\n\tbuild c flags: /W3 /w34062 /w34100 /w34115 /w34189 /w35038 /wd4018 /wd4146 /wd4065 /wd4127 /wd4181 /wd4200 /wd4244 /wd4267 /wd4305 /wd4800 /wd4828 /wd4996 /wd4661 /wd4848 /we4013 /we4133 /we4431 /we4033 /DWIN32 /D_WINDOWS /W3 /nologo /J /Gd /MP /bigobj /Zc:inline  -openmp \n\tbuild c++ flags: /W3 /w34062 /w34100 /w34115 /w34189 /w35038 /wd4018 /wd4146 /wd4065 /wd4127 /wd4181 /wd4200 /wd4244 /wd4267 /wd4305 /wd4800 /wd4828 /wd4996 /wd4661 /wd4848 /we4013 /we4133 /we4431 /we4033 /DWIN32 /D_WINDOWS /W3  /EHsc /nologo /J /Gd /MP /EHsc /bigobj /permissive- /Zc:__cplusplus /Zc:inline  -openmp \n\tbuild link flags: /MACHINE:X64  /SUBSYSTEM:CONSOLE /STACK:2097152 /ignore:4049 /ignore:4217 /ignore:4221\n\tbuild system: CMake\n"
+  },
+  "lease": {
+    "contender_while_held": 73,
+    "contender_after_release": 0,
+    "cpu_entered_while_gpu_lease_held": true,
+    "cpu_did_not_release_gpu": true,
+    "cpu_workload_exclusion": true,
+    "stderr": [
+      "",
+      ""
+    ],
+    "cuda_qualified": false,
+    "scope": "real separate-process OS lease exclusion, no GPU resident"
+  },
+  "status": "FAILED",
+  "error": "PermissionError: [Errno 13] Permission denied: 'D:\\\\a\\\\_temp\\\\game-studio-qualification\\\\evidence\\\\budget-contention\\\\record.json'",
+  "elapsed_s": 6.140999999999963
+}
