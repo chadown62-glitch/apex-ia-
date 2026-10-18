@@ -13,8 +13,8 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 9,
-  "why": "même pile que la tentative 8 (Codex #29 à 8fc1df9, #31 à 550b347) ; le parcours 3D d'abord par l'INTERFACE d'APEX, avec de vrais clics dans Edge (le moteur de WebView2) sur la page que le Panel ouvre : Processeur dans les Paramètres, conversation 3D, proposition, composants installés par leurs boutons, Lancer la mission, Annuler puis Reprendre, aperçus, .blend et .glb téléchargés par les boutons de Game Studio et vérifiés ; puis le parcours par l'API sur une seconde mission. Poids et Blender sur ce runner jetable seulement, jamais sur le PC de l'utilisateur",
+  "attempt": 10,
+  "why": "même pile que la tentative 9 (Codex #31 à 550b347), avec le travail « 3D haut de gamme » de Claude (1ab3f8a) : le brief de la demande doit s'afficher AVANT le clic (« Ce que Game Studio fera de votre demande ») ; après la livraison, « Qualité de cette création » doit montrer les versions, la portée du juge et les mesures des rendus réels, puis un avis d'ESSAI (marqué comme tel, ce runner est jetable) est enregistré par le formulaire et relu par l'API. Le parcours validé (clics, annulation, reprise, aperçus, .blend et .glb vérifiés, seconde mission par l'API) doit rester vert. Poids et Blender sur ce runner jetable seulement, jamais sur le PC de l'utilisateur",
   "studio_engine": true,
   "studio_planner": true,
   "studio_blender": true,

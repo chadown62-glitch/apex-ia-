@@ -4,17 +4,20 @@
 // Ce n'est pas la fenêtre d'APEX.exe elle-même, mais la même page, servie par le même APEX.
 //
 // 1. Paramètres > Outils : « Calcul des missions Game Studio » = Processeur, Enregistrer ;
-// 2. accueil : mode 3D, la demande, « Démarrer la conversation » ; le Cerveau doit PROPOSER la mission ;
+// 2. accueil : mode 3D, la demande, « Démarrer la conversation » ; le Cerveau doit PROPOSER la mission, avec le brief
+//    (« Ce que Game Studio fera de votre demande ») avant le clic ;
 // 3. Atelier 3D : « Composants de Game Studio », chaque « Installer » cliqué et confirmé (boîte de dialogue acceptée) ;
 // 4. « Lancer la mission » ; avec --cancel-resume : « Annuler la mission » pendant qu'elle tourne, puis « Reprendre
 //    la mission » ;
-// 5. suivi jusqu'à l'état final : aperçus affichés, liste des fichiers ;
+// 5. suivi jusqu'à l'état final : aperçus affichés, liste des fichiers ; « Qualité de cette création » : versions,
+//    portée du juge, mesures des rendus, et un avis d'essai enregistré (marqué comme tel : ce runner est jetable) ;
 // 6. « Ouvrir dans Game Studio » : le projet, puis les boutons de téléchargement du .blend et du .glb ; chaque fichier
 //    reçu est comparé à l'empreinte annoncée par APEX.
 //
 // Verdicts : PASS (0) si la mission est livrée (« review »), avec un aperçu affiché et .blend et .glb téléchargés et
-// identiques à leur empreinte (et l'annulation puis la reprise vues, si demandées) ; BLOCKED (3) si un composant ne
-// peut pas être installé ici ; FAIL (1) sinon. Preuves : <sortie>/ui/ (captures, fichiers, ui.json).
+// identiques à leur empreinte (et l'annulation puis la reprise vues, si demandées), le brief et le volet Qualité
+// affichés ; BLOCKED (3) si un composant ne peut pas être installé ici ; FAIL (1) sinon. Preuves : <sortie>/ui/
+// (captures, fichiers, ui.json).
 //
 // Usage : node studio_ui_e2e.mjs --out <dossier> [--base http://127.0.0.1:8000] [--home <APEX_HOME>]
 //         [--channel msedge] [--cancel-resume] [--no-install] [--mission-timeout 5400]
@@ -176,6 +179,7 @@ async function main() {
       return finish(FAIL, "aucune mission proposée par le Cerveau pour une demande de création claire");
     }
     log("CHECK", `proposition affichée : ${(await proposal.innerText()).replace(/\s+/g, " ").slice(0, 300)}`);
+    evidence.brief_problem = await checkBrief(proposal);
     await capture(page, "proposition");
 
     // 3. Composants de Game Studio, installés par leurs boutons.
@@ -231,6 +235,9 @@ async function main() {
     const prefix = (await card.getByRole("heading").innerText()).replace("Mission ", "").trim();
     const projectId = await fullProjectId(conversationId, prefix);
     evidence.project_id = projectId;
+    // Une erreur du volet Qualité ne doit pas empêcher de vérifier les téléchargements : elle est rapportée.
+    evidence.quality_problem = await checkQuality(page, card, conversationId, projectId)
+      .catch((error) => `volet Qualité : ${error.name}: ${error.message}`.slice(0, 600));
     const announced = (await api("GET", `/assistant/conversations/${conversationId}/game-studio/${projectId}`)).results.artifacts ?? [];
     await card.getByRole("link", { name: "Ouvrir dans Game Studio" }).click();
     await page.waitForURL(/\/game-studio/);
@@ -256,17 +263,81 @@ async function main() {
     evidence.downloads = downloads;
     evidence.previews = previews;
     const cancelled = !flag("--cancel-resume") || (evidence.cancelled && evidence.resumed);
-    if (previews > 0 && downloads.every((d) => d.verified) && cancelled) {
+    const display = [evidence.brief_problem, evidence.quality_problem].filter(Boolean);
+    if (previews > 0 && downloads.every((d) => d.verified) && cancelled && display.length === 0) {
       return finish(PASS, `mission livrée par l'interface : ${previews} aperçu(s), .blend et .glb téléchargés et vérifiés`
-        + (flag("--cancel-resume") ? ", annulée puis reprise" : ""));
+        + (flag("--cancel-resume") ? ", annulée puis reprise" : "") + ", brief et volet Qualité affichés");
     }
-    return finish(FAIL, `livraison incomplète : aperçus ${previews}, téléchargements ${JSON.stringify(downloads)}`);
+    return finish(FAIL, `livraison incomplète : aperçus ${previews}, téléchargements ${JSON.stringify(downloads)}`
+      + (display.length ? ` ; ${display.join(" ; ")}` : ""));
   } catch (error) {
     await capture(page, "erreur").catch(() => undefined);
     return finish(FAIL, `${error.name}: ${error.message}`.slice(0, 1200));
   } finally {
     await browser.close();
   }
+}
+
+/** Le brief joint à la proposition : chaque élément de la demande et son sort, d'après l'extracteur de Game Studio.
+ *  Rend `null` s'il est affiché comme attendu, sinon le problème (la mission continue : il ne la change pas). */
+async function checkBrief(proposal) {
+  const brief = proposal.locator("details.ax-gs-brief");
+  if (!(await brief.count())) return "brief absent de la proposition";
+  if ((await brief.getAttribute("open")) === null) await brief.locator("summary").click();
+  const items = await brief.locator("li[data-status]").evaluateAll(
+    (lis) => lis.map((li) => `${li.dataset.status} ${li.innerText.replace(/\s+/g, " ").trim()}`));
+  evidence.brief = items;
+  for (const item of items) log("BRIEF", item.slice(0, 240));
+  if (items.some((item) => item.startsWith("refused"))) return "le brief annonce un refus pour une demande qui passe";
+  if (!items.some((item) => item.startsWith("verified"))) return "aucun élément du brief vérifié par Game Studio";
+  return null;
+}
+
+/** « Qualité de cette création » sur la carte livrée : versions et verdicts, portée du juge, mesures des rendus de
+ *  la version retenue ; puis un avis d'ESSAI, enregistré par le formulaire et relu par l'API. Rend `null` ou le
+ *  problème. */
+async function checkQuality(page, card, conversationId, projectId) {
+  const details = card.locator("details.ax-gs-quality");
+  if (!(await details.count())) return "volet Qualité absent de la mission livrée";
+  await details.locator("summary").click();
+  const form = details.locator("form.ax-gs-rating");
+  try {
+    await form.waitFor({ timeout: 300_000 });
+  } catch {
+    return `volet Qualité non chargé : ${(await details.innerText()).replace(/\s+/g, " ").slice(0, 300)}`;
+  }
+  const lines = (await details.locator("li").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim());
+  for (const line of lines) log("QUALITY", line.slice(0, 400));
+  const judge = (await details.locator("p", { hasText: "Le juge de Game Studio vérifie" }).allInnerTexts()).join(" ");
+  log("QUALITY", judge.replace(/\s+/g, " ").slice(0, 400));
+  await capture(page, "qualite");
+  const report = await api("GET", `/assistant/conversations/${conversationId}/game-studio/${projectId}/quality`);
+  evidence.quality = report;
+  const problems = [];
+  if (!lines.some((line) => line.startsWith("Version "))) problems.push("aucune version affichée");
+  if (!judge.includes("Il ne mesure ni la beauté")) problems.push("portée du juge non affichée");
+  if (report.metrics_available && !lines.some((line) => line.includes("couleur perçue"))) {
+    problems.push("mesures des rendus absentes");
+  }
+  if (!report.metrics_available) log("NOTE", "mesures indisponibles dans cette installation (Pillow ou numpy absent)");
+
+  // L'avis d'essai : ce runner est détruit à la fin du job ; ce n'est pas une donnée de calibration.
+  const before = report.ratings.length;
+  await details.getByLabel("réalisme des matériaux").first().selectOption("3");
+  await details.getByLabel("Commentaire").fill("Essai automatique du runner Windows : pas un avis humain.");
+  await details.getByRole("button", { name: "Enregistrer mon avis" }).click();
+  log("CLICK", "Enregistrer mon avis (essai, pas un avis humain)");
+  try {
+    await details.getByRole("status").filter({ hasText: "Avis enregistré" }).waitFor({ timeout: 60_000 });
+  } catch {
+    problems.push(`avis non enregistré : ${(await details.getByRole("alert").allInnerTexts()).join(" ")}`);
+  }
+  const after = (await api("GET", `/assistant/conversations/${conversationId}/game-studio/${projectId}/quality`)).ratings;
+  const saved = after.length === before + 1 && after.at(-1)?.scores?.materiaux === 3;
+  log("CHECK", `avis relu par l'API : ${saved ? "oui" : "non"} (${after.length} avis) ; fichier `
+    + join(home, ".apex", "game-studio-ratings.jsonl"));
+  if (!saved) problems.push("avis non relu par l'API");
+  return problems.length ? `volet Qualité : ${problems.join(", ")}` : null;
 }
 
 /** L'identifiant complet de la mission dont la carte montre les 8 premiers caractères (le suivi de l'assistant). */

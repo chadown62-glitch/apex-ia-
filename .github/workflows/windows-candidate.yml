@@ -226,7 +226,7 @@ jobs:
             $lines = & node "$pw\studio_ui_e2e.mjs" --out $evidence --channel msedge --cancel-resume 2>&1 | ForEach-Object { "$_" }
             $studioUi = $LASTEXITCODE
             $lines | Out-Host
-            Note notice "Parcours 3D par l'interface (code $studioUi)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|CLICK|DIALOG|MISSION|VERDICT|FAIL)' }) -join "`n")
+            Note notice "Parcours 3D par l'interface (code $studioUi)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|CLICK|DIALOG|MISSION|BRIEF|QUALITY|VERDICT|FAIL)' }) -join "`n")
           }
           $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
           if ($request.studio_cpu) { $studioArgs += '--cpu' }
