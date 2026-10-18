@@ -129,3 +129,26 @@ Tests : `tests/test_minio_optional.py` (fichiers réels + vrai `docker compose c
 (ports selon les profils), CI Windows Server + WSL2 : démarrage sans image MinIO (vérification M01) et
 profil `minio` démarré avec healthcheck (Gate M).
 
+
+## 9. Gate M en CI : le disque du runner, pas MinIO (18/10/2026)
+
+L'étape « MinIO optional profile » de `windows-desktop` échouait au premier essai sur les quatre derniers commits
+(runs 39077478842, 39140125308, 39150876458, 39155790253), avec des erreurs WSL différentes :
+`Wsl/Service/E_UNEXPECTED`, `WSL_E_USER_NOT_FOUND`, SIGBUS de Go.
+
+- **Cause, lue dans le journal brut** du run 39155790253 : `There is not enough space on the disk` sur le C: du
+  runner, où vit la distribution WSL. Go reçoit SIGBUS, puis WSL ne lit plus son propre `/etc/passwd`
+  (`getpwnam(root) failed 5`).
+- **Ce n'était pas la mémoire** : la même construction culmine à environ 1,5 Go (mesuré ici, 4 cœurs).
+- **Correction** (`8ad8033`) :
+  - `free_wsl_space.sh` retire, avant la construction, ce qu'aucune étape suivante n'utilise : modèles Ollama du
+    mode « référence », caches pip et Hugging Face, cache de construction Docker ;
+  - `build_minio_from_source.sh` fige les versions (ce que `@latest` donnait depuis février 2026), allège les
+    binaires (`-trimpath -ldflags "-s -w"` : minio 111 Mo au lieu de 152), efface les caches de Go (2,4 Go
+    mesurés) dans la même couche et retire l'image de construction.
+- **Vérifié** (run 39166670835, vert, Gate M comprise) :
+  - C: n'avait que **4,4 Go libres** avant l'étape ;
+  - le nettoyage a rendu 12 Go dans la distribution ;
+  - C: est resté à 4,4 Go après la construction : la place libérée a servi, le disque de WSL n'a pas grossi.
+
+Un seul run vert ne prouve pas que l'échec ne reviendra jamais. Les relevés de place restent publiés à chaque run.
