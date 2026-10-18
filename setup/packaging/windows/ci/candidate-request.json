@@ -13,9 +13,10 @@
     "agent/codex/10-game-engineer"
   ],
   "studio_cpu": true,
-  "attempt": 8,
-  "why": "dernier état publié de Codex (#29 à 8fc1df9, #31 à 550b347 : étapes sur processeur sans bail du Cerveau, protocole GPU 2) avec la tête de Claude (étape processeur vérifiée pendant que le Cerveau garde CUDA, raisons d'arrêt de Game Studio traduites) ; premier parcours complet dans l'APEX.exe installé : moteur et poids du planificateur installés par leurs boutons, Blender 4.3.2 portable officiel, conversation 3D, clic, mission réelle Qwen puis Blender, aperçus, .blend et .glb téléchargés et vérifiés. Poids et Blender sur ce runner jetable seulement, jamais sur le PC de l'utilisateur",
+  "attempt": 9,
+  "why": "même pile que la tentative 8 (Codex #29 à 8fc1df9, #31 à 550b347) ; le parcours 3D d'abord par l'INTERFACE d'APEX, avec de vrais clics dans Edge (le moteur de WebView2) sur la page que le Panel ouvre : Processeur dans les Paramètres, conversation 3D, proposition, composants installés par leurs boutons, Lancer la mission, Annuler puis Reprendre, aperçus, .blend et .glb téléchargés par les boutons de Game Studio et vérifiés ; puis le parcours par l'API sur une seconde mission. Poids et Blender sur ce runner jetable seulement, jamais sur le PC de l'utilisateur",
   "studio_engine": true,
   "studio_planner": true,
-  "studio_blender": true
+  "studio_blender": true,
+  "studio_ui": true
 }

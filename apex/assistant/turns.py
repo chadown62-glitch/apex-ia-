@@ -946,8 +946,12 @@ class TurnManager:
             return
         reason = (f"demande à confirmer ({intent.reason})" if intent.kind == "ambiguous"
                   else "à lancer par vous : une mission n'est jamais lancée sans votre clic")
+        from apex.assistant.creative_brief import extract as creative_brief
+
+        # Le brief range la demande par aspect et dit ce que Game Studio en fera ; la demande elle-même
+        # reste transmise telle quelle au lancement.
         meta["game_studio"] = {**record, "state": "proposed", "served_by_brain": brain_served,
-                               "reason": reason}
+                               "reason": reason, "brief": creative_brief(request)}
 
     @staticmethod
     def _run_tool(tools: dict[str, Any] | None, name: str, arguments: dict[str, Any], number: int,
