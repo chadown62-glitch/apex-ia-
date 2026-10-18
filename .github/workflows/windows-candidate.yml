@@ -7,6 +7,8 @@
 #   -> --install-model -> --start -> un vrai tour de l'assistant (assistant_e2e.py run)
 #   -> parcours 3D réel (studio_e2e.py : composants installés par leurs boutons, disponibilité, conversation 3D,
 #      proposition, clic, suivi, aperçus, .blend/.glb téléchargés et vérifiés) -> --stop -> désinstallation.
+# Avec studio_ui, le même parcours d'abord par l'INTERFACE (studio_ui_e2e.mjs : vrais clics dans Edge, sur la page que le
+# Panel ouvre), annulation et reprise comprises ; puis le parcours par l'API, sur une seconde mission.
 # Si la demande le dit (studio_planner, studio_blender), le runner JETABLE reçoit les poids du planificateur (5,4 Go,
 # par le bouton « Installer » d'APEX, donc le contrat install-planner de Game Studio) et Blender 4.3.2 portable
 # officiel à empreinte épinglée ; jamais le PC de l'utilisateur.
@@ -213,6 +215,19 @@ jobs:
           Note notice 'Programme exécuté par APEX' "$($prog.Line)"
           if ("$($prog.Line)" -notmatch [regex]::Escape("$env:LOCALAPPDATA\Programs\APEX\app")) { Note error 'Programme' "APEX n'exécute pas l'application installée : $($prog.Line)"; exit 1 }
           $assistant = RunPy 'Assistant' @("$tree/setup/packaging/windows/ci/assistant_e2e.py", 'run', '--out', $evidence, '--timeout', '2400')
+          # Le parcours 3D par l'INTERFACE, avec de vrais clics (Edge, le moteur de WebView2 ; la page que le Panel ouvre) :
+          # composants installés par leurs boutons, lancement, annulation puis reprise, aperçus, téléchargements.
+          $studioUi = 0
+          if ($request.studio_ui) {
+            $pw = (New-Item -ItemType Directory -Force "$env:RUNNER_TEMP\pw").FullName
+            $env:PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = '1'
+            npm install --prefix $pw --no-save --no-audit --no-fund playwright@1.56.1 2>&1 | Out-Host
+            Copy-Item "$tree/setup/packaging/windows/ci/studio_ui_e2e.mjs" $pw
+            $lines = & node "$pw\studio_ui_e2e.mjs" --out $evidence --channel msedge --cancel-resume 2>&1 | ForEach-Object { "$_" }
+            $studioUi = $LASTEXITCODE
+            $lines | Out-Host
+            Note notice "Parcours 3D par l'interface (code $studioUi)" (($lines | Where-Object { $_ -match '^(CHECK|NOTE|CLICK|DIALOG|MISSION|VERDICT|FAIL)' }) -join "`n")
+          }
           $studioArgs = @("$tree/setup/packaging/windows/ci/studio_e2e.py", '--label', 'candidate', '--out', $evidence)
           if ($request.studio_cpu) { $studioArgs += '--cpu' }
           # Moteur du planificateur (llama-cpp-python, processeur) puis ses poids, installés comme par les boutons
@@ -259,10 +274,10 @@ jobs:
           Start-Sleep -Seconds 5
           $kept = Test-Path "$env:LOCALAPPDATA\APEX\data\apex.db"
           Note notice 'Désinstallation' "code $($u.ExitCode) ; base de l'utilisateur conservée : $kept"
-          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio ; partage du GPU $leaseCheck"
+          Note notice 'Codes' "modèle $model ; accélération GPU $gpuCheck ; assistant $assistant ; parcours 3D $studio ; parcours 3D par l'interface $studioUi ; partage du GPU $leaseCheck"
           if ($u.ExitCode -ne 0 -or -not $kept) { exit 1 }
-          if ($assistant -eq 1 -or $studio -eq 1 -or $gpuCheck -ne 0 -or $leaseCheck -eq 1) { exit 1 }
-          if ($assistant -eq 3 -or $studio -eq 3 -or $model -ne 0) { exit 3 }
+          if ($assistant -eq 1 -or $studio -eq 1 -or $studioUi -eq 1 -or $gpuCheck -ne 0 -or $leaseCheck -eq 1) { exit 1 }
+          if ($assistant -eq 3 -or $studio -eq 3 -or $studioUi -eq 3 -or $model -ne 0) { exit 3 }
       # L'installateur de QUALIFICATION, pour l'essayer sur le PC de l'utilisateur : un artefact de ce run (connexion
       # GitHub requise), jamais une release. Il s'annonce « 0.6.0 » ; son contenu exact est dans manifest.json.
       - name: Name the qualification installer
