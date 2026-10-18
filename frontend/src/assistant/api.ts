@@ -101,6 +101,8 @@ export interface GameStudioAvailability {
   cuda_available?: boolean;
   /** Partage du GPU avec les modèles principaux : bail tenu, prêté à un spécialiste. */
   gpu?: { lease_held: boolean; lent_to: string | null; admissions_open: boolean; cuda_available: boolean; cuda_residents: string[] };
+  /** Qui demande le GPU au Cerveau pendant une mission : l'assistant pour toute la mission, ou Game Studio autour de chaque étape. */
+  gpu_loan?: "assistant" | "game_studio";
 }
 
 /** Un composant dont Game Studio a besoin (`GET /assistant/game-studio/dependencies`) : état mesuré sur ce PC, taille

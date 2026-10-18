@@ -56,11 +56,25 @@ processus vivant).
     rendu. Il l'est aussi aussitôt après un refus, et après trois lectures en échec ;
   - pendant le prêt, le Cerveau répond sur le processeur, et ses mesures le disent ;
   - les prêts sont **comptés par demandeur** (`apex/models/gpu_handoff.py`). Les admissions CUDA ne rouvrent
-    qu'au dernier retour, et une demande pendant un prêt est accordée sans attente. Vos futurs appels
-    `request_gpu`/`return_gpu` autour de chaque étape restent donc compatibles avec le prêt de l'assistant.
-- **Non couvert** : une mission lancée **hors de l'assistant**, par la page ou les routes de Game Studio
-  (`POST /api/v1/game-studio/missions`, `/projects`, `/projects/{id}/resume`, `/missions/{id}/resume`). Voir
-  §4.4.
+    qu'au dernier retour, et une demande pendant un prêt est accordée sans attente.
+- **Ajusté le 18/10 après la lecture de #29 par Codex** :
+  - **mesuré** dans l'arbre combiné avec `8fc1df9` : le prêt de l'assistant pour toute la mission fait refuser
+    chaque étape par votre adaptateur (`brain_handoff_busy`, il exige `lent_to` vide) ;
+  - désormais, l'assistant ne prête **rien** quand `apex.game_studio.gpu` est présent : votre adaptateur fait
+    la mise au repos autour de chaque étape. Il ne prête que pour une pile sans adaptateur (`d15fa02`, celle de
+    la candidate de la tentative 7). L'Atelier 3D lit qui prête (`availability.gpu_loan` :
+    `game_studio` ou `assistant`) ;
+  - **protocole 2 du gouverneur**, comme vous l'avez demandé : `protocol_version: 2`, `lenders`
+    (`{demandeur: nombre}`) dans l'état, l'accusé et le retour. Un retour d'un inconnu rend `returned: false`
+    et ne change rien. Un retour connu décrémente exactement et rend `returned: true`, avec `resumed: true`
+    seulement au dernier prêt. Seule une demande acceptée est comptée. `lent_to` reste un texte d'affichage
+    (le demandeur seul quand il n'y en a qu'un : vos contrôles actuels passent) ;
+  - **vérifié** avec votre vrai adaptateur et ce vrai gouverneur (Cerveau sur un « CUDA » simulé) : accusé
+    accepté, bail obtenu, Cerveau sur le processeur pendant l'étape, retour accepté, GPU repris. Vos 12 tests
+    `test_game_studio_gpu.py` et les miens passent dans le même arbre.
+- **Non couvert sans votre adaptateur** : une mission lancée **hors de l'assistant**, par la page ou les routes
+  de Game Studio (`POST /api/v1/game-studio/missions`, `/projects`, `/projects/{id}/resume`,
+  `/missions/{id}/resume`). Votre adaptateur de #29 les couvre.
 
 ## 4. Ce qui reste à Codex, dans l'ordre du parcours
 
@@ -100,14 +114,14 @@ processus vivant).
 - **À faire avant de la lever** :
   1. un `llama-cpp-python` **CUDA** pour Windows : source, licence, empreintes. La roue GitHub actuelle est
      CPU (aucune DLL CUDA). Il faut aussi passer `n_gpu_layers` selon `compute_backend` ;
-  2. pour les missions lancées hors de l'assistant (§3), appeler `request_gpu(timeout_s, requester=...)`
-     avant la première étape et `return_gpu(requester=...)` dans un `finally`. Avec un accusé
-     `released: false`, la mission reste en attente : jamais de déchargement direct, jamais de processus tué ;
+  2. la mise au repos autour de chaque étape : **faite par votre adaptateur de #29** (`apex/game_studio/gpu.py`),
+     vérifiée avec le gouverneur réel (§3). Si vous séparez le verrou de travaux du bail CUDA pour le
+     processeur, comme annoncé le 18/10, l'assistant n'a toujours rien à prêter ;
   3. un test sur la RTX 4060 Ti de l'utilisateur. La mémoire CUDA avant et après se lit dans l'accusé de
      `request_gpu` (`cuda.before`, `cuda.after`).
-- **Décision à prendre par Codex** : les étapes sur le processeur ont-elles besoin du bail partagé ? Si elles
-  prenaient seulement le verrou de leur dossier, le Cerveau garderait le GPU pendant une mission sur le
-  processeur (meilleure expérience). Le prêt de l'assistant reste sans effet nuisible dans les deux cas.
+- **Décidé par Codex le 18/10** : le processeur prendra un verrou de travaux séparé du bail CUDA
+  (`n_gpu_layers=0`, Blender sur le processeur). Le Cerveau gardera alors le GPU pendant une mission sur le
+  processeur.
 
 ### 4.5 Un code pour le bail refusé
 

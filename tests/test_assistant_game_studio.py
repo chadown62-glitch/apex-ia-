@@ -44,6 +44,8 @@ from tests.test_assistant import _conversation, _messages, _no_memory, _Scripted
 from tests.test_conversations_service import BASE_CONFIG
 
 SCENE = "Crée une scène de forêt avec une cabane et une rivière."
+#: La vraie détection de l'adaptateur GPU de Game Studio (le fixture `gpu` la remplace dans chaque test).
+_REAL_HANDS_OFF = game_studio.studio_hands_off_gpu
 #: Ce que le Cerveau fait réellement d'une demande de scène (mesuré) : un appel 3D de son répertoire.
 _SCENE_CALL = {"tool": "3d", "expression": 'vehicle("car", color="vert")', "result": "voiture 4,3 m"}
 
@@ -57,6 +59,8 @@ def gpu(monkeypatch):
     governor = gpu_handoff.GpuGovernor(cuda_available=lambda: False, cuda_memory=lambda: None)
     monkeypatch.setattr(gpu_handoff, "_GOVERNOR", governor)
     monkeypatch.setattr(game_studio, "LOAN_POLL_S", 0.02)
+    # Par défaut, la pile sans adaptateur GPU de Game Studio : c'est l'assistant qui prête le GPU.
+    monkeypatch.setattr(game_studio, "studio_hands_off_gpu", lambda: False)
     yield governor
     game_studio._reset_loans_for_tests()
 
@@ -280,6 +284,16 @@ def test_a_brain_that_cannot_free_the_gpu_in_time_launches_nothing(env, gpu, mon
     finally:
         brain.lock.release()
     assert brain.unloads == 0 and gpu.status()["lease_held"] and gpu.status()["admissions_open"]
+
+
+def test_the_assistant_lends_only_when_game_studio_has_no_gpu_adapter_of_its_own() -> None:
+    from importlib.util import find_spec
+
+    try:
+        present = find_spec("apex.game_studio.gpu") is not None
+    except ImportError:
+        present = False
+    assert _REAL_HANDS_OFF() is present
 
 
 # -- sans Game Studio --------------------------------------------------------------------------------------
@@ -826,3 +840,26 @@ def test_a_resumed_mission_holds_the_gpu_until_it_stops_again(env, studio_tools,
     assert gpu.status()["lent_to"].startswith(f"game_studio:{project_id[:8]}-")
     studio.progress(project_id, "failed", [])
     assert _until(lambda: gpu.status()["admissions_open"])
+
+
+def test_when_game_studio_hands_off_the_gpu_itself_the_assistant_lends_nothing(env, studio_tools, gpu,
+                                                                              monkeypatch) -> None:
+    """Avec l'adaptateur de Game Studio (Codex #29), qui demande le GPU autour de chaque étape et refuse une
+    étape si un autre prêt court : ni lancement ni reprise n'empruntent le GPU, le Cerveau le garde, et
+    l'Atelier 3D le sait (`gpu_loan`)."""
+    from apex.assistant.settings import SettingsService
+
+    monkeypatch.setattr(game_studio, "studio_hands_off_gpu", lambda: True)
+    _brain_on_cuda(gpu)
+    studio = _Studio()
+    _settings(env)
+    launched, _, conversation = _proposed_then_launched(env, studio, compute="cpu")
+    project_id = launched["meta"]["game_studio"]["project_id"]
+    assert launched["meta"]["game_studio"]["state"] == "launched"
+    status = gpu.status()
+    assert status["lenders"] == {} and status["lease_held"] and status["admissions_open"]
+    studio.progress(project_id, "interrupted", [])
+    game_studio.resume(env, conversation.id, project_id, service=studio)
+    assert gpu.status()["lenders"] == {} and game_studio._LOANS == {}
+    settings, _ = SettingsService(env).load()
+    assert game_studio.availability(settings, probe=lambda: {})["gpu_loan"] == "game_studio"

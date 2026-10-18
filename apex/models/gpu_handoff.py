@@ -20,12 +20,16 @@ Protocole (Issue #21, accepté par les deux côtés) :
    Délai dépassé : rien n'est déchargé, les admissions sont rouvertes, et l'accusé dit
    `released: false`. Le spécialiste garde alors sa mission en attente (BLOCKED/queued). Aucun processus
    n'est tué, et il n'y a jamais de bascule silencieuse.
-3. **Reprise** : `return_gpu(requester)` rouvre les admissions. Le prochain chargement reprend le bail
-   s'il est libre.
-4. **Prêts multiples** : chaque demande acceptée est comptée par demandeur (l'assistant pour toute une
-   mission, Game Studio autour de chaque étape). Une demande pendant un prêt est accordée sans attente,
-   puisque rien n'a pu se charger sur CUDA depuis ; les admissions ne rouvrent qu'au DERNIER retour. Une
-   demande alors que rien n'est sur CUDA (ni bail ni modèle) n'attend pas non plus les générations sur le
+3. **Reprise** : `return_gpu(requester)` rend LE prêt de ce demandeur. Le prochain chargement reprend le
+   bail s'il est libre.
+4. **Prêts comptés** (`PROTOCOL_VERSION` 2, demandé par Codex dans l'Issue #21) : seule une demande
+   acceptée est comptée, par demandeur (`lenders`, `{demandeur: nombre}`). Une demande pendant un prêt est
+   accordée sans attente, puisque rien n'a pu se charger sur CUDA depuis. Un retour :
+   - d'un demandeur sans prêt : `returned: false`, et rien ne change ;
+   - d'un demandeur connu : un prêt de moins, `returned: true` ; `resumed: true` seulement si c'était le
+     dernier, et les admissions rouvrent alors.
+   `lent_to` reste un texte d'affichage (le demandeur seul, ou la liste) : un programme lit `lenders`. Une
+   demande alors que rien n'est sur CUDA (ni bail ni modèle) n'attend pas les générations sur le
    processeur.
 
 Ce mécanisme est coopératif, comme le bail de Game Studio : il ne contrôle pas les programmes extérieurs à
@@ -43,6 +47,8 @@ from pathlib import Path
 from typing import Any, BinaryIO
 
 LEASE_NAME = "model-session.lock"
+#: Version du protocole de prêt (2 : prêts comptés par demandeur, retour d'un inconnu sans effet).
+PROTOCOL_VERSION = 2
 #: Bornes du délai de quiescence demandé par un spécialiste (secondes).
 QUIESCE_LIMITS = (0.1, 3600.0)
 
@@ -271,29 +277,33 @@ class GpuGovernor:
                              [r.name for r in residents], before, after)
 
     def return_gpu(self, *, requester: str) -> dict[str, Any]:
-        """Le spécialiste a fini : son prêt est rendu. Les admissions CUDA rouvrent au dernier prêt rendu
-        (le bail sera repris au prochain chargement s'il est libre)."""
+        """Le spécialiste rend SON prêt : sans prêt à ce nom, rien ne change (`returned: false`) ; sinon un
+        prêt de moins (`returned: true`), et au dernier les admissions CUDA rouvrent (`resumed: true` ; le
+        bail sera repris au prochain chargement s'il est libre). Une transition n'a lieu que sans prêt en
+        cours : un retour pendant une transition est donc celui d'un inconnu."""
         with self._cond:
-            if self._quiescing:
-                return {"resumed": False, "requester": requester, "reason": "transition en cours"}
             previous = self._lent_to()
-            count = self._lenders.pop(requester, 0)
+            count = self._lenders.get(requester, 0)
+            if count == 0:
+                return self._returned(False, False, requester, previous, "aucun prêt à ce demandeur")
             if count > 1:
                 self._lenders[requester] = count - 1
-            if self._lenders:
-                return {"resumed": False, "requester": requester, "lent_to": previous,
-                        "reason": f"GPU encore prêté ({self._lent_to()})"}
-            self._open = True
-            self._cond.notify_all()
-        return {"resumed": True, "requester": requester, "lent_to": previous}
+            else:
+                del self._lenders[requester]
+            resumed = not self._lenders
+            if resumed:
+                self._open = True
+                self._cond.notify_all()
+            return self._returned(True, resumed, requester, previous,
+                                  None if resumed else f"GPU encore prêté ({self._lent_to()})")
 
     def status(self) -> dict[str, Any]:
         with self._cond:
-            return {"admissions_open": self._open, "transition": self._quiescing,
-                    "active_generations": self._active,
+            return {"protocol_version": PROTOCOL_VERSION, "admissions_open": self._open,
+                    "transition": self._quiescing, "active_generations": self._active,
                     "lease_held": bool(self._lease and self._lease.held),
                     "lease_path": str(self.lease_path() or "") or None, "lent_to": self._lent_to(),
-                    "cuda_residents": [r.name for r in self._residents()],
+                    "lenders": dict(self._lenders), "cuda_residents": [r.name for r in self._residents()],
                     "cuda_available": self.cuda_available(), "last_ack": self._last_ack}
 
     # -- interne ---------------------------------------------------------------------------------------
@@ -303,6 +313,13 @@ class GpuGovernor:
 
     def _lent_to(self) -> str | None:
         return ", ".join(self._lenders) or None
+
+    def _returned(self, returned: bool, resumed: bool, requester: str, previous: str | None,
+                  reason: str | None) -> dict[str, Any]:
+        answer = {"returned": returned, "resumed": resumed, "requester": requester, "lent_to": previous,
+                  "lenders": dict(self._lenders), "admissions_open": self._open,
+                  "protocol_version": PROTOCOL_VERSION}
+        return answer if reason is None else {**answer, "reason": reason}
 
     def _residents(self) -> list[Resident]:
         found: list[Resident] = []
@@ -324,7 +341,8 @@ class GpuGovernor:
         ack = {"released": released, "requester": requester, "reason": reason, "unloaded": unloaded,
                "waited_s": round(time.monotonic() - started, 3), "admissions_open": self._open,
                "lease_held": bool(self._lease and self._lease.held),
-               "lease_path": str(self.lease_path() or "") or None, "cuda": cuda}
+               "lease_path": str(self.lease_path() or "") or None, "lenders": dict(self._lenders),
+               "protocol_version": PROTOCOL_VERSION, "cuda": cuda}
         self._last_ack = ack
         return ack
 

@@ -7,11 +7,13 @@ qu'à l'espace de travail qui l'a lancée. Seuls les octets d'un aperçu sont lu
 seulement pour un artefact que ses outils viennent de rendre à cette conversation. Rien de Game Studio n'est
 réimplémenté ici.
 
-Partage du GPU : chaque étape d'une mission prend le bail partagé `model-session.lock`
-(`apex.game_graphics.resources.resource_lease`), même sur le processeur, et le Cerveau APEX le tient tant
-qu'il est chargé sur CUDA. Avant de lancer ou de reprendre une mission, le GPU est donc demandé au Cerveau
-(`apex.models.gpu_handoff.request_gpu`) ; il lui est rendu quand la mission ne tourne plus. Pendant ce
-temps, le Cerveau répond sur le processeur, et ses mesures le disent."""
+Partage du GPU (le Cerveau APEX tient le bail `model-session.lock` tant qu'il est chargé sur CUDA) :
+- Game Studio avec son propre adaptateur (`apex.game_studio.gpu`, Codex #29) demande lui-même le GPU autour
+  de chaque étape, et refuse une étape si un autre prêt court : l'assistant ne prête donc rien ;
+- pile antérieure (chaque étape prend le bail partagé via `resource_lease`, même sur le processeur, sans
+  rien demander) : avant de lancer ou de reprendre une mission, l'assistant demande le GPU au Cerveau
+  (`apex.models.gpu_handoff.request_gpu`) et le lui rend quand la mission ne tourne plus.
+Pendant un prêt, le Cerveau répond sur le processeur, et ses mesures le disent."""
 
 from __future__ import annotations
 
@@ -147,10 +149,27 @@ def _permissions(*values: str) -> frozenset[Any]:
     return frozenset(p for p in GAME_STUDIO_PERMISSIONS if p.value in values)
 
 
-def _borrow_gpu(requester: str) -> dict[str, Any]:
+def studio_hands_off_gpu() -> bool:
+    """Game Studio demande-t-il lui-même le GPU au Cerveau autour de chaque étape (`apex.game_studio.gpu`,
+    Codex #29) ? Son adaptateur refuse une étape quand un autre prêt court (`brain_handoff_busy`) : un prêt
+    de l'assistant pour toute la mission ferait alors échouer chaque étape."""
+    try:
+        return find_spec("apex.game_studio.gpu") is not None
+    except (ImportError, ValueError):
+        return False
+
+
+def _loan_requester(name: str) -> str | None:
+    """Le nom du prêt de l'assistant pour cette mission, ou None quand Game Studio s'en charge."""
+    return None if studio_hands_off_gpu() else name
+
+
+def _borrow_gpu(requester: str | None) -> dict[str, Any] | None:
     """Le GPU demandé au Cerveau pour une mission ; GpuBusy (rien n'est lancé) s'il ne le libère pas."""
     from apex.models.gpu_handoff import request_gpu
 
+    if requester is None:
+        return None
     ack = request_gpu(GPU_HANDOFF_TIMEOUT_S, requester=requester)
     if not ack.get("released"):
         raise GpuBusy(f"le Cerveau APEX n'a pas libéré le GPU pour Game Studio ({ack.get('reason')}) : "
@@ -158,9 +177,11 @@ def _borrow_gpu(requester: str) -> dict[str, Any]:
     return ack
 
 
-def _hand_back(requester: str) -> None:
+def _hand_back(requester: str | None) -> None:
     from apex.models.gpu_handoff import return_gpu
 
+    if requester is None:
+        return
     stop = _LOANS.pop(requester, None)
     if stop is not None:
         stop.set()
@@ -252,7 +273,7 @@ def resume(session_factory: Any, conversation_id: str, project_id: str, *,
     before = _call(engine, context, "game_studio.status", project_id, conversation_id)
     projects = service if service is not None else _default_services()[0]
     # Un prêt par reprise (une reprise refusée ne rend jamais le prêt d'une autre).
-    requester = f"game_studio:{project_id[:8]}-{uuid.uuid4().hex[:4]}"
+    requester = _loan_requester(f"game_studio:{project_id[:8]}-{uuid.uuid4().hex[:4]}")
     _borrow_gpu(requester)
     try:
         record = projects.resume(project_id)
@@ -263,7 +284,8 @@ def resume(session_factory: Any, conversation_id: str, project_id: str, *,
         _hand_back(requester)
         raise
     status = record.get("status") if isinstance(record, dict) else None
-    _keep_lent(requester, _status_reader(session_factory, conversation_id, project_id, service))
+    if requester is not None:
+        _keep_lent(requester, _status_reader(session_factory, conversation_id, project_id, service))
     content = f"Mission Game Studio reprise à votre demande : projet {project_id}, état « {status} »."
     meta = {"mode": "3d", "source": "apex", "action": "game_studio.resume",
             "game_studio": {"trigger": "utilisateur", "state": "resumed", "project_id": project_id,
@@ -306,7 +328,7 @@ def launch_proposed(session_factory: Any, conversation_id: str, message_id: str,
         if launched:
             raise AlreadyLaunched("cette mission proposée a déjà été lancée")
         arguments = {"description": game_studio_description(request.content), "compute_backend": compute}
-        requester = f"game_studio:launch-{message_id[:8]}"
+        requester = _loan_requester(f"game_studio:launch-{message_id[:8]}")
         _borrow_gpu(requester)  # GpuBusy : rien n'est lancé, la proposition reste à confirmer
         try:
             result = _execute(engine, context, "game_studio.create", arguments,
@@ -316,7 +338,7 @@ def launch_proposed(session_factory: Any, conversation_id: str, message_id: str,
             raise
         output = dict(result.output) if result.ok else {}
         error = result.error.to_dict() if result.error else None
-        if result.ok and output.get("project_id"):
+        if requester is not None and result.ok and output.get("project_id"):
             _keep_lent(requester, _status_reader(session_factory, conversation_id,
                                                  str(output["project_id"]), service))
         else:
@@ -370,8 +392,10 @@ def availability(settings: Any, *, probe: Any = None) -> dict[str, Any]:
     compute = settings.tools.game_studio_compute
     gpu = {k: v for k, v in gpu_status().items() if k in ("lease_held", "lent_to", "admissions_open",
                                                           "cuda_available", "cuda_residents")}
-    # Lancement : toujours par l'utilisateur (acte humain), jamais par le Cerveau.
-    base = {"launch": "human", "compute": compute, "gpu": gpu}
+    # Lancement : toujours par l'utilisateur (acte humain), jamais par le Cerveau. Qui demande le GPU au
+    # Cerveau pendant une mission : Game Studio autour de chaque étape, ou l'assistant pour la mission.
+    base = {"launch": "human", "compute": compute, "gpu": gpu,
+            "gpu_loan": "game_studio" if studio_hands_off_gpu() else "assistant"}
     absent = register_game_studio(ToolRegistry())
     if absent is not None:
         return {**base, "installed": False, "ready": False, "missing": [absent], "notes": []}

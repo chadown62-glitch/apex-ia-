@@ -125,7 +125,9 @@ def test_request_gpu_waits_for_the_running_generation_then_unloads_and_hands_ove
     # Pendant le prêt : le Cerveau répond sur le processeur, et le dit.
     assert governor.place("auto") == ("cpu", "GPU prêté à un spécialiste (game_studio:mission-1)")
     assert governor.return_gpu(requester="game_studio:mission-1") == {
-        "resumed": True, "requester": "game_studio:mission-1", "lent_to": "game_studio:mission-1"}
+        "returned": True, "resumed": True, "requester": "game_studio:mission-1",
+        "lent_to": "game_studio:mission-1", "lenders": {}, "admissions_open": True,
+        "protocol_version": gpu_handoff.PROTOCOL_VERSION}
     assert governor.place("auto")[0] == "cuda"  # reprise : le bail est repris
 
 
@@ -271,25 +273,73 @@ def test_the_brains_lease_and_game_studios_real_lease_exclude_each_other(tmp_pat
 
 
 def test_loans_are_counted_and_admissions_reopen_only_at_the_last_return(tmp_path) -> None:
-    """L'assistant prête le GPU pour toute une mission, Game Studio autour de chaque étape : le retour d'un
-    prêt ne rouvre jamais les admissions tant qu'un autre court, et un inconnu ne les rouvre pas."""
+    """Protocole 2 (demandé par Codex, Issue #21) : le retour d'un prêt ne rouvre jamais les admissions
+    tant qu'un autre court ; un retour inconnu ne change rien ; `lenders` se lit sans analyser `lent_to`."""
     governor = _governor(tmp_path)
     model = _FakeCuda()
     governor.register("apex_brain", model.residents)
     assert governor.place("auto")[0] == "cuda"
     mission = governor.request_gpu(1, requester="game_studio:launch-1")
     assert mission["released"] is True and model.unloads == 1
+    assert mission["lenders"] == {"game_studio:launch-1": 1} and mission["protocol_version"] == 2
     step = governor.request_gpu(1, requester="game_studio:step")
     assert step["released"] is True and step["unloaded"] == [] and "déjà prêté" in step["reason"]
+    assert step["lenders"] == {"game_studio:launch-1": 1, "game_studio:step": 1}
     assert governor.return_gpu(requester="game_studio:step") == {
-        "resumed": False, "requester": "game_studio:step",
-        "lent_to": "game_studio:launch-1, game_studio:step",
+        "returned": True, "resumed": False, "requester": "game_studio:step",
+        "lent_to": "game_studio:launch-1, game_studio:step", "lenders": {"game_studio:launch-1": 1},
+        "admissions_open": False, "protocol_version": 2,
         "reason": "GPU encore prêté (game_studio:launch-1)"}
     assert governor.place("auto") == ("cpu", "GPU prêté à un spécialiste (game_studio:launch-1)")
-    assert governor.return_gpu(requester="inconnu")["resumed"] is False
-    assert governor.status()["admissions_open"] is False
-    assert governor.return_gpu(requester="game_studio:launch-1")["resumed"] is True
+    before = governor.status()
+    unknown = governor.return_gpu(requester="inconnu")
+    assert unknown["returned"] is False and unknown["resumed"] is False
+    assert unknown["reason"] == "aucun prêt à ce demandeur"
+    assert governor.status() == before  # rien n'a changé
+    assert governor.return_gpu(requester="game_studio:step")["returned"] is False  # déjà rendu
+    back = governor.return_gpu(requester="game_studio:launch-1")
+    assert back["returned"] is True and back["resumed"] is True and back["lenders"] == {}
     assert governor.status()["lent_to"] is None and governor.place("auto")[0] == "cuda"
+
+
+def test_the_same_requester_counts_each_accepted_request_only(tmp_path) -> None:
+    governor = _governor(tmp_path)
+    model = _FakeCuda()
+    governor.register("apex_brain", model.residents)
+    governor.place("auto")
+    model.lock.acquire()  # refus : jamais compté
+    try:
+        assert governor.request_gpu(0.1, requester="gs")["released"] is False
+    finally:
+        model.lock.release()
+    assert governor.status()["lenders"] == {}
+    governor.request_gpu(1, requester="gs")
+    governor.request_gpu(1, requester="gs")
+    assert governor.status()["lenders"] == {"gs": 2}
+    assert governor.return_gpu(requester="gs")["resumed"] is False
+    assert governor.return_gpu(requester="gs")["resumed"] is True
+
+
+def test_codexs_real_adapter_borrows_and_returns_through_this_governor(tmp_path, monkeypatch) -> None:
+    """Avec le vrai adaptateur de Game Studio (`apex.game_studio.gpu`, Codex #29 ; ignoré sans lui) et ce
+    vrai gouverneur : Cerveau sur un « CUDA » simulé, accusé accepté, bail obtenu, retour accepté, puis le
+    Cerveau reprend le GPU. Aucune mesure CUDA réelle."""
+    adapter = pytest.importorskip("apex.game_studio.gpu", reason="adaptateur GPU de Game Studio absent")
+    monkeypatch.setenv("APEX_HOME", str(tmp_path))
+    governor = GpuGovernor(cuda_available=lambda: True, cuda_memory=lambda: None)
+    model = _FakeCuda()
+    governor.register("apex_brain", model.residents)
+    monkeypatch.setattr(gpu_handoff, "_GOVERNOR", governor)
+    monkeypatch.setattr(adapter, "check_external_workloads", lambda: None)
+    import apex.game_graphics.resources as resources
+
+    monkeypatch.setattr(resources, "check_external_workloads", lambda: None)
+    assert governor.place("auto")[0] == "cuda"
+    with adapter.resource_lease(tmp_path / "mission" / "resource.lock"):
+        assert model.unloads == 1 and governor.place("auto")[0] == "cpu"
+        assert list(governor.status()["lenders"].values()) == [1]
+    assert governor.status()["lenders"] == {} and governor.status()["admissions_open"] is True
+    assert governor.place("auto")[0] == "cuda"
 
 
 def test_with_nothing_on_cuda_a_loan_never_waits_for_processor_generations(tmp_path) -> None:
