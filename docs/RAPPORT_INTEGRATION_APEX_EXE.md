@@ -6,7 +6,12 @@
   - proposition par le Cerveau, lancement par l'appel du bouton, plan du Qwen 7B sur le processeur ;
   - voiture construite par Blender 4.3.2, précontrôle Engineer réussi ;
   - `.blend` et `.glb` téléchargés et identiques à leur empreinte, 4 aperçus.
-- Ce n'est **pas** le PC de l'utilisateur : ni Windows 11, ni de vrais clics dans la fenêtre, ni la RTX. Game
+- **Le même parcours par l'interface, avec de vrais clics** (tentative 9,
+  [run 39150876510](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39150876510)), dans Edge (le
+  moteur de WebView2) sur la page que le Panel ouvre : composants installés par leurs boutons, « Lancer la
+  mission », « Annuler » puis « Reprendre », 4 aperçus, `.blend` et `.glb` téléchargés par les boutons de Game
+  Studio et vérifiés ; puis une seconde mission par l'API.
+- Ce n'est **pas** le PC de l'utilisateur : ni Windows 11, ni la fenêtre d'APEX.exe elle-même, ni la RTX. Game
   Studio refuse toujours le GPU. La release attend cet essai et la décision de l'utilisateur.
 - Historique : le 16/10, le parcours s'arrêtait au refus `jsonschema`. Codex a fourni `jsonschema`, le moteur
   et le planificateur (#26), puis le partage du GPU (#29) et le verrou de travaux séparé (#31). En chemin, des
@@ -95,6 +100,7 @@ ligne « programme : … » du journal de démarrage d'APEX et échoue si ce n'e
 | Candidate combinée `cb4bf22` + pile Codex ([run 38987535861](https://github.com/chadown62-glitch/apex-ia-/actions/runs/38987535861)) | installation → « Préparer APEX » → modèle → démarrage → tours de l'assistant → **parcours 3D réel** → arrêt → désinstallation | **job en échec, parcours 3D BLOCKED** (détail ci-dessous). Programme : l'application installée. Démarrage READY. Assistant PASS, dont A3 (`finance.loan` exact : 1 159,92 €). Base conservée |
 | Candidate combinée `20a7167` + pile Codex à `d15fa02` ([run 39077478748](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39077478748)) | même parcours, plus le moteur du planificateur installé par l'API du bouton et le partage du GPU | **job en échec, parcours 3D BLOCKED** au refus attendu `local_planner_model_missing` (poids non téléchargés). `jsonschema` importé. Moteur `llama-cpp-python` 0.3.36 installé (empreintes vérifiées) et importé, avec `llama_cpp.server.app` ; `gpu_offload False` (build CPU). Partage du GPU : 6 contrôles PASS avec les verrous Windows réels. Assistant PASS, base conservée. Codes : modèle 0, GPU 0, assistant 0, parcours 3D 3, partage du GPU 0 |
 | Candidate combinée `8fc89a3` + pile Codex à `550b347` (#29, #31) ([run 39140125328](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39140125328), tentative 8) | même parcours, plus les poids du planificateur installés par le bouton (5,4 Go, sur le runner seulement) et Blender 4.3.2 portable officiel (empreinte épinglée) par `APEX_BLENDER_EXECUTABLE` | **job vert, parcours 3D PASS**. Moteur et poids installés et vérifiés. Proposition, lancement, mission `running` 13 min, puis `review` en livraison `technical_review`. 13 fichiers, dont `asset.blend` (3 767 004 octets) et `asset.glb` (1 108 632 octets) téléchargés par l'API de Game Studio, empreintes vérifiées ; 4 aperçus. Partage du GPU : 7 contrôles PASS, dont l'étape processeur obtenue pendant que le Cerveau tient CUDA (simulé), sans prêt. Assistant PASS, base conservée. Codes : modèle 0, GPU 0, assistant 0, parcours 3D 0, partage du GPU 0. Installateur `APEX-Setup-x64-v0.6.0-candidate-e8d79fcb7aeb.exe`, SHA-256 `bbdfb6ccf849fb8a…` |
+| Candidate combinée `7d2a401` + pile Codex à `550b347` ([run 39150876510](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39150876510), tentative 9) | même parcours, d'abord **par l'interface** (`studio_ui_e2e.mjs`, Playwright 1.56.1, Edge) : Paramètres > Outils « Processeur », conversation 3D, proposition, les deux composants installés par leurs boutons (boîtes de confirmation acceptées), « Lancer la mission », annulation puis reprise ; puis le parcours par l'API sur une seconde mission | **job vert ; parcours par l'interface PASS, parcours par l'API PASS**. Interface : moteur et poids installés par les boutons, mission lancée à 18:07:11, annulée à 18:07:42, reprise à 18:07:48, terminée « à revoir » à 18:22:01 (environ 15 min) ; 4 aperçus affichés ; `asset.blend` (3 767 004 octets) et `asset.glb` (1 108 632 octets) téléchargés par les boutons de la version retenue, empreintes vérifiées. API : seconde mission de 18:27:25 à 18:38:57, `review`, 13 fichiers, `.blend` et `.glb` vérifiés. Partage du GPU 7/7 PASS. Assistant PASS, base conservée. Codes : modèle 0, GPU 0, assistant 0, parcours 3D 0, par l'interface 0, partage du GPU 0. Installateur construit depuis `0c3f90d92bd3` : `APEX-Setup-x64-v0.6.0-candidate-0c3f90d92bd3.exe`, SHA-256 `f18509220b303f08…`, 51 982 779 octets |
 | Ma branche `5a694ec`, `f941d90` (avant le correctif `-P`) | même parcours que la première ligne | PASS, mais **le code Python d'APEX exécuté venait très probablement du checkout**, au même commit, et non des fichiers installés |
 
 **Parcours 3D réel de la candidate sous Windows (run 38987535861)** :
@@ -172,7 +178,9 @@ Le runner rapporte « exit code 1 » pour un verdict BLOCKED. Le script sort par
 - **Sous Windows Server, Blender 4.3.2 portable officiel** (empreinte épinglée) :
   - par Codex, runtime empaqueté (run 39114782698) : voiture, juges, correction, `.blend`, `.glb` et 4 vues ;
   - par Claude, dans l'APEX.exe installé (tentative 8) : `asset.blend` et `asset.glb` livrés, téléchargés et
-    vérifiés, 4 aperçus.
+    vérifiés, 4 aperçus ;
+  - par Claude, par l'interface de l'APEX.exe installé (tentative 9) : la même voiture, après une annulation et
+    une reprise, puis une seconde mission par l'API.
 - Jamais encore sur le PC de l'utilisateur (Blender `.msi` dans Program Files).
 
 ## 7. Exécuté sur CUDA
@@ -237,7 +245,8 @@ consommés, ce qui est fait, et ce qui reste, dans l'ordre du parcours.
 Configuration : RTX 4060 Ti 8 Go, i5-14400F, 16 Go, Windows 11. Procédure :
 [`docs/QUALIFICATION_APEX_EXE.md`](QUALIFICATION_APEX_EXE.md).
 
-1. Installer la candidate de la tentative 8, « Préparer APEX » (installe `jsonschema`), démarrer.
+1. Installer la dernière candidate verte (tentative 9, ou 10 si elle passe), « Préparer APEX » (installe
+   `jsonschema`), démarrer.
 2. Composants de Game Studio : le moteur (8 Mo), puis le planificateur (5,4 Go), puis Blender 4.3.2.
 3. Calcul des missions : « Processeur ».
 4. La première création 3D : proposition, vrai clic, suivi, aperçus, fichiers. Puis annulation et reprise.

@@ -10,11 +10,12 @@ Elle est construite sur un Windows réel de GitHub par le workflow `windows-cand
 ## 1. Télécharger
 
 1. Sur GitHub : **Actions** → **windows-candidate** → le dernier run terminé. Le run de référence est
-   [39140125328](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39140125328) du 18/10/2026 (tentative
-   8 : Claude `8fc89a3`, Game Studio de Codex à `550b347`). Il est **vert**, parcours 3D compris (§7) :
-   `APEX-Setup-x64-v0.6.0-candidate-e8d79fcb7aeb.exe`, 51 981 009 octets, SHA-256
-   `bbdfb6ccf849fb8a6a379c3c541801729e0f544e01f901d3df39213a001bd6fe`. Artefact disponible jusqu'au 17/11/2026.
-   Elle remplace celle du run 39077478748 (`e0ced622…`), dont la pile Game Studio est plus ancienne.
+   [39150876510](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39150876510) du 18/10/2026 (tentative
+   9 : Claude `7d2a401`, Game Studio de Codex à `550b347`). Il est **vert**, parcours 3D par l'interface compris
+   (§7) : `APEX-Setup-x64-v0.6.0-candidate-0c3f90d92bd3.exe`, 51 982 779 octets, SHA-256
+   `f18509220b303f08f9aeceef690177a27e3df3fcd236587b013eafab95cada59`. Artefact disponible jusqu'au 17/11/2026.
+   Elle remplace celle de la tentative 8 (run 39140125328, `bbdfb6cc…`) : même pile Game Studio, interface
+   testée en plus.
 2. En bas de la page, **Artifacts** → `apex-qualification-installer`. Il faut être connecté à GitHub.
 3. Décompressez le zip. Il contient :
    - `APEX-Setup-x64-v0.6.0-candidate-<commit>.exe` ;
@@ -129,13 +130,17 @@ Sans les composants du §6, Game Studio refuse la mission avec la raison, par ex
 local de Game Studio (Qwen2.5-Coder-7B) n'est pas installé ». **Ce sont les blocages connus, pas des pannes.**
 Si un autre message s'affiche, faites une capture.
 
-**Constaté sur le runner Windows Server** (run 39140125328), dans l'APEX.exe installé par cet installateur :
-- la proposition par le Cerveau, puis le lancement par l'appel du bouton « Lancer la mission » ;
-- le plan du Qwen 7B, la voiture construite par Blender, le précontrôle Engineer réussi (`technical_review`) ;
-- 13 fichiers annoncés, dont `asset.blend` (3 767 004 octets) et `asset.glb` (1 108 632 octets), téléchargés et
-  identiques à leur empreinte, et 4 aperçus.
+**Constaté sur le runner Windows Server** (run 39150876510), dans l'APEX.exe installé par cet installateur, par de
+vrais clics dans Edge (le moteur de WebView2) sur la page qu'ouvre le Panel :
+- « Processeur » enregistré dans Paramètres > Outils, la conversation 3D, la proposition ;
+- les deux composants installés par leurs boutons, confirmations acceptées ;
+- « Lancer la mission », puis « Annuler la mission » et « Reprendre la mission » : environ 15 minutes jusqu'à
+  « terminée, à revoir » ;
+- 4 aperçus affichés ; `asset.blend` (3 767 004 octets) et `asset.glb` (1 108 632 octets) téléchargés par les
+  boutons de Game Studio, identiques à leur empreinte ;
+- une seconde mission par l'API, livrée elle aussi (13 fichiers).
 
-Ce n'est pas encore votre PC : ni Windows 11, ni de vrais clics dans la fenêtre, ni la RTX. La première mission
+Ce n'est pas encore votre PC : ni Windows 11, ni la fenêtre d'APEX.exe elle-même, ni la RTX. La première mission
 chez vous reste la preuve qui compte.
 
 ## 8. Quoi renvoyer

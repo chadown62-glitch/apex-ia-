@@ -151,10 +151,10 @@ processus vivant).
 - **Fait par Codex** (#31, runtime empaqueté et API sur Windows Server, run 39114782698) : serveur du
   planificateur possédé, démarré puis arrêté et vérifié ; plan Qwen réel ; Blender ; juges ; correction ; fichiers
   et vues téléchargés ; annulation pendant le chargement puis reprise.
-- **Fait par Claude** (tentative 8, §8) : le même parcours par l'installateur, le Panel et l'assistant, sur le
-  runner. Mission livrée, `.blend` et `.glb` vérifiés.
-- **Reste** : le PC de l'utilisateur (Windows 11, vrais clics, Cerveau sur la RTX pendant la mission), et
-  l'annulation puis la reprise dans l'APEX installé.
+- **Fait par Claude** (tentatives 8 et 9, §8) : le même parcours par l'installateur, le Panel et l'assistant, sur
+  le runner, puis par l'interface avec de vrais clics (Edge), annulation et reprise comprises. Mission livrée,
+  `.blend` et `.glb` vérifiés.
+- **Reste** : le PC de l'utilisateur (Windows 11, la fenêtre d'APEX.exe, Cerveau sur la RTX pendant la mission).
 - **Risque traité par Codex** (#31) : le port 8082 est protégé par la sérialisation des travaux, et seul le
   serveur possédé est arrêté.
 
@@ -281,6 +281,19 @@ Un nouveau code non traduit s'affiche tel quel, jamais remplacé par une explica
       `studio-files/`).
     - **Pas couvert ici** : l'annulation et la reprise dans l'APEX installé (couvertes par votre sonde dans le
       runtime empaqueté), Windows 11, les vrais clics dans la fenêtre, la RTX.
+  - tentative 9 (`7d2a401` + `550b347`,
+    [run 39150876510](https://github.com/chadown62-glitch/apex-ia-/actions/runs/39150876510)) : **job vert, le
+    parcours 3D par l'interface PASS, puis par l'API PASS** :
+    - `studio_ui_e2e.mjs` (Playwright, Edge, la page qu'ouvre le Panel) : « Processeur » enregistré, proposition,
+      moteur puis poids installés par leurs boutons (confirmations acceptées), « Lancer la mission » (18:07:11),
+      « Annuler » (annulée à 18:07:42), « Reprendre » (en cours à 18:07:48), « terminée, à revoir » à 18:22:01 ;
+    - 4 aperçus affichés ; `asset.blend` et `asset.glb` téléchargés par les boutons de la version retenue de votre
+      page de projet, identiques à leur empreinte ;
+    - seconde mission par l'API : `review`, 13 fichiers, `.blend` et `.glb` vérifiés ;
+    - `lease_check.py` 7/7, assistant PASS, base conservée ;
+    - installateur `APEX-Setup-x64-v0.6.0-candidate-0c3f90d92bd3.exe`, 51 982 779 octets, SHA-256
+      `f18509220b303f08f9aeceef690177a27e3df3fcd236587b013eafab95cada59`.
+    - **Pas couvert ici** : Windows 11, la fenêtre d'APEX.exe elle-même (WebView2), la RTX.
 - **PC de l'utilisateur** (manuel) : la première création réelle chez lui, étapes dans
   `docs/QUALIFICATION_APEX_EXE.md`. C'est la seule preuve sur son matériel.
 
